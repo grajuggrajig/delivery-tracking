@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบเช็คการจัดส่งสินค้า</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    </style>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+</head>
+<body class="bg-[#f0f4f8] text-slate-800 min-h-screen pb-12">
+
+    <!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking</span>
+            </h1>
+            <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-sky-100 text-sky-700 font-medium">กำลังเชื่อมต่อ Firebase...</span>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <!-- ฟอร์มเพิ่มข้อมูล (ซ้าย) -->
+        <section class="md:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-sky-100 h-fit">
+            <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">➕ เพิ่มรายการจัดส่งใหม่</h2>
+            <form id="delivery-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า</label>
+                    <input type="text" id="customer-name" required placeholder="เช่น คุณสมชาย" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบริษัท</label>
+                    <input type="text" id="company-name" placeholder="เช่น บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์</label>
+                    <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้า / ของที่ยังค้างส่ง</label>
+                    <textarea id="items" rows="3" required placeholder="เช่น กล่องควบคุม 2 ชุด, สายไฟ 10 เมตร" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition"></textarea>
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sky-200">
+                    บันทึกข้อมูล
+                </button>
+            </form>
+        </section>
+
+        <!-- รายการจัดส่ง (ขวา) -->
+        <section class="md:col-span-2 space-y-4">
+            <!-- ค้นหา -->
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center gap-2">
+                <span class="text-sky-400 pl-2">🔍</span>
+                <input type="text" id="search-input" placeholder="ค้นหาชื่อลูกค้า, บริษัท หรือรายการสินค้า..." class="w-full text-sm outline-none bg-transparent placeholder-slate-400">
+            </div>
+
+            <!-- รายการ Cards -->
+            <div id="delivery-list" class="space-y-3">
+                <div class="text-center py-10 text-slate-400 text-sm">กำลังโหลดข้อมูล...</div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Toast แจ้งเตือน -->
+    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-sm shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50"></div>
+
+    <script>
+        <!-- Firebase Configuration (กำหนดค่าของคุณเองจาก Project Settings) -->
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAQ347hnwb3a30u0ckyHK1QWV9eUEMiWE",
+            authDomain: "delivery-tracking-2313a.firebaseapp.com",
+            projectId: "delivery-tracking-2313a",
+            storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+            messagingSenderId: "631670801383",
+            appId: "1:631670801383:web:e720570af97bad7011f342",
+            measurementId: "G-BB2D5DJH3F"
+        };
+
+        // Initialize Firebase
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+
+        const statusBadge = document.getElementById('connection-status');
+        statusBadge.textContent = 'เชื่อมต่อ Firebase แล้ว';
+        statusBadge.className = 'text-xs px-3 py-1 rounded-full bg-sky-100 text-sky-700 font-medium';
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.style.opacity = '1';
+            setTimeout(() => { t.style.opacity = '0'; }, 2000);
+        }
+
+        // บันทึกข้อมูลลง Firebase
+        document.getElementById('delivery-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const data = {
+                customerName: document.getElementById('customer-name').value,
+                companyName: document.getElementById('company-name').value,
+                phone: document.getElementById('phone').value,
+                items: document.getElementById('items').value,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                await db.collection('deliveries').add(data);
+                showToast('✅ บันทึกข้อมูลสำเร็จ');
+                document.getElementById('delivery-form').reset();
+            } catch (err) {
+                console.error(err);
+                showToast('❌ เกิดข้อผิดพลาดในการบันทึก');
+            }
+        });
+
+        // ดึงข้อมูลและอัปเดตแบบเรียลไทม์
+        let allDeliveries = [];
+        db.collection('deliveries').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+            allDeliveries = [];
+            snapshot.forEach(doc => {
+                allDeliveries.push({ id: doc.id, ...doc.data() });
+            });
+            renderList(allDeliveries);
+        }, error => {
+            console.error(error);
+            document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm">เกิดข้อผิดพลาดในการโหลดข้อมูล (ตรวจสอบสิทธิ์ Firebase Rule)</div>`;
+        });
+
+        // แสดงผลรายการ
+        function renderList(data) {
+            const container = document.getElementById('delivery-list');
+            if (data.length === 0) {
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl border border-sky-100 text-center text-slate-400 text-sm">ไม่มีรายการจัดส่งค้างอยู่</div>`;
+                return;
+            }
+
+            container.innerHTML = data.map(item => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-sky-100 flex items-start justify-between gap-4 transition hover:shadow-md hover:border-sky-200">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="font-bold text-slate-800 text-base">${item.customerName}</span>
+                            ${item.companyName ? `<span class="text-xs bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-md font-medium border border-sky-100">${item.companyName}</span>` : ''}
+                        </div>
+                        ${item.phone ? `<div class="text-xs text-sky-600 font-medium">📞 <a href="tel:${item.phone}" class="hover:underline">${item.phone}</a></div>` : ''}
+                        <div class="text-xs text-slate-600 bg-sky-50/50 p-2.5 rounded-xl mt-2 border border-sky-100/60">
+                            <span class="font-semibold text-slate-700">รายการค้างส่ง:</span> ${item.items}
+                        </div>
+                    </div>
+                    <!-- ปุ่มติ๊กถูกเคลียร์ข้อมูล -->
+                    <button onclick="completeDelivery('${item.id}', '${item.customerName}')" title="จัดส่งแล้ว / ลบรายการ" class="flex-shrink-0 w-10 h-10 rounded-xl bg-sky-50 hover:bg-sky-500 text-sky-600 hover:text-white border border-sky-200 flex items-center justify-center transition shadow-sm group">
+                        <svg class="w-5 h-5 transition transform group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        // ฟังก์ชันลบข้อมูลเมื่อกดติ๊กถูก
+        async function completeDelivery(id, name) {
+            if (confirm(`ยืนยันว่าจัดส่งรายการของ "${name}" เรียบร้อยแล้วใช่หรือไม่? (ข้อมูลจะถูกลบออก)`)) {
+                try {
+                    await db.collection('deliveries').doc(id).delete();
+                    showToast(`🗑️ เคลียร์รายการของ "${name}" สำเร็จ`);
+                } catch (err) {
+                    console.error(err);
+                    showToast('❌ ไม่สามารถลบข้อมูลได้');
+                }
+            }
+        }
+
+        // ระบบค้นหาเรียลไทม์
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            const filtered = allDeliveries.filter(item => 
+                (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
+                (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
+                (item.items && item.items.toLowerCase().includes(keyword))
+            );
+            renderList(filtered);
+        });
+    </script>
+</body>
+</html>
