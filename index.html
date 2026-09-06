@@ -13,7 +13,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-[#f0f4f8] text-slate-800 min-h-screen pb-12">
+<body class="bg-[#f0f4f8] text-slate-800 min-h-screen pb-12 flex flex-col justify-between">
 
     <!-- Header -->
     <header class="bg-white/80 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm">
@@ -21,18 +21,18 @@
             <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                 📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking</span>
             </h1>
-            <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-sky-100 text-sky-700 font-medium">กำลังเชื่อมต่อ Firebase...</span>
+            <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">กำลังเชื่อมต่อ Firebase...</span>
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 w-full flex-grow">
         
         <!-- ฟอร์มเพิ่มข้อมูล (ซ้าย) -->
         <section class="md:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-sky-100 h-fit">
             <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">➕ เพิ่มรายการจัดส่งใหม่</h2>
             <form id="delivery-form" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า</label>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า <span class="text-red-500">*</span></label>
                     <input type="text" id="customer-name" required placeholder="เช่น คุณสมชาย" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
                 </div>
                 <div>
@@ -44,11 +44,11 @@
                     <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้า / ของที่ยังค้างส่ง</label>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้า / ของที่ยังค้างส่ง <span class="text-red-500">*</span></label>
                     <textarea id="items" rows="3" required placeholder="เช่น กล่องควบคุม 2 ชุด, สายไฟ 10 เมตร" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition"></textarea>
                 </div>
-                <button type="submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sky-200">
-                    บันทึกข้อมูล
+                <button type="submit" id="submit-btn" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sky-200 flex items-center justify-center gap-2">
+                    <span>บันทึกข้อมูล</span>
                 </button>
             </form>
         </section>
@@ -63,16 +63,33 @@
 
             <!-- รายการ Cards -->
             <div id="delivery-list" class="space-y-3">
-                <div class="text-center py-10 text-slate-400 text-sm">กำลังโหลดข้อมูล...</div>
+                <div class="text-center py-10 text-slate-400 text-sm animate-pulse">กำลังโหลดข้อมูล...</div>
             </div>
         </section>
     </main>
 
-    <!-- Toast แจ้งเตือน -->
-    <div id="toast" class="fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-sm shadow-xl opacity-0 transition-opacity duration-300 pointer-events-none z-50"></div>
+    <!-- Modern Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Modern Modal Confirmation Dialog -->
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="modal-content">
+            <div class="text-3xl mb-3">⚠️</div>
+            <h3 id="modal-title" class="text-base font-bold text-slate-800 mb-2">ยืนยันการทำรายการ</h3>
+            <p id="modal-desc" class="text-xs text-slate-500 mb-6 leading-relaxed">คุณต้องการดำเนินการนี้ใช่หรือไม่?</p>
+            <div class="flex gap-3">
+                <button id="modal-cancel" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">ยกเลิก</button>
+                <button id="modal-confirm" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-red-500 hover:bg-red-600 text-white shadow-sm transition">ยืนยัน</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="text-center py-6 text-xs text-slate-400 border-t border-sky-100 mt-12">
+        Delivery Tracking System © 2026
+    </footer>
 
     <script>
-        <!-- Firebase Configuration (กำหนดค่าของคุณเองจาก Project Settings) -->
         const firebaseConfig = {
             apiKey: "AIzaSyBAQ347hnwb3a30u0ckyHK1QWV9eUEMiWE",
             authDomain: "delivery-tracking-2313a.firebaseapp.com",
@@ -83,7 +100,6 @@
             measurementId: "G-BB2D5DJH3F"
         };
 
-        // Initialize Firebase
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
@@ -91,33 +107,116 @@
 
         const statusBadge = document.getElementById('connection-status');
         statusBadge.textContent = 'เชื่อมต่อ Firebase แล้ว';
-        statusBadge.className = 'text-xs px-3 py-1 rounded-full bg-sky-100 text-sky-700 font-medium';
+        statusBadge.className = 'text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium';
 
-        function showToast(msg) {
-            const t = document.getElementById('toast');
-            t.textContent = msg;
-            t.style.opacity = '1';
-            setTimeout(() => { t.style.opacity = '0'; }, 2000);
+        // ระบบ Toast แจ้งเตือนแบบโมเดิร์น
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            const bgColors = {
+                success: 'bg-slate-900 text-white border-slate-800',
+                error: 'bg-red-600 text-white border-red-500',
+                info: 'bg-sky-600 text-white border-sky-500'
+            };
+
+            const icons = {
+                success: '✅',
+                error: '❌',
+                info: 'ℹ️'
+            };
+
+            toast.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl text-xs shadow-xl border transition-all duration-300 translate-y-4 opacity-0 ${bgColors[type] || bgColors.success}`;
+            toast.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-4', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-4', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ระบบ Modal ยืนยันการทำงานแบบสวยงามแทน confirm() แบบเดิม
+        function showConfirmModal(title, desc, onConfirm) {
+            const modal = document.getElementById('confirm-modal');
+            const modalContent = document.getElementById('modal-content');
+            const titleEl = document.getElementById('modal-title');
+            const descEl = document.getElementById('modal-desc');
+            const btnConfirm = document.getElementById('modal-confirm');
+            const btnCancel = document.getElementById('modal-cancel');
+
+            titleEl.textContent = title;
+            descEl.textContent = desc;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+
+            const closeModal = () => {
+                modal.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
+                btnCancel.replaceWith(btnCancel.cloneNode(true));
+            };
+
+            document.getElementById('modal-confirm').addEventListener('click', () => {
+                closeModal();
+                onConfirm();
+            }, { once: true });
+
+            document.getElementById('modal-cancel').addEventListener('click', () => {
+                closeModal();
+            }, { once: true });
         }
 
         // บันทึกข้อมูลลง Firebase
-        document.getElementById('delivery-form').addEventListener('submit', async (e) => {
+        const deliveryForm = document.getElementById('delivery-form');
+        const submitBtn = document.getElementById('submit-btn');
+
+        deliveryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            const customerName = document.getElementById('customer-name').value.trim();
+            const companyName = document.getElementById('company-name').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+            const items = document.getElementById('items').value.trim();
+
+            if (!customerName || !items) {
+                showToast('กรุณากรอกข้อมูลชื่อลูกค้าและรายการสินค้าให้ครบถ้วน', 'error');
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังบันทึก...`;
+
             const data = {
-                customerName: document.getElementById('customer-name').value,
-                companyName: document.getElementById('company-name').value,
-                phone: document.getElementById('phone').value,
-                items: document.getElementById('items').value,
+                customerName,
+                companyName,
+                phone,
+                items,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
             try {
                 await db.collection('deliveries').add(data);
-                showToast('✅ บันทึกข้อมูลสำเร็จ');
-                document.getElementById('delivery-form').reset();
+                showToast('บันทึกข้อมูลสำเร็จเรียบร้อย', 'success');
+                deliveryForm.reset();
             } catch (err) {
                 console.error(err);
-                showToast('❌ เกิดข้อผิดพลาดในการบันทึก');
+                showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง', 'error');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<span>บันทึกข้อมูล</span>';
             }
         });
 
@@ -131,14 +230,15 @@
             renderList(allDeliveries);
         }, error => {
             console.error(error);
-            document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm">เกิดข้อผิดพลาดในการโหลดข้อมูล (ตรวจสอบสิทธิ์ Firebase Rule)</div>`;
+            document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm border border-red-100">เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาตรวจสอบสิทธิ์ Firebase Security Rules</div>`;
+            showToast('ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error');
         });
 
         // แสดงผลรายการ
         function renderList(data) {
             const container = document.getElementById('delivery-list');
             if (data.length === 0) {
-                container.innerHTML = `<div class="bg-white p-8 rounded-2xl border border-sky-100 text-center text-slate-400 text-sm">ไม่มีรายการจัดส่งค้างอยู่</div>`;
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl border border-sky-100 text-center text-slate-400 text-sm shadow-sm">ไม่มีรายการจัดส่งค้างอยู่ในระบบขณะนี้</div>`;
                 return;
             }
 
@@ -146,38 +246,50 @@
                 <div class="bg-white p-4 rounded-2xl shadow-sm border border-sky-100 flex items-start justify-between gap-4 transition hover:shadow-md hover:border-sky-200">
                     <div class="space-y-1">
                         <div class="flex items-center gap-2 flex-wrap">
-                            <span class="font-bold text-slate-800 text-base">${item.customerName}</span>
-                            ${item.companyName ? `<span class="text-xs bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-md font-medium border border-sky-100">${item.companyName}</span>` : ''}
+                            <span class="font-bold text-slate-800 text-base">${escapeHTML(item.customerName)}</span>
+                            ${item.companyName ? `<span class="text-xs bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-md font-medium border border-sky-100">${escapeHTML(item.companyName)}</span>` : ''}
                         </div>
-                        ${item.phone ? `<div class="text-xs text-sky-600 font-medium">📞 <a href="tel:${item.phone}" class="hover:underline">${item.phone}</a></div>` : ''}
+                        ${item.phone ? `<div class="text-xs text-sky-600 font-medium">📞 <a href="tel:${escapeHTML(item.phone)}" class="hover:underline">${escapeHTML(item.phone)}</a></div>` : ''}
                         <div class="text-xs text-slate-600 bg-sky-50/50 p-2.5 rounded-xl mt-2 border border-sky-100/60">
-                            <span class="font-semibold text-slate-700">รายการค้างส่ง:</span> ${item.items}
+                            <span class="font-semibold text-slate-700">รายการค้างส่ง:</span> ${escapeHTML(item.items)}
                         </div>
                     </div>
                     <!-- ปุ่มติ๊กถูกเคลียร์ข้อมูล -->
-                    <button onclick="completeDelivery('${item.id}', '${item.customerName}')" title="จัดส่งแล้ว / ลบรายการ" class="flex-shrink-0 w-10 h-10 rounded-xl bg-sky-50 hover:bg-sky-500 text-sky-600 hover:text-white border border-sky-200 flex items-center justify-center transition shadow-sm group">
+                    <button onclick="completeDelivery('${item.id}', '${escapeHTML(item.customerName)}')" title="จัดส่งแล้ว / ลบรายการ" class="flex-shrink-0 w-10 h-10 rounded-xl bg-sky-50 hover:bg-emerald-500 text-sky-600 hover:text-white border border-sky-200 hover:border-emerald-500 flex items-center justify-center transition shadow-sm group">
                         <svg class="w-5 h-5 transition transform group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
                     </button>
                 </div>
             `).join('');
         }
 
-        // ฟังก์ชันลบข้อมูลเมื่อกดติ๊กถูก
-        async function completeDelivery(id, name) {
-            if (confirm(`ยืนยันว่าจัดส่งรายการของ "${name}" เรียบร้อยแล้วใช่หรือไม่? (ข้อมูลจะถูกลบออก)`)) {
-                try {
-                    await db.collection('deliveries').doc(id).delete();
-                    showToast(`🗑️ เคลียร์รายการของ "${name}" สำเร็จ`);
-                } catch (err) {
-                    console.error(err);
-                    showToast('❌ ไม่สามารถลบข้อมูลได้');
-                }
-            }
+        // ฟังก์ชันป้องกัน XSS เบื้องต้น
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
         }
+
+        // ฟังก์ชันลบข้อมูลเมื่อกดติ๊กถูก (ใช้ Modal สวยงามแทน confirm)
+        window.completeDelivery = function(id, name) {
+            showConfirmModal(
+                'ยืนยันการเคลียร์รายการ',
+                `ยืนยันว่าจัดส่งรายการของ "${name}" เรียบร้อยแล้วใช่หรือไม่? ข้อมูลจะถูกลบออกจากระบบ`,
+                async () => {
+                    try {
+                        await db.collection('deliveries').doc(id).delete();
+                        showToast(`เคลียร์รายการของ "${name}" สำเร็จ`, 'success');
+                    } catch (err) {
+                        console.error(err);
+                        showToast('ไม่สามารถลบข้อมูลได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                    }
+                }
+            );
+        };
 
         // ระบบค้นหาเรียลไทม์
         document.getElementById('search-input').addEventListener('input', (e) => {
-            const keyword = e.target.value.toLowerCase();
+            const keyword = e.target.value.toLowerCase().trim();
             const filtered = allDeliveries.filter(item => 
                 (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
                 (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
