@@ -45,11 +45,26 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าที่ค้างส่ง <span class="text-red-500">*</span></label>
-                    <textarea id="items" rows="3" required placeholder="เช่น กล่องควบคุม 2 ชุด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition"></textarea>
-                    <p class="text-[11px] text-slate-400 mt-1">* หากลูกค้ามีชื่ออยู่แล้ว ระบบจะนำรายการนี้ไปรวมกับของเดิมให้อัตโนมัติ</p>
+                   <div>
+    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าที่ค้างส่ง <span class="text-red-500">*</span></label>
+    <div class="flex gap-2">
+        <input type="text" id="item-input" placeholder="เช่น กล่องควบคุม 2 ชุด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+        <!-- ปุ่ม + สีพาสเทล -->
+        <button type="button" id="add-item-btn" class="px-3.5 py-2 bg-sky-100 hover:bg-sky-200 text-sky-700 font-bold rounded-xl text-sm transition shadow-2xs flex items-center justify-center">+</button>
+    </div>
+</div>
                 </div>
+
+                <!-- กล่องแสดงรายการสินค้าที่รอกดบันทึก -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการที่จะบันทึกรอบนี้:</label>
+                    <div id="pending-items-container" class="space-y-1.5 max-h-40 overflow-y-auto mb-3">
+                        <div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่ม +)</div>
+                    </div>
+                </div>
+
                 <button type="submit" id="submit-btn" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sky-200 flex items-center justify-center gap-2">
-                    <span>บันทึกข้อมูล</span>
+                    <span>บันทึกข้อมูลทั้งหมด</span>
                 </button>
             </form>
         </section>
@@ -109,6 +124,8 @@
         const statusBadge = document.getElementById('connection-status');
         statusBadge.textContent = 'เชื่อมต่อ Server แล้ว';
         statusBadge.className = 'text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium';
+
+        let pendingItems = []; // เก็บรายการสินค้าที่รอเพิ่ม
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -178,6 +195,49 @@
             }, { once: true });
         }
 
+        // จัดการการกดปุ่ม + เพื่อเพิ่มสินค้าเข้าคิวรอ
+        const itemInput = document.getElementById('item-input');
+        const addItemBtn = document.getElementById('add-item-btn');
+        const pendingContainer = document.getElementById('pending-items-container');
+
+        function renderPendingItems() {
+            if (pendingItems.length === 0) {
+                pendingContainer.innerHTML = `<div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่ม +)</div>`;
+                return;
+            }
+
+            pendingContainer.innerHTML = pendingItems.map((text, index) => `
+                <div class="flex items-center justify-between bg-sky-50/70 px-3 py-2 rounded-xl border border-sky-100 text-xs text-slate-700">
+                    <span class="truncate">• ${escapeHTML(text)}</span>
+                    <button type="button" onclick="removePendingItem(${index})" class="text-slate-400 hover:text-red-500 font-bold px-1.5 transition">✕</button>
+                </div>
+            `).join('');
+        }
+
+        window.removePendingItem = function(index) {
+            pendingItems.splice(index, 1);
+            renderPendingItems();
+        }
+
+        addItemBtn.addEventListener('click', () => {
+            const val = itemInput.value.trim();
+            if (!val) {
+                showToast('กรุณากรอกชื่อสินค้าก่อนกดเพิ่ม', 'error');
+                return;
+            }
+            pendingItems.push(val);
+            itemInput.value = '';
+            itemInput.focus();
+            renderPendingItems();
+        });
+
+        itemInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addItemBtn.click();
+            }
+        });
+
         const deliveryForm = document.getElementById('delivery-form');
         const submitBtn = document.getElementById('submit-btn');
 
@@ -187,10 +247,14 @@
             const customerName = document.getElementById('customer-name').value.trim();
             const companyName = document.getElementById('company-name').value.trim();
             const phone = document.getElementById('phone').value.trim();
-            const newItemText = document.getElementById('items').value.trim();
 
-            if (!customerName || !newItemText) {
-                showToast('กรุณากรอกข้อมูลชื่อลูกค้าและรายการสินค้าให้ครบถ้วน', 'error');
+            if (!customerName) {
+                showToast('กรุณากรอกชื่อลูกค้า', 'error');
+                return;
+            }
+
+            if (pendingItems.length === 0) {
+                showToast('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการโดยกดปุ่ม +', 'error');
                 return;
             }
 
@@ -202,16 +266,16 @@
                     .where('customerName', '==', customerName)
                     .get();
 
-                const subItemObj = {
+                const newSubItemsObjs = pendingItems.map(text => ({
                     id: 'sub_' + Math.random().toString(36).substring(2, 9),
-                    text: newItemText,
+                    text: text,
                     createdAt: new Date().toISOString()
-                };
+                }));
 
                 if (!snapshot.empty) {
                     const docRef = snapshot.docs[0].ref;
                     const docData = snapshot.docs[0].data();
-                    const existingItems = docData.subItems || [];
+                    let existingItems = docData.subItems || [];
                     
                     if (existingItems.length === 0 && docData.items) {
                         existingItems.push({
@@ -221,7 +285,7 @@
                         });
                     }
 
-                    existingItems.push(subItemObj);
+                    existingItems.push(...newSubItemsObjs);
 
                     await docRef.update({
                         subItems: existingItems,
@@ -229,13 +293,13 @@
                         phone: phone || docData.phone || ''
                     });
 
-                    showToast(`เพิ่มรายการสินค้าให้ "${customerName}" เรียบร้อย`, 'success');
+                    showToast(`เพิ่ม ${pendingItems.length} รายการสินค้าให้ "${customerName}" เรียบร้อย`, 'success');
                 } else {
                     const data = {
                         customerName,
                         companyName,
                         phone,
-                        subItems: [subItemObj],
+                        subItems: newSubItemsObjs,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     await db.collection('deliveries').add(data);
@@ -243,12 +307,14 @@
                 }
 
                 deliveryForm.reset();
+                pendingItems = [];
+                renderPendingItems();
             } catch (err) {
                 console.error(err);
                 showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง', 'error');
             } finally {
                 submitBtn.disabled = false;
-                submitBtn.innerHTML = '<span>บันทึกข้อมูล</span>';
+                submitBtn.innerHTML = '<span>บันทึกข้อมูลทั้งหมด</span>';
             }
         });
 
@@ -278,20 +344,20 @@
             }
 
             container.innerHTML = data.map(item => `
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-sky-100 space-y-3 transition hover:shadow-md hover:border-sky-200">
-                    <div class="flex items-start justify-between gap-4">
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="font-bold text-slate-800 text-base">${escapeHTML(item.customerName)}</span>
-                                ${item.companyName ? `<span class="text-xs bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-md font-medium border border-sky-100">${escapeHTML(item.companyName)}</span>` : ''}
-                            </div>
-                            ${item.phone ? `<div class="text-xs text-sky-600 font-medium">📞 <a href="tel:${escapeHTML(item.phone)}" class="hover:underline">${escapeHTML(item.phone)}</a></div>` : ''}
+                <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden transition hover:shadow-md hover:border-indigo-200">
+                    <!-- เอา sticky ออก เพื่อไม่ให้บังรายการสินค้า -->
+                    <div class="bg-gradient-to-r from-indigo-50 via-white to-purple-50 px-3.5 py-2.5 border-b border-indigo-100 flex items-center justify-between gap-3">
+                        <div class="flex items-center gap-2.5 flex-wrap">
+                            <span class="font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2 py-0.5 rounded-md border border-indigo-200/60">${escapeHTML(item.customerName)}</span>
+                            ${item.companyName ? `<span class="text-[11px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100">${escapeHTML(item.companyName)}</span>` : ''}
+                            ${item.phone ? `<a href="tel:${escapeHTML(item.phone)}" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100 shadow-2xs hover:underline">📞 ${escapeHTML(item.phone)}</a>` : ''}
                         </div>
-                        <button onclick="deleteEntireCustomer('${item.id}', '${escapeHTML(item.customerName)}')" title="ลบรายการทั้งหมดของลูกค้านี้" class="text-xs text-slate-400 hover:text-red-500 transition px-2 py-1 rounded-lg hover:bg-red-50">ลบทั้งหมด</button>
+                        <button onclick="deleteEntireCustomer('${item.id}', '${escapeHTML(item.customerName)}')" title="ลบรายการทั้งหมดของลูกค้านี้" class="text-[11px] font-medium text-slate-400 hover:text-rose-600 transition px-2 py-1 rounded-lg hover:bg-rose-50 flex-shrink-0">ลบทั้งหมด</button>
                     </div>
 
-                    <div class="space-y-2 pt-1 border-t border-slate-100">
-                        <div class="text-xs font-semibold text-slate-500 mb-1">รายการค้างส่ง:</div>
+                    <!-- รายการสินค้าด้านล่าง -->
+                    <div class="p-4 space-y-2 max-h-72 overflow-y-auto">
+                        <div class="text-xs font-semibold text-slate-500 mb-1">รายการค้างส่ง (${item.subItems.length}):</div>
                         ${item.subItems.map(sub => `
                             <div class="flex items-center justify-between gap-3 bg-sky-50/50 p-2.5 rounded-xl border border-sky-100/60 text-xs text-slate-700">
                                 <span class="flex-grow">• ${escapeHTML(sub.text)}</span>
