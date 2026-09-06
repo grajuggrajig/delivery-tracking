@@ -3,23 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบเช็คการจัดส่งสินค้า</title>
+    <title>ระบบเช็คการจัดส่งสินค้าและฐานข้อมูลลูกค้า</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
     </style>
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body class="bg-[#f0f4f8] text-slate-800 min-h-screen pb-12 flex flex-col justify-between">
 
-    <!-- Header -->
-    <header class="bg-white/80 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm">
+    <header class="bg-white/85 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm">
         <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
             <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking</span>
+                📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking & CRM</span>
             </h1>
             <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">กำลังเชื่อมต่อ Firebase...</span>
         </div>
@@ -27,13 +25,13 @@
 
     <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 w-full flex-grow">
         
-        <!-- ฟอร์มเพิ่มข้อมูล (ซ้าย) -->
         <section class="md:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-sky-100 h-fit">
-            <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">➕ เพิ่มรายการค้างส่ง</h2>
+            <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">➕ เพิ่มรายการสินค้า</h2>
             <form id="delivery-form" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า <span class="text-red-500">*</span></label>
-                    <input type="text" id="customer-name" required placeholder="เช่น คุณสมชาย" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                    <input type="text" id="customer-name" list="customer-options" required placeholder="เช่น คุณสมชาย (พิมพ์เพื่อดึงข้อมูลเก่า)" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                    <datalist id="customer-options"></datalist>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบริษัท</label>
@@ -44,22 +42,29 @@
                     <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าที่ค้างส่ง <span class="text-red-500">*</span></label>
-                   <div>
-    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าที่ค้างส่ง <span class="text-red-500">*</span></label>
-    <div class="flex gap-2">
-        <input type="text" id="item-input" placeholder="เช่น กล่องควบคุม 2 ชุด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-        <!-- ปุ่ม + สีพาสเทล -->
-        <button type="button" id="add-item-btn" class="px-3.5 py-2 bg-sky-100 hover:bg-sky-200 text-sky-700 font-bold rounded-xl text-sm transition shadow-2xs flex items-center justify-center">+</button>
-    </div>
-</div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ที่อยู่จัดส่ง</label>
+                    <textarea id="address" rows="2" placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าและราคา <span class="text-red-500">*</span></label>
+                    <div class="space-y-2">
+                        <input type="text" id="item-input" list="item-suggestions" placeholder="เช่น ดินสอ EE 20 กล่องๆละ 280 บาท" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                        <datalist id="item-suggestions"></datalist>
+                        
+                        <div class="flex items-center gap-2">
+                            <div class="flex-grow">
+                                <label class="block text-[11px] font-medium text-slate-500 mb-0.5">📅 วันนัดส่งสินค้า</label>
+                                <input type="date" id="item-due-date" class="w-full px-3 py-1.5 text-xs border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+                            </div>
+                            <button type="button" id="add-item-btn" class="mt-4 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center justify-center">＋ เพิ่ม</button>
+                        </div>
+                    </div>
                 </div>
 
-                <!-- กล่องแสดงรายการสินค้าที่รอกดบันทึก -->
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">รายการที่จะบันทึกรอบนี้:</label>
                     <div id="pending-items-container" class="space-y-1.5 max-h-40 overflow-y-auto mb-3">
-                        <div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่ม +)</div>
+                        <div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่มเพิ่ม)</div>
                     </div>
                 </div>
 
@@ -69,25 +74,27 @@
             </form>
         </section>
 
-        <!-- รายการจัดส่ง (ขวา) -->
         <section class="md:col-span-2 space-y-4">
-            <!-- ค้นหา -->
-            <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center gap-2">
-                <span class="text-sky-400 pl-2">🔍</span>
-                <input type="text" id="search-input" placeholder="ค้นหาชื่อลูกค้า, บริษัท หรือรายการสินค้า..." class="w-full text-sm outline-none bg-transparent placeholder-slate-400">
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 flex-grow pl-2">
+                    <span class="text-sky-400">🔍</span>
+                    <input type="text" id="search-input" placeholder="ค้นหาชื่อลูกค้า, บริษัท, เบอร์โทร, ที่อยู่ หรือสินค้า..." class="w-full text-sm outline-none bg-transparent placeholder-slate-400">
+                </div>
+                <div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
+                    <button id="filter-all" onclick="setFilter('all')" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow-2xs transition">ทั้งหมด</button>
+                    <button id="filter-pending" onclick="setFilter('pending')" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition">ค้างส่ง</button>
+                </div>
             </div>
 
-            <!-- รายการ Cards -->
             <div id="delivery-list" class="space-y-3">
                 <div class="text-center py-10 text-slate-400 text-sm animate-pulse">กำลังโหลดข้อมูล...</div>
             </div>
         </section>
     </main>
 
-    <!-- Modern Toast Notification Container -->
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-    <!-- Modern Modal Confirmation Dialog -->
+    <!-- Modal ยืนยันการทำรายการ -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="modal-content">
             <div class="text-3xl mb-3">⚠️</div>
@@ -100,7 +107,28 @@
         </div>
     </div>
 
-    <!-- Footer -->
+    <!-- Modal แก้ไขข้อมูลสินค้าและราคา -->
+    <div id="edit-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-modal-content">
+            <div class="text-2xl mb-3">✏️</div>
+            <h3 class="text-base font-bold text-slate-800 mb-2">แก้ไขรายการสินค้าและราคา</h3>
+            <div class="space-y-3 mb-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อสินค้าและราคา</label>
+                    <input type="text" id="edit-item-text" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">วันนัดส่งสินค้า</label>
+                    <input type="date" id="edit-item-duedate" class="w-full px-3 py-2 text-xs border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button id="edit-modal-cancel" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">ยกเลิก</button>
+                <button id="edit-modal-confirm" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition">บันทึกการแก้ไข</button>
+            </div>
+        </div>
+    </div>
+
     <footer class="text-center py-6 text-xs text-slate-400 border-t border-sky-100 mt-12">
         Delivery Tracking System © 2026
     </footer>
@@ -125,7 +153,10 @@
         statusBadge.textContent = 'เชื่อมต่อ Server แล้ว';
         statusBadge.className = 'text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium';
 
-        let pendingItems = []; // เก็บรายการสินค้าที่รอเพิ่ม
+        let pendingItems = []; 
+        let allDeliveries = [];
+        let allUniqueItems = new Set();
+        let currentFilter = 'all';
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -195,21 +226,87 @@
             }, { once: true });
         }
 
-        // จัดการการกดปุ่ม + เพื่อเพิ่มสินค้าเข้าคิวรอ
+        window.openEditSubItemModal = function(docId, subId, currentText, currentDueDate) {
+            const modal = document.getElementById('edit-modal');
+            const modalContent = document.getElementById('edit-modal-content');
+            const inputField = document.getElementById('edit-item-text');
+            const dueDateField = document.getElementById('edit-item-duedate');
+            const btnConfirm = document.getElementById('edit-modal-confirm');
+            const btnCancel = document.getElementById('edit-modal-cancel');
+
+            inputField.value = currentText;
+            dueDateField.value = currentDueDate;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+
+            const closeModal = () => {
+                modal.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
+                btnCancel.replaceWith(btnCancel.cloneNode(true));
+            };
+
+            btnConfirm.addEventListener('click', async () => {
+                const newText = inputField.value.trim();
+                const newDueDate = dueDateField.value.trim();
+
+                if (!newText) {
+                    showToast('กรุณากรอกชื่อสินค้าและราคา', 'error');
+                    return;
+                }
+
+                try {
+                    const docRef = db.collection('deliveries').doc(docId);
+                    const docSnap = await docRef.get();
+                    if (!docSnap.exists) return;
+
+                    const data = docSnap.data();
+                    let currentSubItems = data.subItems || [];
+                    
+                    const updatedSubItems = currentSubItems.map(s => {
+                        if (s.id === subId) {
+                            return { ...s, text: newText, dueDate: newDueDate };
+                        }
+                        return s;
+                    });
+
+                    await docRef.update({ subItems: updatedSubItems });
+                    showToast('แก้ไขข้อมูลสินค้าสำเร็จ', 'success');
+                    closeModal();
+                } catch (err) {
+                    console.error(err);
+                    showToast('ไม่สามารถแก้ไขข้อมูลได้', 'error');
+                }
+            }, { once: true });
+
+            btnCancel.addEventListener('click', () => {
+                closeModal();
+            }, { once: true });
+        };
+
         const itemInput = document.getElementById('item-input');
+        const itemDueDateInput = document.getElementById('item-due-date');
         const addItemBtn = document.getElementById('add-item-btn');
         const pendingContainer = document.getElementById('pending-items-container');
 
         function renderPendingItems() {
             if (pendingItems.length === 0) {
-                pendingContainer.innerHTML = `<div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่ม +)</div>`;
+                pendingContainer.innerHTML = `<div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่มเพิ่ม)</div>`;
                 return;
             }
 
-            pendingContainer.innerHTML = pendingItems.map((text, index) => `
-                <div class="flex items-center justify-between bg-sky-50/70 px-3 py-2 rounded-xl border border-sky-100 text-xs text-slate-700">
-                    <span class="truncate">• ${escapeHTML(text)}</span>
-                    <button type="button" onclick="removePendingItem(${index})" class="text-slate-400 hover:text-red-500 font-bold px-1.5 transition">✕</button>
+            pendingContainer.innerHTML = pendingItems.map((item, index) => `
+                <div class="flex items-center justify-between bg-sky-50/70 px-3 py-2 rounded-xl border border-sky-100 text-xs text-slate-700 gap-2">
+                    <span class="truncate flex-grow font-medium">• ${escapeHTML(item.text)}</span>
+                    <span class="text-[10px] text-sky-700 bg-white px-2 py-0.5 rounded-md border border-sky-200 flex-shrink-0 font-medium shadow-2xs">📅 ${escapeHTML(item.dueDate ? formatDateDisplay(item.dueDate) : 'ไม่ระบุวัน')}</span>
+                    <button type="button" onclick="removePendingItem(${index})" class="text-slate-400 hover:text-red-500 font-bold px-1.5 transition flex-shrink-0">✕</button>
                 </div>
             `).join('');
         }
@@ -222,11 +319,17 @@
         addItemBtn.addEventListener('click', () => {
             const val = itemInput.value.trim();
             if (!val) {
-                showToast('กรุณากรอกชื่อสินค้าก่อนกดเพิ่ม', 'error');
+                showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
                 return;
             }
-            pendingItems.push(val);
+            
+            pendingItems.push({
+                text: val,
+                dueDate: itemDueDateInput.value ? itemDueDateInput.value.trim() : ''
+            });
+            
             itemInput.value = '';
+            itemDueDateInput.value = '';
             itemInput.focus();
             renderPendingItems();
         });
@@ -238,15 +341,31 @@
             }
         });
 
+        const customerNameInput = document.getElementById('customer-name');
+        const companyNameInput = document.getElementById('company-name');
+        const phoneInput = document.getElementById('phone');
+        const addressInput = document.getElementById('address');
+
+        customerNameInput.addEventListener('input', (e) => {
+            const enteredName = e.target.value.trim();
+            const found = allDeliveries.find(item => item.customerName === enteredName);
+            if (found) {
+                companyNameInput.value = found.companyName || '';
+                phoneInput.value = found.phone || '';
+                addressInput.value = found.address || '';
+            }
+        });
+
         const deliveryForm = document.getElementById('delivery-form');
         const submitBtn = document.getElementById('submit-btn');
 
         deliveryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             
-            const customerName = document.getElementById('customer-name').value.trim();
-            const companyName = document.getElementById('company-name').value.trim();
-            const phone = document.getElementById('phone').value.trim();
+            const customerName = customerNameInput.value.trim();
+            const companyName = companyNameInput.value.trim();
+            const phone = phoneInput.value.trim();
+            const address = addressInput.value.trim();
 
             if (!customerName) {
                 showToast('กรุณากรอกชื่อลูกค้า', 'error');
@@ -254,7 +373,7 @@
             }
 
             if (pendingItems.length === 0) {
-                showToast('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการโดยกดปุ่ม +', 'error');
+                showToast('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการโดยกดปุ่มเพิ่ม', 'error');
                 return;
             }
 
@@ -266,9 +385,11 @@
                     .where('customerName', '==', customerName)
                     .get();
 
-                const newSubItemsObjs = pendingItems.map(text => ({
+                const newSubItemsObjs = pendingItems.map(item => ({
                     id: 'sub_' + Math.random().toString(36).substring(2, 9),
-                    text: text,
+                    text: item.text,
+                    dueDate: item.dueDate || '',
+                    status: 'pending', 
                     createdAt: new Date().toISOString()
                 }));
 
@@ -277,28 +398,22 @@
                     const docData = snapshot.docs[0].data();
                     let existingItems = docData.subItems || [];
                     
-                    if (existingItems.length === 0 && docData.items) {
-                        existingItems.push({
-                            id: 'sub_old',
-                            text: docData.items,
-                            createdAt: docData.createdAt ? (docData.createdAt.toDate ? docData.createdAt.toDate().toISOString() : new Date().toISOString()) : new Date().toISOString()
-                        });
-                    }
-
                     existingItems.push(...newSubItemsObjs);
 
                     await docRef.update({
                         subItems: existingItems,
                         companyName: companyName || docData.companyName || '',
-                        phone: phone || docData.phone || ''
+                        phone: phone || docData.phone || '',
+                        address: address || docData.address || ''
                     });
 
-                    showToast(`เพิ่ม ${pendingItems.length} รายการสินค้าให้ "${customerName}" เรียบร้อย`, 'success');
+                    showToast(`เพิ่ม ${pendingItems.length} รายการให้ "${customerName}" เรียบร้อย`, 'success');
                 } else {
                     const data = {
                         customerName,
                         companyName,
                         phone,
+                        address,
                         subItems: newSubItemsObjs,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
@@ -318,57 +433,195 @@
             }
         });
 
-        let allDeliveries = [];
-        db.collection('deliveries').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
+        db.collection('deliveries').onSnapshot(snapshot => {
             allDeliveries = [];
+            allUniqueItems.clear();
+            const customerOptions = document.getElementById('customer-options');
+            const itemSuggestions = document.getElementById('item-suggestions');
+            let datalistHTML = '';
+
             snapshot.forEach(doc => {
                 const data = doc.data();
                 let itemsList = data.subItems || [];
-                if (itemsList.length === 0 && data.items) {
-                    itemsList = [{ id: 'legacy', text: data.items }];
-                }
                 allDeliveries.push({ id: doc.id, ...data, subItems: itemsList });
+                
+                if (data.customerName) {
+                    datalistHTML += `<option value="${escapeHTML(data.customerName)}">`;
+                }
+
+                itemsList.forEach(sub => {
+                    if (sub.text) {
+                        allUniqueItems.add(sub.text);
+                    }
+                });
             });
-            renderList(allDeliveries);
+
+            customerOptions.innerHTML = datalistHTML;
+            itemSuggestions.innerHTML = Array.from(allUniqueItems).map(item => `<option value="${escapeHTML(item)}">`).join('');
+            
+            applyFilterAndSearch();
         }, error => {
             console.error(error);
             document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm border border-red-100">เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาตรวจสอบสิทธิ์ Firebase Security Rules</div>`;
             showToast('ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error');
         });
 
+        function setFilter(type) {
+            currentFilter = type;
+            const btnAll = document.getElementById('filter-all');
+            const btnPending = document.getElementById('filter-pending');
+
+            if (type === 'all') {
+                btnAll.className = 'px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow-2xs transition';
+                btnPending.className = 'px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition';
+            } else {
+                btnPending.className = 'px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow-2xs transition';
+                btnAll.className = 'px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition';
+            }
+            applyFilterAndSearch();
+        }
+
+        function applyFilterAndSearch() {
+            const keyword = document.getElementById('search-input').value.toLowerCase().trim();
+            
+            let filtered = allDeliveries.filter(item => {
+                const matchKeyword = 
+                    (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
+                    (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
+                    (item.phone && item.phone.toLowerCase().includes(keyword)) ||
+                    (item.address && item.address.toLowerCase().includes(keyword)) ||
+                    (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword)));
+
+                if (!matchKeyword) return false;
+
+                if (currentFilter === 'pending') {
+                    return item.subItems.some(sub => sub.status === 'pending');
+                }
+                return true;
+            });
+
+            renderList(filtered);
+        }
+
+        function formatDateDisplay(dateStr) {
+            if (!dateStr) return '';
+            if (dateStr.includes('-') && dateStr.length === 10) {
+                const parts = dateStr.split('-');
+                if (parts.length === 3) {
+                    return `${parts[2]}/${parts[1]}/${parseInt(parts[0])}`;
+                }
+            }
+            return dateStr;
+        }
+
+        function getDueDateBadge(dueDateStr) {
+            if (!dueDateStr) return '';
+            
+            let badgeClass = 'bg-sky-100 text-sky-700 border-sky-200';
+            let icon = '⏰';
+            let statusText = `กำหนดส่ง: ${formatDateDisplay(dueDateStr)}`;
+
+            if (dueDateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                
+                const dueParts = dueDateStr.split('-');
+                const dueDate = new Date(dueParts[0], dueParts[1] - 1, dueParts[2]);
+                dueDate.setHours(0, 0, 0, 0);
+
+                const diffTime = dueDate - today;
+                const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+                if (diffDays < 0) {
+                    const overDays = Math.abs(diffDays);
+                    badgeClass = 'bg-rose-100 text-rose-700 border-rose-300 animate-pulse font-bold';
+                    icon = '🚨';
+                    statusText = `เกินกำหนด ${overDays} วัน (${formatDateDisplay(dueDateStr)})`;
+                } else if (diffDays === 0) {
+                    badgeClass = 'bg-amber-100 text-amber-800 border-amber-300 font-bold';
+                    icon = '🔥';
+                    statusText = `นัดส่งวันนี้! (${formatDateDisplay(dueDateStr)})`;
+                } else if (diffDays <= 3) {
+                    badgeClass = 'bg-orange-100 text-orange-800 border-orange-200 font-semibold';
+                    icon = '⚠️';
+                    statusText = `อีก ${diffDays} วัน (${formatDateDisplay(dueDateStr)})`;
+                }
+            }
+
+            return `
+                <span class="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full border shadow-2xs ${badgeClass}">
+                    <span>${icon}</span> <span>${statusText}</span>
+                </span>
+            `;
+        }
+
         function renderList(data) {
             const container = document.getElementById('delivery-list');
             if (data.length === 0) {
-                container.innerHTML = `<div class="bg-white p-8 rounded-2xl border border-sky-100 text-center text-slate-400 text-sm shadow-sm">ไม่มีรายการจัดส่งค้างอยู่ในระบบขณะนี้</div>`;
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl border border-sky-100 text-center text-slate-400 text-sm shadow-sm">ไม่พบข้อมูลลูกค้าในระบบ</div>`;
                 return;
             }
 
-            container.innerHTML = data.map(item => `
-                <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden transition hover:shadow-md hover:border-indigo-200">
-                    <!-- เอา sticky ออก เพื่อไม่ให้บังรายการสินค้า -->
-                    <div class="bg-gradient-to-r from-indigo-50 via-white to-purple-50 px-3.5 py-2.5 border-b border-indigo-100 flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-2.5 flex-wrap">
-                            <span class="font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2 py-0.5 rounded-md border border-indigo-200/60">${escapeHTML(item.customerName)}</span>
-                            ${item.companyName ? `<span class="text-[11px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100">${escapeHTML(item.companyName)}</span>` : ''}
-                            ${item.phone ? `<a href="tel:${escapeHTML(item.phone)}" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100 shadow-2xs hover:underline">📞 ${escapeHTML(item.phone)}</a>` : ''}
-                        </div>
-                        <button onclick="deleteEntireCustomer('${item.id}', '${escapeHTML(item.customerName)}')" title="ลบรายการทั้งหมดของลูกค้านี้" class="text-[11px] font-medium text-slate-400 hover:text-rose-600 transition px-2 py-1 rounded-lg hover:bg-rose-50 flex-shrink-0">ลบทั้งหมด</button>
-                    </div>
-
-                    <!-- รายการสินค้าด้านล่าง -->
-                    <div class="p-4 space-y-2 max-h-72 overflow-y-auto">
-                        <div class="text-xs font-semibold text-slate-500 mb-1">รายการค้างส่ง (${item.subItems.length}):</div>
-                        ${item.subItems.map(sub => `
-                            <div class="flex items-center justify-between gap-3 bg-sky-50/50 p-2.5 rounded-xl border border-sky-100/60 text-xs text-slate-700">
-                                <span class="flex-grow">• ${escapeHTML(sub.text)}</span>
-                                <button onclick="completeSubItem('${item.id}', '${sub.id}', '${escapeHTML(item.customerName)}', '${escapeHTML(sub.text)}')" title="จัดส่งรายการนี้แล้ว" class="flex-shrink-0 w-8 h-8 rounded-lg bg-white hover:bg-emerald-500 text-sky-600 hover:text-white border border-sky-200 hover:border-emerald-500 flex items-center justify-center transition shadow-sm group">
-                                    <svg class="w-4 h-4 transition transform group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path></svg>
-                                </button>
+            container.innerHTML = data.map(item => {
+                const totalCount = item.subItems.length;
+                const pendingCount = item.subItems.filter(s => s.status === 'pending').length;
+                const completedCount = item.subItems.filter(s => s.status === 'completed').length;
+                
+                return `
+                    <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden transition hover:shadow-md hover:border-indigo-200">
+                        <div class="bg-gradient-to-r from-indigo-50 via-white to-purple-50 px-3.5 py-2.5 border-b border-indigo-100 flex items-center justify-between gap-3 flex-wrap">
+                            <div class="flex items-center gap-2.5 flex-wrap">
+                                <span class="font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2 py-0.5 rounded-md border border-indigo-200/60">${escapeHTML(item.customerName)}</span>
+                                ${item.companyName ? `<span class="text-[11px] bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100">${escapeHTML(item.companyName)}</span>` : ''}
+                                ${item.phone ? `<a href="tel:${escapeHTML(item.phone)}" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100 shadow-2xs hover:underline">📞 ${escapeHTML(item.phone)}</a>` : ''}
                             </div>
-                        `).join('')}
+                            <div class="flex items-center gap-2">
+                                ${completedCount > 0 ? `<button onclick="clearCompletedItems('${item.id}', '${escapeHTML(item.customerName)}')" title="เคลียร์รายการที่ส่งแล้วออก เพื่อไม่ให้หน้าจอรก" class="text-[11px] font-medium text-amber-600 hover:text-amber-800 transition px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200/60 flex items-center gap-1">🧹 ล้างรายการที่ส่งแล้ว</button>` : ''}
+                                <button onclick="deleteEntireCustomer('${item.id}', '${escapeHTML(item.customerName)}')" title="ลบข้อมูลลูกค้านี้ออกจากระบบ" class="text-[11px] font-medium text-slate-400 hover:text-rose-600 transition px-2 py-1 rounded-lg hover:bg-rose-50">ลบข้อมูล</button>
+                            </div>
+                        </div>
+
+                        ${item.address ? `
+                            <div class="px-3.5 pt-2 text-xs text-slate-600 flex items-start gap-1.5">
+                                <span class="flex-shrink-0">📍</span>
+                                <span class="leading-relaxed">${escapeHTML(item.address)}</span>
+                            </div>
+                        ` : ''}
+
+                        <div class="p-4 space-y-2 max-h-72 overflow-y-auto">
+                            <div class="flex items-center justify-between bg-slate-100/70 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 mb-2">
+                                <span>📊 สถานภาพรวม: ยอดสั่งซื้อทั้งหมด ${totalCount} รายการ</span>
+                                <span class="${pendingCount > 0 ? 'text-amber-600' : 'text-emerald-600'}">
+                                    ${pendingCount > 0 ? `ค้างส่ง ${pendingCount} รายการ` : 'จัดส่งครบทั้งหมดแล้ว ✅'}
+                                </span>
+                            </div>
+
+                            <div class="text-xs font-semibold text-slate-500 mb-1">รายการสินค้า:</div>
+                            ${item.subItems.map(sub => {
+                                const isDone = sub.status === 'completed';
+                                return `
+                                    <div class="flex items-center justify-between gap-3 ${isDone ? 'bg-slate-50/80 border-slate-100 opacity-70' : 'bg-sky-50/50 border-sky-100/60'} p-2.5 rounded-xl border text-xs text-slate-700">
+                                        <div class="flex flex-col flex-grow truncate gap-1.5">
+                                            <span class="font-medium ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">• ${escapeHTML(sub.text)}</span>
+                                            ${sub.dueDate ? `
+                                                <div>
+                                                    ${getDueDateBadge(sub.dueDate)}
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                                            <button onclick="openEditSubItemModal('${item.id}', '${sub.id}', '${escapeHTML(sub.text).replace(/'/g, "\\'")}', '${sub.dueDate || ''}')" title="แก้ไขรายการหรือราคา" class="text-slate-400 hover:text-sky-600 transition px-1.5 py-1 rounded-lg hover:bg-sky-50 text-[11px]">✏️</button>
+                                            <button onclick="toggleSubItemStatus('${item.id}', '${sub.id}', '${escapeHTML(item.customerName)}', '${escapeHTML(sub.text)}', '${sub.status || 'pending'}')" title="${isDone ? 'เปลี่ยนเป็นค้างส่ง' : 'ติ๊กกว่าส่งแล้ว'}" class="px-2.5 py-1 rounded-lg ${isDone ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-white text-sky-600 hover:bg-emerald-500 hover:text-white border border-sky-200'} font-medium transition text-[11px]">
+                                                ${isDone ? '✓ ส่งแล้ว' : 'รอส่ง'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         function escapeHTML(str) {
@@ -378,10 +631,35 @@
             );
         }
 
-        window.completeSubItem = function(docId, subId, customerName, itemText) {
+        window.toggleSubItemStatus = async function(docId, subId, customerName, itemText, currentStatus) {
+            const nextStatus = currentStatus === 'completed' ? 'pending' : 'completed';
+            try {
+                const docRef = db.collection('deliveries').doc(docId);
+                const docSnap = await docRef.get();
+                if (!docSnap.exists) return;
+
+                const data = docSnap.data();
+                let currentSubItems = data.subItems || [];
+                
+                const updatedSubItems = currentSubItems.map(s => {
+                    if (s.id === subId) {
+                        return { ...s, status: nextStatus };
+                    }
+                    return s;
+                });
+
+                await docRef.update({ subItems: updatedSubItems });
+                showToast(`อัปเดตสถานะ "${itemText}" สำเร็จ`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('ไม่สามารถอัปเดตข้อมูลได้ กรุณาลองใหม่อีกครั้ง', 'error');
+            }
+        };
+
+        window.clearCompletedItems = function(docId, customerName) {
             showConfirmModal(
-                'ยืนยันการเคลียร์รายการสินค้า',
-                `ยืนยันว่าจัดส่งรายการ "${itemText}" ของ "${customerName}" เรียบร้อยแล้วใช่หรือไม่?`,
+                'ล้างรายการที่ส่งแล้ว',
+                `ต้องการลบรายการสินค้าที่ "ส่งแล้ว" ของ "${customerName}" ออกจากหน้าจอ (เพื่อไม่ให้รก) ใช่หรือไม่?`,
                 async () => {
                     try {
                         const docRef = db.collection('deliveries').doc(docId);
@@ -391,18 +669,13 @@
                         const data = docSnap.data();
                         let currentSubItems = data.subItems || [];
                         
-                        const updatedSubItems = currentSubItems.filter(s => s.id !== subId);
+                        const remainingItems = currentSubItems.filter(s => s.status !== 'completed');
 
-                        if (updatedSubItems.length === 0) {
-                            await docRef.delete();
-                            showToast(`เคลียร์รายการทั้งหมดของ "${customerName}" สำเร็จ`, 'success');
-                        } else {
-                            await docRef.update({ subItems: updatedSubItems });
-                            showToast(`เคลียร์รายการ "${itemText}" สำเร็จ`, 'success');
-                        }
+                        await docRef.update({ subItems: remainingItems });
+                        showToast(`เคลียร์รายการที่ส่งแล้วของ "${customerName}" เรียบร้อย`, 'success');
                     } catch (err) {
                         console.error(err);
-                        showToast('ไม่สามารถอัปเดตข้อมูลได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                        showToast('ไม่สามารถเคลียร์ข้อมูลได้', 'error');
                     }
                 }
             );
@@ -411,7 +684,7 @@
         window.deleteEntireCustomer = function(docId, name) {
             showConfirmModal(
                 'ยืนยันการลบข้อมูลลูกค้า',
-                `คุณต้องการลบข้อมูลและรายการทั้งหมดของ "${name}" ออกจากระบบใช่หรือไม่?`,
+                `คุณต้องการลบข้อมูลประวัติและรายการทั้งหมดของ "${name}" ออกจากระบบใช่หรือไม่?`,
                 async () => {
                     try {
                         await db.collection('deliveries').doc(docId).delete();
@@ -424,14 +697,8 @@
             );
         };
 
-        document.getElementById('search-input').addEventListener('input', (e) => {
-            const keyword = e.target.value.toLowerCase().trim();
-            const filtered = allDeliveries.filter(item => 
-                (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
-                (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
-                (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword)))
-            );
-            renderList(filtered);
+        document.getElementById('search-input').addEventListener('input', () => {
+            applyFilterAndSearch();
         });
     </script>
 </body>
