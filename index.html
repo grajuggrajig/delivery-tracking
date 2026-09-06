@@ -110,7 +110,6 @@
         statusBadge.textContent = 'เชื่อมต่อ Firebase แล้ว';
         statusBadge.className = 'text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium';
 
-        // ระบบ Toast แจ้งเตือนแบบโมเดิร์น
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -142,7 +141,6 @@
             }, 3000);
         }
 
-        // ระบบ Modal ยืนยันการทำงานแบบสวยงาม
         function showConfirmModal(title, desc, onConfirm) {
             const modal = document.getElementById('confirm-modal');
             const modalContent = document.getElementById('modal-content');
@@ -180,7 +178,6 @@
             }, { once: true });
         }
 
-        // บันทึกข้อมูล (ถ้าชื่อซ้ำ จะเพิ่ม Sub-item เข้าไปในลูกค้าคนเดิมทันที)
         const deliveryForm = document.getElementById('delivery-form');
         const submitBtn = document.getElementById('submit-btn');
 
@@ -201,24 +198,21 @@
             submitBtn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังบันทึก...`;
 
             try {
-                // ค้นหาว่ามีลูกค้ารายนี้อยู่แล้วหรือไม่ (เทียบจากชื่อ)
                 const snapshot = await db.collection('deliveries')
                     .where('customerName', '==', customerName)
                     .get();
 
                 const subItemObj = {
-                    id: 'sub_' + Math.random().toString(36.substring(2, 9)),
+                    id: 'sub_' + Math.random().toString(36).substring(2, 9),
                     text: newItemText,
                     createdAt: new Date().toISOString()
                 };
 
                 if (!snapshot.empty) {
-                    // ถ้ามีลูกค้าคนนี้อยู่แล้ว อัปเดตเพิ่มรายการย่อยเข้าไป
                     const docRef = snapshot.docs[0].ref;
                     const docData = snapshot.docs[0].data();
                     const existingItems = docData.subItems || [];
                     
-                    // เผื่อข้อมูลเก่าที่เป็นข้อความเดี่ยว ให้แปลงเป็นอาเรย์ก่อน
                     if (existingItems.length === 0 && docData.items) {
                         existingItems.push({
                             id: 'sub_old',
@@ -237,7 +231,6 @@
 
                     showToast(`เพิ่มรายการสินค้าให้ "${customerName}" เรียบร้อย`, 'success');
                 } else {
-                    // ถ้ายังไม่มี สร้างเอกสารใหม่
                     const data = {
                         customerName,
                         companyName,
@@ -259,13 +252,11 @@
             }
         });
 
-        // ดึงข้อมูลและอัปเดตแบบเรียลไทม์
         let allDeliveries = [];
         db.collection('deliveries').orderBy('createdAt', 'desc').onSnapshot(snapshot => {
             allDeliveries = [];
             snapshot.forEach(doc => {
                 const data = doc.data();
-                // แปลงข้อมูลเก่าให้รองรับ subItems เสมอ
                 let itemsList = data.subItems || [];
                 if (itemsList.length === 0 && data.items) {
                     itemsList = [{ id: 'legacy', text: data.items }];
@@ -279,7 +270,6 @@
             showToast('ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error');
         });
 
-        // แสดงผลรายการ
         function renderList(data) {
             const container = document.getElementById('delivery-list');
             if (data.length === 0) {
@@ -300,7 +290,6 @@
                         <button onclick="deleteEntireCustomer('${item.id}', '${escapeHTML(item.customerName)}')" title="ลบรายการทั้งหมดของลูกค้านี้" class="text-xs text-slate-400 hover:text-red-500 transition px-2 py-1 rounded-lg hover:bg-red-50">ลบทั้งหมด</button>
                     </div>
 
-                    <!-- รายการย่อยสินค้า -->
                     <div class="space-y-2 pt-1 border-t border-slate-100">
                         <div class="text-xs font-semibold text-slate-500 mb-1">รายการค้างส่ง:</div>
                         ${item.subItems.map(sub => `
@@ -316,7 +305,6 @@
             `).join('');
         }
 
-        // ฟังก์ชันป้องกัน XSS เบื้องต้น
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>'"]/g, 
@@ -324,7 +312,6 @@
             );
         }
 
-        // ฟังก์ชันติ๊กส่งสินค้าเฉพาะรายการย่อย
         window.completeSubItem = function(docId, subId, customerName, itemText) {
             showConfirmModal(
                 'ยืนยันการเคลียร์รายการสินค้า',
@@ -338,15 +325,12 @@
                         const data = docSnap.data();
                         let currentSubItems = data.subItems || [];
                         
-                        // กรองรายการที่ถูกติ๊กออก
                         const updatedSubItems = currentSubItems.filter(s => s.id !== subId);
 
                         if (updatedSubItems.length === 0) {
-                            // ถ้าเคลียร์ครบทุกรายการแล้ว ให้ลบเอกสารทิ้งไปเลย
                             await docRef.delete();
                             showToast(`เคลียร์รายการทั้งหมดของ "${customerName}" สำเร็จ`, 'success');
                         } else {
-                            // ถ้ายังเหลือรายการอื่น อัปเดตอาเรย์ใหม่
                             await docRef.update({ subItems: updatedSubItems });
                             showToast(`เคลียร์รายการ "${itemText}" สำเร็จ`, 'success');
                         }
@@ -358,7 +342,6 @@
             );
         };
 
-        // ฟังก์ชันลบลูกค้าทั้งหมด
         window.deleteEntireCustomer = function(docId, name) {
             showConfirmModal(
                 'ยืนยันการลบข้อมูลลูกค้า',
@@ -375,7 +358,6 @@
             );
         };
 
-        // ระบบค้นหาเรียลไทม์
         document.getElementById('search-input').addEventListener('input', (e) => {
             const keyword = e.target.value.toLowerCase().trim();
             const filtered = allDeliveries.filter(item => 
