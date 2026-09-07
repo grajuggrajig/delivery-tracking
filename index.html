@@ -19,14 +19,19 @@
             <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                 📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking & CRM</span>
             </h1>
-            <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">กำลังเชื่อมต่อ Firebase...</span>
+            <div class="flex items-center gap-2">
+                <button type="button" id="open-stock-modal-btn" class="px-3 py-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl border border-indigo-200 transition flex items-center gap-1 shadow-2xs">
+                    🏷️ จัดการสต็อกสินค้า/ราคา
+                </button>
+                <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium">กำลังเชื่อมต่อ Firebase...</span>
+            </div>
         </div>
     </header>
 
     <main class="max-w-4xl mx-auto px-4 mt-4 grid grid-cols-1 md:grid-cols-3 gap-6 w-full flex-grow md:h-[calc(100vh-115px)] md:overflow-hidden">
         
         <section class="md:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-sky-100 md:h-full md:overflow-y-auto">
-            <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">➕ เพิ่มรายการสินค้า</h2>
+            <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">➕ เพิ่มรายการสินค้าลูกค้า</h2>
             <form id="delivery-form" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า <span class="text-red-500">*</span></label>
@@ -99,13 +104,52 @@
         </section>
     </main>
 
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <!-- Modal: จัดการสต็อกสินค้า -->
+    <div id="stock-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="stock-modal-box">
+            <div class="flex justify-between items-center pb-3 mb-4 border-b border-slate-100">
+                <span class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    🏷️ จัดการรายการสินค้าและราคามาตรฐานในสต็อก
+                </span>
+                <button type="button" id="close-stock-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
+                    ✕
+                </button>
+            </div>
 
+            <!-- ฟอร์มเพิ่ม/แก้ไขสินค้าในสต็อก -->
+            <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+                <input type="hidden" id="stock-edit-id">
+                <div class="sm:col-span-5">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อสินค้า <span class="text-red-500">*</span></label>
+                    <input type="text" id="stock-name" required placeholder="เช่น ดินสอ EE" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                </div>
+                <div class="sm:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ราคา (บาท) <span class="text-red-500">*</span></label>
+                    <input type="number" step="0.01" id="stock-price" required placeholder="280" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                </div>
+                <div class="sm:col-span-4 flex gap-2">
+                    <button type="submit" id="stock-submit-btn" class="flex-grow py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs transition shadow-sm">บันทึกสินค้า</button>
+                    <button type="button" id="stock-cancel-edit" class="hidden px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs transition">ยกเลิก</button>
+                </div>
+            </form>
+
+            <div class="mb-3 flex items-center justify-between">
+                <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+            </div>
+
+            <!-- ตารางแสดงรายการสต็อก -->
+            <div id="stock-table-container" class="space-y-2 overflow-y-auto flex-grow pr-1">
+                <div class="text-center py-8 text-xs text-slate-400 italic">กำลังโหลดรายการสต็อกสินค้า...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: เลือกสินค้าจากสต็อกตอนกรอกฟอร์มลูกค้า -->
     <div id="custom-item-suggestions" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
         <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 border border-slate-100 flex flex-col max-h-[80vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
             <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
                 <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                    📋 เลือกรายการสินค้าจากฐานข้อมูล
+                    📋 เลือกรายการสินค้าจากสต็อก
                 </span>
                 <button type="button" id="close-suggestion-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
                     ✕
@@ -170,6 +214,8 @@
         </div>
     </div>
 
+    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
     <footer class="text-center py-2 text-xs text-slate-400 border-t border-sky-100 flex-shrink-0">
         Delivery Tracking System © 2026
     </footer>
@@ -196,7 +242,7 @@
 
         let pendingItems = []; 
         let allDeliveries = [];
-        let allUniqueItems = new Set();
+        let allProducts = []; 
         let currentFilter = 'all';
 
         function showToast(message, type = 'success') {
@@ -262,144 +308,148 @@
                 onConfirm();
             }, { once: true });
 
-            document.getElementById('modal-cancel').addEventListener('click', () => {
-                closeModal();
-            }, { once: true });
+            document.getElementById('modal-cancel').addEventListener('click', closeModal, { once: true });
         }
 
-        window.openEditCompanyModal = function(docId, currentCompany) {
-            const modal = document.getElementById('edit-company-modal');
-            const modalContent = document.getElementById('edit-company-modal-content');
-            const inputField = document.getElementById('edit-company-text');
-            const btnConfirm = document.getElementById('edit-company-confirm');
-            const btnCancel = document.getElementById('edit-company-cancel');
+        // --- ส่วนจัดการสต็อกสินค้า (Products Modal) ---
+        const stockModal = document.getElementById('stock-modal');
+        const stockModalBox = document.getElementById('stock-modal-box');
+        const openStockModalBtn = document.getElementById('open-stock-modal-btn');
+        const closeStockModalBtn = document.getElementById('close-stock-modal');
+        const stockForm = document.getElementById('stock-form');
+        const stockEditId = document.getElementById('stock-edit-id');
+        const stockNameInput = document.getElementById('stock-name');
+        const stockPriceInput = document.getElementById('stock-price');
+        const stockSubmitBtn = document.getElementById('stock-submit-btn');
+        const stockCancelEditBtn = document.getElementById('stock-cancel-edit');
+        const stockSearchBox = document.getElementById('stock-search-box');
+        const stockTableContainer = document.getElementById('stock-table-container');
 
-            inputField.value = currentCompany || '';
-
-            modal.classList.remove('hidden');
+        openStockModalBtn.addEventListener('click', () => {
+            stockModal.classList.remove('hidden');
             setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
+                stockModal.classList.remove('opacity-0');
+                stockModalBox.classList.remove('scale-95');
             }, 10);
+            renderStockTable(stockSearchBox.value);
+        });
 
-            const closeModal = () => {
-                modal.classList.add('opacity-0');
-                modalContent.classList.add('scale-95');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
-                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
-                btnCancel.replaceWith(btnCancel.cloneNode(true));
-            };
-
-            btnConfirm.addEventListener('click', async () => {
-                const newCompany = inputField.value.trim();
-
-                try {
-                    const docRef = db.collection('deliveries').doc(docId);
-                    await docRef.update({ companyName: newCompany });
-                    showToast('แก้ไขชื่อบริษัทสำเร็จ', 'success');
-                    closeModal();
-                } catch (err) {
-                    console.error(err);
-                    showToast('ไม่สามารถแก้ไขชื่อบริษัทได้', 'error');
-                }
-            }, { once: true });
-
-            btnCancel.addEventListener('click', () => {
-                closeModal();
-            }, { once: true });
-        };
-
-        window.openEditSubItemModal = function(docId, subId, currentText, currentDueDate) {
-            const modal = document.getElementById('edit-modal');
-            const modalContent = document.getElementById('edit-modal-content');
-            const inputField = document.getElementById('edit-item-text');
-            const dueDateField = document.getElementById('edit-item-duedate');
-            const btnConfirm = document.getElementById('edit-modal-confirm');
-            const btnCancel = document.getElementById('edit-modal-cancel');
-
-            inputField.value = currentText;
-            dueDateField.value = currentDueDate;
-
-            modal.classList.remove('hidden');
+        function closeStockModalFunc() {
+            stockModal.classList.add('opacity-0');
+            stockModalBox.classList.add('scale-95');
             setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-            }, 10);
+                stockModal.classList.add('hidden');
+            }, 200);
+            resetStockForm();
+        }
 
-            const closeModal = () => {
-                modal.classList.add('opacity-0');
-                modalContent.classList.add('scale-95');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
-                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
-                btnCancel.replaceWith(btnCancel.cloneNode(true));
-            };
+        closeStockModalBtn.addEventListener('click', closeStockModalFunc);
+        stockModal.addEventListener('click', (e) => {
+            if (e.target === stockModal) closeStockModalFunc();
+        });
 
-            btnConfirm.addEventListener('click', async () => {
-                const newText = inputField.value.trim();
-                const newDueDate = dueDateField.value.trim();
+        function resetStockForm() {
+            stockForm.reset();
+            stockEditId.value = '';
+            stockSubmitBtn.textContent = 'บันทึกสินค้า';
+            stockCancelEditBtn.classList.add('hidden');
+        }
 
-                if (!newText) {
-                    showToast('กรุณากรอกชื่อสินค้าและราคา', 'error');
-                    return;
-                }
+        stockCancelEditBtn.addEventListener('click', resetStockForm);
 
-                try {
-                    const docRef = db.collection('deliveries').doc(docId);
-                    const docSnap = await docRef.get();
-                    if (!docSnap.exists) return;
+        stockForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const name = stockNameInput.value.trim();
+            const price = parseFloat(stockPriceInput.value);
+            const editId = stockEditId.value;
 
-                    const data = docSnap.data();
-                    let currentSubItems = data.subItems || [];
-                    
-                    const updatedSubItems = currentSubItems.map(s => {
-                        if (s.id === subId) {
-                            return { ...s, text: newText, dueDate: newDueDate };
-                        }
-                        return s;
+            if (!name || isNaN(price)) {
+                showToast('กรุณากรอกข้อมูลสินค้าและราคาให้ถูกต้อง', 'error');
+                return;
+            }
+
+            try {
+                if (editId) {
+                    await db.collection('products').doc(editId).update({ name, price });
+                    showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
+                } else {
+                    await db.collection('products').add({
+                        name,
+                        price,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-
-                    await docRef.update({ subItems: updatedSubItems });
-                    showToast('แก้ไขข้อมูลสินค้าสำเร็จ', 'success');
-                    closeModal();
-                } catch (err) {
-                    console.error(err);
-                    showToast('ไม่สามารถแก้ไขข้อมูลได้', 'error');
+                    showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
                 }
-            }, { once: true });
+                resetStockForm();
+                renderStockTable(stockSearchBox.value);
+            } catch (err) {
+                console.error(err);
+                showToast('ไม่สามารถบันทึกสินค้าได้', 'error');
+            }
+        });
 
-            btnCancel.addEventListener('click', () => {
-                closeModal();
-            }, { once: true });
+        stockSearchBox.addEventListener('input', (e) => {
+            renderStockTable(e.target.value);
+        });
+
+        function renderStockTable(filterText = '') {
+            const keyword = filterText.toLowerCase().trim();
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
+
+            if (filtered.length === 0) {
+                stockTableContainer.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 italic bg-slate-50 rounded-2xl">ไม่พบรายการสินค้าในสต็อก</div>`;
+                return;
+            }
+
+            stockTableContainer.innerHTML = filtered.map(p => `
+                <div class="flex items-center justify-between p-3 bg-white border border-slate-100 hover:border-sky-200 rounded-2xl shadow-2xs transition">
+                    <div>
+                        <div class="text-xs font-bold text-slate-800">${escapeHTML(p.name)}</div>
+                        <div class="text-[11px] font-semibold text-sky-600">ราคา: ${Number(p.price).toLocaleString()} บาท</div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${p.price})" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
+                        <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        window.editStockItem = function(id, name, price) {
+            stockEditId.value = id;
+            stockNameInput.value = name;
+            stockPriceInput.value = price;
+            stockSubmitBtn.textContent = 'บันทึกการแก้ไข';
+            stockCancelEditBtn.classList.remove('hidden');
+            stockNameInput.focus();
         };
 
-        window.deleteSubItem = function(docId, subId, itemText) {
+        window.deleteStockItem = function(id, name) {
             showConfirmModal(
-                'ยืนยันการลบรายการสินค้า',
-                `คุณต้องการลบรายการ "${itemText}" นี้ออกใช่หรือไม่?`,
+                'ยืนยันลบสินค้าในสต็อก',
+                `ต้องการลบ "${name}" ออกจากรายการสต็อกสินค้ามาตรฐานใช่หรือไม่?`,
                 async () => {
                     try {
-                        const docRef = db.collection('deliveries').doc(docId);
-                        const docSnap = await docRef.get();
-                        if (!docSnap.exists) return;
-
-                        const data = docSnap.data();
-                        let currentSubItems = data.subItems || [];
-                        
-                        const updatedSubItems = currentSubItems.filter(s => s.id !== subId);
-
-                        await docRef.update({ subItems: updatedSubItems });
-                        showToast('ลบรายการสินค้าสำเร็จ', 'success');
+                        await db.collection('products').doc(id).delete();
+                        showToast('ลบสินค้าออกจากสต็อกแล้ว', 'success');
+                        renderStockTable(stockSearchBox.value);
                     } catch (err) {
                         console.error(err);
-                        showToast('ไม่สามารถลบรายการสินค้าได้', 'error');
+                        showToast('ไม่สามารถลบสินค้าได้', 'error');
                     }
                 }
             );
         };
+
+        db.collection('products').orderBy('name').onSnapshot(snapshot => {
+            allProducts = [];
+            snapshot.forEach(doc => {
+                allProducts.push({ id: doc.id, ...doc.data() });
+            });
+            if (!stockModal.classList.contains('hidden')) {
+                renderStockTable(stockSearchBox.value);
+            }
+        });
 
         const itemInput = document.getElementById('item-input');
         const itemDueDateInput = document.getElementById('item-due-date');
@@ -433,20 +483,20 @@
 
         function renderSuggestionsTable(filterText = '') {
             const keyword = filterText.toLowerCase().trim();
-            const filteredItems = Array.from(allUniqueItems).filter(item => item.toLowerCase().includes(keyword));
+            const filteredItems = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
 
             if (filteredItems.length === 0) {
-                suggestionsTableContainer.innerHTML = `<div class="px-3 py-8 text-xs text-slate-400 italic text-center bg-slate-50 rounded-2xl">ไม่พบประวัติรายการสินค้า</div>`;
+                suggestionsTableContainer.innerHTML = `<div class="px-3 py-8 text-xs text-slate-400 italic text-center bg-slate-50 rounded-2xl">ไม่พบรายการสินค้าในสต็อก (คุณสามารถพิมพ์ชื่อและราคาเองได้เลย)</div>`;
                 return;
             }
 
-            suggestionsTableContainer.innerHTML = filteredItems.map(item => `
-                <div class="flex items-center justify-between px-4 py-3 text-xs text-slate-700 hover:bg-sky-50 rounded-2xl cursor-pointer transition border border-slate-100/80 hover:border-sky-200 group shadow-2xs" onclick="selectSuggestion('${escapeHTML(item).replace(/'/g, "\\'")}')">
+            suggestionsTableContainer.innerHTML = filteredItems.map(p => `
+                <div class="flex items-center justify-between px-4 py-3 text-xs text-slate-700 hover:bg-sky-50 rounded-2xl cursor-pointer transition border border-slate-100/80 hover:border-sky-200 group shadow-2xs" onclick="selectSuggestion('${escapeHTML(p.name).replace(/'/g, "\\'")}', ${p.price})">
                     <div class="flex items-center gap-3 truncate pr-2">
                         <span class="w-2.5 h-2.5 rounded-full bg-sky-500 flex-shrink-0 shadow-xs"></span>
-                        <span class="font-semibold text-slate-800 truncate text-sm">${escapeHTML(item)}</span>
+                        <span class="font-semibold text-slate-800 truncate text-sm">${escapeHTML(p.name)}</span>
                     </div>
-                    <span class="text-xs text-sky-600 bg-sky-100 px-3 py-1.5 rounded-xl font-bold opacity-0 group-hover:opacity-100 transition flex-shrink-0">เลือกใช้ ↵</span>
+                    <span class="text-xs text-sky-700 bg-sky-100 px-3 py-1.5 rounded-xl font-bold transition flex-shrink-0">${Number(p.price).toLocaleString()}.- ↵</span>
                 </div>
             `).join('');
         }
@@ -456,9 +506,7 @@
             openSuggestionModal();
         });
 
-        itemInput.addEventListener('focus', () => {
-            openSuggestionModal();
-        });
+        itemInput.addEventListener('focus', openSuggestionModal);
 
         suggestionSearchBox.addEventListener('input', (e) => {
             renderSuggestionsTable(e.target.value);
@@ -472,8 +520,8 @@
             }
         });
 
-        window.selectSuggestion = function(val) {
-            itemInput.value = val;
+        window.selectSuggestion = function(name, price) {
+            itemInput.value = `${name} (${Number(price).toLocaleString()} บาท)`;
             closeSuggestionModal();
             itemInput.focus();
         };
@@ -482,7 +530,7 @@
             if (pendingItems.length === 0) {
                 pendingContainer.innerHTML = `
                     <div class="text-xs text-slate-400 italic bg-gradient-to-br from-slate-50 to-sky-50/40 p-3.5 rounded-2xl border border-dashed border-sky-200/60 text-center shadow-2xs">
-                        ✨ ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่มเพิ่มด้านบน)
+                        ✨ ยังไม่มีรายการสินค้า (พิมพ์หรือเลือกจากสต็อก แล้วกดปุ่มเพิ่ม)
                     </div>
                 `;
                 return;
@@ -631,7 +679,6 @@
 
         db.collection('deliveries').onSnapshot(snapshot => {
             allDeliveries = [];
-            allUniqueItems.clear();
             const customerOptions = document.getElementById('customer-options');
             let datalistHTML = '';
 
@@ -643,12 +690,6 @@
                 if (data.customerName) {
                     datalistHTML += `<option value="${escapeHTML(data.customerName)}">`;
                 }
-
-                itemsList.forEach(sub => {
-                    if (sub.text) {
-                        allUniqueItems.add(sub.text);
-                    }
-                });
             });
 
             customerOptions.innerHTML = datalistHTML;
@@ -794,13 +835,13 @@
 
                         <div class="p-4 space-y-2 max-h-72 overflow-y-auto">
                             <div class="flex items-center justify-between bg-slate-100/70 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 mb-2">
-                                <span>📊 สถานภาพรวม: ยอดสั่งซื้อทั้งหมด ${totalCount} รายการ</span>
+                                <span>📊 ประวัติการซื้อทั้งหมด ${totalCount} รายการ</span>
                                 <span class="${pendingCount > 0 ? 'text-amber-600' : 'text-emerald-600'}">
                                     ${pendingCount > 0 ? `ค้างส่ง ${pendingCount} รายการ` : 'จัดส่งครบทั้งหมดแล้ว ✅'}
                                 </span>
                             </div>
 
-                            <div class="text-xs font-semibold text-slate-500 mb-1">รายการสินค้า:</div>
+                            <div class="text-xs font-semibold text-slate-500 mb-1">รายการสินค้าและราคาที่เคยซื้อ:</div>
                             ${item.subItems.map(sub => {
                                 const isDone = sub.status === 'completed';
                                 return `
@@ -836,6 +877,133 @@
             );
         }
 
+        window.openEditCompanyModal = function(docId, currentCompany) {
+            const modal = document.getElementById('edit-company-modal');
+            const modalContent = document.getElementById('edit-company-modal-content');
+            const inputField = document.getElementById('edit-company-text');
+            const btnConfirm = document.getElementById('edit-company-confirm');
+            const btnCancel = document.getElementById('edit-company-cancel');
+
+            inputField.value = currentCompany || '';
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+
+            const closeModal = () => {
+                modal.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
+                btnCancel.replaceWith(btnCancel.cloneNode(true));
+            };
+
+            btnConfirm.addEventListener('click', async () => {
+                const newCompany = inputField.value.trim();
+                try {
+                    await db.collection('deliveries').doc(docId).update({ companyName: newCompany });
+                    showToast('แก้ไขชื่อบริษัทสำเร็จ', 'success');
+                    closeModal();
+                } catch (err) {
+                    console.error(err);
+                    showToast('ไม่สามารถแก้ไขชื่อบริษัทได้', 'error');
+                }
+            }, { once: true });
+
+            btnCancel.addEventListener('click', closeModal, { once: true });
+        };
+
+        window.openEditSubItemModal = function(docId, subId, currentText, currentDueDate) {
+            const modal = document.getElementById('edit-modal');
+            const modalContent = document.getElementById('edit-modal-content');
+            const inputField = document.getElementById('edit-item-text');
+            const dueDateField = document.getElementById('edit-item-duedate');
+            const btnConfirm = document.getElementById('edit-modal-confirm');
+            const btnCancel = document.getElementById('edit-modal-cancel');
+
+            inputField.value = currentText;
+            dueDateField.value = currentDueDate;
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+
+            const closeModal = () => {
+                modal.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
+                btnCancel.replaceWith(btnCancel.cloneNode(true));
+            };
+
+            btnConfirm.addEventListener('click', async () => {
+                const newText = inputField.value.trim();
+                const newDueDate = dueDateField.value.trim();
+
+                if (!newText) {
+                    showToast('กรุณากรอกชื่อสินค้าและราคา', 'error');
+                    return;
+                }
+
+                try {
+                    const docRef = db.collection('deliveries').doc(docId);
+                    const docSnap = await docRef.get();
+                    if (!docSnap.exists) return;
+
+                    const data = docSnap.data();
+                    let currentSubItems = data.subItems || [];
+                    
+                    const updatedSubItems = currentSubItems.map(s => {
+                        if (s.id === subId) {
+                            return { ...s, text: newText, dueDate: newDueDate };
+                        }
+                        return s;
+                    });
+
+                    await docRef.update({ subItems: updatedSubItems });
+                    showToast('แก้ไขข้อมูลสินค้าสำเร็จ', 'success');
+                    closeModal();
+                } catch (err) {
+                    console.error(err);
+                    showToast('ไม่สามารถแก้ไขข้อมูลได้', 'error');
+                }
+            }, { once: true });
+
+            btnCancel.addEventListener('click', closeModal, { once: true });
+        };
+
+        window.deleteSubItem = function(docId, subId, itemText) {
+            showConfirmModal(
+                'ยืนยันการลบรายการสินค้า',
+                `คุณต้องการลบรายการ "${itemText}" นี้ออกใช่หรือไม่?`,
+                async () => {
+                    try {
+                        const docRef = db.collection('deliveries').doc(docId);
+                        const docSnap = await docRef.get();
+                        if (!docSnap.exists) return;
+
+                        const data = docSnap.data();
+                        let currentSubItems = data.subItems || [];
+                        const updatedSubItems = currentSubItems.filter(s => s.id !== subId);
+
+                        await docRef.update({ subItems: updatedSubItems });
+                        showToast('ลบรายการสินค้าสำเร็จ', 'success');
+                    } catch (err) {
+                        console.error(err);
+                        showToast('ไม่สามารถลบรายการสินค้าได้', 'error');
+                    }
+                }
+            );
+        };
+
         window.toggleSubItemStatus = async function(docId, subId, customerName, itemText, currentStatus) {
             const nextStatus = currentStatus === 'completed' ? 'pending' : 'completed';
             try {
@@ -864,7 +1032,7 @@
         window.clearCompletedItems = function(docId, customerName) {
             showConfirmModal(
                 'ล้างรายการที่ส่งแล้ว',
-                `ต้องการลบรายการสินค้าที่ "ส่งแล้ว" ของ "${customerName}" ออกจากหน้าจอ (เพื่อไม่ให้รก) ใช่หรือไม่?`,
+                `ต้องการลบรายการสินค้าที่ "ส่งแล้ว" ของ "${customerName}" ออกจากหน้าจอใช่หรือไม่?`,
                 async () => {
                     try {
                         const docRef = db.collection('deliveries').doc(docId);
@@ -873,7 +1041,6 @@
 
                         const data = docSnap.data();
                         let currentSubItems = data.subItems || [];
-                        
                         const remainingItems = currentSubItems.filter(s => s.status !== 'completed');
 
                         await docRef.update({ subItems: remainingItems });
@@ -902,9 +1069,7 @@
             );
         };
 
-        document.getElementById('search-input').addEventListener('input', () => {
-            applyFilterAndSearch();
-        });
+        document.getElementById('search-input').addEventListener('input', applyFilterAndSearch);
     </script>
 </body>
 </html>
