@@ -47,17 +47,25 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าและราคา <span class="text-red-500">*</span></label>
-                    <div class="space-y-2">
-                        <input type="text" id="item-input" list="item-suggestions" placeholder="ดินสอ EE 280.- x 12" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                        <datalist id="item-suggestions"></datalist>
-                        
-                        <div class="flex items-center gap-2">
-                            <div class="flex-grow">
-                                <label class="block text-[11px] font-medium text-slate-500 mb-0.5">📅 วันนัดส่งสินค้า</label>
-                                <input type="date" id="item-due-date" class="w-full px-3 py-1.5 text-xs border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
-                            </div>
-                            <button type="button" id="add-item-btn" class="mt-4 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs transition shadow-sm flex items-center justify-center">＋ เพิ่ม</button>
+                    <div class="space-y-2 relative">
+                        <!-- ช่อง input และปุ่มลูกศรดรอปดาวน์ทางขวา -->
+                        <div class="relative flex items-center">
+                            <input type="text" id="item-input" autocomplete="off" placeholder="ดินสอ EE 280.- x 12" class="w-full pl-3 pr-10 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                            <button type="button" id="dropdown-toggle-btn" title="ดูรายการสินค้าที่บันทึกไว้" class="absolute right-2 px-2 py-1 text-slate-400 hover:text-slate-700 transition focus:outline-none text-xs font-bold">
+                                ▼
+                            </button>
                         </div>
+                        
+                        <div class="flex items-end gap-1.5">
+    <div class="flex-grow">
+        <label class="block text-[11px] font-medium text-slate-500 mb-1">📅 วันนัดส่งสินค้า</label>
+        <input type="date" id="item-due-date" class="w-full px-3 py-1.5 text-xs border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+    </div>
+    <div class="flex items-center gap-1 pb-0.5">
+        <button type="button" id="add-item-btn" class="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg text-base font-bold transition flex items-center justify-center flex-shrink-0" title="เพิ่มรายการ">＋</button>
+        <button type="button" id="clear-item-btn" class="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-sm transition flex items-center justify-center flex-shrink-0" title="เคลียร์ข้อมูลช่องกรอก">🧹</button>
+    </div>
+</div>
                     </div>
                 </div>
 
@@ -93,6 +101,28 @@
     </main>
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- Modal เลือกรายการสินค้า (แทนที่ดรอปดาวน์เดิมแบบ Pop-up ตรงกลางจอ) -->
+    <div id="custom-item-suggestions" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 border border-slate-100 flex flex-col max-h-[80vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
+            <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    📋 เลือกรายการสินค้าจากฐานข้อมูล
+                </span>
+                <button type="button" id="close-suggestion-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
+                    ✕
+                </button>
+            </div>
+            
+            <div class="mb-3">
+                <input type="text" id="suggestion-search-box" placeholder="🔍 พิมพ์เพื่อกรองชื่อสินค้า..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+            </div>
+
+            <div id="suggestions-table-container" class="space-y-1.5 overflow-y-auto flex-grow pr-1">
+                <!-- รายการจะถูก render แทรกตรงนี้ -->
+            </div>
+        </div>
+    </div>
 
     <!-- Modal ยืนยันการทำรายการ -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
@@ -382,18 +412,113 @@
         const itemDueDateInput = document.getElementById('item-due-date');
         const addItemBtn = document.getElementById('add-item-btn');
         const pendingContainer = document.getElementById('pending-items-container');
+        const dropdownToggleBtn = document.getElementById('dropdown-toggle-btn');
+        const suggestionBox = document.getElementById('custom-item-suggestions');
+        const suggestionModalBox = document.getElementById('suggestion-modal-box');
+        const closeSuggestionModalBtn = document.getElementById('close-suggestion-modal');
+        const suggestionSearchBox = document.getElementById('suggestion-search-box');
+        const suggestionsTableContainer = document.getElementById('suggestions-table-container');
+
+        // ฟังก์ชันเปิด Modal ดรอปดาวน์ตรงกลางจอ
+        function openSuggestionModal() {
+            suggestionBox.classList.remove('hidden');
+            setTimeout(() => {
+                suggestionBox.classList.remove('opacity-0');
+                suggestionModalBox.classList.remove('scale-95');
+            }, 10);
+            suggestionSearchBox.value = itemInput.value;
+            renderSuggestionsTable(suggestionSearchBox.value);
+            suggestionSearchBox.focus();
+        }
+
+        // ฟังก์ชันปิด Modal ดรอปดาวน์
+        function closeSuggestionModal() {
+            suggestionBox.classList.add('opacity-0');
+            suggestionModalBox.classList.add('scale-95');
+            setTimeout(() => {
+                suggestionBox.classList.add('hidden');
+            }, 200);
+        }
+
+        // ฟังก์ชันแสดงรายการในตาราง Pop-up
+        function renderSuggestionsTable(filterText = '') {
+            const keyword = filterText.toLowerCase().trim();
+            const filteredItems = Array.from(allUniqueItems).filter(item => item.toLowerCase().includes(keyword));
+
+            if (filteredItems.length === 0) {
+                suggestionsTableContainer.innerHTML = `<div class="px-3 py-8 text-xs text-slate-400 italic text-center bg-slate-50 rounded-2xl">ไม่พบประวัติรายการสินค้า</div>`;
+                return;
+            }
+
+            suggestionsTableContainer.innerHTML = filteredItems.map(item => `
+                <div class="flex items-center justify-between px-4 py-3 text-xs text-slate-700 hover:bg-sky-50 rounded-2xl cursor-pointer transition border border-slate-100/80 hover:border-sky-200 group shadow-2xs" onclick="selectSuggestion('${escapeHTML(item).replace(/'/g, "\\'")}')">
+                    <div class="flex items-center gap-3 truncate pr-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-sky-500 flex-shrink-0 shadow-xs"></span>
+                        <span class="font-semibold text-slate-800 truncate text-sm">${escapeHTML(item)}</span>
+                    </div>
+                    <span class="text-xs text-sky-600 bg-sky-100 px-3 py-1.5 rounded-xl font-bold opacity-0 group-hover:opacity-100 transition flex-shrink-0">เลือกใช้ ↵</span>
+                </div>
+            `).join('');
+        }
+
+        // เมื่อคลิกปุ่มลูกศรดรอปดาวน์
+        dropdownToggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openSuggestionModal();
+        });
+
+        // เมื่อคลิกที่ช่อง input สินค้า ให้เด้งตารางตรงกลางขึ้นมาทันที
+        itemInput.addEventListener('focus', () => {
+            openSuggestionModal();
+        });
+
+        // ค้นหาแบบ Real-time ภายใน Modal
+        suggestionSearchBox.addEventListener('input', (e) => {
+            renderSuggestionsTable(e.target.value);
+        });
+
+        // ปิดเมื่อกดปุ่มกากบาท
+        closeSuggestionModalBtn.addEventListener('click', closeSuggestionModal);
+
+        // ปิดเมื่อคลิกพื้นที่เบลอฉากหลัง (backdrop)
+        suggestionBox.addEventListener('click', (e) => {
+            if (e.target === suggestionBox) {
+                closeSuggestionModal();
+            }
+        });
+
+        // ฟังก์ชันเลือกรายการจากตารางดรอปดาวน์
+        window.selectSuggestion = function(val) {
+            itemInput.value = val;
+            closeSuggestionModal();
+            itemInput.focus();
+        };
 
         function renderPendingItems() {
             if (pendingItems.length === 0) {
-                pendingContainer.innerHTML = `<div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่มเพิ่ม)</div>`;
+                pendingContainer.innerHTML = `
+                    <div class="text-xs text-slate-400 italic bg-gradient-to-br from-slate-50 to-sky-50/40 p-3.5 rounded-2xl border border-dashed border-sky-200/60 text-center shadow-2xs">
+                        ✨ ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่มเพิ่มด้านบน)
+                    </div>
+                `;
                 return;
             }
 
             pendingContainer.innerHTML = pendingItems.map((item, index) => `
-                <div class="flex items-center justify-between bg-sky-50/70 px-3 py-2 rounded-xl border border-sky-100 text-xs text-slate-700 gap-2">
-                    <span class="truncate flex-grow font-medium">• ${escapeHTML(item.text)}</span>
-                    <span class="text-[10px] text-sky-700 bg-white px-2 py-0.5 rounded-md border border-sky-200 flex-shrink-0 font-medium shadow-2xs">📅 ${escapeHTML(item.dueDate ? formatDateDisplay(item.dueDate) : 'ไม่ระบุวัน')}</span>
-                    <button type="button" onclick="removePendingItem(${index})" class="text-slate-400 hover:text-red-500 font-bold px-1.5 transition flex-shrink-0">✕</button>
+                <div class="group flex items-center justify-between bg-gradient-to-r from-sky-50/80 via-white to-blue-50/40 px-3.5 py-2.5 rounded-2xl border border-sky-100/80 text-xs text-slate-700 gap-3 shadow-2xs transition-all duration-200 hover:shadow-sm hover:border-sky-300">
+                    <div class="flex items-center gap-2 flex-grow truncate">
+                        <span class="flex-shrink-0 w-2 h-2 rounded-full bg-sky-500"></span>
+                        <span class="truncate font-semibold text-slate-800">${escapeHTML(item.text)}</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <span class="text-[11px] text-sky-800 bg-sky-100/70 px-2.5 py-1 rounded-xl border border-sky-200/60 font-medium shadow-2xs flex items-center gap-1">
+                            <span>📅</span> ${escapeHTML(item.dueDate ? formatDateDisplay(item.dueDate) : 'ไม่ระบุวัน')}
+                        </span>
+                        <button type="button" onclick="removePendingItem(${index})" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-500 rounded-full transition-all duration-200" title="ลบรายการนี้">
+                            ✕
+                        </button>
+                    </div>
                 </div>
             `).join('');
         }
@@ -524,7 +649,6 @@
             allDeliveries = [];
             allUniqueItems.clear();
             const customerOptions = document.getElementById('customer-options');
-            const itemSuggestions = document.getElementById('item-suggestions');
             let datalistHTML = '';
 
             snapshot.forEach(doc => {
@@ -544,14 +668,22 @@
             });
 
             customerOptions.innerHTML = datalistHTML;
-            itemSuggestions.innerHTML = Array.from(allUniqueItems).map(item => `<option value="${escapeHTML(item)}">`).join('');
-            
             applyFilterAndSearch();
         }, error => {
             console.error(error);
             document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm border border-red-100">เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาตรวจสอบสิทธิ์ Firebase Security Rules</div>`;
             showToast('ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error');
         });
+
+
+		const clearItemBtn = document.getElementById('clear-item-btn');
+
+clearItemBtn.addEventListener('click', () => {
+    itemInput.value = '';
+    itemDueDateInput.value = '';
+    itemInput.focus();
+    showToast('ล้างข้อมูลช่องกรอกสินค้าแล้ว', 'info');
+});
 
         function setFilter(type) {
             currentFilter = type;
@@ -791,6 +923,8 @@
         document.getElementById('search-input').addEventListener('input', () => {
             applyFilterAndSearch();
         });
+		
+		
     </script>
 </body>
 </html>
