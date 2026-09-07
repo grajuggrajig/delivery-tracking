@@ -12,10 +12,10 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-[#f0f4f8] text-slate-800 min-h-screen pb-12 flex flex-col justify-between">
+<body class="bg-[#f0f4f8] text-slate-800 min-h-screen md:h-screen md:overflow-hidden flex flex-col justify-between pb-4 md:pb-0">
 
-    <header class="bg-white/85 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm">
-        <div class="max-w-4xl mx-auto px-4 py-4 flex justify-between items-center">
+    <header class="bg-white/85 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm flex-shrink-0">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                 📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking & CRM</span>
             </h1>
@@ -23,9 +23,9 @@
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 mt-6 grid grid-cols-1 md:grid-cols-3 gap-6 w-full flex-grow">
+    <main class="max-w-4xl mx-auto px-4 mt-4 grid grid-cols-1 md:grid-cols-3 gap-6 w-full flex-grow md:h-[calc(100vh-115px)] md:overflow-hidden">
         
-        <section class="md:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-sky-100 h-fit">
+        <section class="md:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-sky-100 md:h-full md:overflow-y-auto">
             <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">➕ เพิ่มรายการสินค้า</h2>
             <form id="delivery-form" class="space-y-4">
                 <div>
@@ -48,7 +48,6 @@
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าและราคา <span class="text-red-500">*</span></label>
                     <div class="space-y-2 relative">
-                        <!-- ช่อง input และปุ่มลูกศรดรอปดาวน์ทางขวา -->
                         <div class="relative flex items-center">
                             <input type="text" id="item-input" autocomplete="off" placeholder="ดินสอ EE 280.- x 12" class="w-full pl-3 pr-10 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
                             <button type="button" id="dropdown-toggle-btn" title="ดูรายการสินค้าที่บันทึกไว้" class="absolute right-2 px-2 py-1 text-slate-400 hover:text-slate-700 transition focus:outline-none text-xs font-bold">
@@ -57,15 +56,15 @@
                         </div>
                         
                         <div class="flex items-end gap-1.5">
-    <div class="flex-grow">
-        <label class="block text-[11px] font-medium text-slate-500 mb-1">📅 วันนัดส่งสินค้า</label>
-        <input type="date" id="item-due-date" class="w-full px-3 py-1.5 text-xs border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
-    </div>
-    <div class="flex items-center gap-1 pb-0.5">
-        <button type="button" id="add-item-btn" class="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg text-base font-bold transition flex items-center justify-center flex-shrink-0" title="เพิ่มรายการ">＋</button>
-        <button type="button" id="clear-item-btn" class="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-sm transition flex items-center justify-center flex-shrink-0" title="เคลียร์ข้อมูลช่องกรอก">🧹</button>
-    </div>
-</div>
+                            <div class="flex-grow">
+                                <label class="block text-[11px] font-medium text-slate-500 mb-1">📅 วันนัดส่งสินค้า</label>
+                                <input type="date" id="item-due-date" class="w-full px-3 py-1.5 text-xs border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+                            </div>
+                            <div class="flex items-center gap-1 pb-0.5">
+                                <button type="button" id="add-item-btn" class="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg text-base font-bold transition flex items-center justify-center flex-shrink-0" title="เพิ่มรายการ">＋</button>
+                                <button type="button" id="clear-item-btn" class="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-sm transition flex items-center justify-center flex-shrink-0" title="เคลียร์ข้อมูลช่องกรอก">🧹</button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -82,8 +81,8 @@
             </form>
         </section>
 
-        <section class="md:col-span-2 space-y-4">
-            <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center justify-between gap-3">
+        <section class="md:col-span-2 md:flex md:flex-col md:h-full md:overflow-hidden space-y-4">
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center justify-between gap-3 flex-shrink-0">
                 <div class="flex items-center gap-2 flex-grow pl-2">
                     <span class="text-sky-400">🔍</span>
                     <input type="text" id="search-input" placeholder="ค้นหาชื่อลูกค้า, บริษัท, เบอร์โทร, ที่อยู่ หรือสินค้า..." class="w-full text-sm outline-none bg-transparent placeholder-slate-400">
@@ -94,7 +93,7 @@
                 </div>
             </div>
 
-            <div id="delivery-list" class="space-y-3">
+            <div id="delivery-list" class="space-y-3 md:overflow-y-auto md:flex-grow md:pr-1">
                 <div class="text-center py-10 text-slate-400 text-sm animate-pulse">กำลังโหลดข้อมูล...</div>
             </div>
         </section>
@@ -102,7 +101,6 @@
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-    <!-- Modal เลือกรายการสินค้า (แทนที่ดรอปดาวน์เดิมแบบ Pop-up ตรงกลางจอ) -->
     <div id="custom-item-suggestions" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
         <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 border border-slate-100 flex flex-col max-h-[80vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
             <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
@@ -118,13 +116,10 @@
                 <input type="text" id="suggestion-search-box" placeholder="🔍 พิมพ์เพื่อกรองชื่อสินค้า..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
             </div>
 
-            <div id="suggestions-table-container" class="space-y-1.5 overflow-y-auto flex-grow pr-1">
-                <!-- รายการจะถูก render แทรกตรงนี้ -->
-            </div>
+            <div id="suggestions-table-container" class="space-y-1.5 overflow-y-auto flex-grow pr-1"></div>
         </div>
     </div>
 
-    <!-- Modal ยืนยันการทำรายการ -->
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="modal-content">
             <div class="text-3xl mb-3">⚠️</div>
@@ -137,7 +132,6 @@
         </div>
     </div>
 
-    <!-- Modal แก้ไขข้อมูลสินค้าและราคา -->
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-modal-content">
             <div class="text-2xl mb-3">✏️</div>
@@ -159,7 +153,6 @@
         </div>
     </div>
 
-    <!-- Modal แก้ไขชื่อบริษัท -->
     <div id="edit-company-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-company-modal-content">
             <div class="text-2xl mb-3">🏢</div>
@@ -177,7 +170,7 @@
         </div>
     </div>
 
-    <footer class="text-center py-6 text-xs text-slate-400 border-t border-sky-100 mt-12">
+    <footer class="text-center py-2 text-xs text-slate-400 border-t border-sky-100 flex-shrink-0">
         Delivery Tracking System © 2026
     </footer>
 
@@ -419,7 +412,6 @@
         const suggestionSearchBox = document.getElementById('suggestion-search-box');
         const suggestionsTableContainer = document.getElementById('suggestions-table-container');
 
-        // ฟังก์ชันเปิด Modal ดรอปดาวน์ตรงกลางจอ
         function openSuggestionModal() {
             suggestionBox.classList.remove('hidden');
             setTimeout(() => {
@@ -431,7 +423,6 @@
             suggestionSearchBox.focus();
         }
 
-        // ฟังก์ชันปิด Modal ดรอปดาวน์
         function closeSuggestionModal() {
             suggestionBox.classList.add('opacity-0');
             suggestionModalBox.classList.add('scale-95');
@@ -440,7 +431,6 @@
             }, 200);
         }
 
-        // ฟังก์ชันแสดงรายการในตาราง Pop-up
         function renderSuggestionsTable(filterText = '') {
             const keyword = filterText.toLowerCase().trim();
             const filteredItems = Array.from(allUniqueItems).filter(item => item.toLowerCase().includes(keyword));
@@ -461,33 +451,27 @@
             `).join('');
         }
 
-        // เมื่อคลิกปุ่มลูกศรดรอปดาวน์
         dropdownToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
             openSuggestionModal();
         });
 
-        // เมื่อคลิกที่ช่อง input สินค้า ให้เด้งตารางตรงกลางขึ้นมาทันที
         itemInput.addEventListener('focus', () => {
             openSuggestionModal();
         });
 
-        // ค้นหาแบบ Real-time ภายใน Modal
         suggestionSearchBox.addEventListener('input', (e) => {
             renderSuggestionsTable(e.target.value);
         });
 
-        // ปิดเมื่อกดปุ่มกากบาท
         closeSuggestionModalBtn.addEventListener('click', closeSuggestionModal);
 
-        // ปิดเมื่อคลิกพื้นที่เบลอฉากหลัง (backdrop)
         suggestionBox.addEventListener('click', (e) => {
             if (e.target === suggestionBox) {
                 closeSuggestionModal();
             }
         });
 
-        // ฟังก์ชันเลือกรายการจากตารางดรอปดาวน์
         window.selectSuggestion = function(val) {
             itemInput.value = val;
             closeSuggestionModal();
@@ -675,15 +659,13 @@
             showToast('ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error');
         });
 
-
-		const clearItemBtn = document.getElementById('clear-item-btn');
-
-clearItemBtn.addEventListener('click', () => {
-    itemInput.value = '';
-    itemDueDateInput.value = '';
-    itemInput.focus();
-    showToast('ล้างข้อมูลช่องกรอกสินค้าแล้ว', 'info');
-});
+        const clearItemBtn = document.getElementById('clear-item-btn');
+        clearItemBtn.addEventListener('click', () => {
+            itemInput.value = '';
+            itemDueDateInput.value = '';
+            itemInput.focus();
+            showToast('ล้างข้อมูลช่องกรอกสินค้าแล้ว', 'info');
+        });
 
         function setFilter(type) {
             currentFilter = type;
@@ -923,8 +905,6 @@ clearItemBtn.addEventListener('click', () => {
         document.getElementById('search-input').addEventListener('input', () => {
             applyFilterAndSearch();
         });
-		
-		
     </script>
 </body>
 </html>
