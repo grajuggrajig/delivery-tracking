@@ -109,7 +109,8 @@
         <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="stock-modal-box">
             <div class="flex justify-between items-center pb-3 mb-4 border-b border-slate-100">
                 <span class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    🏷️ จัดการรายการสินค้าและราคามาตรฐานในสต็อก
+                    🏷️ จัดการรายการสินค้าและราคามาตรฐานในสต็อก 
+                    <span id="stock-count-badge" class="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-semibold">0 รายการ</span>
                 </span>
                 <button type="button" id="close-stock-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
                     ✕
@@ -394,6 +395,12 @@
         function renderStockTable(filterText = '') {
             const keyword = filterText.toLowerCase().trim();
             const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
+
+            // อัปเดตจำนวนสินค้าที่แสดง
+            const badge = document.getElementById('stock-count-badge');
+            if (badge) {
+                badge.textContent = `${allProducts.length} รายการ`;
+            }
 
             if (filtered.length === 0) {
                 stockTableContainer.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 italic bg-slate-50 rounded-2xl">ไม่พบรายการสินค้าในสต็อก</div>`;
