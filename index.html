@@ -8,14 +8,32 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+        /* ซ่อน Scrollbar สำหรับเบราว์เซอร์ Chrome, Safari และ Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* ซ่อน Scrollbar สำหรับ IE, Edge และ Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE และ Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+
+        /* บังคับซ่อน Scrollbar ทั้งหน้าจอ */
+        html, body {
+            overflow: hidden !important;
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+        }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-[#f0f4f8] text-slate-800 min-h-screen md:h-screen md:overflow-hidden flex flex-col justify-between pb-4 md:pb-0">
+<body class="bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
     <header class="bg-white/85 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm flex-shrink-0">
-        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
+        <div class="max-w-4xl mx-auto px-4 py-2.5 flex justify-between items-center">
             <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
                 📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking & CRM</span>
             </h1>
@@ -28,69 +46,71 @@
         </div>
     </header>
 
-    <main class="max-w-4xl mx-auto px-4 mt-4 grid grid-cols-1 md:grid-cols-3 gap-6 w-full flex-grow md:h-[calc(100vh-115px)] md:overflow-hidden">
+    <main class="max-w-4xl mx-auto px-4 mt-3 grid grid-cols-1 md:grid-cols-3 gap-4 w-full flex-grow h-[calc(100vh-100px)] overflow-hidden">
         
-        <section class="md:col-span-1 bg-white p-5 rounded-2xl shadow-sm border border-sky-100 md:h-full md:overflow-y-auto">
-            <h2 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">➕ เพิ่มรายการสินค้าลูกค้า</h2>
-            <form id="delivery-form" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า <span class="text-red-500">*</span></label>
-                    <div class="relative flex items-center">
-                        <input type="text" id="customer-name" autocomplete="off" placeholder="คลิกเพื่อเลือกชื่อลูกค้าเก่า" class="w-full pl-3 pr-10 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition cursor-pointer">
-                        <button type="button" id="customer-dropdown-btn" title="เลือกรายชื่อลูกค้าเดิม" class="absolute right-2 px-2 py-1 text-slate-400 hover:text-slate-700 transition focus:outline-none text-xs font-bold">
-                            ▼
-                        </button>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบริษัท</label>
-                    <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์</label>
-                    <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">ที่อยู่จัดส่ง</label>
-                    <textarea id="address" rows="2" placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition resize-none"></textarea>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าและราคา <span class="text-red-500">*</span></label>
-                    <div class="space-y-2 relative">
+        <section class="md:col-span-1 bg-white p-4 rounded-2xl shadow-sm border border-sky-100 h-full overflow-y-auto no-scrollbar flex flex-col justify-between">
+            <div class="space-y-3">
+                <h2 class="text-base font-bold text-slate-800 mb-2 flex items-center gap-2">➕ เพิ่มรายการสินค้าลูกค้า</h2>
+                <form id="delivery-form" class="space-y-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า <span class="text-red-500">*</span></label>
                         <div class="relative flex items-center">
-                            <input type="text" id="item-input" autocomplete="off" placeholder="ดินสอ EE 280.- x 12" class="w-full pl-3 pr-10 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                            <button type="button" id="dropdown-toggle-btn" title="ดูรายการสินค้าที่บันทึกไว้" class="absolute right-2 px-2 py-1 text-slate-400 hover:text-slate-700 transition focus:outline-none text-xs font-bold">
+                            <input type="text" id="customer-name" autocomplete="off" placeholder="คลิกเพื่อเลือกชื่อลูกค้าเก่า" class="w-full pl-3 pr-10 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition cursor-pointer">
+                            <button type="button" id="customer-dropdown-btn" title="เลือกรายชื่อลูกค้าเดิม" class="absolute right-2 px-2 py-1 text-slate-400 hover:text-slate-700 transition focus:outline-none text-xs font-bold">
                                 ▼
                             </button>
                         </div>
-                        
-                        <div class="flex items-end gap-1.5">
-                            <div class="flex-grow">
-                                <label class="block text-[11px] font-medium text-slate-500 mb-1">📅 วันนัดส่งสินค้า</label>
-                                <input type="date" id="item-due-date" class="w-full px-3 py-1.5 text-xs border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบริษัท</label>
+                        <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์</label>
+                        <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ที่อยู่จัดส่ง</label>
+                        <textarea id="address" rows="2" placeholder="บ้านเลขที่, ถนน, ตำบล, อำเภอ, จังหวัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition resize-none"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">รายการสินค้าและราคา <span class="text-red-500">*</span></label>
+                        <div class="space-y-2 relative">
+                            <div class="relative flex items-center">
+                                <input type="text" id="item-input" autocomplete="off" placeholder="ดินสอ EE 280.- x 12" class="w-full pl-3 pr-10 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                                <button type="button" id="dropdown-toggle-btn" title="ดูรายการสินค้าที่บันทึกไว้" class="absolute right-2 px-2 py-1 text-slate-400 hover:text-slate-700 transition focus:outline-none text-xs font-bold">
+                                    ▼
+                                </button>
                             </div>
-                            <div class="flex items-center gap-1 pb-0.5">
-                                <button type="button" id="add-item-btn" class="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg text-base font-bold transition flex items-center justify-center flex-shrink-0" title="เพิ่มรายการ">＋</button>
-                                <button type="button" id="clear-item-btn" class="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-sm transition flex items-center justify-center flex-shrink-0" title="เคลียร์ข้อมูลช่องกรอก">🧹</button>
+                            
+                            <div class="flex items-end gap-1.5">
+                                <div class="flex-grow">
+                                    <label class="block text-[11px] font-medium text-slate-500 mb-1">📅 วันนัดส่งสินค้า</label>
+                                    <input type="date" id="item-due-date" class="w-full px-3 py-1.5 text-xs border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+                                </div>
+                                <div class="flex items-center gap-1 pb-0.5">
+                                    <button type="button" id="add-item-btn" class="h-8 w-8 text-sky-600 hover:text-sky-700 hover:bg-sky-50 rounded-lg text-base font-bold transition flex items-center justify-center flex-shrink-0" title="เพิ่มรายการ">＋</button>
+                                    <button type="button" id="clear-item-btn" class="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg text-sm transition flex items-center justify-center flex-shrink-0" title="เคลียร์ข้อมูลช่องกรอก">🧹</button>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">รายการที่จะบันทึกรอบนี้:</label>
-                    <div id="pending-items-container" class="space-y-1.5 max-h-40 overflow-y-auto mb-3">
-                        <div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่มเพิ่ม)</div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">รายการที่จะบันทึกรอบนี้:</label>
+                        <div id="pending-items-container" class="space-y-1.5 max-h-32 overflow-y-auto no-scrollbar mb-2">
+                            <div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่มเพิ่ม)</div>
+                        </div>
                     </div>
-                </div>
 
-                <button type="submit" id="submit-btn" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sky-200 flex items-center justify-center gap-2">
-                    <span>บันทึกข้อมูลทั้งหมด</span>
-                </button>
-            </form>
+                    <button type="submit" id="submit-btn" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sky-200 flex items-center justify-center gap-2">
+                        <span>บันทึกข้อมูลทั้งหมด</span>
+                    </button>
+                </form>
+            </div>
         </section>
 
-        <section class="md:col-span-2 md:flex md:flex-col md:h-full md:overflow-hidden space-y-4">
+        <section class="md:col-span-2 flex flex-col h-full overflow-hidden space-y-3">
             <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center justify-between gap-3 flex-shrink-0">
                 <div class="flex items-center gap-2 flex-grow pl-2">
                     <span class="text-sky-400">🔍</span>
@@ -102,13 +122,13 @@
                 </div>
             </div>
 
-            <div id="delivery-list" class="space-y-3 md:overflow-y-auto md:flex-grow md:pr-1">
+            <div id="delivery-list" class="space-y-3 overflow-y-auto no-scrollbar flex-grow pr-1">
                 <div class="text-center py-10 text-slate-400 text-sm animate-pulse">กำลังโหลดข้อมูล...</div>
             </div>
         </section>
     </main>
 
-    <!-- Modal: เลือกลูกค้าเดิม (เด้งลอยกลางจอแบบเทพ) -->
+    <!-- Modal: เลือกลูกค้าเดิม -->
     <div id="customer-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="customer-modal-box">
             <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
@@ -119,12 +139,10 @@
                     ✕
                 </button>
             </div>
-            
             <div class="mb-3">
                 <input type="text" id="customer-search-box" placeholder="🔍 พิมพ์เพื่อค้นหาชื่อลูกค้า หรือบริษัท..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
             </div>
-
-            <div id="customer-list-container" class="space-y-1.5 overflow-y-auto flex-grow pr-1"></div>
+            <div id="customer-list-container" class="space-y-1.5 overflow-y-auto no-scrollbar flex-grow pr-1"></div>
         </div>
     </div>
 
@@ -140,7 +158,6 @@
                     ✕
                 </button>
             </div>
-
             <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                 <input type="hidden" id="stock-edit-id">
                 <div class="sm:col-span-5">
@@ -156,18 +173,16 @@
                     <button type="button" id="stock-cancel-edit" class="hidden px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs transition">ยกเลิก</button>
                 </div>
             </form>
-
             <div class="mb-3 flex items-center justify-between">
                 <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
             </div>
-
-            <div id="stock-table-container" class="space-y-2 overflow-y-auto flex-grow pr-1">
+            <div id="stock-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1">
                 <div class="text-center py-8 text-xs text-slate-400 italic">กำลังโหลดรายการสต็อกสินค้า...</div>
             </div>
         </div>
     </div>
 
-    <!-- Modal: เลือกสินค้าจากสต็อกตอนกรอกฟอร์มลูกค้า -->
+    <!-- Modal: เลือกสินค้าจากสต็อก -->
     <div id="custom-item-suggestions" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
         <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-5 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
             <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
@@ -178,12 +193,10 @@
                     ✕
                 </button>
             </div>
-            
             <div class="mb-3">
                 <input type="text" id="suggestion-search-box" placeholder="🔍 พิมพ์เพื่อกรองชื่อสินค้า..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
             </div>
-
-            <div id="suggestions-table-container" class="space-y-2 overflow-y-auto flex-grow pr-1"></div>
+            <div id="suggestions-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1"></div>
         </div>
     </div>
 
@@ -239,7 +252,7 @@
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-    <footer class="text-center py-2 text-xs text-slate-400 border-t border-sky-100 flex-shrink-0">
+    <footer class="text-center py-1.5 text-[11px] text-slate-400 border-t border-sky-100 flex-shrink-0">
         Delivery Tracking System © 2026
     </footer>
 
@@ -335,7 +348,6 @@
             document.getElementById('modal-cancel').addEventListener('click', closeModal, { once: true });
         }
 
-        // --- ส่วนจัดการ Modal เลือกลูกค้าเดิม (Customer Selection Modal) ---
         const customerModal = document.getElementById('customer-modal');
         const customerModalBox = document.getElementById('customer-modal-box');
         const customerNameInput = document.getElementById('customer-name');
@@ -393,7 +405,6 @@
             }
 
             customerListContainer.innerHTML = filtered.map((item, index) => {
-                // สลับสีรายชื่อลูกค้า (Zebra Striping) ให้สวยเด่นสะดุดตา
                 const rowBg = index % 2 === 0 ? 'bg-white hover:bg-sky-50/70 border-slate-100' : 'bg-slate-50/70 hover:bg-sky-50/90 border-slate-200/60';
                 
                 return `
@@ -426,7 +437,6 @@
             showToast(`เลือกข้อมูลของ "${name}" เรียบร้อย`, 'info');
         };
 
-        // --- ส่วนจัดการสต็อกสินค้า (Products Modal) ---
         const stockModal = document.getElementById('stock-modal');
         const stockModalBox = document.getElementById('stock-modal-box');
         const openStockModalBtn = document.getElementById('open-stock-modal-btn');
@@ -698,7 +708,7 @@
         function renderPendingItems() {
             if (pendingItems.length === 0) {
                 pendingContainer.innerHTML = `
-                    <div class="text-xs text-slate-400 italic bg-gradient-to-br from-slate-50 to-sky-50/40 p-3.5 rounded-2xl border border-dashed border-sky-200/60 text-center shadow-2xs">
+                    <div class="text-xs text-slate-400 italic bg-gradient-to-br from-slate-50 to-sky-50/40 p-2.5 rounded-2xl border border-dashed border-sky-200/60 text-center shadow-2xs">
                         ✨ ยังไม่มีรายการสินค้า (พิมพ์หรือเลือกจากสต็อก แล้วกดปุ่มเพิ่ม)
                     </div>
                 `;
@@ -706,7 +716,7 @@
             }
 
             pendingContainer.innerHTML = pendingItems.map((item, index) => `
-                <div class="group flex items-center justify-between bg-gradient-to-r from-sky-50/80 via-white to-blue-50/40 px-3.5 py-2 rounded-2xl border border-sky-100/80 text-xs text-slate-700 gap-2 shadow-2xs transition-all duration-200">
+                <div class="group flex items-center justify-between bg-gradient-to-r from-sky-50/80 via-white to-blue-50/40 px-3 py-1.5 rounded-2xl border border-sky-100/80 text-xs text-slate-700 gap-2 shadow-2xs transition-all duration-200">
                     <div class="flex items-center gap-2 flex-grow truncate">
                         <span class="flex-shrink-0 w-2 h-2 rounded-full bg-sky-500"></span>
                         <span class="truncate font-semibold text-slate-800">${escapeHTML(item.text)}</span>
@@ -1043,7 +1053,7 @@
                             </div>
                         ` : ''}
 
-                        <div class="p-4 space-y-2 max-h-72 overflow-y-auto">
+                        <div class="p-3 space-y-2 max-h-48 overflow-y-auto no-scrollbar">
                             <div class="flex items-center justify-between bg-slate-100/70 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 mb-2">
                                 <span>📊 ประวัติการซื้อทั้งหมด ${totalCount} รายการ</span>
                                 <span class="${pendingCount > 0 ? 'text-amber-600' : 'text-emerald-600'}">
