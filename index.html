@@ -560,24 +560,40 @@
             renderPendingItems();
         }
 
-        addItemBtn.addEventListener('click', () => {
-            const val = itemInput.value.trim();
-            if (!val) {
-                showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
-                return;
-            }
-            
-            pendingItems.push({
-                text: val,
-                dueDate: itemDueDateInput.value ? itemDueDateInput.value.trim() : ''
-            });
-            
-            itemInput.value = '';
-            itemDueDateInput.value = '';
-            itemInput.focus();
-            renderPendingItems();
-        });
+addItemBtn.addEventListener('click', () => {
+    const val = itemInput.value.trim();
+    if (!val) {
+        showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
+        return;
+    }
+    
+    const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
 
+    // ตรวจสอบว่ามีสินค้าชื่อนี้และวันนัดส่งเดียวกันอยู่ใน pendingItems แล้วหรือยัง
+    const existingIndex = pendingItems.findIndex(item => item.text === val && item.dueDate === dueDate);
+
+    if (existingIndex > -1) {
+        // หากมีอยู่แล้ว ให้เพิ่มจำนวน (quantity) ขึ้นทีละ 1 หรือแยกเก็บตัวเลขจำนวนไว้
+        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + 1;
+        
+        // อัปเดตข้อความแสดงผลให้ต่อท้ายด้วย x จำนวน (เช่น สินค้า A x 3)
+        // หรือถ้าข้อความเดิมมีคำว่า x อยู่แล้ว ให้ตัดออกก่อนแล้วคำนวณใหม่เพื่อความสะอาด
+        let baseName = val.replace(/\s*x\s*\d+$/, '');
+        pendingItems[existingIndex].text = `${baseName} x ${pendingItems[existingIndex].quantity}`;
+    } else {
+        // หากยังไม่มี ให้เพิ่มรายการใหม่เข้าไปตามปกติ (เริ่มต้นจำนวนเป็น 1)
+        pendingItems.push({
+            text: val,
+            quantity: 1,
+            dueDate: dueDate
+        });
+    }
+    
+    itemInput.value = '';
+    itemDueDateInput.value = '';
+    itemInput.focus();
+    renderPendingItems();
+});
         itemInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
