@@ -116,7 +116,6 @@
                 </button>
             </div>
 
-            <!-- ฟอร์มเพิ่ม/แก้ไขสินค้าในสต็อก -->
             <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                 <input type="hidden" id="stock-edit-id">
                 <div class="sm:col-span-5">
@@ -137,7 +136,6 @@
                 <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
             </div>
 
-            <!-- ตารางแสดงรายการสต็อก -->
             <div id="stock-table-container" class="space-y-2 overflow-y-auto flex-grow pr-1">
                 <div class="text-center py-8 text-xs text-slate-400 italic">กำลังโหลดรายการสต็อกสินค้า...</div>
             </div>
@@ -146,10 +144,10 @@
 
     <!-- Modal: เลือกสินค้าจากสต็อกตอนกรอกฟอร์มลูกค้า -->
     <div id="custom-item-suggestions" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-5 border border-slate-100 flex flex-col max-h-[80vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-5 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
             <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
                 <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                    📋 เลือกรายการสินค้าจากสต็อก
+                    📋 เลือกรายการสินค้าจากสต็อก (ปรับเพิ่ม-ลดจำนวนได้ทันที)
                 </span>
                 <button type="button" id="close-suggestion-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
                     ✕
@@ -160,7 +158,7 @@
                 <input type="text" id="suggestion-search-box" placeholder="🔍 พิมพ์เพื่อกรองชื่อสินค้า..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
             </div>
 
-            <div id="suggestions-table-container" class="space-y-1.5 overflow-y-auto flex-grow pr-1"></div>
+            <div id="suggestions-table-container" class="space-y-2 overflow-y-auto flex-grow pr-1"></div>
         </div>
     </div>
 
@@ -244,6 +242,7 @@
         let allDeliveries = [];
         let allProducts = []; 
         let currentFilter = 'all';
+        let suggestionQuantities = {};
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -490,16 +489,65 @@
                 return;
             }
 
-            suggestionsTableContainer.innerHTML = filteredItems.map(p => `
-                <div class="flex items-center justify-between px-4 py-3 text-xs text-slate-700 hover:bg-sky-50 rounded-2xl cursor-pointer transition border border-slate-100/80 hover:border-sky-200 group shadow-2xs" onclick="selectSuggestion('${escapeHTML(p.name).replace(/'/g, "\\'")}', ${p.price})">
-                    <div class="flex items-center gap-3 truncate pr-2">
-                        <span class="w-2.5 h-2.5 rounded-full bg-sky-500 flex-shrink-0 shadow-xs"></span>
-                        <span class="font-semibold text-slate-800 truncate text-sm">${escapeHTML(p.name)}</span>
+            suggestionsTableContainer.innerHTML = filteredItems.map(p => {
+                if (!suggestionQuantities[p.id]) suggestionQuantities[p.id] = 1;
+                const currentQty = suggestionQuantities[p.id];
+
+                return `
+                    <div class="flex items-center justify-between px-3.5 py-2.5 bg-white hover:bg-sky-50/60 rounded-2xl transition border border-slate-100 hover:border-sky-200 shadow-2xs gap-2">
+                        <div class="flex items-center gap-2.5 truncate flex-grow cursor-pointer" onclick="selectSuggestion('${escapeHTML(p.name).replace(/'/g, "\\'")}', ${p.price})">
+                            <span class="w-2 h-2 rounded-full bg-sky-500 flex-shrink-0"></span>
+                            <div class="truncate">
+                                <div class="font-semibold text-slate-800 text-xs truncate">${escapeHTML(p.name)}</div>
+                                <div class="text-[11px] text-sky-600 font-bold">${Number(p.price).toLocaleString()} บาท</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <button type="button" onclick="adjustSuggestionQty('${p.id}', -1)" class="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 font-bold text-xs transition shadow-2xs">-</button>
+                            <span id="suggestion-qty-${p.id}" class="w-6 text-center font-bold text-xs text-slate-800">${currentQty}</span>
+                            <button type="button" onclick="adjustSuggestionQty('${p.id}', 1)" class="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 font-bold text-xs transition shadow-2xs">+</button>
+                            <button type="button" onclick="addSuggestionWithQty('${escapeHTML(p.name).replace(/'/g, "\\'")}', ${p.price}, '${p.id}')" class="ml-1 px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs transition shadow-xs">เพิ่ม</button>
+                        </div>
                     </div>
-                    <span class="text-xs text-sky-700 bg-sky-100 px-3 py-1.5 rounded-xl font-bold transition flex-shrink-0">${Number(p.price).toLocaleString()}.- ↵</span>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
+
+        window.adjustSuggestionQty = function(id, delta) {
+            if (!suggestionQuantities[id]) suggestionQuantities[id] = 1;
+            suggestionQuantities[id] += delta;
+            if (suggestionQuantities[id] < 1) suggestionQuantities[id] = 1;
+            const span = document.getElementById(`suggestion-qty-${id}`);
+            if (span) span.textContent = suggestionQuantities[id];
+        };
+
+        window.addSuggestionWithQty = function(name, price, id) {
+            const qty = suggestionQuantities[id] || 1;
+            const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
+            
+            const existingIndex = pendingItems.findIndex(item => {
+                let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+                return itemCleanName === name && item.dueDate === dueDate;
+            });
+
+            if (existingIndex > -1) {
+                pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
+                let baseText = pendingItems[existingIndex].rawName || name;
+                pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
+            } else {
+                pendingItems.push({
+                    rawName: name,
+                    text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
+                    quantity: qty,
+                    dueDate: dueDate
+                });
+            }
+
+            renderPendingItems();
+            closeSuggestionModal();
+            showToast(`เพิ่ม "${name} x ${qty}" สำเร็จ`, 'success');
+            suggestionQuantities[id] = 1;
+        };
 
         dropdownToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -521,7 +569,7 @@
         });
 
         window.selectSuggestion = function(name, price) {
-            itemInput.value = `${name} (${Number(price).toLocaleString()} บาท)`;
+            itemInput.value = `${name} (${Number(price).toLocaleString()} บาท) x 1`;
             closeSuggestionModal();
             itemInput.focus();
         };
@@ -537,17 +585,25 @@
             }
 
             pendingContainer.innerHTML = pendingItems.map((item, index) => `
-                <div class="group flex items-center justify-between bg-gradient-to-r from-sky-50/80 via-white to-blue-50/40 px-3.5 py-2.5 rounded-2xl border border-sky-100/80 text-xs text-slate-700 gap-3 shadow-2xs transition-all duration-200 hover:shadow-sm hover:border-sky-300">
+                <div class="group flex items-center justify-between bg-gradient-to-r from-sky-50/80 via-white to-blue-50/40 px-3.5 py-2 rounded-2xl border border-sky-100/80 text-xs text-slate-700 gap-2 shadow-2xs transition-all duration-200">
                     <div class="flex items-center gap-2 flex-grow truncate">
                         <span class="flex-shrink-0 w-2 h-2 rounded-full bg-sky-500"></span>
                         <span class="truncate font-semibold text-slate-800">${escapeHTML(item.text)}</span>
                     </div>
                     
-                    <div class="flex items-center gap-2 flex-shrink-0">
-                        <span class="text-[11px] text-sky-800 bg-sky-100/70 px-2.5 py-1 rounded-xl border border-sky-200/60 font-medium shadow-2xs flex items-center gap-1">
-                            <span>📅</span> ${escapeHTML(item.dueDate ? formatDateDisplay(item.dueDate) : 'ไม่ระบุวัน')}
+                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <button type="button" onclick="decreaseQuantity(${index})" class="w-6 h-6 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 rounded-md text-slate-600 font-bold transition shadow-2xs" title="ลดจำนวน">
+                            -
+                        </button>
+                        <button type="button" onclick="increaseQuantity(${index})" class="w-6 h-6 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 rounded-md text-slate-600 font-bold transition shadow-2xs" title="เพิ่มจำนวน">
+                            +
+                        </button>
+
+                        <span class="text-[11px] text-sky-800 bg-sky-100/70 px-2 py-0.5 rounded-xl border border-sky-200/60 font-medium ml-1">
+                            📅 ${escapeHTML(item.dueDate ? formatDateDisplay(item.dueDate) : 'ไม่ระบุ')}
                         </span>
-                        <button type="button" onclick="removePendingItem(${index})" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-500 rounded-full transition-all duration-200" title="ลบรายการนี้">
+
+                        <button type="button" onclick="removePendingItem(${index})" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-500 rounded-full transition ml-1" title="ลบรายการนี้">
                             ✕
                         </button>
                     </div>
@@ -558,51 +614,68 @@
         window.removePendingItem = function(index) {
             pendingItems.splice(index, 1);
             renderPendingItems();
-        }
+        };
 
-addItemBtn.addEventListener('click', () => {
-    const val = itemInput.value.trim();
-    if (!val) {
-        showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
-        return;
-    }
-    
-    const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
+        window.increaseQuantity = function(index) {
+            let item = pendingItems[index];
+            item.quantity = (item.quantity || 1) + 1;
+            let baseText = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+            item.text = `${baseText} x ${item.quantity}`;
+            renderPendingItems();
+        };
 
-    // แยกชื่อสินค้าพื้นฐานออกจากจำนวนเดิม (ถ้ามี เช่น "กรรไกร x 2" ให้เหลือ "กรรไกร")
-    let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
-    let addQty = 1;
-    const matchQty = val.match(/x\s*(\d+)$/);
-    if (matchQty) {
-        addQty = parseInt(matchQty[1]);
-    }
+        window.decreaseQuantity = function(index) {
+            let item = pendingItems[index];
+            if (item.quantity && item.quantity > 1) {
+                item.quantity -= 1;
+                let baseText = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+                item.text = `${baseText} x ${item.quantity}`;
+            } else {
+                pendingItems.splice(index, 1);
+            }
+            renderPendingItems();
+        };
 
-    // ค้นหาว่ามีสินค้าชื่อเดียวกันและวันนัดส่งเดียวกันใน pendingItems หรือยัง
-    const existingIndex = pendingItems.findIndex(item => {
-        let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
-        return itemCleanName === cleanName && item.dueDate === dueDate;
-    });
+        addItemBtn.addEventListener('click', () => {
+            const val = itemInput.value.trim();
+            if (!val) {
+                showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
+                return;
+            }
+            
+            const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
 
-    if (existingIndex > -1) {
-        // ถ้ารวมกันจริง ให้บวกจำนวนเพิ่มเข้าไป
-        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + addQty;
-        let baseText = pendingItems[existingIndex].rawName || cleanName;
-        pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
-    } else {
-        // ถ้ายังไม่มี ให้สร้างรายการใหม่แต่เก็บบันทึกชื่อดิบ (rawName) ไว้เทียบ
-        pendingItems.push({
-            rawName: cleanName,
-            text: addQty > 1 ? `${cleanName} x ${addQty}` : cleanName,
-            quantity: addQty,
-            dueDate: dueDate
+            let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
+            let addQty = 1;
+            const matchQty = val.match(/x\s*(\d+)$/);
+            if (matchQty) {
+                addQty = parseInt(matchQty[1]);
+            }
+
+            const existingIndex = pendingItems.findIndex(item => {
+                let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+                return itemCleanName === cleanName && item.dueDate === dueDate;
+            });
+
+            if (existingIndex > -1) {
+                pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + addQty;
+                let baseText = pendingItems[existingIndex].rawName || cleanName;
+                pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
+            } else {
+                pendingItems.push({
+                    rawName: cleanName,
+                    text: addQty > 1 ? `${cleanName} x ${addQty}` : `${cleanName} x 1`,
+                    quantity: addQty,
+                    dueDate: dueDate
+                });
+            }
+            
+            itemInput.value = '';
+            itemDueDateInput.value = '';
+            itemInput.focus();
+            renderPendingItems();
         });
-    }
-    
-    itemInput.value = '';
-    itemDueDateInput.value = '';
-    itemInput.focus();
-    renderPendingItems();
-});
+
         itemInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
