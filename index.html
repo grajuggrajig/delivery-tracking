@@ -35,8 +35,12 @@
             <form id="delivery-form" class="space-y-4">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า <span class="text-red-500">*</span></label>
-                    <input type="text" id="customer-name" list="customer-options" required placeholder="พิมพ์เพื่อดึงข้อมูลเก่า" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                    <datalist id="customer-options"></datalist>
+                    <div class="relative flex items-center">
+                        <input type="text" id="customer-name" autocomplete="off" placeholder="คลิกเพื่อเลือกชื่อลูกค้าเก่า" class="w-full pl-3 pr-10 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition cursor-pointer">
+                        <button type="button" id="customer-dropdown-btn" title="เลือกรายชื่อลูกค้าเดิม" class="absolute right-2 px-2 py-1 text-slate-400 hover:text-slate-700 transition focus:outline-none text-xs font-bold">
+                            ▼
+                        </button>
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบริษัท</label>
@@ -103,6 +107,26 @@
             </div>
         </section>
     </main>
+
+    <!-- Modal: เลือกลูกค้าเดิม (เด้งลอยกลางจอแบบเทพ) -->
+    <div id="customer-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="customer-modal-box">
+            <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    👥 เลือกลูกค้าจากฐานข้อมูลเดิม
+                </span>
+                <button type="button" id="close-customer-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
+                    ✕
+                </button>
+            </div>
+            
+            <div class="mb-3">
+                <input type="text" id="customer-search-box" placeholder="🔍 พิมพ์เพื่อค้นหาชื่อลูกค้า หรือบริษัท..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+            </div>
+
+            <div id="customer-list-container" class="space-y-1.5 overflow-y-auto flex-grow pr-1"></div>
+        </div>
+    </div>
 
     <!-- Modal: จัดการสต็อกสินค้า -->
     <div id="stock-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
@@ -311,6 +335,97 @@
             document.getElementById('modal-cancel').addEventListener('click', closeModal, { once: true });
         }
 
+        // --- ส่วนจัดการ Modal เลือกลูกค้าเดิม (Customer Selection Modal) ---
+        const customerModal = document.getElementById('customer-modal');
+        const customerModalBox = document.getElementById('customer-modal-box');
+        const customerNameInput = document.getElementById('customer-name');
+        const customerDropdownBtn = document.getElementById('customer-dropdown-btn');
+        const closeCustomerModalBtn = document.getElementById('close-customer-modal');
+        const customerSearchBox = document.getElementById('customer-search-box');
+        const customerListContainer = document.getElementById('customer-list-container');
+
+        function openCustomerModal() {
+            customerModal.classList.remove('hidden');
+            setTimeout(() => {
+                customerModal.classList.remove('opacity-0');
+                customerModalBox.classList.remove('scale-95');
+            }, 10);
+            customerSearchBox.value = '';
+            renderCustomerList('');
+            customerSearchBox.focus();
+        }
+
+        function closeCustomerModal() {
+            customerModal.classList.add('opacity-0');
+            customerModalBox.classList.add('scale-95');
+            setTimeout(() => {
+                customerModal.classList.add('hidden');
+            }, 200);
+        }
+
+        customerDropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openCustomerModal();
+        });
+
+        customerNameInput.addEventListener('click', openCustomerModal);
+
+        customerSearchBox.addEventListener('input', (e) => {
+            renderCustomerList(e.target.value);
+        });
+
+        closeCustomerModalBtn.addEventListener('click', closeCustomerModal);
+        customerModal.addEventListener('click', (e) => {
+            if (e.target === customerModal) closeCustomerModal();
+        });
+
+        function renderCustomerList(filterText = '') {
+            const keyword = filterText.toLowerCase().trim();
+            const filtered = allDeliveries.filter(item => 
+                (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
+                (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
+                (item.phone && item.phone.toLowerCase().includes(keyword))
+            );
+
+            if (filtered.length === 0) {
+                customerListContainer.innerHTML = `<div class="text-center py-8 text-xs text-slate-400 italic bg-slate-50 rounded-2xl">ไม่พบรายชื่อลูกค้าในระบบ</div>`;
+                return;
+            }
+
+            customerListContainer.innerHTML = filtered.map((item, index) => {
+                // สลับสีรายชื่อลูกค้า (Zebra Striping) ให้สวยเด่นสะดุดตา
+                const rowBg = index % 2 === 0 ? 'bg-white hover:bg-sky-50/70 border-slate-100' : 'bg-slate-50/70 hover:bg-sky-50/90 border-slate-200/60';
+                
+                return `
+                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}')" 
+                         class="flex items-center justify-between p-3 rounded-2xl border ${rowBg} shadow-2xs transition cursor-pointer group">
+                        <div class="flex items-center gap-3 truncate">
+                            <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
+                                ${escapeHTML(item.customerName.charAt(0).toUpperCase())}
+                            </div>
+                            <div class="truncate">
+                                <div class="text-xs font-bold text-slate-800 group-hover:text-sky-700 transition truncate">${escapeHTML(item.customerName)}</div>
+                                <div class="text-[11px] text-slate-500 truncate flex items-center gap-2">
+                                    <span>🏢 ${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
+                                    ${item.phone ? `<span>📞 ${escapeHTML(item.phone)}</span>` : ''}
+                                </div>
+                            </div>
+                        </div>
+                        <span class="text-xs font-semibold text-sky-600 bg-sky-50 px-2.5 py-1 rounded-xl border border-sky-100 group-hover:bg-sky-600 group-hover:text-white transition flex-shrink-0">เลือก</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.selectCustomerItem = function(name, company, phone, address) {
+            customerNameInput.value = name;
+            companyNameInput.value = company;
+            phoneInput.value = phone;
+            addressInput.value = address;
+            closeCustomerModal();
+            showToast(`เลือกข้อมูลของ "${name}" เรียบร้อย`, 'info');
+        };
+
         // --- ส่วนจัดการสต็อกสินค้า (Products Modal) ---
         const stockModal = document.getElementById('stock-modal');
         const stockModalBox = document.getElementById('stock-modal-box');
@@ -396,7 +511,6 @@
             const keyword = filterText.toLowerCase().trim();
             const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
 
-            // อัปเดตจำนวนสินค้าที่แสดง
             const badge = document.getElementById('stock-count-badge');
             if (badge) {
                 badge.textContent = `${allProducts.length} รายการ`;
@@ -690,7 +804,6 @@
             }
         });
 
-        const customerNameInput = document.getElementById('customer-name');
         const companyNameInput = document.getElementById('company-name');
         const phoneInput = document.getElementById('phone');
         const addressInput = document.getElementById('address');
@@ -784,20 +897,11 @@
 
         db.collection('deliveries').onSnapshot(snapshot => {
             allDeliveries = [];
-            const customerOptions = document.getElementById('customer-options');
-            let datalistHTML = '';
-
             snapshot.forEach(doc => {
                 const data = doc.data();
                 let itemsList = data.subItems || [];
                 allDeliveries.push({ id: doc.id, ...data, subItems: itemsList });
-                
-                if (data.customerName) {
-                    datalistHTML += `<option value="${escapeHTML(data.customerName)}">`;
-                }
             });
-
-            customerOptions.innerHTML = datalistHTML;
             applyFilterAndSearch();
         }, error => {
             console.error(error);
