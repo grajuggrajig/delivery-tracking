@@ -569,22 +569,31 @@ addItemBtn.addEventListener('click', () => {
     
     const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
 
-    // ตรวจสอบว่ามีสินค้าชื่อนี้และวันนัดส่งเดียวกันอยู่ใน pendingItems แล้วหรือยัง
-    const existingIndex = pendingItems.findIndex(item => item.text === val && item.dueDate === dueDate);
+    // แยกชื่อสินค้าพื้นฐานออกจากจำนวนเดิม (ถ้ามี เช่น "กรรไกร x 2" ให้เหลือ "กรรไกร")
+    let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
+    let addQty = 1;
+    const matchQty = val.match(/x\s*(\d+)$/);
+    if (matchQty) {
+        addQty = parseInt(matchQty[1]);
+    }
+
+    // ค้นหาว่ามีสินค้าชื่อเดียวกันและวันนัดส่งเดียวกันใน pendingItems หรือยัง
+    const existingIndex = pendingItems.findIndex(item => {
+        let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+        return itemCleanName === cleanName && item.dueDate === dueDate;
+    });
 
     if (existingIndex > -1) {
-        // หากมีอยู่แล้ว ให้เพิ่มจำนวน (quantity) ขึ้นทีละ 1 หรือแยกเก็บตัวเลขจำนวนไว้
-        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + 1;
-        
-        // อัปเดตข้อความแสดงผลให้ต่อท้ายด้วย x จำนวน (เช่น สินค้า A x 3)
-        // หรือถ้าข้อความเดิมมีคำว่า x อยู่แล้ว ให้ตัดออกก่อนแล้วคำนวณใหม่เพื่อความสะอาด
-        let baseName = val.replace(/\s*x\s*\d+$/, '');
-        pendingItems[existingIndex].text = `${baseName} x ${pendingItems[existingIndex].quantity}`;
+        // ถ้ารวมกันจริง ให้บวกจำนวนเพิ่มเข้าไป
+        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + addQty;
+        let baseText = pendingItems[existingIndex].rawName || cleanName;
+        pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
     } else {
-        // หากยังไม่มี ให้เพิ่มรายการใหม่เข้าไปตามปกติ (เริ่มต้นจำนวนเป็น 1)
+        // ถ้ายังไม่มี ให้สร้างรายการใหม่แต่เก็บบันทึกชื่อดิบ (rawName) ไว้เทียบ
         pendingItems.push({
-            text: val,
-            quantity: 1,
+            rawName: cleanName,
+            text: addQty > 1 ? `${cleanName} x ${addQty}` : cleanName,
+            quantity: addQty,
             dueDate: dueDate
         });
     }
