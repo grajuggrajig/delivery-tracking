@@ -128,19 +128,19 @@
         </section>
     </main>
 
-    <!-- Modal: เลือกลูกค้าเดิม -->
+    <!-- Modal: เลือกลูกค้าเดิม หรือพิมพ์เพิ่มใหม่ -->
     <div id="customer-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
         <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-5 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="customer-modal-box">
             <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
                 <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                    👥 เลือกลูกค้าจากฐานข้อมูลเดิม
+                    👥 เลือกลูกค้าเดิม หรือพิมพ์เพิ่มใหม่
                 </span>
                 <button type="button" id="close-customer-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
                     ✕
                 </button>
             </div>
             <div class="mb-3">
-                <input type="text" id="customer-search-box" placeholder="🔍 พิมพ์เพื่อค้นหาชื่อลูกค้า หรือบริษัท..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                <input type="text" id="customer-search-box" placeholder="🔍 พิมพ์ค้นหา หรือพิมพ์ชื่อลูกค้าใหม่..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
             </div>
             <div id="customer-list-container" class="space-y-1.5 overflow-y-auto no-scrollbar flex-grow pr-1"></div>
         </div>
@@ -399,17 +399,39 @@
                 (item.phone && item.phone.toLowerCase().includes(keyword))
             );
 
-            if (filtered.length === 0) {
-                customerListContainer.innerHTML = `<div class="text-center py-8 text-xs text-slate-400 italic bg-slate-50 rounded-2xl">ไม่พบรายชื่อลูกค้าในระบบ</div>`;
+            let htmlContent = '';
+
+            // ถ้ามีการพิมพ์ค้นหา และยังไม่มีชื่อนี้ตรงเป๊ะในระบบ ให้แสดงปุ่มสร้างลูกค้าใหม่ทันทีใน Modal
+            if (keyword.length > 0) {
+                const exactMatch = allDeliveries.some(item => item.customerName.toLowerCase() === keyword);
+                if (!exactMatch) {
+                    htmlContent += `
+                        <div onclick="addNewCustomerFromModal('${escapeHTML(filterText).replace(/'/g, "\\'")}')" 
+                             class="flex items-center justify-between p-3.5 rounded-2xl border bg-sky-600 text-white shadow-md transition cursor-pointer mb-2 hover:bg-sky-700">
+                            <div class="flex items-center gap-2.5 truncate">
+                                <span class="text-base">➕</span>
+                                <div class="truncate">
+                                    <div class="text-xs font-bold truncate">เพิ่ม "${escapeHTML(filterText)}" เป็นลูกค้าใหม่</div>
+                                    <div class="text-[11px] opacity-90 truncate">คลิกเพื่อใช้ชื่อนี้สร้างรายการใหม่</div>
+                                </div>
+                            </div>
+                            <span class="text-xs font-semibold bg-white/20 px-2.5 py-1 rounded-xl flex-shrink-0">สร้างใหม่</span>
+                        </div>
+                    `;
+                }
+            }
+
+            if (filtered.length === 0 && keyword.length === 0) {
+                customerListContainer.innerHTML = `<div class="text-center py-8 text-xs text-slate-400 italic bg-slate-50 rounded-2xl">ไม่พบรายชื่อลูกค้าในระบบ (พิมพ์ชื่อใหม่ในช่องค้นหาด้านบนได้เลย)</div>`;
                 return;
             }
 
-            customerListContainer.innerHTML = filtered.map((item, index) => {
+            htmlContent += filtered.map((item, index) => {
                 const rowBg = index % 2 === 0 ? 'bg-white hover:bg-sky-50/70 border-slate-100' : 'bg-slate-50/70 hover:bg-sky-50/90 border-slate-200/60';
                 
                 return `
                     <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}')" 
-                         class="flex items-center justify-between p-3 rounded-2xl border ${rowBg} shadow-2xs transition cursor-pointer group">
+                         class="flex items-center justify-between p-3 rounded-2xl border ${rowBg} shadow-2xs transition cursor-pointer group mb-1.5">
                         <div class="flex items-center gap-3 truncate">
                             <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
                                 ${escapeHTML(item.customerName.charAt(0).toUpperCase())}
@@ -426,6 +448,8 @@
                     </div>
                 `;
             }).join('');
+
+            customerListContainer.innerHTML = htmlContent;
         }
 
         window.selectCustomerItem = function(name, company, phone, address) {
@@ -435,6 +459,16 @@
             addressInput.value = address;
             closeCustomerModal();
             showToast(`เลือกข้อมูลของ "${name}" เรียบร้อย`, 'info');
+        };
+
+        window.addNewCustomerFromModal = function(name) {
+            customerNameInput.value = name;
+            companyNameInput.value = '';
+            phoneInput.value = '';
+            addressInput.value = '';
+            closeCustomerModal();
+            showToast(`ตั้งชื่อลูกค้าใหม่เป็น "${name}" แล้ว`, 'info');
+            document.getElementById('company-name').focus();
         };
 
         const stockModal = document.getElementById('stock-modal');
@@ -1292,4 +1326,4 @@
         document.getElementById('search-input').addEventListener('input', applyFilterAndSearch);
     </script>
 </body>
-</html>
+</html>ฤ
