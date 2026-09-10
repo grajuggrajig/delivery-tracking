@@ -233,6 +233,24 @@
         </div>
     </div>
 
+    <!-- Modal: แก้ไขชื่อลูกค้า -->
+    <div id="edit-customer-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-customer-modal-content">
+            <div class="text-2xl mb-3">👤</div>
+            <h3 class="text-base font-bold text-slate-800 mb-2">แก้ไขชื่อลูกค้า</h3>
+            <div class="space-y-3 mb-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้าใหม่</label>
+                    <input type="text" id="edit-customer-text" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+            </div>
+            <div class="flex gap-3">
+                <button id="edit-customer-cancel" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition">ยกเลิก</button>
+                <button id="edit-customer-confirm" class="flex-1 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition">บันทึกการแก้ไข</button>
+            </div>
+        </div>
+    </div>
+
     <div id="edit-company-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-company-modal-content">
             <div class="text-2xl mb-3">🏢</div>
@@ -401,7 +419,6 @@
 
             let htmlContent = '';
 
-            // ถ้ามีการพิมพ์ค้นหา และยังไม่มีชื่อนี้ตรงเป๊ะในระบบ ให้แสดงปุ่มสร้างลูกค้าใหม่ทันทีใน Modal
             if (keyword.length > 0) {
                 const exactMatch = allDeliveries.some(item => item.customerName.toLowerCase() === keyword);
                 if (!exactMatch) {
@@ -517,56 +534,52 @@
         stockCancelEditBtn.addEventListener('click', resetStockForm);
 
         stockForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // ป้องกันการกดซ้ำขณะกำลังประมวลผล
-    if (stockSubmitBtn.disabled) return;
+            e.preventDefault();
+            if (stockSubmitBtn.disabled) return;
 
-    const name = stockNameInput.value.trim();
-    const price = parseFloat(stockPriceInput.value);
-    const editId = stockEditId.value;
+            const name = stockNameInput.value.trim();
+            const price = parseFloat(stockPriceInput.value);
+            const editId = stockEditId.value;
 
-    if (!name || isNaN(price)) {
-        showToast('กรุณากรอกข้อมูลสินค้าและราคาให้ถูกต้อง', 'error');
-        return;
-    }
-
-    // ล็อกปุ่มทันทีเพื่อกันการกดเบิ้ล
-    stockSubmitBtn.disabled = true;
-    stockSubmitBtn.textContent = 'กำลังบันทึก...';
-
-    try {
-        if (editId) {
-            await db.collection('products').doc(editId).update({ name, price });
-            showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
-        } else {
-            // (ทางเลือกเสริม) ตรวจสอบว่ามีชื่อสินင့်นี้อยู่แล้วหรือไม่ก่อนบันทึกใหม่
-            const existing = allProducts.find(p => p.name.toLowerCase() === name.toLowerCase());
-            if (existing && !editId) {
-                showToast('มีสินค้านี้ในสต็อกอยู่แล้ว กรุณาใช้ปุ่มแก้ไขแทน', 'error');
-                stockSubmitBtn.disabled = false;
-                stockSubmitBtn.textContent = 'บันทึกสินค้า';
+            if (!name || isNaN(price)) {
+                showToast('กรุณากรอกข้อมูลสินค้าและราคาให้ถูกต้อง', 'error');
                 return;
             }
 
-            await db.collection('products').add({
-                name,
-                price,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
-        }
-        resetStockForm();
-        renderStockTable(stockSearchBox.value);
-    } catch (err) {
-        console.error(err);
-        showToast('ไม่สามารถบันทึกสินค้าได้', 'error');
-    } finally {
-        // คืนสถานะปุ่มให้ใช้งานได้ปกติ
-        stockSubmitBtn.disabled = false;
-        stockSubmitBtn.textContent = editId ? 'บันทึกการแก้ไข' : 'บันทึกสินค้า';
-    }
-});
+            stockSubmitBtn.disabled = true;
+            stockSubmitBtn.textContent = 'กำลังบันทึก...';
+
+            try {
+                if (editId) {
+                    await db.collection('products').doc(editId).update({ name, price });
+                    showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
+                } else {
+                    const existing = allProducts.find(p => p.name.toLowerCase() === name.toLowerCase());
+                    if (existing && !editId) {
+                        showToast('มีสินค้านี้ในสต็อกอยู่แล้ว กรุณาใช้ปุ่มแก้ไขแทน', 'error');
+                        stockSubmitBtn.disabled = false;
+                        stockSubmitBtn.textContent = 'บันทึกสินค้า';
+                        return;
+                    }
+
+                    await db.collection('products').add({
+                        name,
+                        price,
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
+                }
+                resetStockForm();
+                renderStockTable(stockSearchBox.value);
+            } catch (err) {
+                console.error(err);
+                showToast('ไม่สามารถบันทึกสินค้าได้', 'error');
+            } finally {
+                stockSubmitBtn.disabled = false;
+                stockSubmitBtn.textContent = editId ? 'บันทึกการแก้ไข' : 'บันทึกสินค้า';
+            }
+        });
+
         stockSearchBox.addEventListener('input', (e) => {
             renderStockTable(e.target.value);
         });
@@ -708,40 +721,40 @@
 
         let isAddingSuggestion = false;
 
-window.addSuggestionWithQty = function(name, price, id) {
-    if (isAddingSuggestion) return;
-    isAddingSuggestion = true;
+        window.addSuggestionWithQty = function(name, price, id) {
+            if (isAddingSuggestion) return;
+            isAddingSuggestion = true;
 
-    const qty = suggestionQuantities[id] || 1;
-    const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
-    
-    const existingIndex = pendingItems.findIndex(item => {
-        let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
-        return itemCleanName === name && item.dueDate === dueDate;
-    });
+            const qty = suggestionQuantities[id] || 1;
+            const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
+            
+            const existingIndex = pendingItems.findIndex(item => {
+                let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+                return itemCleanName === name && item.dueDate === dueDate;
+            });
 
-    if (existingIndex > -1) {
-        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
-        let baseText = pendingItems[existingIndex].rawName || name;
-        pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
-    } else {
-        pendingItems.push({
-            rawName: name,
-            text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
-            quantity: qty,
-            dueDate: dueDate
-        });
-    }
+            if (existingIndex > -1) {
+                pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
+                let baseText = pendingItems[existingIndex].rawName || name;
+                pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
+            } else {
+                pendingItems.push({
+                    rawName: name,
+                    text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
+                    quantity: qty,
+                    dueDate: dueDate
+                });
+            }
 
-    renderPendingItems();
-    closeSuggestionModal();
-    showToast(`เพิ่ม "${name} x ${qty}" สำเร็จ`, 'success');
-    suggestionQuantities[id] = 1;
+            renderPendingItems();
+            closeSuggestionModal();
+            showToast(`เพิ่ม "${name} x ${qty}" สำเร็จ`, 'success');
+            suggestionQuantities[id] = 1;
 
-    setTimeout(() => {
-        isAddingSuggestion = false;
-    }, 300);
-};
+            setTimeout(() => {
+                isAddingSuggestion = false;
+            }, 300);
+        };
 
         dropdownToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -833,56 +846,53 @@ window.addSuggestionWithQty = function(name, price, id) {
 
         let isAddingItem = false;
 
-addItemBtn.addEventListener('click', () => {
-    if (isAddingItem) return; // ป้องกันการกดปุ่มรัวๆ ซ้อนกัน
-    isAddingItem = true;
+        addItemBtn.addEventListener('click', () => {
+            if (isAddingItem) return;
+            isAddingItem = true;
 
-    const val = itemInput.value.trim();
-    if (!val) {
-        showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
-        isAddingItem = false;
-        return;
-    }
-    
-    const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
+            const val = itemInput.value.trim();
+            if (!val) {
+                showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
+                isAddingItem = false;
+                return;
+            }
+            
+            const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
 
-    let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
-    let addQty = 1;
-    const matchQty = val.match(/x\s*(\d+)$/);
-    if (matchQty) {
-        addQty = parseInt(matchQty[1]);
-    }
+            let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
+            let addQty = 1;
+            const matchQty = val.match(/x\s*(\d+)$/);
+            if (matchQty) {
+                addQty = parseInt(matchQty[1]);
+            }
 
-    // ตรวจสอบว่ามีสินค้ารายการนี้และวันนัดส่งเดียวกันอยู่ในตารางรอ 
-    // ถ้ามีให้บวกจำนวนเพิ่มเข้าไปแทนการสร้างบรรทัดใหม่
-    const existingIndex = pendingItems.findIndex(item => {
-        let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
-        return itemCleanName === cleanName && item.dueDate === dueDate;
-    });
+            const existingIndex = pendingItems.findIndex(item => {
+                let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+                return itemCleanName === cleanName && item.dueDate === dueDate;
+            });
 
-    if (existingIndex > -1) {
-        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + addQty;
-        let baseText = pendingItems[existingIndex].rawName || cleanName;
-        pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
-    } else {
-        pendingItems.push({
-            rawName: cleanName,
-            text: addQty > 1 ? `${cleanName} x ${addQty}` : `${cleanName} x 1`,
-            quantity: addQty,
-            dueDate: dueDate
+            if (existingIndex > -1) {
+                pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + addQty;
+                let baseText = pendingItems[existingIndex].rawName || cleanName;
+                pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
+            } else {
+                pendingItems.push({
+                    rawName: cleanName,
+                    text: addQty > 1 ? `${cleanName} x ${addQty}` : `${cleanName} x 1`,
+                    quantity: addQty,
+                    dueDate: dueDate
+                });
+            }
+            
+            itemInput.value = '';
+            itemDueDateInput.value = '';
+            renderPendingItems();
+            
+            setTimeout(() => {
+                isAddingItem = false;
+                itemInput.focus();
+            }, 300);
         });
-    }
-    
-    itemInput.value = '';
-    itemDueDateInput.value = '';
-    renderPendingItems();
-    
-    // คืนสถานะให้กดได้อีกครั้งหลังจากผ่านไป 300 มิลลิวินาที
-    setTimeout(() => {
-        isAddingItem = false;
-        itemInput.focus();
-    }, 300);
-});
 
         itemInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -909,13 +919,10 @@ addItemBtn.addEventListener('click', () => {
         const submitBtn = document.getElementById('submit-btn');
 
         deliveryForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    // ป้องกันการกดซ้ำถ้ากำลังประมวลผลอยู่
-    if (submitBtn.disabled) return; 
+            e.preventDefault();
+            if (submitBtn.disabled) return; 
 
-    const customerName = customerNameInput.value.trim();
-
+            const customerName = customerNameInput.value.trim();
 
             if (!customerName) {
                 showToast('กรุณากรอกชื่อลูกค้า', 'error');
@@ -1110,7 +1117,10 @@ addItemBtn.addEventListener('click', () => {
                     <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden transition hover:shadow-md hover:border-indigo-200">
                         <div class="bg-gradient-to-r from-indigo-50 via-white to-purple-50 px-3.5 py-2.5 border-b border-indigo-100 flex items-center justify-between gap-3 flex-wrap">
                             <div class="flex items-center gap-2.5 flex-wrap">
-                                <span class="font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2 py-0.5 rounded-md border border-indigo-200/60">${escapeHTML(item.customerName)}</span>
+                                <div class="inline-flex items-center gap-1.5 font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2.5 py-0.5 rounded-md border border-indigo-200/60">
+                                    <span>${escapeHTML(item.customerName)}</span>
+                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขชื่อลูกค้า" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
+                                </div>
                                 <div class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100 text-[11px]">
                                     <span>${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
                                     <button onclick="openEditCompanyModal('${item.id}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" title="แก้ไขชื่อบริษัท" class="text-purple-400 hover:text-purple-700 transition">✏️</button>
@@ -1173,6 +1183,50 @@ addItemBtn.addEventListener('click', () => {
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
+
+        window.openEditCustomerModal = function(docId, currentCustomerName) {
+            const modal = document.getElementById('edit-customer-modal');
+            const modalContent = document.getElementById('edit-customer-modal-content');
+            const inputField = document.getElementById('edit-customer-text');
+            const btnConfirm = document.getElementById('edit-customer-confirm');
+            const btnCancel = document.getElementById('edit-customer-cancel');
+
+            inputField.value = currentCustomerName || '';
+
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                modalContent.classList.remove('scale-95');
+            }, 10);
+
+            const closeModal = () => {
+                modal.classList.add('opacity-0');
+                modalContent.classList.add('scale-95');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
+                btnCancel.replaceWith(btnCancel.cloneNode(true));
+            };
+
+            btnConfirm.addEventListener('click', async () => {
+                const newCustomerName = inputField.value.trim();
+                if (!newCustomerName) {
+                    showToast('กรุณากรอกชื่อลูกค้าใหม่', 'error');
+                    return;
+                }
+                try {
+                    await db.collection('deliveries').doc(docId).update({ customerName: newCustomerName });
+                    showToast('แก้ไขชื่อลูกค้าสำเร็จ', 'success');
+                    closeModal();
+                } catch (err) {
+                    console.error(err);
+                    showToast('ไม่สามารถแก้ไขชื่อลูกค้าได้', 'error');
+                }
+            }, { once: true });
+
+            btnCancel.addEventListener('click', closeModal, { once: true });
+        };
 
         window.openEditCompanyModal = function(docId, currentCompany) {
             const modal = document.getElementById('edit-company-modal');
