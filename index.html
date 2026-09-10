@@ -281,7 +281,6 @@
         let allProducts = []; 
         let currentFilter = 'all';
         let suggestionQuantities = {};
-		let isSavingStock = false;
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -517,12 +516,11 @@
 
         stockCancelEditBtn.addEventListener('click', resetStockForm);
 
-        ```js
-stockForm.addEventListener('submit', async (e) => {
+        stockForm.addEventListener('submit', async (e) => {
     e.preventDefault();
-
-    // ป้องกันการกดบันทึกซ้ำหลายครั้งติดกัน
-    if (isSavingStock) return;
+    
+    // ป้องกันการกดซ้ำขณะกำลังประมวลผล
+    if (stockSubmitBtn.disabled) return;
 
     const name = stockNameInput.value.trim();
     const price = parseFloat(stockPriceInput.value);
@@ -533,35 +531,21 @@ stockForm.addEventListener('submit', async (e) => {
         return;
     }
 
-    isSavingStock = true;
+    // ล็อกปุ่มทันทีเพื่อกันการกดเบิ้ล
     stockSubmitBtn.disabled = true;
-    stockSubmitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+    stockSubmitBtn.textContent = 'กำลังบันทึก...';
 
     try {
         if (editId) {
-
-            // =========================
-            // กรณีแก้ไขสินค้าเดิม
-            // =========================
-            await db.collection('products').doc(editId).update({
-                name,
-                price
-            });
-
+            await db.collection('products').doc(editId).update({ name, price });
             showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
-
         } else {
-
-            // =========================
-            // กรณีเพิ่มสินค้าใหม่
-            // ตรวจสอบชื่อซ้ำก่อนบันทึก
-            // =========================
-            const duplicateSnapshot = await db.collection('products')
-                .where('name', '==', name)
-                .get();
-
-            if (!duplicateSnapshot.empty) {
-                showToast(`สินค้า "${name}" มีอยู่ในสต็อกแล้ว ไม่สามารถบันทึกซ้ำได้`, 'error');
+            // (ทางเลือกเสริม) ตรวจสอบว่ามีชื่อสินင့်นี้อยู่แล้วหรือไม่ก่อนบันทึกใหม่
+            const existing = allProducts.find(p => p.name.toLowerCase() === name.toLowerCase());
+            if (existing && !editId) {
+                showToast('มีสินค้านี้ในสต็อกอยู่แล้ว กรุณาใช้ปุ่มแก้ไขแทน', 'error');
+                stockSubmitBtn.disabled = false;
+                stockSubmitBtn.textContent = 'บันทึกสินค้า';
                 return;
             }
 
@@ -570,25 +554,19 @@ stockForm.addEventListener('submit', async (e) => {
                 price,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-
             showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
         }
-
         resetStockForm();
         renderStockTable(stockSearchBox.value);
-
     } catch (err) {
         console.error(err);
         showToast('ไม่สามารถบันทึกสินค้าได้', 'error');
     } finally {
-        isSavingStock = false;
+        // คืนสถานะปุ่มให้ใช้งานได้ปกติ
         stockSubmitBtn.disabled = false;
-        stockSubmitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        stockSubmitBtn.textContent = editId ? 'บันทึกการแก้ไข' : 'บันทึกสินค้า';
     }
 });
-```
-
-
         stockSearchBox.addEventListener('input', (e) => {
             renderStockTable(e.target.value);
         });
@@ -728,33 +706,42 @@ stockForm.addEventListener('submit', async (e) => {
             if (span) span.textContent = suggestionQuantities[id];
         };
 
-        window.addSuggestionWithQty = function(name, price, id) {
-            const qty = suggestionQuantities[id] || 1;
-            const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
-            
-            const existingIndex = pendingItems.findIndex(item => {
-                let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
-                return itemCleanName === name && item.dueDate === dueDate;
-            });
+        let isAddingSuggestion = false;
 
-            if (existingIndex > -1) {
-                pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
-                let baseText = pendingItems[existingIndex].rawName || name;
-                pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
-            } else {
-                pendingItems.push({
-                    rawName: name,
-                    text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
-                    quantity: qty,
-                    dueDate: dueDate
-                });
-            }
+window.addSuggestionWithQty = function(name, price, id) {
+    if (isAddingSuggestion) return;
+    isAddingSuggestion = true;
 
-            renderPendingItems();
-            closeSuggestionModal();
-            showToast(`เพิ่ม "${name} x ${qty}" สำเร็จ`, 'success');
-            suggestionQuantities[id] = 1;
-        };
+    const qty = suggestionQuantities[id] || 1;
+    const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
+    
+    const existingIndex = pendingItems.findIndex(item => {
+        let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+        return itemCleanName === name && item.dueDate === dueDate;
+    });
+
+    if (existingIndex > -1) {
+        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
+        let baseText = pendingItems[existingIndex].rawName || name;
+        pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
+    } else {
+        pendingItems.push({
+            rawName: name,
+            text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
+            quantity: qty,
+            dueDate: dueDate
+        });
+    }
+
+    renderPendingItems();
+    closeSuggestionModal();
+    showToast(`เพิ่ม "${name} x ${qty}" สำเร็จ`, 'success');
+    suggestionQuantities[id] = 1;
+
+    setTimeout(() => {
+        isAddingSuggestion = false;
+    }, 300);
+};
 
         dropdownToggleBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -844,45 +831,58 @@ stockForm.addEventListener('submit', async (e) => {
             renderPendingItems();
         };
 
-        addItemBtn.addEventListener('click', () => {
-            const val = itemInput.value.trim();
-            if (!val) {
-                showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
-                return;
-            }
-            
-            const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
+        let isAddingItem = false;
 
-            let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
-            let addQty = 1;
-            const matchQty = val.match(/x\s*(\d+)$/);
-            if (matchQty) {
-                addQty = parseInt(matchQty[1]);
-            }
+addItemBtn.addEventListener('click', () => {
+    if (isAddingItem) return; // ป้องกันการกดปุ่มรัวๆ ซ้อนกัน
+    isAddingItem = true;
 
-            const existingIndex = pendingItems.findIndex(item => {
-                let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
-                return itemCleanName === cleanName && item.dueDate === dueDate;
-            });
+    const val = itemInput.value.trim();
+    if (!val) {
+        showToast('กรุณากรอกชื่อสินค้าและราคาหรือเลือกรายการก่อนกดเพิ่ม', 'error');
+        isAddingItem = false;
+        return;
+    }
+    
+    const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
 
-            if (existingIndex > -1) {
-                pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + addQty;
-                let baseText = pendingItems[existingIndex].rawName || cleanName;
-                pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
-            } else {
-                pendingItems.push({
-                    rawName: cleanName,
-                    text: addQty > 1 ? `${cleanName} x ${addQty}` : `${cleanName} x 1`,
-                    quantity: addQty,
-                    dueDate: dueDate
-                });
-            }
-            
-            itemInput.value = '';
-            itemDueDateInput.value = '';
-            itemInput.focus();
-            renderPendingItems();
+    let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
+    let addQty = 1;
+    const matchQty = val.match(/x\s*(\d+)$/);
+    if (matchQty) {
+        addQty = parseInt(matchQty[1]);
+    }
+
+    // ตรวจสอบว่ามีสินค้ารายการนี้และวันนัดส่งเดียวกันอยู่ในตารางรอ 
+    // ถ้ามีให้บวกจำนวนเพิ่มเข้าไปแทนการสร้างบรรทัดใหม่
+    const existingIndex = pendingItems.findIndex(item => {
+        let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+        return itemCleanName === cleanName && item.dueDate === dueDate;
+    });
+
+    if (existingIndex > -1) {
+        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + addQty;
+        let baseText = pendingItems[existingIndex].rawName || cleanName;
+        pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
+    } else {
+        pendingItems.push({
+            rawName: cleanName,
+            text: addQty > 1 ? `${cleanName} x ${addQty}` : `${cleanName} x 1`,
+            quantity: addQty,
+            dueDate: dueDate
         });
+    }
+    
+    itemInput.value = '';
+    itemDueDateInput.value = '';
+    renderPendingItems();
+    
+    // คืนสถานะให้กดได้อีกครั้งหลังจากผ่านไป 300 มิลลิวินาที
+    setTimeout(() => {
+        isAddingItem = false;
+        itemInput.focus();
+    }, 300);
+});
 
         itemInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -909,12 +909,13 @@ stockForm.addEventListener('submit', async (e) => {
         const submitBtn = document.getElementById('submit-btn');
 
         deliveryForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            
-            const customerName = customerNameInput.value.trim();
-            const companyName = companyNameInput.value.trim();
-            const phone = phoneInput.value.trim();
-            const address = addressInput.value.trim();
+    e.preventDefault();
+    
+    // ป้องกันการกดซ้ำถ้ากำลังประมวลผลอยู่
+    if (submitBtn.disabled) return; 
+
+    const customerName = customerNameInput.value.trim();
+
 
             if (!customerName) {
                 showToast('กรุณากรอกชื่อลูกค้า', 'error');
