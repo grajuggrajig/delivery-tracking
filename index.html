@@ -281,6 +281,7 @@
         let allProducts = []; 
         let currentFilter = 'all';
         let suggestionQuantities = {};
+		let isSavingStock = false;
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -516,36 +517,77 @@
 
         stockCancelEditBtn.addEventListener('click', resetStockForm);
 
-        stockForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const name = stockNameInput.value.trim();
-            const price = parseFloat(stockPriceInput.value);
-            const editId = stockEditId.value;
+        ```js
+stockForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
 
-            if (!name || isNaN(price)) {
-                showToast('กรุณากรอกข้อมูลสินค้าและราคาให้ถูกต้อง', 'error');
+    // ป้องกันการกดบันทึกซ้ำหลายครั้งติดกัน
+    if (isSavingStock) return;
+
+    const name = stockNameInput.value.trim();
+    const price = parseFloat(stockPriceInput.value);
+    const editId = stockEditId.value;
+
+    if (!name || isNaN(price)) {
+        showToast('กรุณากรอกข้อมูลสินค้าและราคาให้ถูกต้อง', 'error');
+        return;
+    }
+
+    isSavingStock = true;
+    stockSubmitBtn.disabled = true;
+    stockSubmitBtn.classList.add('opacity-60', 'cursor-not-allowed');
+
+    try {
+        if (editId) {
+
+            // =========================
+            // กรณีแก้ไขสินค้าเดิม
+            // =========================
+            await db.collection('products').doc(editId).update({
+                name,
+                price
+            });
+
+            showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
+
+        } else {
+
+            // =========================
+            // กรณีเพิ่มสินค้าใหม่
+            // ตรวจสอบชื่อซ้ำก่อนบันทึก
+            // =========================
+            const duplicateSnapshot = await db.collection('products')
+                .where('name', '==', name)
+                .get();
+
+            if (!duplicateSnapshot.empty) {
+                showToast(`สินค้า "${name}" มีอยู่ในสต็อกแล้ว ไม่สามารถบันทึกซ้ำได้`, 'error');
                 return;
             }
 
-            try {
-                if (editId) {
-                    await db.collection('products').doc(editId).update({ name, price });
-                    showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
-                } else {
-                    await db.collection('products').add({
-                        name,
-                        price,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
-                }
-                resetStockForm();
-                renderStockTable(stockSearchBox.value);
-            } catch (err) {
-                console.error(err);
-                showToast('ไม่สามารถบันทึกสินค้าได้', 'error');
-            }
-        });
+            await db.collection('products').add({
+                name,
+                price,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
+        }
+
+        resetStockForm();
+        renderStockTable(stockSearchBox.value);
+
+    } catch (err) {
+        console.error(err);
+        showToast('ไม่สามารถบันทึกสินค้าได้', 'error');
+    } finally {
+        isSavingStock = false;
+        stockSubmitBtn.disabled = false;
+        stockSubmitBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+    }
+});
+```
+
 
         stockSearchBox.addEventListener('input', (e) => {
             renderStockTable(e.target.value);
@@ -1326,4 +1368,4 @@
         document.getElementById('search-input').addEventListener('input', applyFilterAndSearch);
     </script>
 </body>
-</html>ฤ
+</html>
