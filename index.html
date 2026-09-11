@@ -950,6 +950,11 @@
                     createdAt: new Date().toISOString()
                 }));
 
+                // อ่านค่าจากช่องกรอกโดยตรงก่อนบันทึก
+                const companyName = companyNameInput.value.trim();
+                const phone = phoneInput.value.trim();
+                const address = addressInput.value.trim();
+
                 if (!snapshot.empty) {
                     const docRef = snapshot.docs[0].ref;
                     const docData = snapshot.docs[0].data();
@@ -982,7 +987,7 @@
                 pendingItems = [];
                 renderPendingItems();
             } catch (err) {
-                console.error(err);
+                console.error('บันทึกข้อมูลไม่สำเร็จ:', err);
                 showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง', 'error');
             } finally {
                 submitBtn.disabled = false;
