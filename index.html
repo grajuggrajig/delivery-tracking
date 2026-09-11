@@ -53,7 +53,7 @@
             </div>
             <div class="flex items-center gap-2">
                 <button type="button" id="open-stock-modal-btn" class="px-3 py-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl border border-indigo-200 transition flex items-center gap-1 shadow-2xs">
-                    🏷️ จัดการสต็อกสินค้า/ราคา
+                    🏷️ จัดการสต็อกสินค้า/ราคา/ต้นทุน
                 </button>
                 <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium hidden sm:inline-block">กำลังเชื่อมต่อ Firebase...</span>
             </div>
@@ -130,29 +130,27 @@
         </section>
 
         <!-- ส่วนแสดงตารางข้อมูลลูกค้าหลัก -->
-        <!-- ส่วนแสดงตารางข้อมูลลูกค้าหลัก -->
-<section class="flex flex-col h-full overflow-hidden space-y-3 flex-grow transition-all duration-300">
-    <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center justify-between gap-3 flex-shrink-0 flex-wrap">
-        <div class="flex items-center gap-2 flex-grow pl-2 min-w-[200px]">
-            <span class="text-sky-400">🔍</span>
-            <input type="text" id="search-input" placeholder="ค้นหาชื่อลูกค้า, บริษัท, เบอร์โทร, ที่อยู่ หรือสินค้า..." class="w-full text-sm outline-none bg-transparent placeholder-slate-400">
-        </div>
-        <!-- เพิ่มป้ายแสดงจำนวนบริษัทตรงนี้ -->
-        <div class="flex items-center gap-3">
-            <span id="company-count-badge" class="text-xs px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-semibold border border-sky-100">
-                พบรายชื่อบริษัท: 0 แห่ง
-            </span>
-            <div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
-                <button id="filter-all" onclick="setFilter('all')" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow-2xs transition">ทั้งหมด</button>
-                <button id="filter-pending" onclick="setFilter('pending')" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition">ค้างส่ง</button>
+        <section class="flex flex-col h-full overflow-hidden space-y-3 flex-grow transition-all duration-300">
+            <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center justify-between gap-3 flex-shrink-0 flex-wrap">
+                <div class="flex items-center gap-2 flex-grow pl-2 min-w-[200px]">
+                    <span class="text-sky-400">🔍</span>
+                    <input type="text" id="search-input" placeholder="ค้นหาชื่อลูกค้า, บริษัท, เบอร์โทร, ที่อยู่ หรือสินค้า..." class="w-full text-sm outline-none bg-transparent placeholder-slate-400">
+                </div>
+                <div class="flex items-center gap-3">
+                    <span id="company-count-badge" class="text-xs px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-semibold border border-sky-100">
+                        พบรายชื่อบริษัท: 0 แห่ง
+                    </span>
+                    <div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
+                        <button id="filter-all" onclick="setFilter('all')" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow-2xs transition">ทั้งหมด</button>
+                        <button id="filter-pending" onclick="setFilter('pending')" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition">ค้างส่ง</button>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
 
-    <div id="delivery-list" class="space-y-3 overflow-y-auto no-scrollbar flex-grow pr-1">
-        <div class="text-center py-10 text-slate-400 text-sm animate-pulse">กำลังโหลดข้อมูล...</div>
-    </div>
-</section>
+            <div id="delivery-list" class="space-y-3 overflow-y-auto no-scrollbar flex-grow pr-1">
+                <div class="text-center py-10 text-slate-400 text-sm animate-pulse">กำลังโหลดข้อมูล...</div>
+            </div>
+        </section>
     </main>
 
     <!-- Modal: เลือกลูกค้าเดิม หรือพิมพ์เพิ่มใหม่ -->
@@ -173,12 +171,12 @@
         </div>
     </div>
 
-    <!-- Modal: จัดการสต็อกสินค้า -->
+    <!-- Modal: จัดการสต็อกสินค้า (เพิ่มช่องต้นทุนและกำไร) -->
     <div id="stock-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="stock-modal-box">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="stock-modal-box">
             <div class="flex justify-between items-center pb-3 mb-4 border-b border-slate-100">
                 <span class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                    🏷️ จัดการรายการสินค้าและราคามาตรฐานในสต็อก 
+                    🏷️ จัดการรายการสินค้า ราคา และต้นทุนในสต็อก 
                     <span id="stock-count-badge" class="text-xs px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 font-semibold">0 รายการ</span>
                 </span>
                 <button type="button" id="close-stock-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
@@ -187,17 +185,21 @@
             </div>
             <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
                 <input type="hidden" id="stock-edit-id">
-                <div class="sm:col-span-5">
+                <div class="sm:col-span-4">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อสินค้า <span class="text-red-500">*</span></label>
                     <input type="text" id="stock-name" required placeholder="เช่น ดินสอ EE" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
                 </div>
                 <div class="sm:col-span-3">
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">ราคา (บาท) <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ต้นทุน (บาท)</label>
+                    <input type="number" step="0.01" id="stock-cost" placeholder="200" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                </div>
+                <div class="sm:col-span-3">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาขาย (บาท) <span class="text-red-500">*</span></label>
                     <input type="number" step="0.01" id="stock-price" required placeholder="280" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
                 </div>
-                <div class="sm:col-span-4 flex gap-2">
-                    <button type="submit" id="stock-submit-btn" class="flex-grow py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs transition shadow-sm">บันทึกสินค้า</button>
-                    <button type="button" id="stock-cancel-edit" class="hidden px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs transition">ยกเลิก</button>
+                <div class="sm:col-span-2 flex gap-2">
+                    <button type="submit" id="stock-submit-btn" class="w-full py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs transition shadow-sm">บันทึก</button>
+                    <button type="button" id="stock-cancel-edit" class="hidden px-2 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs transition">ยกเลิก</button>
                 </div>
             </form>
             <div class="mb-3 flex items-center justify-between">
@@ -209,12 +211,12 @@
         </div>
     </div>
 
-    <!-- Modal: เลือกสินค้าจากสต็อก -->
+    <!-- Modal: เลือกสินค้าจากสต็อก (คำนวณกำไรและต้นทุนแสดงทันที) -->
     <div id="custom-item-suggestions" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
         <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-5 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
             <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
                 <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                    📋 เลือกรายการสินค้าจากสต็อก (ปรับเพิ่ม-ลดจำนวนได้ทันที)
+                    📋 เลือกรายการสินค้าจากสต็อก (คำนวณกำไรอัตโนมัติ)
                 </span>
                 <button type="button" id="close-suggestion-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
                     ✕
@@ -328,7 +330,6 @@
         let suggestionQuantities = {};
         let isFormVisible = true;
 
-        // ฟังก์ชันสำหรับกดซ่อน/แสดงฟอร์มด้านซ้ายแบบสมูทๆ เลื่อนออกข้าง
         function toggleSidebarForm() {
             const formSection = document.getElementById('form-section');
             const toggleIcon = document.getElementById('toggle-icon');
@@ -540,6 +541,7 @@
         const stockForm = document.getElementById('stock-form');
         const stockEditId = document.getElementById('stock-edit-id');
         const stockNameInput = document.getElementById('stock-name');
+        const stockCostInput = document.getElementById('stock-cost');
         const stockPriceInput = document.getElementById('stock-price');
         const stockSubmitBtn = document.getElementById('stock-submit-btn');
         const stockCancelEditBtn = document.getElementById('stock-cancel-edit');
@@ -572,7 +574,7 @@
         function resetStockForm() {
             stockForm.reset();
             stockEditId.value = '';
-            stockSubmitBtn.textContent = 'บันทึกสินค้า';
+            stockSubmitBtn.textContent = 'บันทึก';
             stockCancelEditBtn.classList.add('hidden');
         }
 
@@ -583,11 +585,12 @@
             if (stockSubmitBtn.disabled) return;
 
             const name = stockNameInput.value.trim();
+            const cost = parseFloat(stockCostInput.value) || 0;
             const price = parseFloat(stockPriceInput.value);
             const editId = stockEditId.value;
 
             if (!name || isNaN(price)) {
-                showToast('กรุณากรอกข้อมูลสินค้าและราคาให้ถูกต้อง', 'error');
+                showToast('กรุณากรอกชื่อสินค้าและราคาขายให้ถูกต้อง', 'error');
                 return;
             }
 
@@ -596,19 +599,12 @@
 
             try {
                 if (editId) {
-                    await db.collection('products').doc(editId).update({ name, price });
+                    await db.collection('products').doc(editId).update({ name, cost, price });
                     showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
                 } else {
-                    const existing = allProducts.find(p => p.name.toLowerCase() === name.toLowerCase());
-                    if (existing && !editId) {
-                        showToast('มีสินค้านี้ในสต็อกอยู่แล้ว กรุณาใช้ปุ่มแก้ไขแทน', 'error');
-                        stockSubmitBtn.disabled = false;
-                        stockSubmitBtn.textContent = 'บันทึกสินค้า';
-                        return;
-                    }
-
                     await db.collection('products').add({
                         name,
+                        cost,
                         price,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
@@ -621,7 +617,7 @@
                 showToast('ไม่สามารถบันทึกสินค้าได้', 'error');
             } finally {
                 stockSubmitBtn.disabled = false;
-                stockSubmitBtn.textContent = editId ? 'บันทึกการแก้ไข' : 'บันทึกสินค้า';
+                stockSubmitBtn.textContent = editId ? 'บันทึกการแก้ไข' : 'บันทึก';
             }
         });
 
@@ -643,23 +639,34 @@
                 return;
             }
 
-            stockTableContainer.innerHTML = filtered.map(p => `
-                <div class="flex items-center justify-between p-3 bg-white border border-slate-100 hover:border-sky-200 rounded-2xl shadow-2xs transition">
-                    <div>
-                        <div class="text-xs font-bold text-slate-800">${escapeHTML(p.name)}</div>
-                        <div class="text-[11px] font-semibold text-sky-600">ราคา: ${Number(p.price).toLocaleString()} บาท</div>
+            stockTableContainer.innerHTML = filtered.map(p => {
+                const cost = p.cost || 0;
+                const profit = p.price - cost;
+                const profitMargin = p.price > 0 ? ((profit / p.price) * 100).toFixed(1) : 0;
+
+                return `
+                    <div class="flex items-center justify-between p-3 bg-white border border-slate-100 hover:border-sky-200 rounded-2xl shadow-2xs transition gap-2">
+                        <div class="truncate">
+                            <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}</div>
+                            <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5 flex-wrap">
+                                <span>ต้นทุน: <strong class="text-slate-700">${Number(cost).toLocaleString()} ฿</strong></span>
+                                <span>ราคาขาย: <strong class="text-sky-600">${Number(p.price).toLocaleString()} ฿</strong></span>
+                                <span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-semibold">กำไร: +${Number(profit).toLocaleString()} ฿ (${profitMargin}%)</span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${p.price})" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
+                            <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-1.5">
-                        <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${p.price})" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
-                        <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
-                    </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
-        window.editStockItem = function(id, name, price) {
+        window.editStockItem = function(id, name, cost, price) {
             stockEditId.value = id;
             stockNameInput.value = name;
+            stockCostInput.value = cost;
             stockPriceInput.value = price;
             stockSubmitBtn.textContent = 'บันทึกการแก้ไข';
             stockCancelEditBtn.classList.remove('hidden');
@@ -735,6 +742,8 @@
             suggestionsTableContainer.innerHTML = filteredItems.map(p => {
                 if (!suggestionQuantities[p.id]) suggestionQuantities[p.id] = 1;
                 const currentQty = suggestionQuantities[p.id];
+                const cost = p.cost || 0;
+                const profit = p.price - cost;
 
                 return `
                     <div class="flex items-center justify-between px-3.5 py-2.5 bg-white hover:bg-sky-50/60 rounded-2xl transition border border-slate-100 hover:border-sky-200 shadow-2xs gap-2">
@@ -742,7 +751,10 @@
                             <span class="w-2 h-2 rounded-full bg-sky-500 flex-shrink-0"></span>
                             <div class="truncate">
                                 <div class="font-semibold text-slate-800 text-xs truncate">${escapeHTML(p.name)}</div>
-                                <div class="text-[11px] text-sky-600 font-bold">${Number(p.price).toLocaleString()} บาท</div>
+                                <div class="text-[11px] text-slate-500 flex items-center gap-2">
+                                    <span>ราคา: <strong class="text-sky-600">${Number(p.price).toLocaleString()} ฿</strong></span>
+                                    <span class="text-emerald-600 font-medium">กำไรหน่วยละ: +${Number(profit).toLocaleString()} ฿</span>
+                                </div>
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -773,6 +785,11 @@
             const qty = suggestionQuantities[id] || 1;
             const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
             
+            const productData = allProducts.find(p => p.id === id);
+            const cost = productData ? (productData.cost || 0) * qty : 0;
+            const totalSell = price * qty;
+            const totalProfit = totalSell - cost;
+
             const existingIndex = pendingItems.findIndex(item => {
                 let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
                 return itemCleanName === name && item.dueDate === dueDate;
@@ -780,13 +797,23 @@
 
             if (existingIndex > -1) {
                 pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
-                let baseText = pendingItems[existingIndex].rawName || name;
-                pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
+                let newQty = pendingItems[existingIndex].quantity;
+                let newCost = (productData ? (productData.cost || 0) : 0) * newQty;
+                let newSell = price * newQty;
+                
+                pendingItems[existingIndex].totalCost = newCost;
+                pendingItems[existingIndex].totalSell = newSell;
+                pendingItems[existingIndex].totalProfit = newSell - newCost;
+                pendingItems[existingIndex].text = `${name} x ${newQty}`;
             } else {
                 pendingItems.push({
                     rawName: name,
                     text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
                     quantity: qty,
+                    unitPrice: price,
+                    totalCost: cost,
+                    totalSell: totalSell,
+                    totalProfit: totalProfit,
                     dueDate: dueDate
                 });
             }
@@ -836,32 +863,36 @@
                 return;
             }
 
-            pendingContainer.innerHTML = pendingItems.map((item, index) => `
-                <div class="group flex items-center justify-between bg-gradient-to-r from-sky-50/80 via-white to-blue-50/40 px-3 py-1.5 rounded-2xl border border-sky-100/80 text-xs text-slate-700 gap-2 shadow-2xs transition-all duration-200">
-                    <div class="flex items-center gap-2 flex-grow truncate">
-                        <span class="flex-shrink-0 w-2 h-2 rounded-full bg-sky-500"></span>
-                        <span class="truncate font-semibold text-slate-800">${escapeHTML(item.text)}</span>
-                    </div>
-                    
-                    <div class="flex items-center gap-1.5 flex-shrink-0">
-                        <button type="button" onclick="decreaseQuantity(${index})" class="w-6 h-6 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 rounded-md text-slate-600 font-bold transition shadow-2xs" title="ลดจำนวน">
-                            -
-                        </button>
-                        <span class="w-6 text-center font-bold text-xs text-slate-800">${item.quantity || 1}</span>
-                        <button type="button" onclick="increaseQuantity(${index})" class="w-6 h-6 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 rounded-md text-slate-600 font-bold transition shadow-2xs" title="เพิ่มจำนวน">
-                            +
-                        </button>
+            pendingContainer.innerHTML = pendingItems.map((item, index) => {
+                let profitBadge = '';
+                if (item.totalProfit !== undefined && item.totalProfit !== null) {
+                    profitBadge = `<div class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold inline-block mt-0.5">กำไร: +${Number(item.totalProfit).toLocaleString()} ฿</div>`;
+                }
 
-                        <span class="text-[11px] text-sky-800 bg-sky-100/70 px-2 py-0.5 rounded-xl border border-sky-200/60 font-medium ml-1">
-                            📅 ${escapeHTML(item.dueDate ? formatDateDisplay(item.dueDate) : 'ไม่ระบุ')}
-                        </span>
+                return `
+                    <div class="group flex items-center justify-between bg-gradient-to-r from-sky-50/80 via-white to-blue-50/40 px-3 py-2 rounded-2xl border border-sky-100/80 text-xs text-slate-700 gap-2 shadow-2xs transition-all duration-200">
+                        <div class="flex items-start gap-2.5 flex-grow truncate">
+                            <span class="flex-shrink-0 w-2 h-2 rounded-full bg-sky-500 mt-1"></span>
+                            <div class="truncate">
+                                <span class="truncate font-semibold text-slate-800 block">${escapeHTML(item.text)}</span>
+                                ${profitBadge}
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-center gap-1.5 flex-shrink-0">
+                            <button type="button" onclick="decreaseQuantity(${index})" class="w-6 h-6 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 rounded-md text-slate-600 font-bold transition shadow-2xs" title="ลดจำนวน">-</button>
+                            <span class="w-6 text-center font-bold text-xs text-slate-800">${item.quantity || 1}</span>
+                            <button type="button" onclick="increaseQuantity(${index})" class="w-6 h-6 flex items-center justify-center bg-white border border-slate-200 hover:bg-slate-100 rounded-md text-slate-600 font-bold transition shadow-2xs" title="เพิ่มจำนวน">+</button>
 
-                        <button type="button" onclick="removePendingItem(${index})" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-500 rounded-full transition ml-1" title="ลบรายการนี้">
-                            ✕
-                        </button>
+                            <span class="text-[11px] text-sky-800 bg-sky-100/70 px-2 py-0.5 rounded-xl border border-sky-200/60 font-medium ml-1">
+                                📅 ${escapeHTML(item.dueDate ? formatDateDisplay(item.dueDate) : 'ไม่ระบุ')}
+                            </span>
+
+                            <button type="button" onclick="removePendingItem(${index})" class="w-6 h-6 flex items-center justify-center text-slate-400 hover:text-white hover:bg-rose-500 rounded-full transition ml-1" title="ลบรายการนี้">✕</button>
+                        </div>
                     </div>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
 
         window.removePendingItem = function(index) {
@@ -874,6 +905,14 @@
             item.quantity = (item.quantity || 1) + 1;
             let baseText = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
             item.text = `${baseText} x ${item.quantity}`;
+            
+            if (item.unitPrice !== undefined) {
+                let foundProd = allProducts.find(p => p.name.toLowerCase() === baseText.toLowerCase());
+                let unitCost = foundProd ? (foundProd.cost || 0) : 0;
+                item.totalCost = unitCost * item.quantity;
+                item.totalSell = item.unitPrice * item.quantity;
+                item.totalProfit = item.totalSell - item.totalCost;
+            }
             renderPendingItems();
         };
 
@@ -883,6 +922,14 @@
                 item.quantity -= 1;
                 let baseText = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
                 item.text = `${baseText} x ${item.quantity}`;
+
+                if (item.unitPrice !== undefined) {
+                    let foundProd = allProducts.find(p => p.name.toLowerCase() === baseText.toLowerCase());
+                    let unitCost = foundProd ? (foundProd.cost || 0) : 0;
+                    item.totalCost = unitCost * item.quantity;
+                    item.totalSell = item.unitPrice * item.quantity;
+                    item.totalProfit = item.totalSell - item.totalCost;
+                }
             } else {
                 pendingItems.splice(index, 1);
             }
@@ -903,13 +950,16 @@
             }
             
             const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
-
             let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
             let addQty = 1;
             const matchQty = val.match(/x\s*(\d+)$/);
             if (matchQty) {
                 addQty = parseInt(matchQty[1]);
             }
+
+            const foundProd = allProducts.find(p => p.name.toLowerCase() === cleanName.toLowerCase());
+            let unitPrice = foundProd ? foundProd.price : 0;
+            let unitCost = foundProd ? (foundProd.cost || 0) : 0;
 
             const existingIndex = pendingItems.findIndex(item => {
                 let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
@@ -918,13 +968,24 @@
 
             if (existingIndex > -1) {
                 pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + addQty;
-                let baseText = pendingItems[existingIndex].rawName || cleanName;
-                pendingItems[existingIndex].text = `${baseText} x ${pendingItems[existingIndex].quantity}`;
+                let newQty = pendingItems[existingIndex].quantity;
+                pendingItems[existingIndex].text = `${cleanName} x ${newQty}`;
+                if (unitPrice > 0) {
+                    pendingItems[existingIndex].totalCost = unitCost * newQty;
+                    pendingItems[existingIndex].totalSell = unitPrice * newQty;
+                    pendingItems[existingIndex].totalProfit = pendingItems[existingIndex].totalSell - pendingItems[existingIndex].totalCost;
+                }
             } else {
+                let totalCost = unitCost * addQty;
+                let totalSell = unitPrice * addQty;
                 pendingItems.push({
                     rawName: cleanName,
                     text: addQty > 1 ? `${cleanName} x ${addQty}` : `${cleanName} x 1`,
                     quantity: addQty,
+                    unitPrice: unitPrice > 0 ? unitPrice : undefined,
+                    totalCost: totalCost > 0 ? totalCost : undefined,
+                    totalSell: totalSell > 0 ? totalSell : undefined,
+                    totalProfit: (unitPrice > 0) ? (totalSell - totalCost) : undefined,
                     dueDate: dueDate
                 });
             }
@@ -990,6 +1051,7 @@
                 const newSubItemsObjs = pendingItems.map(item => ({
                     id: 'sub_' + Math.random().toString(36).substring(2, 9),
                     text: item.text,
+                    totalProfit: item.totalProfit !== undefined ? item.totalProfit : null,
                     dueDate: item.dueDate || '',
                     status: 'pending', 
                     createdAt: new Date().toISOString()
@@ -1077,40 +1139,37 @@
         }
 
         function applyFilterAndSearch() {
-    const keyword = document.getElementById('search-input').value.toLowerCase().trim();
-    
-    let filtered = allDeliveries.filter(item => {
-        const matchKeyword = 
-            (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
-            (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
-            (item.phone && item.phone.toLowerCase().includes(keyword)) ||
-            (item.address && item.address.toLowerCase().includes(keyword)) ||
-            (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword)));
+            const keyword = document.getElementById('search-input').value.toLowerCase().trim();
+            
+            let filtered = allDeliveries.filter(item => {
+                const matchKeyword = 
+                    (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
+                    (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
+                    (item.phone && item.phone.toLowerCase().includes(keyword)) ||
+                    (item.address && item.address.toLowerCase().includes(keyword)) ||
+                    (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword)));
 
-        if (!matchKeyword) return false;
+                if (!matchKeyword) return false;
 
-        if (currentFilter === 'pending') {
-            return item.subItems.some(sub => sub.status === 'pending');
+                if (currentFilter === 'pending') {
+                    return item.subItems.some(sub => sub.status === 'pending');
+                }
+                return true;
+            });
+
+            const uniqueCompanies = new Set(
+                filtered
+                    .map(item => item.companyName ? item.companyName.trim() : '')
+                    .filter(company => company !== '')
+            );
+            
+            const companyBadge = document.getElementById('company-count-badge');
+            if (companyBadge) {
+                companyBadge.textContent = `พบรายชื่อบริษัท: ${filtered.length} แห่ง (บริษัทไม่ซ้ำ: ${uniqueCompanies.size} แห่ง)`;
+            }
+
+            renderList(filtered);
         }
-        return true;
-    });
-
-    // คำนวณจำนวนบริษัทที่ไม่ซ้ำกัน (นับเฉพาะที่มีการกรอกชื่อบริษัท หรือนับจำนวนฟอร์มลูกค้าทั้งหมดที่ตรงกัน)
-    // หากต้องการนับจำนวนชื่อบริษัทที่ไม่ซ้ำกัน:
-    const uniqueCompanies = new Set(
-        filtered
-            .map(item => item.companyName ? item.companyName.trim() : '')
-            .filter(company => company !== '')
-    );
-    
-    // หรือถ้าต้องการนับจำนวนรายชื่อทั้งหมดที่แสดงอยู่ (รวมลูกค้าที่ไม่ได้กรอกชื่อบริษัทด้วย ให้ใช้ filtered.length)
-    const companyBadge = document.getElementById('company-count-badge');
-    if (companyBadge) {
-        companyBadge.textContent = `พบรายชื่อบริษัท: ${filtered.length} แห่ง (บริษัทไม่ซ้ำ: ${uniqueCompanies.size} แห่ง)`;
-    }
-
-    renderList(filtered);
-}
 
         function formatDateDisplay(dateStr) {
             if (!dateStr) return '';
@@ -1214,10 +1273,18 @@
                             <div class="text-xs font-semibold text-slate-500 mb-1">รายการสินค้าและราคาที่เคยซื้อ:</div>
                             ${item.subItems.map(sub => {
                                 const isDone = sub.status === 'completed';
+                                let profitTag = '';
+                                if (sub.totalProfit !== undefined && sub.totalProfit !== null) {
+                                    profitTag = `<span class="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold ml-2">กำไร: +${Number(sub.totalProfit).toLocaleString()} ฿</span>`;
+                                }
+
                                 return `
                                     <div class="flex items-center justify-between gap-3 ${isDone ? 'bg-slate-50/80 border-slate-100 opacity-70' : 'bg-sky-50/50 border-sky-100/60'} p-2.5 rounded-xl border text-xs text-slate-700">
                                         <div class="flex flex-col flex-grow truncate gap-1.5">
-                                            <span class="font-medium ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">• ${escapeHTML(sub.text)}</span>
+                                            <div class="flex items-center flex-wrap gap-1">
+                                                <span class="font-medium ${isDone ? 'line-through text-slate-400' : 'text-slate-800'}">• ${escapeHTML(sub.text)}</span>
+                                                ${profitTag}
+                                            </div>
                                             ${sub.dueDate ? `
                                                 <div>
                                                     ${getDueDateBadge(sub.dueDate)}
