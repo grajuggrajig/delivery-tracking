@@ -129,22 +129,29 @@
         </section>
 
         <!-- ส่วนแสดงตารางข้อมูลลูกค้าหลัก -->
-        <section class="flex flex-col h-full overflow-hidden space-y-3 flex-grow transition-all duration-300">
-            <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center justify-between gap-3 flex-shrink-0">
-                <div class="flex items-center gap-2 flex-grow pl-2">
-                    <span class="text-sky-400">🔍</span>
-                    <input type="text" id="search-input" placeholder="ค้นหาชื่อลูกค้า, บริษัท, เบอร์โทร, ที่อยู่ หรือสินค้า..." class="w-full text-sm outline-none bg-transparent placeholder-slate-400">
-                </div>
-                <div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
-                    <button id="filter-all" onclick="setFilter('all')" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow-2xs transition">ทั้งหมด</button>
-                    <button id="filter-pending" onclick="setFilter('pending')" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition">ค้างส่ง</button>
-                </div>
+        <!-- ส่วนแสดงตารางข้อมูลลูกค้าหลัก -->
+<section class="flex flex-col h-full overflow-hidden space-y-3 flex-grow transition-all duration-300">
+    <div class="bg-white p-3 rounded-2xl shadow-sm border border-sky-100 flex items-center justify-between gap-3 flex-shrink-0 flex-wrap">
+        <div class="flex items-center gap-2 flex-grow pl-2 min-w-[200px]">
+            <span class="text-sky-400">🔍</span>
+            <input type="text" id="search-input" placeholder="ค้นหาชื่อลูกค้า, บริษัท, เบอร์โทร, ที่อยู่ หรือสินค้า..." class="w-full text-sm outline-none bg-transparent placeholder-slate-400">
+        </div>
+        <!-- เพิ่มป้ายแสดงจำนวนบริษัทตรงนี้ -->
+        <div class="flex items-center gap-3">
+            <span id="company-count-badge" class="text-xs px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-semibold border border-sky-100">
+                พบรายชื่อบริษัท: 0 แห่ง
+            </span>
+            <div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
+                <button id="filter-all" onclick="setFilter('all')" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow-2xs transition">ทั้งหมด</button>
+                <button id="filter-pending" onclick="setFilter('pending')" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition">ค้างส่ง</button>
             </div>
+        </div>
+    </div>
 
-            <div id="delivery-list" class="space-y-3 overflow-y-auto no-scrollbar flex-grow pr-1">
-                <div class="text-center py-10 text-slate-400 text-sm animate-pulse">กำลังโหลดข้อมูล...</div>
-            </div>
-        </section>
+    <div id="delivery-list" class="space-y-3 overflow-y-auto no-scrollbar flex-grow pr-1">
+        <div class="text-center py-10 text-slate-400 text-sm animate-pulse">กำลังโหลดข้อมูล...</div>
+    </div>
+</section>
     </main>
 
     <!-- Modal: เลือกลูกค้าเดิม หรือพิมพ์เพิ่มใหม่ -->
@@ -1069,26 +1076,40 @@
         }
 
         function applyFilterAndSearch() {
-            const keyword = document.getElementById('search-input').value.toLowerCase().trim();
-            
-            let filtered = allDeliveries.filter(item => {
-                const matchKeyword = 
-                    (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
-                    (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
-                    (item.phone && item.phone.toLowerCase().includes(keyword)) ||
-                    (item.address && item.address.toLowerCase().includes(keyword)) ||
-                    (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword)));
+    const keyword = document.getElementById('search-input').value.toLowerCase().trim();
+    
+    let filtered = allDeliveries.filter(item => {
+        const matchKeyword = 
+            (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
+            (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
+            (item.phone && item.phone.toLowerCase().includes(keyword)) ||
+            (item.address && item.address.toLowerCase().includes(keyword)) ||
+            (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword)));
 
-                if (!matchKeyword) return false;
+        if (!matchKeyword) return false;
 
-                if (currentFilter === 'pending') {
-                    return item.subItems.some(sub => sub.status === 'pending');
-                }
-                return true;
-            });
-
-            renderList(filtered);
+        if (currentFilter === 'pending') {
+            return item.subItems.some(sub => sub.status === 'pending');
         }
+        return true;
+    });
+
+    // คำนวณจำนวนบริษัทที่ไม่ซ้ำกัน (นับเฉพาะที่มีการกรอกชื่อบริษัท หรือนับจำนวนฟอร์มลูกค้าทั้งหมดที่ตรงกัน)
+    // หากต้องการนับจำนวนชื่อบริษัทที่ไม่ซ้ำกัน:
+    const uniqueCompanies = new Set(
+        filtered
+            .map(item => item.companyName ? item.companyName.trim() : '')
+            .filter(company => company !== '')
+    );
+    
+    // หรือถ้าต้องการนับจำนวนรายชื่อทั้งหมดที่แสดงอยู่ (รวมลูกค้าที่ไม่ได้กรอกชื่อบริษัทด้วย ให้ใช้ filtered.length)
+    const companyBadge = document.getElementById('company-count-badge');
+    if (companyBadge) {
+        companyBadge.textContent = `พบรายชื่อบริษัท: ${filtered.length} แห่ง (บริษัทไม่ซ้ำ: ${uniqueCompanies.size} แห่ง)`;
+    }
+
+    renderList(filtered);
+}
 
         function formatDateDisplay(dateStr) {
             if (!dateStr) return '';
