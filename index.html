@@ -55,6 +55,12 @@
                 <button type="button" id="open-stock-modal-btn" class="px-3 py-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl border border-indigo-200 transition flex items-center gap-1 shadow-2xs">
                     🏷️ จัดการสต็อกสินค้า/ราคา/ต้นทุน
                 </button>
+				
+				<button
+    id="open-reminder-modal-btn"
+    class="bg-white/20 hover:bg-white/35 text-slate-700 border border-sky-200 bg-white px-3 py-1.5 rounded-xl font-bold text-xs transition shadow-2xs flex items-center gap-1">
+    🔔 แจ้งเตือน
+</button>
                 <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium hidden sm:inline-block">กำลังเชื่อมต่อ Firebase...</span>
             </div>
         </div>
@@ -62,15 +68,19 @@
 
     <main class="max-w-7xl mx-auto px-4 mt-3 flex gap-4 w-full flex-grow h-[calc(100vh-100px)] overflow-hidden">
         
-        <!-- ส่วนฟอร์มเพิ่มรายการ (สามารถกดซ่อน/แสดงได้สมูทๆ เลื่อนออกข้าง) -->
-        <section id="form-section" class="w-full md:w-[380px] lg:w-[420px] flex-shrink-0 bg-white p-4 rounded-2xl shadow-sm border border-sky-100 h-full overflow-y-auto no-scrollbar flex flex-col justify-between opacity-100 translate-x-0">
-            <div class="space-y-3">
-                <div class="flex justify-between items-center mb-2">
-                    <svg class="w-4 h-4 text-sky-500 inline-block mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                    <button type="button" onclick="toggleSidebarForm()" class="text-slate-400 hover:text-slate-700 text-xs font-bold md:hidden">✕ ซ่อน</button>
-                </div>
-                <form id="delivery-form" class="space-y-3">
+        <!-- ส่วนฟอร์มเพิ่มรายการ (ปรับให้ปุ่มบันทึกอยู่ด้านล่างสุดและมองเห็นเสมอ) -->
+        <section id="form-section" class="w-full md:w-[380px] lg:w-[420px] flex-shrink-0 bg-white p-4 rounded-2xl shadow-sm border border-sky-100 h-full flex flex-col opacity-100 translate-x-0 transition-all duration-300">
+            <!-- ส่วนหัวฟอร์ม -->
+            <div class="flex justify-between items-center mb-2 flex-shrink-0">
+                <svg class="w-4 h-4 text-sky-500 inline-block mr-1" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+                </svg>
+                <button type="button" onclick="toggleSidebarForm()" class="text-slate-400 hover:text-slate-700 text-xs font-bold md:hidden">✕ ซ่อน</button>
+            </div>
+
+            <!-- ฟอร์มและช่องกรอกที่สามารถเลื่อนได้ -->
+            <form id="delivery-form" class="flex flex-col h-full overflow-hidden justify-between">
+                <div class="space-y-3 overflow-y-auto no-scrollbar flex-grow pr-1 pb-2">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้า <span class="text-red-500">*</span></label>
                         <div class="relative flex items-center">
@@ -80,10 +90,7 @@
                             </button>
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบริษัท</label>
-                        <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                    </div>
+                    <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent focus:bg-white transition">
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์</label>
                         <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
@@ -121,12 +128,15 @@
                             <div class="text-xs text-slate-400 italic bg-slate-50 p-2.5 rounded-xl border border-dashed border-slate-200 text-center">ยังไม่มีรายการสินค้า (พิมพ์แล้วกดปุ่มเพิ่ม)</div>
                         </div>
                     </div>
+                </div>
 
+                <!-- ปุ่มบันทึกด้านล่างสุดที่จะถูกตรึงไว้ให้อยู่ในตำแหน่งที่มองเห็นเสมอ -->
+                <div class="pt-2 flex-shrink-0 bg-white border-t border-slate-100 mt-2">
                     <button type="submit" id="submit-btn" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm transition shadow-md shadow-sky-200 flex items-center justify-center gap-2">
                         <span>บันทึกข้อมูลทั้งหมด</span>
                     </button>
-                </form>
-            </div>
+                </div>
+            </form>
         </section>
 
         <!-- ส่วนแสดงตารางข้อมูลลูกค้าหลัก -->
@@ -229,7 +239,7 @@
         </div>
     </div>
 
-    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="modal-content">
             <div class="text-3xl mb-3">⚠️</div>
             <h3 id="modal-title" class="text-base font-bold text-slate-800 mb-2">ยืนยันการทำรายการ</h3>
@@ -240,6 +250,184 @@
             </div>
         </div>
     </div>
+	
+	<!-- ==================== REMINDER MODAL ==================== -->
+<div id="reminder-modal"
+    class="fixed inset-0 bg-black/50 z-[100] hidden flex items-center justify-center p-4">
+
+    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
+
+        <!-- Header -->
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-5 py-4 flex items-center justify-between">
+            <div>
+                <h2 class="text-xl font-bold">🔔 จัดการแจ้งเตือน</h2>
+                <p class="text-sm text-white/80">
+                    ตั้งเวลาเตือนวางบิลและงานที่ต้องดำเนินการ
+                </p>
+            </div>
+
+            <button id="close-reminder-modal"
+                class="text-white text-2xl hover:bg-white/20 rounded-lg px-3 py-1">
+                ✕
+            </button>
+        </div>
+
+        <div class="p-5 overflow-y-auto max-h-[calc(90vh-80px)]">
+
+            <!-- Add Reminder -->
+            <div class="bg-gray-50 border rounded-2xl p-4 mb-5">
+
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-lg text-gray-800">
+                        ➕ เพิ่มการแจ้งเตือน
+                    </h3>
+
+                    <button id="cancel-reminder-edit"
+                        class="hidden text-sm text-gray-500 hover:text-red-600">
+                        ยกเลิกการแก้ไข
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <!-- Company -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">
+                            🏢 บริษัท / ลูกค้า
+                        </label>
+
+                        <input id="reminder-company"
+                            type="text"
+                            list="reminder-company-list"
+                            placeholder="เลือกหรือพิมพ์ชื่อบริษัท"
+                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+
+                        <datalist id="reminder-company-list"></datalist>
+                    </div>
+
+                    <!-- Title -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">
+                            📄 เรื่อง
+                        </label>
+
+                        <input id="reminder-title"
+                            type="text"
+                            value="วางบิล"
+                            placeholder="เช่น วางบิล, เก็บเงิน, ส่งเอกสาร"
+                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Repeat -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">
+                            🔄 รูปแบบ
+                        </label>
+
+                        <select id="reminder-repeat"
+                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="monthly">ทุกเดือน</option>
+                            <option value="once">ครั้งเดียว</option>
+                        </select>
+                    </div>
+
+                    <!-- Day -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">
+                            📅 วันที่
+                        </label>
+
+                        <input id="reminder-day"
+                            type="number"
+                            min="1"
+                            max="31"
+                            value="15"
+                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Time -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">
+                            ⏰ เวลาแจ้งเตือน
+                        </label>
+
+                        <input id="reminder-time"
+                            type="time"
+                            value="08:00"
+                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <!-- Before -->
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">
+                            🔔 แจ้งล่วงหน้า
+                        </label>
+
+                        <select id="reminder-before"
+                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="0">วันเดียวกัน</option>
+                            <option value="1">1 วันล่วงหน้า</option>
+                            <option value="2">2 วันล่วงหน้า</option>
+                            <option value="3">3 วันล่วงหน้า</option>
+                            <option value="7">7 วันล่วงหน้า</option>
+                        </select>
+                    </div>
+
+                </div>
+
+                <div class="flex justify-end mt-4">
+                    <button id="save-reminder-btn"
+                        class="bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-90 text-white px-6 py-2.5 rounded-xl font-bold shadow">
+                        💾 บันทึกการแจ้งเตือน
+                    </button>
+                </div>
+
+            </div>
+
+
+            <!-- Today's notification -->
+            <div id="today-reminder-box"
+                class="hidden bg-red-50 border border-red-200 rounded-2xl p-4 mb-5">
+
+                <h3 class="font-bold text-red-700 mb-3">
+                    🔴 วันนี้มีรายการต้องดำเนินการ
+                </h3>
+
+                <div id="today-reminder-list"
+                    class="space-y-2">
+                </div>
+
+            </div>
+
+
+            <!-- Reminder List -->
+            <div>
+
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold text-lg text-gray-800">
+                        📋 รายการแจ้งเตือนทั้งหมด
+                    </h3>
+
+                    <span id="reminder-count"
+                        class="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-bold">
+                        0 รายการ
+                    </span>
+                </div>
+
+                <div id="reminder-list"
+                    class="space-y-3">
+
+                    <div class="text-center text-gray-400 py-8">
+                        ยังไม่มีรายการแจ้งเตือน
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
 
     <div id="edit-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-modal-content">
@@ -1550,6 +1738,542 @@
             );
         };
 
+
+let editingReminderId = null;
+let allReminders = [];
+
+		async function saveReminder() {
+
+    const companyName =
+        document.getElementById('reminder-company').value.trim();
+
+    const title =
+        document.getElementById('reminder-title').value.trim();
+
+    const repeat =
+        document.getElementById('reminder-repeat').value;
+
+    const dayOfMonth =
+        parseInt(document.getElementById('reminder-day').value);
+
+    const notifyTime =
+        document.getElementById('reminder-time').value;
+
+    const beforeDays =
+        parseInt(document.getElementById('reminder-before').value);
+
+
+    if (!companyName) {
+
+        showToast(
+            'กรุณาระบุบริษัท / ลูกค้า',
+            'error'
+        );
+
+        return;
+    }
+
+
+    if (!title) {
+
+        showToast(
+            'กรุณาระบุเรื่องที่ต้องแจ้งเตือน',
+            'error'
+        );
+
+        return;
+    }
+
+
+    if (
+        repeat === 'monthly' &&
+        (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31)
+    ) {
+
+        showToast(
+            'วันที่ต้องอยู่ระหว่าง 1 - 31',
+            'error'
+        );
+
+        return;
+    }
+
+
+    if (!notifyTime) {
+
+        showToast(
+            'กรุณาระบุเวลาแจ้งเตือน',
+            'error'
+        );
+
+        return;
+    }
+
+
+    const reminderData = {
+
+        companyName: companyName,
+
+        title: title,
+
+        type: 'billing',
+
+        repeat: repeat,
+
+        dayOfMonth:
+            repeat === 'monthly'
+                ? dayOfMonth
+                : null,
+
+        notifyTime: notifyTime,
+
+        beforeDays: beforeDays,
+
+        active: true,
+
+        updatedAt:
+            firebase.firestore.FieldValue.serverTimestamp()
+
+    };
+
+
+    try {
+
+        if (editingReminderId) {
+
+            await db
+                .collection('reminders')
+                .doc(editingReminderId)
+                .update(reminderData);
+
+            showToast(
+                'แก้ไขการแจ้งเตือนเรียบร้อยแล้ว',
+                'success'
+            );
+
+        } else {
+
+            reminderData.createdAt =
+                firebase.firestore.FieldValue.serverTimestamp();
+
+            await db
+                .collection('reminders')
+                .add(reminderData);
+
+            showToast(
+                'เพิ่มการแจ้งเตือนเรียบร้อยแล้ว',
+                'success'
+            );
+        }
+
+
+        resetReminderForm();
+
+    } catch (error) {
+
+        console.error('บันทึก reminder:', error);
+
+        showToast(
+            'ไม่สามารถบันทึกการแจ้งเตือนได้',
+            'error'
+        );
+    }
+}
+
+
+// ------------------------------------------------------------
+// แสดงรายการ Reminder
+// ------------------------------------------------------------
+
+function renderReminders() {
+
+    const container =
+        document.getElementById('reminder-list');
+
+    const count =
+        document.getElementById('reminder-count');
+
+    if (!container) return;
+
+
+    count.textContent =
+        `${allReminders.length} รายการ`;
+
+
+    if (!allReminders.length) {
+
+        container.innerHTML = `
+            <div class="text-center text-gray-400 py-8">
+                ยังไม่มีรายการแจ้งเตือน
+            </div>
+        `;
+
+        return;
+    }
+
+
+    container.innerHTML = allReminders.map(reminder => {
+
+        const active =
+            reminder.active !== false;
+
+        let repeatText = '';
+
+        if (reminder.repeat === 'monthly') {
+
+            repeatText =
+                `ทุกวันที่ ${reminder.dayOfMonth} ของเดือน`;
+
+        } else {
+
+            repeatText = 'ครั้งเดียว';
+        }
+
+
+        const beforeText =
+            reminder.beforeDays > 0
+                ? `แจ้งล่วงหน้า ${reminder.beforeDays} วัน`
+                : 'แจ้งวันครบกำหนด';
+
+
+        return `
+            <div class="border rounded-2xl p-4 bg-white shadow-sm
+                        ${active ? '' : 'opacity-50'}">
+
+                <div class="flex flex-col md:flex-row
+                            md:items-center md:justify-between gap-3">
+
+                    <div class="min-w-0">
+
+                        <div class="font-bold text-gray-800 text-lg">
+                            🏢 ${escapeHTML(reminder.companyName || '-')}
+                        </div>
+
+                        <div class="text-blue-600 font-semibold mt-1">
+                            📄 ${escapeHTML(reminder.title || 'แจ้งเตือน')}
+                        </div>
+
+                        <div class="text-sm text-gray-500 mt-1">
+                            📅 ${repeatText}
+                            &nbsp; • &nbsp;
+                            ⏰ ${reminder.notifyTime || '--:--'}
+                        </div>
+
+                        <div class="text-xs text-gray-400 mt-1">
+                            ${beforeText}
+                        </div>
+
+                    </div>
+
+
+                    <div class="flex items-center gap-2">
+
+                        <button
+                            onclick="toggleReminder('${reminder.id}', ${active})"
+                            class="${active
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-gray-100 text-gray-500'} 
+                                px-3 py-2 rounded-xl text-sm font-bold">
+
+                            ${active ? '🟢 เปิด' : '⚪ ปิด'}
+
+                        </button>
+
+
+                        <button
+                            onclick="editReminder('${reminder.id}')"
+                            class="bg-blue-100 text-blue-700 px-3 py-2 rounded-xl font-bold">
+                            ✏️
+                        </button>
+
+
+                        <button
+                            onclick="deleteReminder('${reminder.id}')"
+                            class="bg-red-100 text-red-700 px-3 py-2 rounded-xl font-bold">
+                            🗑️
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+
+    }).join('');
+}
+
+
+// ------------------------------------------------------------
+// แก้ไข Reminder
+// ------------------------------------------------------------
+
+window.editReminder = function(id) {
+
+    const reminder =
+        allReminders.find(r => r.id === id);
+
+    if (!reminder) return;
+
+
+    editingReminderId = id;
+
+
+    document.getElementById('reminder-company').value =
+        reminder.companyName || '';
+
+    document.getElementById('reminder-title').value =
+        reminder.title || 'วางบิล';
+
+    document.getElementById('reminder-repeat').value =
+        reminder.repeat || 'monthly';
+
+    document.getElementById('reminder-day').value =
+        reminder.dayOfMonth || 15;
+
+    document.getElementById('reminder-time').value =
+        reminder.notifyTime || '08:00';
+
+    document.getElementById('reminder-before').value =
+        reminder.beforeDays || 0;
+
+
+    document.getElementById('save-reminder-btn').textContent =
+        '💾 บันทึกการแก้ไข';
+
+    document.getElementById('cancel-reminder-edit')
+        .classList.remove('hidden');
+
+    document.getElementById('reminder-company')
+        .focus();
+};
+
+
+// ------------------------------------------------------------
+// ยกเลิกแก้ไข
+// ------------------------------------------------------------
+
+document.getElementById('cancel-reminder-edit')
+    .addEventListener('click', resetReminderForm);
+
+
+function resetReminderForm() {
+
+    editingReminderId = null;
+
+
+    document.getElementById('reminder-company').value = '';
+
+    document.getElementById('reminder-title').value =
+        'วางบิล';
+
+    document.getElementById('reminder-repeat').value =
+        'monthly';
+
+    document.getElementById('reminder-day').value =
+        '15';
+
+    document.getElementById('reminder-time').value =
+        '08:00';
+
+    document.getElementById('reminder-before').value =
+        '0';
+
+
+    document.getElementById('save-reminder-btn').textContent =
+        '💾 บันทึกการแจ้งเตือน';
+
+    document.getElementById('cancel-reminder-edit')
+        .classList.add('hidden');
+}
+
+
+// ------------------------------------------------------------
+// เปิด / ปิด Reminder
+// ------------------------------------------------------------
+
+window.toggleReminder = async function(id, currentStatus) {
+
+    try {
+
+        await db
+            .collection('reminders')
+            .doc(id)
+            .update({
+
+                active: !currentStatus,
+
+                updatedAt:
+                    firebase.firestore.FieldValue.serverTimestamp()
+
+            });
+
+        showToast(
+            currentStatus
+                ? 'ปิดการแจ้งเตือนแล้ว'
+                : 'เปิดการแจ้งเตือนแล้ว',
+            'success'
+        );
+
+    } catch (error) {
+
+        console.error(error);
+
+        showToast(
+            'ไม่สามารถเปลี่ยนสถานะได้',
+            'error'
+        );
+    }
+};
+
+
+// ------------------------------------------------------------
+// ลบ Reminder
+// ------------------------------------------------------------
+
+window.deleteReminder = function(id) {
+
+    showConfirmModal(
+        'ยืนยันการลบการแจ้งเตือน',
+        'คุณต้องการลบการแจ้งเตือนนี้ใช่หรือไม่?',
+        async () => {
+
+            try {
+
+                await db
+                    .collection('reminders')
+                    .doc(id)
+                    .delete();
+
+                showToast(
+                    'ลบการแจ้งเตือนแล้ว',
+                    'success'
+                );
+
+            } catch (error) {
+
+                console.error(error);
+
+                showToast(
+                    'ไม่สามารถลบรายการได้',
+                    'error'
+                );
+            }
+
+        }
+    );
+};
+
+function checkTodayReminders() {
+    const box = document.getElementById('today-reminder-box');
+    const list = document.getElementById('today-reminder-list');
+
+    if (!box || !list) return;
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    const dueReminders = allReminders.filter(reminder => {
+        if (reminder.active === false) return false;
+        if (reminder.repeat !== 'monthly') return false;
+        if (!reminder.dayOfMonth) return false;
+
+        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+        const targetDay = Math.min(Number(reminder.dayOfMonth), lastDay);
+        
+        const dueDate = new Date(now.getFullYear(), now.getMonth(), targetDay);
+        const notifyDate = new Date(dueDate);
+        notifyDate.setDate(notifyDate.getDate() - Number(reminder.beforeDays || 0));
+
+        return (
+            today.getFullYear() === notifyDate.getFullYear() &&
+            today.getMonth() === notifyDate.getMonth() &&
+            today.getDate() === notifyDate.getDate()
+        );
+    });
+
+    if (!dueReminders.length) {
+        box.classList.add('hidden');
+        return;
+    }
+
+    box.classList.remove('hidden');
+
+    list.innerHTML = dueReminders.map(reminder => {
+        const before = Number(reminder.beforeDays || 0);
+        const message = before > 0 ? `แจ้งเตือนล่วงหน้า ${before} วัน (กำหนดจริงวันที่ ${reminder.dayOfMonth})` : `ถึงกำหนดดำเนินการวันนี้`;
+        
+        return `
+            <div class="bg-white p-3 rounded-xl border border-red-200 shadow-2xs flex items-center justify-between gap-3">
+                <div>
+                    <div class="text-xs font-bold text-red-700">🏢 ${escapeHTML(reminder.companyName)} - ${escapeHTML(reminder.title)}</div>
+                    <div class="text-[11px] text-slate-500 mt-0.5">${message} ⏰ เวลา ${reminder.notifyTime}</div>
+                </div>
+                <span class="text-[11px] bg-red-100 text-red-700 px-2.5 py-1 rounded-lg font-bold">ต้องทำวันนี้</span>
+            </div>
+        `;
+    }).join('');
+}
+db.collection('reminders').onSnapshot(snapshot => {
+    allReminders = [];
+    snapshot.forEach(doc => {
+        allReminders.push({ id: doc.id, ...doc.data() });
+    });
+    renderReminders();
+    checkTodayReminders();
+}, error => {
+    console.error("Error loading reminders:", error);
+});
+
+
+// ------------------------------------------------------------
+// ตรวจสอบแจ้งเตือนเมื่อเปิดหน้าเว็บ
+// ------------------------------------------------------------
+
+setTimeout(() => {
+
+    checkTodayReminders();
+
+}, 1000);
+
+
+// ตรวจสอบซ้ำทุก 1 นาที
+setInterval(() => {
+
+    checkTodayReminders();
+
+}, 60000);
+
+
+// เปิด Modal แจ้งเตือนและโหลดข้อมูลบริษัท
+document.getElementById('open-reminder-modal-btn').addEventListener('click', () => {
+    const reminderModal = document.getElementById('reminder-modal');
+    reminderModal.classList.remove('hidden');
+    renderReminders();
+    checkTodayReminders();
+    
+    // เติมรายชื่อบริษัทลงใน datalist อัตโนมัติเพื่อให้เลือกง่ายขึ้น
+    const companyListEl = document.getElementById('reminder-company-list');
+    if (companyListEl && typeof allDeliveries !== 'undefined') {
+        const uniqueCompanies = [...new Set(allDeliveries.map(item => item.companyName).filter(Boolean))];
+        companyListEl.innerHTML = uniqueCompanies.map(c => `<option value="${c}">`).join('');
+    }
+});
+
+// ปิด Modal แจ้งเตือนด้วยปุ่มกากบาท (✕)
+document.getElementById('close-reminder-modal').addEventListener('click', () => {
+    document.getElementById('reminder-modal').classList.add('hidden');
+});
+
+// ปิด Modal เมื่อคลิกพื้นที่ว่างรอบนอก
+document.getElementById('reminder-modal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('reminder-modal')) {
+        e.target.classList.add('hidden');
+    }
+});
+document.getElementById('save-reminder-btn').addEventListener('click', () => {
+    saveReminder();
+});
         document.getElementById('search-input').addEventListener('input', applyFilterAndSearch);
     </script>
 </body>
