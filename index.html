@@ -89,8 +89,12 @@
                                 ▼
                             </button>
                         </div>
+						<div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบริษัท / ร้านค้า</label>
+                        <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent focus:bg-white transition">
                     </div>
-                    <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:border-transparent focus:bg-white transition">
+                    </div>
+                    
                     <div>
                         <label class="block text-xs font-semibold text-slate-600 mb-1">เบอร์โทรศัพท์</label>
                         <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
@@ -716,6 +720,115 @@ function getCompanyPriceHistory(companyName, productName) {
         const closeCustomerModalBtn = document.getElementById('close-customer-modal');
         const customerSearchBox = document.getElementById('customer-search-box');
         const customerListContainer = document.getElementById('customer-list-container');
+		
+		
+		
+		
+// ฟังก์ชันดึงประวัติสินค้าทั้งหมดที่บริษัทนั้นเคยซื้อตั้งแต่ชิ้นแรก
+function showCompanyAllHistory(companyName) {
+    if (!companyName) {
+        showToast('ไม่พบชื่อบริษัทสำหรับค้นหาประวัติ', 'error');
+        return;
+    }
+
+    let allPurchasedItems = [];
+    let customerInfo = '';
+
+    // ค้นหาข้อมูลทั้งหมดของบริษัทนี้จาก allDeliveries
+    allDeliveries.forEach(item => {
+        if (item.companyName && item.companyName.trim().toLowerCase() === companyName.trim().toLowerCase()) {
+            customerInfo = item.customerName;
+            if (item.subItems && Array.isArray(item.subItems)) {
+                item.subItems.forEach(sub => {
+                    allPurchasedItems.push({
+                        text: sub.text,
+                        dueDate: sub.dueDate || 'ไม่ระบุวันที่',
+                        status: sub.status || 'pending',
+                        totalProfit: sub.totalProfit
+                    });
+                });
+            }
+        }
+    });
+
+    // สร้าง Modal พร้อมช่องค้นหา
+    showCompanyHistoryModal(companyName, customerInfo, allPurchasedItems);
+}
+
+// ฟังก์ชันสร้างและแสดง Modal แสดงประวัติสินค้าทั้งหมดของบริษัท พร้อมระบบค้นหา
+function showCompanyHistoryModal(companyName, customerName, items) {
+    let oldModal = document.getElementById('company-all-history-modal');
+    if (oldModal) oldModal.remove();
+
+    const modalHtml = `
+        <div id="company-all-history-modal" class="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-[200] flex items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 flex flex-col max-h-[85vh]">
+                <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-100 flex-shrink-0">
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-800">📦 ประวัติสินค้าทั้งหมดของ</h3>
+                        <p class="text-xs text-sky-600 font-bold mt-0.5">🏢 ${escapeHTML(companyName)} ${customerName ? `(ผู้ติดต่อ: ${escapeHTML(customerName)})` : ''}</p>
+                    </div>
+                    <button type="button" onclick="document.getElementById('company-all-history-modal').remove()" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 text-xs font-bold">✕</button>
+                </div>
+
+                <!-- ช่องค้นหาสินค้าในประวัติ -->
+                <div class="mb-3 flex-shrink-0">
+                    <input type="text" id="company-history-search" placeholder="🔍 ค้นหารายชื่อสินค้าในประวัติ..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+
+                <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1 mb-3">
+                    <!-- รายการสินค้าจะแสดงที่นี่ -->
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 flex justify-end flex-shrink-0">
+                    <button type="button" onclick="document.getElementById('company-all-history-modal').remove()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition">ปิดหน้าต่าง</button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+    const searchInput = document.getElementById('company-history-search');
+    const container = document.getElementById('company-history-items-container');
+
+    const renderItems = (keyword = '') => {
+        const kw = keyword.toLowerCase().trim();
+        const filtered = items.filter(item => item.text.toLowerCase().includes(kw) || item.dueDate.toLowerCase().includes(kw));
+
+        if (filtered.length === 0) {
+            container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">ไม่พบรายการสินค้าที่ค้นหา</div>`;
+            return;
+        }
+
+        container.innerHTML = filtered.map((item, index) => {
+            let statusBadge = item.status === 'completed' 
+                ? '<span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold">✓ ส่งแล้ว</span>' 
+                : '<span class="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md font-semibold">รอส่ง</span>';
+            
+            let profitText = item.totalProfit !== undefined && item.totalProfit !== null 
+                ? `<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold ml-2">กำไร: +${Number(item.totalProfit).toLocaleString()} ฿</span>` 
+                : '';
+
+            return `
+                <div class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-2xs text-xs">
+                    <div>
+                        <div class="font-bold text-slate-800">${index + 1}. ${escapeHTML(item.text)} ${profitText}</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">📅 วันที่นัด/บันทึก: ${escapeHTML(item.dueDate)}</div>
+                    </div>
+                    <div>${statusBadge}</div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    renderItems('');
+
+    searchInput.addEventListener('input', (e) => {
+        renderItems(e.target.value);
+    });
+}
+		
 		
 		
 // ฟังก์ชันค้นหาประวัติราคาของบริษัทแบบยืดหยุ่น รองรับการเทียบชื่อสินค้าบางส่วน
@@ -1468,7 +1581,6 @@ document.getElementById('item-input').addEventListener('blur', function() {
         clearItemBtn.addEventListener('click', () => {
             itemInput.value = '';
             itemDueDateInput.value = '';
-            itemInput.focus();
             showToast('ล้างข้อมูลช่องกรอกสินค้าแล้ว', 'info');
         });
 
@@ -1598,8 +1710,16 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                 </div>
                                 ${item.phone ? `<a href="tel:${escapeHTML(item.phone)}" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100 shadow-2xs hover:underline">📞 ${escapeHTML(item.phone)}</a>` : ''}
                             </div>
+                            
                             <div class="flex items-center gap-2">
+                                <button onclick="showCompanyAllHistory('${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" 
+                                    class="text-[11px] font-medium text-sky-600 hover:text-sky-800 transition px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200/60 flex items-center gap-1"
+                                    title="ดูประวัติสินค้าทั้งหมดที่บริษัทนี้เคยซื้อ">
+                                    📦 ดูสินค้าทั้งหมด
+                                </button>
+                                
                                 ${completedCount > 0 ? `<button onclick="clearCompletedItems('${item.id}', '${escapeHTML(item.customerName)}')" title="เคลียร์รายการที่ส่งแล้วออก เพื่อไม่ให้หน้าจอรก" class="text-[11px] font-medium text-amber-600 hover:text-amber-800 transition px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200/60 flex items-center gap-1">🧹 ล้างรายการที่ส่งแล้ว</button>` : ''}
+                                
                                 <button onclick="deleteEntireCustomer('${item.id}', '${escapeHTML(item.customerName)}')" title="ลบข้อมูลลูกค้านี้ออกจากระบบ" class="text-[11px] font-medium text-slate-400 hover:text-rose-600 transition px-2 py-1 rounded-lg hover:bg-rose-50">ลบข้อมูล</button>
                             </div>
                         </div>
