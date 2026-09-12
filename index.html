@@ -104,6 +104,11 @@
                         <div class="space-y-2 relative">
                             <div class="relative flex items-center">
                                 <input type="text" id="item-input" autocomplete="off" placeholder="ดินสอ EE 280.- x 12" class="w-full pl-3 pr-10 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+								
+						<button type="button" onclick="checkCompanyItemHistory()" title="เช็คประวัติราคาที่บริษัทนี้เคยซื้อ" class="absolute right-9 px-2 py-1 text-sky-600 hover:text-sky-800 transition focus:outline-none text-xs font-bold bg-sky-50 rounded-lg">
+                📜
+						</button>
+								
                                 <button type="button" id="dropdown-toggle-btn" title="ดูรายการสินค้าที่บันทึกไว้" class="absolute right-2 px-2 py-1 text-slate-400 hover:text-slate-700 transition focus:outline-none text-xs font-bold">
                                     ▼
                                 </button>
@@ -571,6 +576,57 @@
         let suggestionQuantities = {};
         let isFormVisible = true;
 
+
+// ฟังก์ชันกดเช็คประวัติราคาของบริษัทปัจจุบัน
+function checkCompanyItemHistory() {
+    const currentCompany = document.getElementById('company-name').value.trim();
+    const currentItemText = document.getElementById('item-input').value.trim();
+
+    if (!currentCompany) {
+        showToast('กรุณากรอกหรือเลือกชื่อบริษัทก่อนเช็คประวัติ', 'error');
+        return;
+    }
+
+    if (!currentItemText) {
+        showToast('กรุณาพิมพ์ชื่อสินค้าที่ต้องการเช็คประวัติราคา', 'error');
+        return;
+    }
+
+    const history = getCompanyPriceHistory(currentCompany, currentItemText);
+    
+    if (history) {
+        showToast(`💡 พบประวัติ: "${currentCompany}" เคยซื้อ "${history.text}"`, 'success');
+        document.getElementById('item-input').value = history.text;
+    } else {
+        showToast(`ไม่พบประวัติการซื้อสินค้านี้ของ "${currentCompany}"`, 'info');
+    }
+}
+
+// ฟังก์ชันค้นหาประวัติราคาของบริษัทแบบยืดหยุ่น
+function getCompanyPriceHistory(companyName, productName) {
+    if (!companyName) return null;
+    let foundPrice = null;
+    const targetCompany = companyName.trim().toLowerCase();
+    const cleanSearchKeyword = productName.replace(/\s*\(.*?\)/g, '').replace(/\s*x\s*\d+$/, '').trim().toLowerCase();
+
+    allDeliveries.forEach(item => {
+        const itemCompany = item.companyName ? item.companyName.trim().toLowerCase() : '';
+        if (itemCompany === targetCompany || itemCompany.includes(targetCompany) || targetCompany.includes(itemCompany)) {
+            if (item.subItems && Array.isArray(item.subItems)) {
+                item.subItems.forEach(sub => {
+                    const subTextLower = sub.text.toLowerCase();
+                    if (!cleanSearchKeyword || subTextLower.includes(cleanSearchKeyword) || cleanSearchKeyword.includes(subTextLower.split(' x ')[0])) {
+                        foundPrice = sub;
+                    }
+                });
+            }
+        }
+    });
+    return foundPrice;
+}
+
+
+
         function toggleSidebarForm() {
             const formSection = document.getElementById('form-section');
             const toggleIcon = document.getElementById('toggle-icon');
@@ -660,6 +716,32 @@
         const closeCustomerModalBtn = document.getElementById('close-customer-modal');
         const customerSearchBox = document.getElementById('customer-search-box');
         const customerListContainer = document.getElementById('customer-list-container');
+		
+		
+// ฟังก์ชันค้นหาประวัติราคาของบริษัทแบบยืดหยุ่น รองรับการเทียบชื่อสินค้าบางส่วน
+function getCompanyPriceHistory(companyName, productName) {
+    if (!companyName) return null;
+    let foundPrice = null;
+    const targetCompany = companyName.trim().toLowerCase();
+    const cleanSearchKeyword = productName.replace(/\s*\(.*?\)/g, '').replace(/\s*x\s*\d+$/, '').trim().toLowerCase();
+
+    allDeliveries.forEach(item => {
+        const itemCompany = item.companyName ? item.companyName.trim().toLowerCase() : '';
+        if (itemCompany === targetCompany || itemCompany.includes(targetCompany) || targetCompany.includes(itemCompany)) {
+            if (item.subItems && Array.isArray(item.subItems)) {
+                item.subItems.forEach(sub => {
+                    const subTextLower = sub.text.toLowerCase();
+                    if (!cleanSearchKeyword || subTextLower.includes(cleanSearchKeyword) || cleanSearchKeyword.includes(subTextLower.split(' x ')[0])) {
+                        foundPrice = sub;
+                    }
+                });
+            }
+        }
+    });
+    return foundPrice;
+}
+		
+		
 
         function openCustomerModal() {
             customerModal.classList.remove('hidden');
@@ -1093,6 +1175,32 @@
             closeSuggestionModal();
             itemInput.focus();
         };
+
+
+		// ฟังก์ชันดึงรายชื่อบริษัทที่ไม่ซ้ำกันจากฐานข้อมูลทั้งหมด
+function getUniqueCompanyList() {
+    const companies = new Set();
+    allDeliveries.forEach(item => {
+        if (item.companyName && item.companyName.trim() !== '') {
+            companies.add(item.companyName.trim());
+        }
+    });
+    return Array.from(companies);
+}
+
+// ตัวอย่างฟังก์ชันเมื่อผู้ใช้เลือกบริษัทและพิมพ์ชื่อสินค้า
+document.getElementById('item-input').addEventListener('blur', function() {
+    const currentCompany = document.getElementById('company-name').value.trim();
+    const currentItemText = this.value.trim();
+
+    if (currentCompany && currentItemText) {
+        const history = getCompanyPriceHistory(currentCompany, currentItemText);
+        if (history) {
+            showToast(`พบประวัติเดิม: "${currentCompany}" เคยซื้อสินค้านี้แล้ว`, 'info');
+            // คุณสามารถนำค่าราคาจากประวัติมาเติมให้อัตโนมัติได้ที่นี่
+        }
+    }
+});
 
         function renderPendingItems() {
             if (pendingItems.length === 0) {
