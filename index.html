@@ -181,6 +181,27 @@
         </div>
     </div>
 
+    <!-- Modal: เลือก / เพิ่มบริษัทสำหรับการแจ้งเตือน -->
+    <div id="company-picker-modal" class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[120] hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
+        <div id="company-picker-box" class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[82vh] flex flex-col overflow-hidden border border-slate-100 transform scale-95 transition-transform duration-200">
+            <div class="bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <div class="text-lg font-bold">🏢 เลือกบริษัท</div>
+                    <div class="text-xs text-white/75 mt-0.5">เลือกบริษัทเดิม หรือพิมพ์ชื่อใหม่เพื่อสร้างการแจ้งเตือน</div>
+                </div>
+                <button type="button" id="close-company-picker" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg">✕</button>
+            </div>
+            <div class="p-4 border-b border-slate-100 bg-slate-50/70">
+                <div class="relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                    <input id="company-picker-search" type="text" autocomplete="off" placeholder="ค้นหาชื่อบริษัท..."
+                        class="w-full pl-10 pr-3 py-3 border border-slate-200 rounded-2xl bg-white outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                </div>
+            </div>
+            <div id="company-picker-list" class="p-4 space-y-2 overflow-y-auto flex-1 no-scrollbar"></div>
+        </div>
+    </div>
+
     <!-- Modal: จัดการสต็อกสินค้า (เพิ่มช่องต้นทุนและกำไร) -->
     <div id="stock-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
         <div class="bg-white rounded-3xl shadow-2xl max-w-3xl w-full p-6 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="stock-modal-box">
@@ -295,14 +316,17 @@
                         <label class="block text-sm font-bold text-gray-700 mb-1">
                             🏢 บริษัท / ลูกค้า
                         </label>
-
-                        <input id="reminder-company"
-                            type="text"
-                            list="reminder-company-list"
-                            placeholder="เลือกหรือพิมพ์ชื่อบริษัท"
-                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
-
-                        <datalist id="reminder-company-list"></datalist>
+                        <div class="relative">
+                            <input id="reminder-company"
+                                type="text"
+                                readonly
+                                placeholder="คลิกเพื่อเลือกหรือเพิ่มชื่อบริษัท"
+                                class="w-full border border-gray-300 rounded-xl px-3 py-2.5 pr-12 outline-none focus:ring-2 focus:ring-blue-500 bg-white cursor-pointer">
+                            <button type="button" id="open-company-picker-btn"
+                                class="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 transition font-bold"
+                                title="เลือกบริษัท">⌄</button>
+                        </div>
+                        <p class="text-[11px] text-slate-400 mt-1">เลือกจากรายชื่อเดิม หรือพิมพ์ชื่อใหม่ในหน้าต่างเลือกบริษัท</p>
                     </div>
 
                     <!-- Title -->
@@ -323,7 +347,6 @@
                         <label class="block text-sm font-bold text-gray-700 mb-1">
                             🔄 รูปแบบ
                         </label>
-
                         <select id="reminder-repeat"
                             class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
                             <option value="monthly">ทุกเดือน</option>
@@ -331,46 +354,76 @@
                         </select>
                     </div>
 
-                    <!-- Day -->
+                    <!-- Number of billing rounds -->
                     <div>
                         <label class="block text-sm font-bold text-gray-700 mb-1">
-                            📅 วันที่
+                            🔢 รอบวางบิลต่อเดือน
                         </label>
-
-                        <input id="reminder-day"
-                            type="number"
-                            min="1"
-                            max="31"
-                            value="15"
+                        <select id="reminder-rounds-count"
                             class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-
-                    <!-- Time -->
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">
-                            ⏰ เวลาแจ้งเตือน
-                        </label>
-
-                        <input id="reminder-time"
-                            type="time"
-                            value="08:00"
-                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
-                    </div>
-
-                    <!-- Before -->
-                    <div>
-                        <label class="block text-sm font-bold text-gray-700 mb-1">
-                            🔔 แจ้งล่วงหน้า
-                        </label>
-
-                        <select id="reminder-before"
-                            class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="0">วันเดียวกัน</option>
-                            <option value="1">1 วันล่วงหน้า</option>
-                            <option value="2">2 วันล่วงหน้า</option>
-                            <option value="3">3 วันล่วงหน้า</option>
-                            <option value="7">7 วันล่วงหน้า</option>
+                            <option value="1">1 รอบ / เดือน</option>
+                            <option value="2">2 รอบ / เดือน</option>
                         </select>
+                    </div>
+
+                    <!-- Round 1 -->
+                    <div id="billing-round-1" class="md:col-span-2 rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-7 h-7 rounded-lg bg-blue-600 text-white flex items-center justify-center text-xs font-bold">1</span>
+                            <div>
+                                <div class="text-sm font-bold text-slate-800">รอบวางบิลที่ 1</div>
+                                <div class="text-[11px] text-slate-500">กำหนดวัน เวลา และการแจ้งล่วงหน้า</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">📅 วันที่</label>
+                                <input id="reminder-day" type="number" min="1" max="31" value="15"
+                                    class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">⏰ เวลาแจ้งเตือน</label>
+                                <input id="reminder-time" type="time" value="08:00"
+                                    class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">🔔 แจ้งล่วงหน้า</label>
+                                <select id="reminder-before"
+                                    class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-blue-500">
+                                    <option value="0">วันเดียวกัน</option><option value="1">1 วันล่วงหน้า</option><option value="2">2 วันล่วงหน้า</option><option value="3">3 วันล่วงหน้า</option><option value="7">7 วันล่วงหน้า</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Round 2 -->
+                    <div id="billing-round-2" class="md:col-span-2 hidden rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
+                        <div class="flex items-center gap-2 mb-3">
+                            <span class="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-bold">2</span>
+                            <div>
+                                <div class="text-sm font-bold text-slate-800">รอบวางบิลที่ 2</div>
+                                <div class="text-[11px] text-slate-500">ตั้งค่าแยกจากรอบที่ 1 ได้</div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">📅 วันที่</label>
+                                <input id="reminder-day-2" type="number" min="1" max="31" value="25"
+                                    class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">⏰ เวลาแจ้งเตือน</label>
+                                <input id="reminder-time-2" type="time" value="08:00"
+                                    class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 mb-1">🔔 แจ้งล่วงหน้า</label>
+                                <select id="reminder-before-2"
+                                    class="w-full border border-gray-300 rounded-xl px-3 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="0">วันเดียวกัน</option><option value="1">1 วันล่วงหน้า</option><option value="2">2 วันล่วงหน้า</option><option value="3">3 วันล่วงหน้า</option><option value="7">7 วันล่วงหน้า</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
 
                 </div>
@@ -1742,522 +1795,409 @@
 let editingReminderId = null;
 let allReminders = [];
 
-		async function saveReminder() {
+function getReminderRounds(reminder) {
+    if (Array.isArray(reminder.billingRounds) && reminder.billingRounds.length) {
+        return reminder.billingRounds.slice(0, 2).map((r, index) => ({
+            dayOfMonth: Number(r.dayOfMonth) || (index === 0 ? Number(reminder.dayOfMonth) || 15 : 25),
+            notifyTime: r.notifyTime || (index === 0 ? reminder.notifyTime || '08:00' : '08:00'),
+            beforeDays: Number(r.beforeDays) || 0
+        }));
+    }
+    return [{
+        dayOfMonth: Number(reminder.dayOfMonth) || 15,
+        notifyTime: reminder.notifyTime || '08:00',
+        beforeDays: Number(reminder.beforeDays) || 0
+    }];
+}
 
-    const companyName =
-        document.getElementById('reminder-company').value.trim();
+function updateBillingRoundUI() {
+    const repeat = document.getElementById('reminder-repeat').value;
+    const count = document.getElementById('reminder-rounds-count');
+    const round2 = document.getElementById('billing-round-2');
+    if (!count || !round2) return;
+    const isMonthly = repeat === 'monthly';
+    count.disabled = !isMonthly;
+    if (!isMonthly) count.value = '1';
+    round2.classList.toggle('hidden', !isMonthly || count.value !== '2');
+}
 
-    const title =
-        document.getElementById('reminder-title').value.trim();
+async function saveReminder() {
+    const companyName = document.getElementById('reminder-company').value.trim();
+    const title = document.getElementById('reminder-title').value.trim();
+    const repeat = document.getElementById('reminder-repeat').value;
+    const roundCount = repeat === 'monthly' ? Number(document.getElementById('reminder-rounds-count').value) : 1;
 
-    const repeat =
-        document.getElementById('reminder-repeat').value;
+    if (!companyName) return showToast('กรุณาเลือกหรือเพิ่มบริษัท / ลูกค้า', 'error');
+    if (!title) return showToast('กรุณาระบุเรื่องที่ต้องแจ้งเตือน', 'error');
+    if (![1, 2].includes(roundCount)) return showToast('จำนวนรอบวางบิลไม่ถูกต้อง', 'error');
 
-    const dayOfMonth =
-        parseInt(document.getElementById('reminder-day').value);
+    const round1 = {
+        dayOfMonth: Number(document.getElementById('reminder-day').value),
+        notifyTime: document.getElementById('reminder-time').value,
+        beforeDays: Number(document.getElementById('reminder-before').value) || 0
+    };
+    const round2 = {
+        dayOfMonth: Number(document.getElementById('reminder-day-2').value),
+        notifyTime: document.getElementById('reminder-time-2').value,
+        beforeDays: Number(document.getElementById('reminder-before-2').value) || 0
+    };
+    const rounds = repeat === 'monthly' ? (roundCount === 2 ? [round1, round2] : [round1]) : [round1];
 
-    const notifyTime =
-        document.getElementById('reminder-time').value;
-
-    const beforeDays =
-        parseInt(document.getElementById('reminder-before').value);
-
-
-    if (!companyName) {
-
-        showToast(
-            'กรุณาระบุบริษัท / ลูกค้า',
-            'error'
-        );
-
-        return;
+    for (let i = 0; i < rounds.length; i++) {
+        const r = rounds[i];
+        if (!Number.isInteger(r.dayOfMonth) || r.dayOfMonth < 1 || r.dayOfMonth > 31) {
+            showToast(`รอบที่ ${i + 1}: วันที่ต้องอยู่ระหว่าง 1 - 31`, 'error');
+            return;
+        }
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(r.notifyTime)) {
+            showToast(`รอบที่ ${i + 1}: กรุณาระบุเวลาแจ้งเตือน`, 'error');
+            return;
+        }
     }
 
-
-    if (!title) {
-
-        showToast(
-            'กรุณาระบุเรื่องที่ต้องแจ้งเตือน',
-            'error'
-        );
-
+    if (rounds.length === 2 && rounds[0].dayOfMonth === rounds[1].dayOfMonth && rounds[0].notifyTime === rounds[1].notifyTime) {
+        showToast('รอบที่ 1 และรอบที่ 2 ห้ามตั้งวันและเวลาเดียวกัน', 'error');
         return;
     }
-
-
-    if (
-        repeat === 'monthly' &&
-        (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31)
-    ) {
-
-        showToast(
-            'วันที่ต้องอยู่ระหว่าง 1 - 31',
-            'error'
-        );
-
-        return;
-    }
-
-
-    if (!notifyTime) {
-
-        showToast(
-            'กรุณาระบุเวลาแจ้งเตือน',
-            'error'
-        );
-
-        return;
-    }
-
 
     const reminderData = {
-
-        companyName: companyName,
-
-        title: title,
-
+        companyName,
+        title,
         type: 'billing',
-
-        repeat: repeat,
-
-        dayOfMonth:
-            repeat === 'monthly'
-                ? dayOfMonth
-                : null,
-
-        notifyTime: notifyTime,
-
-        beforeDays: beforeDays,
-
+        repeat,
+        billingRoundsCount: rounds.length,
+        billingRounds: rounds,
+        // เก็บฟิลด์เดิมไว้ด้วย เพื่อรองรับข้อมูลเก่าของระบบ
+        dayOfMonth: rounds[0].dayOfMonth,
+        notifyTime: rounds[0].notifyTime,
+        beforeDays: rounds[0].beforeDays,
         active: true,
-
-        updatedAt:
-            firebase.firestore.FieldValue.serverTimestamp()
-
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
-
     try {
-
         if (editingReminderId) {
-
-            await db
-                .collection('reminders')
-                .doc(editingReminderId)
-                .update(reminderData);
-
-            showToast(
-                'แก้ไขการแจ้งเตือนเรียบร้อยแล้ว',
-                'success'
-            );
-
+            await db.collection('reminders').doc(editingReminderId).update(reminderData);
+            showToast('แก้ไขการแจ้งเตือนเรียบร้อยแล้ว', 'success');
         } else {
-
-            reminderData.createdAt =
-                firebase.firestore.FieldValue.serverTimestamp();
-
-            await db
-                .collection('reminders')
-                .add(reminderData);
-
-            showToast(
-                'เพิ่มการแจ้งเตือนเรียบร้อยแล้ว',
-                'success'
-            );
+            reminderData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            await db.collection('reminders').add(reminderData);
+            showToast(`เพิ่มการแจ้งเตือน ${rounds.length} รอบเรียบร้อยแล้ว`, 'success');
         }
-
-
         resetReminderForm();
-
     } catch (error) {
-
         console.error('บันทึก reminder:', error);
-
-        showToast(
-            'ไม่สามารถบันทึกการแจ้งเตือนได้',
-            'error'
-        );
+        showToast('ไม่สามารถบันทึกการแจ้งเตือนได้ กรุณาตรวจสอบการเชื่อมต่อ Firebase', 'error');
     }
 }
 
-
-// ------------------------------------------------------------
-// แสดงรายการ Reminder
-// ------------------------------------------------------------
-
 function renderReminders() {
-
-    const container =
-        document.getElementById('reminder-list');
-
-    const count =
-        document.getElementById('reminder-count');
-
+    const container = document.getElementById('reminder-list');
+    const count = document.getElementById('reminder-count');
     if (!container) return;
-
-
-    count.textContent =
-        `${allReminders.length} รายการ`;
-
-
+    count.textContent = `${allReminders.length} รายการ`;
     if (!allReminders.length) {
-
-        container.innerHTML = `
-            <div class="text-center text-gray-400 py-8">
-                ยังไม่มีรายการแจ้งเตือน
-            </div>
-        `;
-
+        container.innerHTML = '<div class="text-center text-gray-400 py-8">ยังไม่มีรายการแจ้งเตือน</div>';
         return;
     }
 
-
     container.innerHTML = allReminders.map(reminder => {
-
-        const active =
-            reminder.active !== false;
-
-        let repeatText = '';
-
-        if (reminder.repeat === 'monthly') {
-
-            repeatText =
-                `ทุกวันที่ ${reminder.dayOfMonth} ของเดือน`;
-
-        } else {
-
-            repeatText = 'ครั้งเดียว';
-        }
-
-
-        const beforeText =
-            reminder.beforeDays > 0
-                ? `แจ้งล่วงหน้า ${reminder.beforeDays} วัน`
-                : 'แจ้งวันครบกำหนด';
-
+        const active = reminder.active !== false;
+        const rounds = getReminderRounds(reminder);
+        const roundText = reminder.repeat === 'monthly'
+            ? rounds.map((r, i) => `รอบ ${i + 1}: วันที่ ${r.dayOfMonth} • ${r.notifyTime} • ${r.beforeDays > 0 ? `ล่วงหน้า ${r.beforeDays} วัน` : 'วันเดียวกัน'}`).join('<br>')
+            : `ครั้งเดียว • ${rounds[0].notifyTime}`;
+        const roundBadge = reminder.repeat === 'monthly' && rounds.length === 2
+            ? '<span class="text-[11px] bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg font-bold">2 รอบ/เดือน</span>'
+            : '<span class="text-[11px] bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg font-bold">1 รอบ</span>';
 
         return `
-            <div class="border rounded-2xl p-4 bg-white shadow-sm
-                        ${active ? '' : 'opacity-50'}">
-
-                <div class="flex flex-col md:flex-row
-                            md:items-center md:justify-between gap-3">
-
+            <div class="border border-slate-200 rounded-2xl p-4 bg-white shadow-sm ${active ? '' : 'opacity-50'}">
+                <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                     <div class="min-w-0">
-
-                        <div class="font-bold text-gray-800 text-lg">
-                            🏢 ${escapeHTML(reminder.companyName || '-')}
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <div class="font-bold text-gray-800 text-lg">🏢 ${escapeHTML(reminder.companyName || '-')}</div>
+                            ${roundBadge}
                         </div>
-
-                        <div class="text-blue-600 font-semibold mt-1">
-                            📄 ${escapeHTML(reminder.title || 'แจ้งเตือน')}
-                        </div>
-
-                        <div class="text-sm text-gray-500 mt-1">
-                            📅 ${repeatText}
-                            &nbsp; • &nbsp;
-                            ⏰ ${reminder.notifyTime || '--:--'}
-                        </div>
-
-                        <div class="text-xs text-gray-400 mt-1">
-                            ${beforeText}
-                        </div>
-
+                        <div class="text-blue-600 font-semibold mt-1">📄 ${escapeHTML(reminder.title || 'แจ้งเตือน')}</div>
+                        <div class="text-sm text-gray-500 mt-2 leading-6">📅 ${roundText}</div>
                     </div>
-
-
-                    <div class="flex items-center gap-2">
-
-                        <button
-                            onclick="toggleReminder('${reminder.id}', ${active})"
-                            class="${active
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-100 text-gray-500'} 
-                                px-3 py-2 rounded-xl text-sm font-bold">
-
-                            ${active ? '🟢 เปิด' : '⚪ ปิด'}
-
-                        </button>
-
-
-                        <button
-                            onclick="editReminder('${reminder.id}')"
-                            class="bg-blue-100 text-blue-700 px-3 py-2 rounded-xl font-bold">
-                            ✏️
-                        </button>
-
-
-                        <button
-                            onclick="deleteReminder('${reminder.id}')"
-                            class="bg-red-100 text-red-700 px-3 py-2 rounded-xl font-bold">
-                            🗑️
-                        </button>
-
+                    <div class="flex items-center gap-2 flex-shrink-0">
+                        <button onclick="toggleReminder('${reminder.id}', ${active})" class="${active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'} px-3 py-2 rounded-xl text-sm font-bold">${active ? '🟢 เปิด' : '⚪ ปิด'}</button>
+                        <button onclick="editReminder('${reminder.id}')" class="bg-blue-100 text-blue-700 px-3 py-2 rounded-xl font-bold">✏️</button>
+                        <button onclick="deleteReminder('${reminder.id}')" class="bg-red-100 text-red-700 px-3 py-2 rounded-xl font-bold">🗑️</button>
                     </div>
-
                 </div>
-
-            </div>
-        `;
-
+            </div>`;
     }).join('');
 }
 
-
-// ------------------------------------------------------------
-// แก้ไข Reminder
-// ------------------------------------------------------------
-
 window.editReminder = function(id) {
-
-    const reminder =
-        allReminders.find(r => r.id === id);
-
+    const reminder = allReminders.find(r => r.id === id);
     if (!reminder) return;
-
-
     editingReminderId = id;
-
-
-    document.getElementById('reminder-company').value =
-        reminder.companyName || '';
-
-    document.getElementById('reminder-title').value =
-        reminder.title || 'วางบิล';
-
-    document.getElementById('reminder-repeat').value =
-        reminder.repeat || 'monthly';
-
-    document.getElementById('reminder-day').value =
-        reminder.dayOfMonth || 15;
-
-    document.getElementById('reminder-time').value =
-        reminder.notifyTime || '08:00';
-
-    document.getElementById('reminder-before').value =
-        reminder.beforeDays || 0;
-
-
-    document.getElementById('save-reminder-btn').textContent =
-        '💾 บันทึกการแก้ไข';
-
-    document.getElementById('cancel-reminder-edit')
-        .classList.remove('hidden');
-
-    document.getElementById('reminder-company')
-        .focus();
+    const rounds = getReminderRounds(reminder);
+    document.getElementById('reminder-company').value = reminder.companyName || '';
+    document.getElementById('reminder-title').value = reminder.title || 'วางบิล';
+    document.getElementById('reminder-repeat').value = reminder.repeat || 'monthly';
+    document.getElementById('reminder-rounds-count').value = String(reminder.repeat === 'monthly' ? Math.min(Math.max(Number(reminder.billingRoundsCount) || rounds.length, 1), 2) : 1);
+    const r1 = rounds[0];
+    const r2 = rounds[1] || { dayOfMonth: 25, notifyTime: '08:00', beforeDays: 0 };
+    document.getElementById('reminder-day').value = r1.dayOfMonth;
+    document.getElementById('reminder-time').value = r1.notifyTime;
+    document.getElementById('reminder-before').value = r1.beforeDays;
+    document.getElementById('reminder-day-2').value = r2.dayOfMonth;
+    document.getElementById('reminder-time-2').value = r2.notifyTime;
+    document.getElementById('reminder-before-2').value = r2.beforeDays;
+    updateBillingRoundUI();
+    document.getElementById('save-reminder-btn').textContent = '💾 บันทึกการแก้ไข';
+    document.getElementById('cancel-reminder-edit').classList.remove('hidden');
+    document.getElementById('reminder-company').focus();
 };
 
-
-// ------------------------------------------------------------
-// ยกเลิกแก้ไข
-// ------------------------------------------------------------
-
-document.getElementById('cancel-reminder-edit')
-    .addEventListener('click', resetReminderForm);
-
+document.getElementById('cancel-reminder-edit').addEventListener('click', resetReminderForm);
 
 function resetReminderForm() {
-
     editingReminderId = null;
-
-
     document.getElementById('reminder-company').value = '';
-
-    document.getElementById('reminder-title').value =
-        'วางบิล';
-
-    document.getElementById('reminder-repeat').value =
-        'monthly';
-
-    document.getElementById('reminder-day').value =
-        '15';
-
-    document.getElementById('reminder-time').value =
-        '08:00';
-
-    document.getElementById('reminder-before').value =
-        '0';
-
-
-    document.getElementById('save-reminder-btn').textContent =
-        '💾 บันทึกการแจ้งเตือน';
-
-    document.getElementById('cancel-reminder-edit')
-        .classList.add('hidden');
+    document.getElementById('reminder-title').value = 'วางบิล';
+    document.getElementById('reminder-repeat').value = 'monthly';
+    document.getElementById('reminder-rounds-count').value = '1';
+    document.getElementById('reminder-day').value = '15';
+    document.getElementById('reminder-time').value = '08:00';
+    document.getElementById('reminder-before').value = '0';
+    document.getElementById('reminder-day-2').value = '25';
+    document.getElementById('reminder-time-2').value = '08:00';
+    document.getElementById('reminder-before-2').value = '0';
+    updateBillingRoundUI();
+    document.getElementById('save-reminder-btn').textContent = '💾 บันทึกการแจ้งเตือน';
+    document.getElementById('cancel-reminder-edit').classList.add('hidden');
 }
 
-
-// ------------------------------------------------------------
-// เปิด / ปิด Reminder
-// ------------------------------------------------------------
+document.getElementById('reminder-repeat').addEventListener('change', updateBillingRoundUI);
+document.getElementById('reminder-rounds-count').addEventListener('change', updateBillingRoundUI);
 
 window.toggleReminder = async function(id, currentStatus) {
-
     try {
-
-        await db
-            .collection('reminders')
-            .doc(id)
-            .update({
-
-                active: !currentStatus,
-
-                updatedAt:
-                    firebase.firestore.FieldValue.serverTimestamp()
-
-            });
-
-        showToast(
-            currentStatus
-                ? 'ปิดการแจ้งเตือนแล้ว'
-                : 'เปิดการแจ้งเตือนแล้ว',
-            'success'
-        );
-
+        await db.collection('reminders').doc(id).update({ active: !currentStatus, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        showToast(currentStatus ? 'ปิดการแจ้งเตือนแล้ว' : 'เปิดการแจ้งเตือนแล้ว', 'success');
     } catch (error) {
-
         console.error(error);
-
-        showToast(
-            'ไม่สามารถเปลี่ยนสถานะได้',
-            'error'
-        );
+        showToast('ไม่สามารถเปลี่ยนสถานะได้', 'error');
     }
 };
 
-
-// ------------------------------------------------------------
-// ลบ Reminder
-// ------------------------------------------------------------
-
 window.deleteReminder = function(id) {
-
-    showConfirmModal(
-        'ยืนยันการลบการแจ้งเตือน',
-        'คุณต้องการลบการแจ้งเตือนนี้ใช่หรือไม่?',
-        async () => {
-
-            try {
-
-                await db
-                    .collection('reminders')
-                    .doc(id)
-                    .delete();
-
-                showToast(
-                    'ลบการแจ้งเตือนแล้ว',
-                    'success'
-                );
-
-            } catch (error) {
-
-                console.error(error);
-
-                showToast(
-                    'ไม่สามารถลบรายการได้',
-                    'error'
-                );
-            }
-
+    showConfirmModal('ยืนยันการลบการแจ้งเตือน', 'คุณต้องการลบการแจ้งเตือนนี้ใช่หรือไม่?', async () => {
+        try {
+            await db.collection('reminders').doc(id).delete();
+            showToast('ลบการแจ้งเตือนแล้ว', 'success');
+        } catch (error) {
+            console.error(error);
+            showToast('ไม่สามารถลบรายการได้', 'error');
         }
-    );
+    });
 };
 
 function checkTodayReminders() {
     const box = document.getElementById('today-reminder-box');
     const list = document.getElementById('today-reminder-list');
-
     if (!box || !list) return;
-
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const dueReminders = [];
 
-    const dueReminders = allReminders.filter(reminder => {
-        if (reminder.active === false) return false;
-        if (reminder.repeat !== 'monthly') return false;
-        if (!reminder.dayOfMonth) return false;
-
-        const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-        const targetDay = Math.min(Number(reminder.dayOfMonth), lastDay);
-        
-        const dueDate = new Date(now.getFullYear(), now.getMonth(), targetDay);
-        const notifyDate = new Date(dueDate);
-        notifyDate.setDate(notifyDate.getDate() - Number(reminder.beforeDays || 0));
-
-        return (
-            today.getFullYear() === notifyDate.getFullYear() &&
-            today.getMonth() === notifyDate.getMonth() &&
-            today.getDate() === notifyDate.getDate()
-        );
+    allReminders.forEach(reminder => {
+        if (reminder.active === false) return;
+        if (reminder.repeat !== 'monthly') return;
+        getReminderRounds(reminder).forEach((round, index) => {
+            if (!round.dayOfMonth) return;
+            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+            const targetDay = Math.min(Number(round.dayOfMonth), lastDay);
+            const dueDate = new Date(now.getFullYear(), now.getMonth(), targetDay);
+            const notifyDate = new Date(dueDate);
+            notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
+            if (today.getTime() === notifyDate.getTime()) {
+                dueReminders.push({ reminder, round, roundNumber: index + 1 });
+            }
+        });
     });
 
     if (!dueReminders.length) {
         box.classList.add('hidden');
+        list.innerHTML = '';
         return;
     }
-
     box.classList.remove('hidden');
-
-    list.innerHTML = dueReminders.map(reminder => {
-        const before = Number(reminder.beforeDays || 0);
-        const message = before > 0 ? `แจ้งเตือนล่วงหน้า ${before} วัน (กำหนดจริงวันที่ ${reminder.dayOfMonth})` : `ถึงกำหนดดำเนินการวันนี้`;
-        
-        return `
-            <div class="bg-white p-3 rounded-xl border border-red-200 shadow-2xs flex items-center justify-between gap-3">
-                <div>
-                    <div class="text-xs font-bold text-red-700">🏢 ${escapeHTML(reminder.companyName)} - ${escapeHTML(reminder.title)}</div>
-                    <div class="text-[11px] text-slate-500 mt-0.5">${message} ⏰ เวลา ${reminder.notifyTime}</div>
-                </div>
-                <span class="text-[11px] bg-red-100 text-red-700 px-2.5 py-1 rounded-lg font-bold">ต้องทำวันนี้</span>
-            </div>
-        `;
+    list.innerHTML = dueReminders.map(({ reminder, round, roundNumber }) => {
+        const before = Number(round.beforeDays || 0);
+        const message = before > 0 ? `แจ้งเตือนล่วงหน้า ${before} วัน (กำหนดจริงวันที่ ${round.dayOfMonth})` : 'ถึงกำหนดดำเนินการวันนี้';
+        return `<div class="bg-white p-3 rounded-xl border border-red-200 shadow-2xs flex items-center justify-between gap-3">
+            <div><div class="text-xs font-bold text-red-700">🏢 ${escapeHTML(reminder.companyName)} - ${escapeHTML(reminder.title)} <span class="ml-1 text-[10px] bg-red-100 px-2 py-0.5 rounded">รอบ ${roundNumber}</span></div>
+            <div class="text-[11px] text-slate-500 mt-0.5">${message} ⏰ เวลา ${escapeHTML(round.notifyTime || '--:--')}</div></div>
+            <span class="text-[11px] bg-red-100 text-red-700 px-2.5 py-1 rounded-lg font-bold">ต้องทำวันนี้</span>
+        </div>`;
     }).join('');
 }
+
 db.collection('reminders').onSnapshot(snapshot => {
     allReminders = [];
-    snapshot.forEach(doc => {
-        allReminders.push({ id: doc.id, ...doc.data() });
-    });
+    snapshot.forEach(doc => allReminders.push({ id: doc.id, ...doc.data() }));
+    allReminders.sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || ''), 'th'));
     renderReminders();
     checkTodayReminders();
 }, error => {
-    console.error("Error loading reminders:", error);
+    console.error('Error loading reminders:', error);
+    showToast('ไม่สามารถโหลดข้อมูลการแจ้งเตือนได้', 'error');
 });
 
+setTimeout(() => checkTodayReminders(), 1000);
+setInterval(() => checkTodayReminders(), 60000);
 
 // ------------------------------------------------------------
-// ตรวจสอบแจ้งเตือนเมื่อเปิดหน้าเว็บ
+// Company picker สำหรับ Reminder
 // ------------------------------------------------------------
+const companyPickerModal = document.getElementById('company-picker-modal');
+const companyPickerBox = document.getElementById('company-picker-box');
+const companyPickerSearch = document.getElementById('company-picker-search');
+const companyPickerList = document.getElementById('company-picker-list');
 
-setTimeout(() => {
+function getUniqueReminderCompanies() {
+    const names = [];
+    const add = value => {
+        const name = String(value || '').trim();
+        if (!name) return;
+        if (!names.some(n => n.toLowerCase() === name.toLowerCase())) names.push(name);
+    };
+    allDeliveries.forEach(item => add(item.companyName));
+    allReminders.forEach(item => add(item.companyName));
+    return names.sort((a, b) => a.localeCompare(b, 'th'));
+}
 
-    checkTodayReminders();
+function renderCompanyPicker(filterText = '') {
+    const keyword = String(filterText || '').trim().toLowerCase();
+    const allCompanies = getUniqueReminderCompanies();
+    const companies = allCompanies.filter(name => name.toLowerCase().includes(keyword));
+    const exact = allCompanies.some(name => name.toLowerCase() === keyword);
+    let html = '';
 
-}, 1000);
+    if (keyword && !exact) {
+        html += `
+            <button type="button"
+                class="company-picker-new w-full text-left p-4 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md hover:shadow-lg transition mb-2"
+                data-company="${encodeURIComponent(filterText.trim())}">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center text-xl">＋</span>
+                    <div class="min-w-0">
+                        <div class="font-bold text-sm truncate">ใช้ “${escapeHTML(filterText.trim())}” เป็นบริษัทใหม่</div>
+                        <div class="text-[11px] text-white/75 mt-0.5">สร้างการแจ้งเตือนให้ชื่อนี้</div>
+                    </div>
+                </div>
+            </button>`;
+    }
 
+    if (!companies.length) {
+        if (!keyword) {
+            html += '<div class="text-center py-10 text-slate-400 text-sm">ยังไม่มีรายชื่อบริษัทในระบบ</div>';
+        }
+        companyPickerList.innerHTML = html || '<div class="text-center py-10 text-slate-400 text-sm">ไม่พบชื่อบริษัท</div>';
+        return;
+    }
 
-// ตรวจสอบซ้ำทุก 1 นาที
-setInterval(() => {
+    html += companies.map((name) => {
+        const reminder = allReminders.find(r =>
+            String(r.companyName || '').trim().toLowerCase() === name.toLowerCase()
+        );
+        const rounds = reminder ? getReminderRounds(reminder).length : 0;
 
-    checkTodayReminders();
+        return `
+            <button type="button"
+                class="company-picker-item w-full text-left p-3.5 rounded-2xl border border-slate-100 bg-white hover:border-blue-200 hover:bg-blue-50/60 transition flex items-center justify-between gap-3 group"
+                data-company="${encodeURIComponent(name)}">
+                <span class="flex items-center gap-3 min-w-0">
+                    <span class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-indigo-600 text-white flex items-center justify-center font-bold shadow-sm">
+                        ${escapeHTML(name.charAt(0).toUpperCase())}
+                    </span>
+                    <span class="min-w-0">
+                        <span class="block text-sm font-bold text-slate-800 truncate group-hover:text-blue-700">${escapeHTML(name)}</span>
+                        <span class="block text-[11px] text-slate-400 mt-0.5">
+                            ${rounds ? `มีการตั้งแจ้งเตือนแล้ว ${rounds} รอบ` : 'ยังไม่มีการตั้งแจ้งเตือน'}
+                        </span>
+                    </span>
+                </span>
+                <span class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-xl group-hover:bg-blue-600 group-hover:text-white">เลือก</span>
+            </button>`;
+    }).join('');
 
-}, 60000);
+    companyPickerList.innerHTML = html;
+}
 
+function openCompanyPicker() {
+    companyPickerModal.classList.remove('hidden');
+    companyPickerSearch.value = '';
+    renderCompanyPicker('');
+    setTimeout(() => {
+        companyPickerModal.classList.remove('opacity-0');
+        companyPickerBox.classList.remove('scale-95');
+        companyPickerSearch.focus();
+    }, 10);
+}
 
-// เปิด Modal แจ้งเตือนและโหลดข้อมูลบริษัท
+function closeCompanyPicker() {
+    companyPickerModal.classList.add('opacity-0');
+    companyPickerBox.classList.add('scale-95');
+    setTimeout(() => companyPickerModal.classList.add('hidden'), 200);
+}
+
+window.selectReminderCompany = function(name) {
+    const value = String(name || '').trim();
+    if (!value) return;
+
+    const companyInput = document.getElementById('reminder-company');
+    companyInput.value = value;
+    closeCompanyPicker();
+    showToast(`เลือกบริษัท “${value}” แล้ว`, 'info');
+};
+
+// ใช้ Event Delegation แทน inline onclick
+companyPickerList.addEventListener('click', (e) => {
+    const button = e.target.closest('button[data-company]');
+    if (!button) return;
+
+    const encodedName = button.getAttribute('data-company');
+    if (!encodedName) return;
+
+    try {
+        const companyName = decodeURIComponent(encodedName);
+        selectReminderCompany(companyName);
+    } catch (error) {
+        console.error('Company picker decode error:', error);
+        showToast('ไม่สามารถเลือกบริษัทได้ กรุณาลองใหม่', 'error');
+    }
+});
+
+document.getElementById('open-company-picker-btn').addEventListener('click', openCompanyPicker);
+document.getElementById('reminder-company').addEventListener('click', openCompanyPicker);
+document.getElementById('close-company-picker').addEventListener('click', closeCompanyPicker);
+companyPickerModal.addEventListener('click', e => {
+    if (e.target === companyPickerModal) closeCompanyPicker();
+});
+companyPickerSearch.addEventListener('input', e => renderCompanyPicker(e.target.value));
+companyPickerSearch.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && e.target.value.trim()) {
+        e.preventDefault();
+        selectReminderCompany(e.target.value.trim());
+    }
+});
+
+// เปิด Modal แจ้งเตือน
+
 document.getElementById('open-reminder-modal-btn').addEventListener('click', () => {
     const reminderModal = document.getElementById('reminder-modal');
     reminderModal.classList.remove('hidden');
     renderReminders();
     checkTodayReminders();
-    
-    // เติมรายชื่อบริษัทลงใน datalist อัตโนมัติเพื่อให้เลือกง่ายขึ้น
-    const companyListEl = document.getElementById('reminder-company-list');
-    if (companyListEl && typeof allDeliveries !== 'undefined') {
-        const uniqueCompanies = [...new Set(allDeliveries.map(item => item.companyName).filter(Boolean))];
-        companyListEl.innerHTML = uniqueCompanies.map(c => `<option value="${c}">`).join('');
-    }
+    updateBillingRoundUI();
 });
 
 // ปิด Modal แจ้งเตือนด้วยปุ่มกากบาท (✕)
