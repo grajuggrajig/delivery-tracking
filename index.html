@@ -306,21 +306,27 @@
 
     <!-- Modal: เลือกสินค้าจากสต็อก (คำนวณกำไรและต้นทุนแสดงทันที) -->
     <div id="custom-item-suggestions" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
-        <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-5 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
-            <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
-                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                    📋 เลือกรายการสินค้าจากสต็อก (คำนวณกำไรอัตโนมัติ)
-                </span>
-                <button type="button" id="close-suggestion-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
-                    ✕
-                </button>
-            </div>
-            <div class="mb-3">
-                <input type="text" id="suggestion-search-box" placeholder="🔍 พิมพ์เพื่อกรองชื่อสินค้า..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-            </div>
-            <div id="suggestions-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1"></div>
+    <div class="bg-white rounded-3xl shadow-2xl max-w-xl w-full p-5 border border-slate-100 flex flex-col max-h-[85vh] transform scale-95 transition-transform duration-200" id="suggestion-modal-box">
+        <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
+            <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                📋 เลือกรายการสินค้าจากสต็อก (เลือกได้หลายรายการ)
+            </span>
+            <button type="button" id="close-suggestion-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
+                ✕
+            </button>
+        </div>
+        <div class="mb-3">
+            <input type="text" id="suggestion-search-box" placeholder="🔍 พิมพ์เพื่อกรองชื่อสินค้า..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+        </div>
+        <div id="suggestions-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1"></div>
+        
+        <!-- ปุ่มยืนยันเพิ่มสินค้าที่เลือก -->
+        <div class="pt-3 mt-3 border-t border-slate-100 flex justify-end gap-2">
+            <button type="button" onclick="closeSuggestionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition">ยกเลิก</button>
+            <button type="button" onclick="confirmSelectedSuggestions()" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold transition shadow-sm">✓ เพิ่มรายการที่เลือกทั้งหมด</button>
         </div>
     </div>
+</div>
 
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="modal-content">
@@ -1283,8 +1289,8 @@ function getCompanyPriceHistory(companyName, productName) {
 
                 return `
                     <div class="flex items-center justify-between px-3.5 py-2.5 bg-white hover:bg-sky-50/60 rounded-2xl transition border border-slate-100 hover:border-sky-200 shadow-2xs gap-2">
-                        <div class="flex items-center gap-2.5 truncate flex-grow cursor-pointer" onclick="selectSuggestion('${escapeHTML(p.name).replace(/'/g, "\\'")}', ${p.price})">
-                            <span class="w-2 h-2 rounded-full bg-sky-500 flex-shrink-0"></span>
+                        <div class="flex items-center gap-2.5 truncate flex-grow">
+                            <input type="checkbox" id="chk-product-${p.id}" value="${p.id}" class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-400 cursor-pointer">
                             <div class="truncate">
                                 <div class="font-semibold text-slate-800 text-xs truncate">${escapeHTML(p.name)}</div>
                                 <div class="text-[11px] text-slate-500 flex items-center gap-2">
@@ -1297,12 +1303,67 @@ function getCompanyPriceHistory(companyName, productName) {
                             <button type="button" onclick="adjustSuggestionQty('${p.id}', -1)" class="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 font-bold text-xs transition shadow-2xs">-</button>
                             <span id="suggestion-qty-${p.id}" class="w-6 text-center font-bold text-xs text-slate-800">${currentQty}</span>
                             <button type="button" onclick="adjustSuggestionQty('${p.id}', 1)" class="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 font-bold text-xs transition shadow-2xs">+</button>
-                            <button type="button" onclick="addSuggestionWithQty('${escapeHTML(p.name).replace(/'/g, "\\'")}', ${p.price}, '${p.id}')" class="ml-1 px-3 py-1 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold text-xs transition shadow-xs">เพิ่ม</button>
                         </div>
                     </div>
                 `;
             }).join('');
         }
+
+        // ฟังก์ชันยืนยันเพิ่มสินค้าหลายรายการที่ติ๊กเลือกพร้อมกัน
+        window.confirmSelectedSuggestions = function() {
+            const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
+            let addedCount = 0;
+
+            allProducts.forEach(p => {
+                const checkbox = document.getElementById(`chk-product-${p.id}`);
+                if (checkbox && checkbox.checked) {
+                    const qty = suggestionQuantities[p.id] || 1;
+                    const cost = (p.cost || 0) * qty;
+                    const totalSell = p.price * qty;
+                    const totalProfit = totalSell - cost;
+                    const name = p.name;
+
+                    const existingIndex = pendingItems.findIndex(item => {
+                        let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+                        return itemCleanName === name && item.dueDate === dueDate;
+                    });
+
+                    if (existingIndex > -1) {
+                        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
+                        let newQty = pendingItems[existingIndex].quantity;
+                        let newCost = (p.cost || 0) * newQty;
+                        let newSell = p.price * newQty;
+                        
+                        pendingItems[existingIndex].totalCost = newCost;
+                        pendingItems[existingIndex].totalSell = newSell;
+                        pendingItems[existingIndex].totalProfit = newSell - newCost;
+                        pendingItems[existingIndex].text = `${name} x ${newQty}`;
+                    } else {
+                        pendingItems.push({
+                            rawName: name,
+                            text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
+                            quantity: qty,
+                            unitPrice: p.price,
+                            totalCost: cost,
+                            totalSell: totalSell,
+                            totalProfit: totalProfit,
+                            dueDate: dueDate
+                        });
+                    }
+                    addedCount++;
+                    suggestionQuantities[p.id] = 1;
+                }
+            });
+
+            if (addedCount === 0) {
+                showToast('กรุณาเลือกติ๊กสินค้าอย่างน้อย 1 รายการ', 'error');
+                return;
+            }
+
+            renderPendingItems();
+            closeSuggestionModal();
+            showToast(`เพิ่มสินค้า ${addedCount} รายการสำเร็จ`, 'success');
+        };
 
         window.quickAddAndSelectStock = async function() {
             const nameInput = document.getElementById('quick-stock-name');
