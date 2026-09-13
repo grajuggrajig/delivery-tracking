@@ -796,9 +796,12 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                     <button type="button" onclick="document.getElementById('company-all-history-modal').remove()" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 text-xs font-bold">✕</button>
                 </div>
 
-                <!-- ช่องค้นหาสินค้าในประวัติ -->
-                <div class="mb-3 flex-shrink-0">
-                    <input type="text" id="company-history-search" placeholder="🔍 ค้นหารายชื่อสินค้าในประวัติ..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                <!-- ช่องค้นหาสินค้าในประวัติ และแสดงผลจำนวนรายการ -->
+                <div class="mb-3 flex-shrink-0 space-y-2">
+                    <input type="text" id="company-history-search" placeholder="🔍 ค้นหารายชื่อสินค้าในประวัติ..." class="w-full px-3.5 py-2 text-xs border border-sky-200 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+                    <div class="flex justify-between items-center px-1">
+                        <span id="search-count-label" class="text-[11px] font-semibold text-slate-500">ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ</span>
+                    </div>
                 </div>
 
                 <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1 mb-3">
@@ -816,32 +819,51 @@ function showCompanyHistoryModal(companyName, customerName, items) {
 
     const searchInput = document.getElementById('company-history-search');
     const container = document.getElementById('company-history-items-container');
+    const countLabel = document.getElementById('search-count-label');
 
     const renderItems = (keyword = '') => {
         const kw = keyword.toLowerCase().trim();
         const filtered = items.filter(item => item.text.toLowerCase().includes(kw) || item.dueDate.toLowerCase().includes(kw));
 
+        // อัปเดตข้อความแสดงจำนวนที่ค้นพบ
+        if (kw === '') {
+            countLabel.innerHTML = `ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ`;
+        } else {
+            countLabel.innerHTML = `ค้นพบ <span class="text-emerald-600 font-bold">${filtered.length}</span> จากทั้งหมด ${items.length} รายการ`;
+        }
+
         if (filtered.length === 0) {
-            container.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs italic">ไม่พบรายการสินค้าที่ค้นหา</div>`;
+            container.innerHTML = `<div class="text-center py-8 text-rose-400 text-xs italic font-medium bg-rose-50/50 rounded-xl border border-rose-100">❌ ไม่พบรายการสินค้าที่ตรงกับคำว่า "${escapeHTML(keyword)}"</div>`;
             return;
         }
 
         container.innerHTML = filtered.map((item, index) => {
             let statusBadge = item.status === 'completed' 
-                ? '<span class="text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold">✓ ส่งแล้ว</span>' 
-                : '<span class="text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md font-semibold">รอส่ง</span>';
+                ? '<span class="text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-lg font-bold shadow-2xs">✓ ส่งแล้ว</span>' 
+                : '<span class="text-amber-700 bg-amber-100/80 px-2.5 py-1 rounded-lg font-bold shadow-2xs">⏳ รอส่ง</span>';
             
             let profitText = item.totalProfit !== undefined && item.totalProfit !== null 
-                ? `<span class="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-semibold ml-2">กำไร: +${Number(item.totalProfit).toLocaleString()} ฿</span>` 
+                ? `<span class="text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold ml-2 shadow-2xs">💰 กำไร: +${Number(item.totalProfit).toLocaleString()} ฿</span>` 
                 : '';
 
+            // ทำไฮไลท์คำค้นหาในชื่อสินค้าให้เด่นชัด (ถ้ามีการพิมพ์ค้นหา)
+            let highlightedText = escapeHTML(item.text);
+            if (kw) {
+                const regex = new RegExp(`(${kw})`, 'gi');
+                highlightedText = highlightedText.replace(regex, `<mark class="bg-amber-200 text-slate-900 rounded px-0.5">$1</mark>`);
+            }
+
             return `
-                <div class="flex items-center justify-between p-3 bg-white border border-slate-100 rounded-xl shadow-2xs text-xs">
-                    <div>
-                        <div class="font-bold text-slate-800">${index + 1}. ${escapeHTML(item.text)} ${profitText}</div>
-                        <div class="text-[11px] text-slate-500 mt-0.5">📅 วันที่นัด/บันทึก: ${escapeHTML(item.dueDate)}</div>
+                <div class="flex items-center justify-between p-3.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs transition-all text-xs">
+                    <div class="space-y-1 pr-2">
+                        <div class="font-bold text-slate-900 text-[13px] leading-relaxed">
+                            <span class="text-sky-600 font-extrabold mr-1">#${index + 1}</span> ${highlightedText} ${profitText}
+                        </div>
+                        <div class="text-[11px] text-slate-500 flex items-center gap-1 font-medium">
+                            <span>📅 วันที่นัด/บันทึก:</span> <span class="text-slate-700 font-semibold">${escapeHTML(item.dueDate)}</span>
+                        </div>
                     </div>
-                    <div>${statusBadge}</div>
+                    <div class="flex-shrink-0">${statusBadge}</div>
                 </div>
             `;
         }).join('');
