@@ -43,6 +43,7 @@
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -606,6 +607,113 @@
         </div>
     </div>
 
+    <!-- Modal: ประวัติการติดต่อ / โน้ตย่อ CRM -->
+    <div id="crm-modal" class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[220] hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
+        <div id="crm-modal-box" class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col border border-slate-100 transform scale-95 transition-transform duration-200 overflow-hidden">
+            <div class="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 text-white px-5 py-4 flex items-center justify-between flex-shrink-0">
+                <div class="min-w-0">
+                    <div class="text-base font-bold flex items-center gap-2">📝 ประวัติการติดต่อ / โน้ตย่อ CRM</div>
+                    <div id="crm-customer-title" class="text-xs text-white/80 mt-1 truncate">ลูกค้า</div>
+                </div>
+                <button type="button" id="close-crm-modal" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg transition">✕</button>
+            </div>
+            <div class="p-5 overflow-y-auto no-scrollbar flex-1">
+                <div class="bg-sky-50/60 border border-sky-100 rounded-2xl p-4 mb-4">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <div><div class="text-sm font-bold text-slate-800">➕ บันทึกการติดต่อใหม่</div><div class="text-[11px] text-slate-400 mt-0.5">เช่น ลูกค้าขอเลื่อนส่งเป็นวันพุธ / ชอบติดต่อผ่านเบอร์สำรอง</div></div>
+                        <span class="text-[10px] px-2 py-1 rounded-lg bg-white text-sky-700 border border-sky-100 font-semibold">CRM</span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-[1fr_150px] gap-3">
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">💬 โน้ต / รายละเอียดการติดต่อ</label><textarea id="crm-note-input" rows="3" placeholder="พิมพ์รายละเอียดการพูดคุยกับลูกค้า..." class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none"></textarea></div>
+                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">📅 วันที่ติดต่อ</label><input type="date" id="crm-contact-date" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"><div class="text-[10px] text-slate-400 mt-1.5 leading-relaxed">ใช้บันทึกวันที่โทรคุย / ติดต่อครั้งล่าสุด</div></div>
+                    </div>
+                    <div class="flex justify-end mt-3"><button type="button" id="save-crm-note-btn" class="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-sm transition">💾 บันทึกโน้ต</button></div>
+                </div>
+                <div class="flex items-center justify-between mb-3"><div><div class="text-sm font-bold text-slate-800">📋 ประวัติการติดต่อ</div><div class="text-[11px] text-slate-400">ข้อมูลนี้จะถูกเก็บไว้กับโปรไฟล์ลูกค้า</div></div><span id="crm-note-count" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-semibold">0 รายการ</span></div>
+                <div id="crm-note-list" class="space-y-2"></div>
+            </div>
+            <div class="px-5 py-3 border-t border-slate-100 flex justify-end flex-shrink-0 bg-white"><button type="button" id="crm-close-bottom" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">ปิดหน้าต่าง</button></div>
+        </div>
+    </div>
+
+
+    <!-- Modal: ออกใบเสนอราคา / ใบเสร็จรับเงิน / ใบส่งสินค้า + Preview -->
+    <div id="document-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[230] hidden flex items-center justify-center p-3 md:p-5 opacity-0 transition-all duration-200">
+        <div id="document-modal-box" class="bg-slate-100 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[94vh] flex flex-col overflow-hidden border border-slate-200 transform scale-95 transition-transform duration-200">
+            <div class="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 text-white px-5 py-3.5 flex items-center justify-between flex-shrink-0">
+                <div>
+                    <div class="text-base font-bold">🧾 ออกเอกสาร</div>
+                    <div id="document-customer-title" class="text-xs text-white/80 mt-1 truncate">ลูกค้า</div>
+                </div>
+                <button type="button" id="close-document-modal" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg transition">✕</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-[300px_1fr] min-h-0 flex-1 overflow-hidden">
+                <div class="bg-white p-4 border-r border-slate-200 overflow-y-auto no-scrollbar">
+                    <div class="text-sm font-bold text-slate-800 mb-3">⚙️ ตั้งค่าเอกสาร</div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ประเภทเอกสาร</label>
+                            <select id="document-type" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                                <option value="quotation">📄 ใบเสนอราคา</option>
+                                <option value="receipt">🧾 ใบเสร็จรับเงิน</option>
+                                <option value="delivery">📦 ใบส่งสินค้า</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">เลขที่เอกสาร</label>
+                            <input id="document-number-input" type="text" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">วันที่ออกเอกสาร</label>
+                            <input id="document-date-input" type="date" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">ผู้รับสินค้า</label>
+                            <input id="document-receiver-input" type="text" placeholder="ระบุชื่อผู้รับ (ถ้ามี)" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">หมายเหตุ</label>
+                            <textarea id="document-note-input" rows="3" placeholder="หมายเหตุเพิ่มเติม" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400 resize-none"></textarea>
+                        </div>
+                    </div>
+
+                    <div id="document-summary" class="bg-slate-50 rounded-2xl border border-slate-100 p-3 text-[11px] text-slate-600 mt-4"></div>
+
+                    <div class="rounded-2xl bg-emerald-50 border border-emerald-100 p-3 mt-3">
+                        <div class="text-[11px] font-bold text-emerald-800 mb-1">🏷️ ราคาจาก Manage Stock</div>
+                        <div class="text-[10px] text-emerald-700 leading-relaxed">
+                            ระบบจะค้นหาราคาขายปัจจุบันจาก <b>🏷️ จัดการรายการสินค้า ราคา และต้นทุนในสต็อก</b> แล้วคำนวณยอดตามจำนวนสินค้าให้อัตโนมัติ
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col gap-2 mt-4">
+                        <button type="button" id="print-document-btn" class="py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition shadow-sm">🖨️ สั่งพิมพ์ทันที</button>
+                        <button type="button" id="download-document-btn" class="py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition shadow-sm">⬇️ ดาวน์โหลด PDF</button>
+                        <button type="button" id="document-close-bottom" class="py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">ปิดหน้าต่าง</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-200/70 overflow-auto p-4 md:p-6 no-scrollbar">
+                    <div class="text-[11px] text-slate-500 font-semibold mb-2">👁️ ตัวอย่างก่อนพิมพ์</div>
+                    <div class="flex justify-center">
+                        <div id="document-preview" class="bg-white shadow-xl w-full max-w-[820px] min-h-[1050px] p-8 md:p-10"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- พื้นที่เอกสารสำหรับ html2pdf -->
+    <div id="pdf-document-wrapper" style="position:fixed;left:-100000px;top:0;width:210mm;background:#fff;z-index:-1;">
+        <div id="pdf-document" style="width:210mm;min-height:297mm;padding:14mm 14mm 16mm;background:#fff;color:#111827;font-family:'Plus Jakarta Sans',Arial,sans-serif;font-size:12px;box-sizing:border-box;"></div>
+    </div>
+
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
     <footer class="text-center py-1.5 text-[11px] text-slate-400 border-t border-sky-100 flex-shrink-0">
@@ -638,6 +746,7 @@
         let currentFilter = 'all';
         let suggestionQuantities = {};
         let isFormVisible = true;
+        let currentCrmCustomerId = null;
 
 
 // ฟังก์ชันกดเช็คประวัติราคาของบริษัทปัจจุบัน
@@ -1741,7 +1850,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         subItems: existingItems,
                         companyName: companyName || docData.companyName || '',
                         phone: phone || docData.phone || '',
-                        address: address || docData.address || ''
+                        address: address || docData.address || '',
+                        customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : []
                     });
 
                     showToast(`เพิ่ม ${pendingItems.length} รายการให้ "${customerName}" เรียบร้อย`, 'success');
@@ -1752,6 +1862,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         phone,
                         address,
                         subItems: newSubItemsObjs,
+                        customerNotes: [],
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     await db.collection('deliveries').add(data);
@@ -1815,7 +1926,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
                     (item.phone && item.phone.toLowerCase().includes(keyword)) ||
                     (item.address && item.address.toLowerCase().includes(keyword)) ||
-                    (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword)));
+                    (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword))) ||
+                    (item.customerNotes && item.customerNotes.some(note => (note.note || '').toLowerCase().includes(keyword) || (note.contactDate || '').toLowerCase().includes(keyword)));
 
                 if (!matchKeyword) return false;
 
@@ -1919,10 +2031,20 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             </div>
                             
                             <div class="flex items-center gap-2">
+                                <button onclick="openCrmModal('${item.id}')" 
+                                    class="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 transition px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/60 flex items-center gap-1"
+                                    title="ดูและบันทึกประวัติการติดต่อกับลูกค้า">
+                                    📝 CRM <span class="text-[10px] opacity-70">(${Array.isArray(item.customerNotes) ? item.customerNotes.length : 0})</span>
+                                </button>
                                 <button onclick="showCompanyAllHistory('${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" 
                                     class="text-[11px] font-medium text-sky-600 hover:text-sky-800 transition px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200/60 flex items-center gap-1"
                                     title="ดูประวัติสินค้าทั้งหมดที่บริษัทนี้เคยซื้อ">
                                     📦 ดูสินค้าทั้งหมด
+                                </button>
+                                <button onclick="openDocumentModal('${item.id}')"
+                                    class="text-[11px] font-bold text-emerald-700 hover:text-white transition px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 border border-emerald-200/60 flex items-center gap-1"
+                                    title="ออกใบเสนอราคา ใบเสร็จรับเงิน หรือใบส่งสินค้า">
+                                    🧾 ออกเอกสาร
                                 </button>
                                 
                                 ${completedCount > 0 ? `<button onclick="clearCompletedItems('${item.id}', '${escapeHTML(item.customerName)}')" title="เคลียร์รายการที่ส่งแล้วออก เพื่อไม่ให้หน้าจอรก" class="text-[11px] font-medium text-amber-600 hover:text-amber-800 transition px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200/60 flex items-center gap-1">🧹 ล้างรายการที่ส่งแล้ว</button>` : ''}
@@ -1937,6 +2059,13 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                 <span class="leading-relaxed">${escapeHTML(item.address)}</span>
                             </div>
                         ` : ''}
+
+                        ${Array.isArray(item.customerNotes) && item.customerNotes.length ? (() => {
+                            const latestNote = [...item.customerNotes].sort((a,b) => String(b.createdAt || b.contactDate || '').localeCompare(String(a.createdAt || a.contactDate || '')))[0];
+                            return `<div class="mx-3.5 mt-2 px-3 py-2 rounded-xl bg-indigo-50/70 border border-indigo-100 flex items-start gap-2 cursor-pointer hover:bg-indigo-50 transition" onclick="openCrmModal('${item.id}')" title="คลิกเพื่อดูประวัติการติดต่อทั้งหมด">
+                                <span class="flex-shrink-0">📝</span><div class="min-w-0"><div class="text-[10px] font-bold text-indigo-700 mb-0.5">โน้ตล่าสุด${latestNote.contactDate ? ` • ${formatDateDisplay(latestNote.contactDate)}` : ''}</div><div class="text-[11px] text-slate-600 truncate">${escapeHTML(latestNote.note || '')}</div></div>
+                            </div>`;
+                        })() : ''}
 
                         <div class="p-3 space-y-2 max-h-48 overflow-y-auto no-scrollbar">
                             <div class="flex items-center justify-between bg-slate-100/70 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 mb-2">
@@ -1982,6 +2111,406 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 `;
             }).join('');
         }
+
+        // ==================== PDF / PRINT DOCUMENT GENERATOR ====================
+        let currentDocumentCustomerId = null;
+
+        const documentState = {
+            number: '',
+            date: '',
+            receiver: '',
+            note: ''
+        };
+
+        function getTodayISODateForDocument() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        function getDocumentNumber() {
+            const d = new Date();
+            const pad = n => String(n).padStart(2, '0');
+            return `DOC-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+        }
+
+        function getDocumentItems(customer) {
+            const missing = [];
+            const items = (customer && Array.isArray(customer.subItems) ? customer.subItems : []).map(sub => {
+                const rawText = String(sub.text || '').trim();
+                const qtyMatch = rawText.match(/x\s*(\d+)\s*$/i);
+                const quantity = qtyMatch ? Math.max(1, parseInt(qtyMatch[1], 10)) : 1;
+
+                let itemName = rawText.replace(/\s*x\s*\d+\s*$/i, '').trim();
+                const embeddedPriceMatch = itemName.match(/\(\s*([\d,]+(?:\.\d+)?)\s*บาท\s*\)$/i);
+                const embeddedPrice = embeddedPriceMatch ? Number(embeddedPriceMatch[1].replace(/,/g, '')) : 0;
+                itemName = itemName.replace(/\s*\(\s*[\d,]+(?:\.\d+)?\s*บาท\s*\)\s*$/i, '').trim();
+
+                const normalized = itemName.toLowerCase().replace(/\s+/g, ' ').trim();
+                let product = allProducts.find(p =>
+                    String(p.name || '').toLowerCase().replace(/\s+/g, ' ').trim() === normalized
+                );
+
+                if (!product) {
+                    product = allProducts.find(p => {
+                        const pn = String(p.name || '').toLowerCase().replace(/\s+/g, ' ').trim();
+                        return pn && (pn.includes(normalized) || normalized.includes(pn));
+                    });
+                }
+
+                if (!product && !missing.includes(itemName)) missing.push(itemName);
+
+                // ใช้ราคาปัจจุบันจาก Manage Stock ก่อนเสมอ
+                const unitPrice = product ? (Number(product.price) || 0) : embeddedPrice;
+
+                return {
+                    name: product ? product.name : itemName,
+                    quantity,
+                    unitPrice,
+                    total: unitPrice * quantity,
+                    dueDate: sub.dueDate || ''
+                };
+            });
+
+            return { items, missing };
+        }
+
+        function escapeDocumentHTML(value) {
+            return escapeHTML(String(value == null ? '' : value));
+        }
+
+        function getDocumentTypeText(type) {
+            return type === 'quotation' ? 'ใบเสนอราคา' :
+                   type === 'receipt' ? 'ใบเสร็จรับเงิน' : 'ใบส่งสินค้า';
+        }
+
+        function formatDocumentDate(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dateStr;
+        }
+
+        function thaiBahtText(amount) {
+            amount = Math.round((Number(amount) || 0) * 100) / 100;
+            if (amount === 0) return 'ศูนย์บาทถ้วน';
+
+            const numbers = ['ศูนย์','หนึ่ง','สอง','สาม','สี่','ห้า','หก','เจ็ด','แปด','เก้า'];
+
+            function readBelowMillion(num) {
+                num = Math.floor(num);
+                if (num === 0) return '';
+                const s = String(num);
+                let result = '';
+
+                for (let i = 0; i < s.length; i++) {
+                    const digit = Number(s[i]);
+                    const pos = s.length - i - 1;
+                    if (!digit) continue;
+
+                    if (pos === 0) {
+                        result += (digit === 1 && s.length > 1) ? 'เอ็ด' : numbers[digit];
+                    } else if (pos === 1) {
+                        if (digit === 1) result += 'สิบ';
+                        else if (digit === 2) result += 'ยี่สิบ';
+                        else result += numbers[digit] + 'สิบ';
+                    } else {
+                        result += numbers[digit] + ['', 'สิบ', 'ร้อย', 'พัน', 'หมื่น', 'แสน'][pos];
+                    }
+                }
+                return result;
+            }
+
+            function readInteger(num) {
+                num = Math.floor(num);
+                if (num < 1000000) return readBelowMillion(num);
+                const million = Math.floor(num / 1000000);
+                const rest = num % 1000000;
+                return readInteger(million) + 'ล้าน' + (rest ? readBelowMillion(rest) : '');
+            }
+
+            const baht = Math.floor(amount);
+            const satang = Math.round((amount - baht) * 100);
+            if (satang === 0) return readInteger(baht) + 'บาทถ้วน';
+            return readInteger(baht) + 'บาท' + readBelowMillion(satang) + 'สตางค์';
+        }
+
+        function buildDocumentHTML(customer, type) {
+            const result = getDocumentItems(customer);
+
+            if (result.missing.length && type !== 'delivery') {
+                throw new Error(`ไม่พบสินค้าใน Manage Stock: ${result.missing.join(', ')}`);
+            }
+
+            const items = result.items;
+            const grandTotal = items.reduce((sum, item) => sum + item.total, 0);
+            const title = getDocumentTypeText(type);
+            const showPrice = type !== 'delivery';
+            const docNo = documentState.number || getDocumentNumber();
+            const dateText = formatDocumentDate(documentState.date) || formatDocumentDate(getTodayISODateForDocument());
+            const receiver = documentState.receiver.trim();
+            const note = documentState.note.trim();
+
+            const rows = items.length ? items.map((item, index) => `
+                <tr>
+                    <td style="border:1px solid #cbd5e1;padding:8px;text-align:center;width:8%;">${index + 1}</td>
+                    <td style="border:1px solid #cbd5e1;padding:8px;">${escapeDocumentHTML(item.name)}${item.dueDate ? `<div style="font-size:9px;color:#64748b;margin-top:2px;">กำหนดส่ง: ${escapeDocumentHTML(formatDateDisplay(item.dueDate))}</div>` : ''}</td>
+                    <td style="border:1px solid #cbd5e1;padding:8px;text-align:center;width:12%;">${item.quantity.toLocaleString()}</td>
+                    ${showPrice ? `<td style="border:1px solid #cbd5e1;padding:8px;text-align:right;width:18%;">${item.unitPrice.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
+                    <td style="border:1px solid #cbd5e1;padding:8px;text-align:right;width:18%;font-weight:700;">${item.total.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>` : ''}
+                </tr>
+            `).join('') : `
+                <tr><td colspan="${showPrice ? 5 : 3}" style="border:1px solid #cbd5e1;padding:20px;text-align:center;color:#94a3b8;">ไม่มีรายการสินค้า</td></tr>
+            `;
+
+            return `
+                <div id="document-paper" style="font-family:'Tahoma','Sarabun',Arial,sans-serif;color:#111827;background:#fff;line-height:1.5;">
+                    <div style="display:flex;justify-content:space-between;gap:24px;border-bottom:3px solid #2563eb;padding-bottom:14px;margin-bottom:18px;">
+                        <div>
+                            <div style="font-size:21px;font-weight:800;color:#1d4ed8;">Delivery Tracking & CRM</div>
+                            <div style="font-size:11px;color:#64748b;margin-top:3px;">ระบบจัดการลูกค้าและรายการจัดส่งสินค้า</div>
+                        </div>
+                        <div style="text-align:right;min-width:190px;">
+                            <div style="font-size:22px;font-weight:800;color:#0f172a;">${title}</div>
+                            <div style="font-size:11px;color:#64748b;margin-top:4px;">เลขที่: <b>${escapeDocumentHTML(docNo)}</b></div>
+                            <div style="font-size:11px;color:#64748b;">วันที่: <b>${escapeDocumentHTML(dateText)}</b></div>
+                        </div>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
+                        <div style="border:1px solid #bfdbfe;border-radius:10px;padding:11px;background:#f8fbff;">
+                            <div style="font-size:10px;font-weight:700;color:#2563eb;margin-bottom:5px;">ข้อมูลลูกค้า</div>
+                            <div style="font-weight:700;font-size:13px;">${escapeDocumentHTML(customer.customerName || '-')}</div>
+                            <div style="font-size:11px;margin-top:3px;">${escapeDocumentHTML(customer.companyName || '-')}</div>
+                            ${customer.phone ? `<div style="font-size:11px;margin-top:3px;">โทร. ${escapeDocumentHTML(customer.phone)}</div>` : ''}
+                        </div>
+                        <div style="border:1px solid #cbd5e1;border-radius:10px;padding:11px;">
+                            <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px;">ที่อยู่จัดส่ง</div>
+                            <div style="font-size:11px;line-height:1.55;">${escapeDocumentHTML(customer.address || 'ไม่ระบุที่อยู่')}</div>
+                        </div>
+                    </div>
+
+                    <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;">
+                        <thead>
+                            <tr style="background:#eff6ff;">
+                                <th style="border:1px solid #cbd5e1;padding:8px;width:8%;">ลำดับ</th>
+                                <th style="border:1px solid #cbd5e1;padding:8px;text-align:left;">รายการสินค้า</th>
+                                <th style="border:1px solid #cbd5e1;padding:8px;width:12%;">จำนวน</th>
+                                ${showPrice ? '<th style="border:1px solid #cbd5e1;padding:8px;width:18%;text-align:right;">ราคาต่อหน่วย</th><th style="border:1px solid #cbd5e1;padding:8px;width:18%;text-align:right;">จำนวนเงิน</th>' : ''}
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+
+                    ${showPrice ? `
+                        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
+                            <div style="width:300px;">
+                                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding:8px 0;font-size:12px;">
+                                    <span>รวมทั้งสิ้น</span>
+                                    <strong>${grandTotal.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})} บาท</strong>
+                                </div>
+                                ${type === 'receipt' ? `
+                                    <div style="margin-top:8px;padding:9px;background:#f8fafc;border-radius:8px;font-size:10px;line-height:1.6;">
+                                        <b>จำนวนเงินตัวอักษร (Thai Baht)</b><br>
+                                        ${thaiBahtText(grandTotal)}
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    ${note ? `<div style="margin-top:16px;border:1px dashed #cbd5e1;border-radius:9px;padding:9px;font-size:10px;"><b>หมายเหตุ:</b> ${escapeDocumentHTML(note)}</div>` : ''}
+
+                    <div style="margin-top:55px;display:grid;grid-template-columns:1fr 1fr;gap:50px;text-align:center;font-size:10px;color:#475569;">
+                        <div>
+                            <div style="height:28px;border-bottom:1px solid #94a3b8;"></div>
+                            <div style="margin-top:6px;">ผู้จัดทำ / ผู้ส่งสินค้า</div>
+                        </div>
+                        <div>
+                            <div style="height:28px;border-bottom:1px solid #94a3b8;"></div>
+                            <div style="margin-top:6px;">ผู้รับสินค้า${receiver ? `: ${escapeDocumentHTML(receiver)}` : ' / ลูกค้า'}</div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:35px;text-align:center;font-size:9px;color:#94a3b8;">
+                        เอกสารสร้างจากระบบ Delivery Tracking & CRM
+                    </div>
+                </div>
+            `;
+        }
+
+        function syncDocumentStateFromInputs() {
+            documentState.number = document.getElementById('document-number-input').value.trim();
+            documentState.date = document.getElementById('document-date-input').value;
+            documentState.receiver = document.getElementById('document-receiver-input').value.trim();
+            documentState.note = document.getElementById('document-note-input').value.trim();
+        }
+
+        function updateDocumentPreview() {
+            const customer = allDeliveries.find(item => item.id === currentDocumentCustomerId);
+            const summary = document.getElementById('document-summary');
+            if (!customer) return;
+
+            syncDocumentStateFromInputs();
+
+            const type = document.getElementById('document-type').value;
+            const result = getDocumentItems(customer);
+            const totalQty = result.items.reduce((sum, item) => sum + item.quantity, 0);
+            const total = result.items.reduce((sum, item) => sum + item.total, 0);
+
+            const missingText = result.missing.length
+                ? `<div class="mt-2 text-rose-600 font-semibold">⚠️ สินค้าที่ไม่พบใน Manage Stock: ${escapeHTML(result.missing.join(', '))}</div>`
+                : '';
+
+            summary.innerHTML = `
+                <div class="font-bold text-slate-800">${escapeHTML(customer.companyName || customer.customerName || '-')}</div>
+                <div class="mt-1">รายการ ${result.items.length} รายการ • จำนวนรวม ${totalQty.toLocaleString()} ชิ้น</div>
+                <div class="mt-1 font-bold text-sky-700">ยอดตามราคาปัจจุบันใน Manage Stock: ${total.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})} บาท</div>
+                ${missingText}
+            `;
+
+            try {
+                document.getElementById('document-preview').innerHTML = buildDocumentHTML(customer, type);
+            } catch (err) {
+                document.getElementById('document-preview').innerHTML = `
+                    <div class="p-5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+                        ⚠️ ${escapeHTML(err.message)}
+                    </div>
+                `;
+            }
+        }
+
+        window.openDocumentModal = function(docId) {
+            const customer = allDeliveries.find(item => item.id === docId);
+            if (!customer) return;
+
+            currentDocumentCustomerId = docId;
+
+            document.getElementById('document-customer-title').textContent =
+                `${customer.customerName || '-'} • ${customer.companyName || 'ไม่ระบุบริษัท'}`;
+
+            document.getElementById('document-type').value = 'delivery';
+            document.getElementById('document-number-input').value = getDocumentNumber();
+            document.getElementById('document-date-input').value = getTodayISODateForDocument();
+            document.getElementById('document-receiver-input').value = '';
+            document.getElementById('document-note-input').value = '';
+
+            updateDocumentPreview();
+
+            const modal = document.getElementById('document-modal');
+            const box = document.getElementById('document-modal-box');
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                box.classList.remove('scale-95');
+            }, 10);
+        };
+
+        function closeDocumentModal() {
+            const modal = document.getElementById('document-modal');
+            const box = document.getElementById('document-modal-box');
+            modal.classList.add('opacity-0');
+            box.classList.add('scale-95');
+            setTimeout(() => modal.classList.add('hidden'), 200);
+            currentDocumentCustomerId = null;
+        }
+
+        async function prepareDocument(type) {
+            const customer = allDeliveries.find(item => item.id === currentDocumentCustomerId);
+            if (!customer) throw new Error('ไม่พบข้อมูลลูกค้า');
+
+            syncDocumentStateFromInputs();
+            const html = buildDocumentHTML(customer, type);
+            document.getElementById('pdf-document').innerHTML = html;
+            return { customer, html };
+        }
+
+        document.getElementById('document-type').addEventListener('change', updateDocumentPreview);
+        ['document-number-input','document-date-input','document-receiver-input','document-note-input'].forEach(id => {
+            const el = document.getElementById(id);
+            el.addEventListener('input', updateDocumentPreview);
+            el.addEventListener('change', updateDocumentPreview);
+        });
+
+        document.getElementById('close-document-modal').addEventListener('click', closeDocumentModal);
+        document.getElementById('document-close-bottom').addEventListener('click', closeDocumentModal);
+        document.getElementById('document-modal').addEventListener('click', e => {
+            if (e.target.id === 'document-modal') closeDocumentModal();
+        });
+
+        document.getElementById('print-document-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('print-document-btn');
+            const type = document.getElementById('document-type').value;
+
+            try {
+                btn.disabled = true;
+                btn.textContent = 'กำลังเตรียมเอกสาร...';
+
+                const { html } = await prepareDocument(type);
+                const printWindow = window.open('', '_blank', 'width=900,height=1200');
+                if (!printWindow) throw new Error('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาต Pop-up สำหรับเว็บไซต์นี้');
+
+                printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html lang="th">
+                    <head>
+                        <meta charset="UTF-8">
+                        <title>${getDocumentTypeText(type)}</title>
+                        <style>
+                            @page{size:A4;margin:10mm}
+                            body{margin:0;background:#fff;font-family:Tahoma,'Sarabun',Arial,sans-serif;}
+                            @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+                        </style>
+                    </head>
+                    <body>${html}</body>
+                    </html>
+                `);
+                printWindow.document.close();
+                printWindow.focus();
+                setTimeout(() => printWindow.print(), 500);
+                showToast('เปิดหน้าสั่งพิมพ์เรียบร้อย', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'ไม่สามารถสร้างเอกสารได้', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🖨️ สั่งพิมพ์ทันที';
+            }
+        });
+
+        document.getElementById('download-document-btn').addEventListener('click', async () => {
+            const btn = document.getElementById('download-document-btn');
+            const type = document.getElementById('document-type').value;
+
+            try {
+                if (typeof html2pdf === 'undefined') {
+                    throw new Error('ไม่พบไลบรารี PDF กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่');
+                }
+
+                btn.disabled = true;
+                btn.textContent = 'กำลังสร้าง PDF...';
+
+                const { customer } = await prepareDocument(type);
+                const safeName = (customer.companyName || customer.customerName || 'customer').replace(/[\\/:*?"<>|]/g, '_');
+                const fileName = `${getDocumentTypeText(type)}_${safeName}_${documentState.number || 'document'}.pdf`;
+
+                await html2pdf().set({
+                    margin: 0,
+                    filename: fileName,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                    pagebreak: { mode: ['css','legacy'] }
+                }).from(document.getElementById('pdf-document')).save();
+
+                showToast('ดาวน์โหลด PDF เรียบร้อย', 'success');
+            } catch (err) {
+                console.error(err);
+                showToast(err.message || 'ไม่สามารถสร้าง PDF ได้', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '⬇️ ดาวน์โหลด PDF';
+            }
+        });
 
         function escapeHTML(str) {
             if (!str) return '';
@@ -2226,6 +2755,120 @@ document.getElementById('item-input').addEventListener('blur', function() {
             );
         };
 
+
+// ------------------------------------------------------------
+// CRM: ประวัติการติดต่อ / โน้ตย่อของลูกค้า
+// ------------------------------------------------------------
+const crmModal = document.getElementById('crm-modal');
+const crmModalBox = document.getElementById('crm-modal-box');
+const crmCustomerTitle = document.getElementById('crm-customer-title');
+const crmNoteInput = document.getElementById('crm-note-input');
+const crmContactDate = document.getElementById('crm-contact-date');
+const crmNoteList = document.getElementById('crm-note-list');
+const crmNoteCount = document.getElementById('crm-note-count');
+const saveCrmNoteBtn = document.getElementById('save-crm-note-btn');
+
+function getTodayISODate() {
+    const d = new Date();
+    const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+    return local.toISOString().slice(0, 10);
+}
+
+function getCustomerNotes(customer) {
+    return Array.isArray(customer && customer.customerNotes) ? customer.customerNotes : [];
+}
+
+function renderCrmNotes(notes) {
+    const sorted = [...notes].sort((a, b) => String(b.contactDate || b.createdAt || '').localeCompare(String(a.contactDate || a.createdAt || '')));
+    crmNoteCount.textContent = `${sorted.length} รายการ`;
+    if (!sorted.length) {
+        crmNoteList.innerHTML = `<div class="text-center py-8 rounded-2xl bg-slate-50 border border-dashed border-slate-200 text-xs text-slate-400">ยังไม่มีประวัติการติดต่อ<br><span class="text-[10px]">เริ่มบันทึกโน้ตด้านบนได้เลย</span></div>`;
+        return;
+    }
+    crmNoteList.innerHTML = sorted.map(note => `
+        <div class="bg-white border border-slate-100 rounded-2xl p-3.5 shadow-2xs hover:border-indigo-100 transition">
+            <div class="flex items-start justify-between gap-3">
+                <div class="flex items-start gap-2.5 min-w-0 flex-1">
+                    <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">💬</div>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap break-words">${escapeHTML(note.note || '')}</div>
+                        <div class="flex items-center gap-2 mt-2 flex-wrap">
+                            ${note.contactDate ? `<span class="text-[10px] px-2 py-0.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-100 font-semibold">📅 ติดต่อวันที่ ${formatDateDisplay(note.contactDate)}</span>` : ''}
+                            ${note.createdAt ? `<span class="text-[10px] text-slate-400">บันทึกเมื่อ ${new Date(note.createdAt).toLocaleString('th-TH')}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+                <button type="button" onclick="deleteCrmNote('${escapeHTML(note.id || '')}')" class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-300 hover:text-rose-600 hover:bg-rose-50 transition flex-shrink-0" title="ลบโน้ตนี้">✕</button>
+            </div>
+        </div>`).join('');
+}
+
+window.openCrmModal = function(docId) {
+    const customer = allDeliveries.find(item => item.id === docId);
+    if (!customer) return showToast('ไม่พบข้อมูลลูกค้านี้', 'error');
+    currentCrmCustomerId = docId;
+    crmCustomerTitle.textContent = `👤 ${customer.customerName || '-'}${customer.companyName ? ` • 🏢 ${customer.companyName}` : ''}`;
+    crmNoteInput.value = '';
+    crmContactDate.value = getTodayISODate();
+    renderCrmNotes(getCustomerNotes(customer));
+    crmModal.classList.remove('hidden');
+    setTimeout(() => { crmModal.classList.remove('opacity-0'); crmModalBox.classList.remove('scale-95'); crmNoteInput.focus(); }, 10);
+};
+
+function closeCrmModal() {
+    crmModal.classList.add('opacity-0');
+    crmModalBox.classList.add('scale-95');
+    setTimeout(() => crmModal.classList.add('hidden'), 200);
+    currentCrmCustomerId = null;
+}
+
+async function saveCrmNote() {
+    if (!currentCrmCustomerId) return;
+    const noteText = crmNoteInput.value.trim();
+    const contactDate = crmContactDate.value || '';
+    if (!noteText) { showToast('กรุณาพิมพ์รายละเอียดการติดต่อหรือโน้ต', 'error'); crmNoteInput.focus(); return; }
+    const customer = allDeliveries.find(item => item.id === currentCrmCustomerId);
+    if (!customer) return;
+    saveCrmNoteBtn.disabled = true;
+    saveCrmNoteBtn.textContent = 'กำลังบันทึก...';
+    try {
+        const notes = [...getCustomerNotes(customer)];
+        notes.push({ id: 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7), note: noteText, contactDate, createdAt: new Date().toISOString() });
+        await db.collection('deliveries').doc(currentCrmCustomerId).update({ customerNotes: notes });
+        crmNoteInput.value = '';
+        crmContactDate.value = getTodayISODate();
+        showToast('บันทึกประวัติการติดต่อเรียบร้อย', 'success');
+    } catch (err) {
+        console.error('บันทึก CRM ไม่สำเร็จ:', err);
+        showToast('ไม่สามารถบันทึกประวัติการติดต่อได้', 'error');
+    } finally {
+        saveCrmNoteBtn.disabled = false;
+        saveCrmNoteBtn.textContent = '💾 บันทึกโน้ต';
+    }
+}
+
+window.deleteCrmNote = function(noteId) {
+    if (!currentCrmCustomerId || !noteId) return;
+    showConfirmModal('ยืนยันการลบโน้ต', 'ต้องการลบประวัติการติดต่อนี้ใช่หรือไม่?', async () => {
+        try {
+            const docRef = db.collection('deliveries').doc(currentCrmCustomerId);
+            const docSnap = await docRef.get();
+            if (!docSnap.exists) return;
+            const notes = getCustomerNotes(docSnap.data()).filter(note => note.id !== noteId);
+            await docRef.update({ customerNotes: notes });
+            showToast('ลบประวัติการติดต่อแล้ว', 'success');
+        } catch (err) {
+            console.error('ลบ CRM ไม่สำเร็จ:', err);
+            showToast('ไม่สามารถลบประวัติการติดต่อได้', 'error');
+        }
+    });
+};
+
+saveCrmNoteBtn.addEventListener('click', saveCrmNote);
+document.getElementById('close-crm-modal').addEventListener('click', closeCrmModal);
+document.getElementById('crm-close-bottom').addEventListener('click', closeCrmModal);
+crmModal.addEventListener('click', e => { if (e.target === crmModal) closeCrmModal(); });
+crmNoteInput.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); saveCrmNote(); } });
 
 let editingReminderId = null;
 let allReminders = [];
