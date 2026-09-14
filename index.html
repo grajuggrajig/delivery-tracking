@@ -672,9 +672,34 @@
                             <input id="document-date-input" type="date" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
                         </div>
 
-                        <div>
+                        <div id="document-receiver-field">
                             <label class="block text-xs font-semibold text-slate-600 mb-1">ผู้รับสินค้า</label>
                             <input id="document-receiver-input" type="text" placeholder="ระบุชื่อผู้รับ (ถ้ามี)" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                        </div>
+
+                        <div id="document-tax-fields" class="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-3 space-y-3">
+                            <div class="text-[11px] font-bold text-indigo-800">🧮 ส่วนลดและภาษีสำหรับเอกสาร</div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div id="document-discount-field">
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">ส่วนลด (%)</label>
+                                    <input id="document-discount-input" type="number" min="0" max="100" step="0.01" value="0"
+                                        class="w-full px-3 py-2 text-xs border border-indigo-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                </div>
+                                <div id="document-vat-field">
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">VAT (%)</label>
+                                    <input id="document-vat-input" type="number" min="0" max="100" step="0.01" value="7"
+                                        class="w-full px-3 py-2 text-xs border border-indigo-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                </div>
+                            </div>
+                            <div class="text-[10px] text-indigo-700 leading-relaxed">
+                                ระบบดึง <b>ราคาขายปัจจุบันจาก 🏷️ Manage Stock</b> มาคำนวณ และใช้ส่วนลดก่อนคำนวณ VAT
+                            </div>
+                        </div>
+
+                        <div id="document-buyer-tax-field">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">เลขประจำตัวผู้เสียภาษีลูกค้า <span class="font-normal text-slate-400">(ถ้ามี)</span></label>
+                            <input id="document-buyer-taxid-input" type="text" inputmode="numeric" maxlength="20" placeholder="กรอกเมื่อจำเป็นสำหรับเอกสารภาษี"
+                                class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
                         </div>
 
                         <div>
@@ -711,7 +736,7 @@
 
     <!-- พื้นที่เอกสารสำหรับ html2pdf -->
     <div id="pdf-document-wrapper" style="position:fixed;left:-100000px;top:0;width:210mm;background:#fff;z-index:-1;">
-        <div id="pdf-document" style="width:210mm;min-height:297mm;padding:14mm 14mm 16mm;background:#fff;color:#111827;font-family:'Plus Jakarta Sans',Arial,sans-serif;font-size:12px;box-sizing:border-box;"></div>
+        <div id="pdf-document" style="width:210mm;min-height:297mm;padding:10mm 12mm 14mm;background:#fff;color:#111827;font-family:Tahoma,'Sarabun',Arial,sans-serif;font-size:12px;box-sizing:border-box;"></div>
     </div>
 
     <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
@@ -784,18 +809,19 @@ function getCompanyPriceHistory(companyName, productName) {
     allDeliveries.forEach(item => {
         const itemCompany = item.companyName ? item.companyName.trim().toLowerCase() : '';
         if (itemCompany === targetCompany || itemCompany.includes(targetCompany) || targetCompany.includes(itemCompany)) {
-            if (item.subItems && Array.isArray(item.subItems)) {
-                item.subItems.forEach(sub => {
-                    const subTextLower = sub.text.toLowerCase();
-                    if (!cleanSearchKeyword || subTextLower.includes(cleanSearchKeyword) || cleanSearchKeyword.includes(subTextLower.split(' x ')[0])) {
-                        foundPrice = sub;
-                    }
-                });
-            }
+            const archived = Array.isArray(item.purchaseHistory) ? item.purchaseHistory : [];
+            const current = Array.isArray(item.subItems) ? item.subItems : [];
+            [...archived, ...current].forEach(sub => {
+                const subTextLower = String(sub.text || '').toLowerCase();
+                if (!cleanSearchKeyword || subTextLower.includes(cleanSearchKeyword) || cleanSearchKeyword.includes(subTextLower.split(' x ')[0])) {
+                    foundPrice = sub;
+                }
+            });
         }
     });
     return foundPrice;
 }
+
 
 
 
@@ -902,28 +928,20 @@ function showCompanyAllHistory(companyName) {
     let allPurchasedItems = [];
     let customerInfo = '';
 
-    // ค้นหาข้อมูลทั้งหมดของบริษัทนี้จาก allDeliveries
+    // ประวัติการซื้อ = รายการปัจจุบัน + รายการที่เคยส่งแล้วและถูกล้างออกจากหน้าติดตาม
     allDeliveries.forEach(item => {
         if (item.companyName && item.companyName.trim().toLowerCase() === companyName.trim().toLowerCase()) {
             customerInfo = item.customerName;
-            if (item.subItems && Array.isArray(item.subItems)) {
-                item.subItems.forEach(sub => {
-                    allPurchasedItems.push({
-                        text: sub.text,
-                        dueDate: sub.dueDate || 'ไม่ระบุวันที่',
-                        status: sub.status || 'pending',
-                        totalProfit: sub.totalProfit
-                    });
-                });
-            }
+            const currentItems = Array.isArray(item.subItems) ? item.subItems : [];
+            const archivedItems = Array.isArray(item.purchaseHistory) ? item.purchaseHistory : [];
+            allPurchasedItems.push(...archivedItems.map(sub => ({ text: sub.text, dueDate: sub.dueDate || 'ไม่ระบุวันที่', status: 'completed', totalProfit: sub.totalProfit })));
+            allPurchasedItems.push(...currentItems.map(sub => ({ text: sub.text, dueDate: sub.dueDate || 'ไม่ระบุวันที่', status: sub.status || 'pending', totalProfit: sub.totalProfit })));
         }
     });
 
-    // สร้าง Modal พร้อมช่องค้นหา
     showCompanyHistoryModal(companyName, customerInfo, allPurchasedItems);
 }
 
-// ฟังก์ชันสร้างและแสดง Modal แสดงประวัติสินค้าทั้งหมดของบริษัท พร้อมระบบค้นหา
 function showCompanyHistoryModal(companyName, customerName, items) {
     let oldModal = document.getElementById('company-all-history-modal');
     if (oldModal) oldModal.remove();
@@ -1031,18 +1049,19 @@ function getCompanyPriceHistory(companyName, productName) {
     allDeliveries.forEach(item => {
         const itemCompany = item.companyName ? item.companyName.trim().toLowerCase() : '';
         if (itemCompany === targetCompany || itemCompany.includes(targetCompany) || targetCompany.includes(itemCompany)) {
-            if (item.subItems && Array.isArray(item.subItems)) {
-                item.subItems.forEach(sub => {
-                    const subTextLower = sub.text.toLowerCase();
-                    if (!cleanSearchKeyword || subTextLower.includes(cleanSearchKeyword) || cleanSearchKeyword.includes(subTextLower.split(' x ')[0])) {
-                        foundPrice = sub;
-                    }
-                });
-            }
+            const archived = Array.isArray(item.purchaseHistory) ? item.purchaseHistory : [];
+            const current = Array.isArray(item.subItems) ? item.subItems : [];
+            [...archived, ...current].forEach(sub => {
+                const subTextLower = String(sub.text || '').toLowerCase();
+                if (!cleanSearchKeyword || subTextLower.includes(cleanSearchKeyword) || cleanSearchKeyword.includes(subTextLower.split(' x ')[0])) {
+                    foundPrice = sub;
+                }
+            });
         }
     });
     return foundPrice;
 }
+
 		
 		
 
@@ -1851,7 +1870,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         companyName: companyName || docData.companyName || '',
                         phone: phone || docData.phone || '',
                         address: address || docData.address || '',
-                        customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : []
+                        customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : [],
+                        purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : []
                     });
 
                     showToast(`เพิ่ม ${pendingItems.length} รายการให้ "${customerName}" เรียบร้อย`, 'success');
@@ -1863,6 +1883,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         address,
                         subItems: newSubItemsObjs,
                         customerNotes: [],
+                        purchaseHistory: [],
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     await db.collection('deliveries').add(data);
@@ -2046,6 +2067,11 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                     title="ออกใบเสนอราคา ใบเสร็จรับเงิน หรือใบส่งสินค้า">
                                     🧾 ออกเอกสาร
                                 </button>
+                                <button onclick="openDocumentModal('${item.id}')"
+                                    class="text-[11px] font-bold text-blue-700 hover:text-white transition px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-600 border border-blue-200/60 flex items-center gap-1"
+                                    title="เปิดตัวอย่างเอกสารก่อนสั่งพิมพ์หรือดาวน์โหลด PDF">
+                                    🖨️ Preview / พิมพ์
+                                </button>
                                 
                                 ${completedCount > 0 ? `<button onclick="clearCompletedItems('${item.id}', '${escapeHTML(item.customerName)}')" title="เคลียร์รายการที่ส่งแล้วออก เพื่อไม่ให้หน้าจอรก" class="text-[11px] font-medium text-amber-600 hover:text-amber-800 transition px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200/60 flex items-center gap-1">🧹 ล้างรายการที่ส่งแล้ว</button>` : ''}
                                 
@@ -2115,11 +2141,21 @@ document.getElementById('item-input').addEventListener('blur', function() {
         // ==================== PDF / PRINT DOCUMENT GENERATOR ====================
         let currentDocumentCustomerId = null;
 
+        const documentCompany = {
+            name: 'บริษัท เค แอล สเตชั่นเนอรี่ จำกัด (สำนักงานใหญ่)',
+            address: '873, 875 ถนนสุขุมวิท105 แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260',
+            phone: '0-2748-6788',
+            taxId: '0105544005337'
+        };
+
         const documentState = {
             number: '',
             date: '',
             receiver: '',
-            note: ''
+            note: '',
+            discount: 0,
+            vat: 7,
+            buyerTaxId: ''
         };
 
         function getTodayISODateForDocument() {
@@ -2131,6 +2167,19 @@ document.getElementById('item-input').addEventListener('blur', function() {
             const d = new Date();
             const pad = n => String(n).padStart(2, '0');
             return `DOC-${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+        }
+
+        function money(value) {
+            return (Number(value) || 0).toLocaleString('th-TH', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            });
+        }
+
+        function clampNumber(value, min, max) {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return min;
+            return Math.min(max, Math.max(min, n));
         }
 
         function getDocumentItems(customer) {
@@ -2159,7 +2208,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
                 if (!product && !missing.includes(itemName)) missing.push(itemName);
 
-                // ใช้ราคาปัจจุบันจาก Manage Stock ก่อนเสมอ
+                // ยึดราคาขายปัจจุบันจาก Manage Stock ก่อนเสมอ
                 const unitPrice = product ? (Number(product.price) || 0) : embeddedPrice;
 
                 return {
@@ -2234,6 +2283,26 @@ document.getElementById('item-input').addEventListener('blur', function() {
             return readInteger(baht) + 'บาท' + readBelowMillion(satang) + 'สตางค์';
         }
 
+        function calculateDocumentTotals(items, type) {
+            const subtotal = items.reduce((sum, item) => sum + item.total, 0);
+
+            // ใบเสนอราคา: ส่วนลด + VAT
+            // ใบเสร็จ: ส่วนลดได้ และไม่บังคับ VAT จากช่องนี้
+            // ใบส่งสินค้า: ไม่คำนวณราคาในเอกสาร
+            if (type === 'delivery') {
+                return { subtotal, discountPercent: 0, discountAmount: 0, taxable: subtotal, vatPercent: 0, vatAmount: 0, grandTotal: subtotal };
+            }
+
+            const discountPercent = clampNumber(documentState.discount, 0, 100);
+            const discountAmount = subtotal * discountPercent / 100;
+            const taxable = Math.max(0, subtotal - discountAmount);
+            const vatPercent = type === 'quotation' ? clampNumber(documentState.vat, 0, 100) : 0;
+            const vatAmount = taxable * vatPercent / 100;
+            const grandTotal = taxable + vatAmount;
+
+            return { subtotal, discountPercent, discountAmount, taxable, vatPercent, vatAmount, grandTotal };
+        }
+
         function buildDocumentHTML(customer, type) {
             const result = getDocumentItems(customer);
 
@@ -2242,97 +2311,131 @@ document.getElementById('item-input').addEventListener('blur', function() {
             }
 
             const items = result.items;
-            const grandTotal = items.reduce((sum, item) => sum + item.total, 0);
+            const totals = calculateDocumentTotals(items, type);
             const title = getDocumentTypeText(type);
             const showPrice = type !== 'delivery';
             const docNo = documentState.number || getDocumentNumber();
             const dateText = formatDocumentDate(documentState.date) || formatDocumentDate(getTodayISODateForDocument());
             const receiver = documentState.receiver.trim();
             const note = documentState.note.trim();
+            const buyerTaxId = documentState.buyerTaxId.trim();
 
             const rows = items.length ? items.map((item, index) => `
-                <tr>
-                    <td style="border:1px solid #cbd5e1;padding:8px;text-align:center;width:8%;">${index + 1}</td>
-                    <td style="border:1px solid #cbd5e1;padding:8px;">${escapeDocumentHTML(item.name)}${item.dueDate ? `<div style="font-size:9px;color:#64748b;margin-top:2px;">กำหนดส่ง: ${escapeDocumentHTML(formatDateDisplay(item.dueDate))}</div>` : ''}</td>
-                    <td style="border:1px solid #cbd5e1;padding:8px;text-align:center;width:12%;">${item.quantity.toLocaleString()}</td>
-                    ${showPrice ? `<td style="border:1px solid #cbd5e1;padding:8px;text-align:right;width:18%;">${item.unitPrice.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>
-                    <td style="border:1px solid #cbd5e1;padding:8px;text-align:right;width:18%;font-weight:700;">${item.total.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})}</td>` : ''}
+                <tr style="page-break-inside:avoid;">
+                    <td style="border:1px solid #cbd5e1;padding:8px;text-align:center;width:7%;">${index + 1}</td>
+                    <td style="border:1px solid #cbd5e1;padding:8px;word-break:break-word;">
+                        ${escapeDocumentHTML(item.name)}
+                        ${item.dueDate ? `<div style="font-size:9px;color:#64748b;margin-top:2px;">กำหนดส่ง: ${escapeDocumentHTML(formatDateDisplay(item.dueDate))}</div>` : ''}
+                    </td>
+                    <td style="border:1px solid #cbd5e1;padding:8px;text-align:center;width:11%;">${item.quantity.toLocaleString()}</td>
+                    ${showPrice ? `
+                        <td style="border:1px solid #cbd5e1;padding:8px;text-align:right;width:17%;">${money(item.unitPrice)}</td>
+                        <td style="border:1px solid #cbd5e1;padding:8px;text-align:right;width:18%;font-weight:700;">${money(item.total)}</td>
+                    ` : ''}
                 </tr>
             `).join('') : `
                 <tr><td colspan="${showPrice ? 5 : 3}" style="border:1px solid #cbd5e1;padding:20px;text-align:center;color:#94a3b8;">ไม่มีรายการสินค้า</td></tr>
             `;
 
+            const quotationSummary = type === 'quotation' ? `
+                <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+                    <div style="width:320px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;">
+                        <div style="display:flex;justify-content:space-between;padding:8px 11px;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>รวมก่อนหักส่วนลด</span><strong>${money(totals.subtotal)} บาท</strong></div>
+                        <div style="display:flex;justify-content:space-between;padding:8px 11px;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>ส่วนลด ${money(totals.discountPercent)}%</span><strong style="color:#dc2626;">${money(totals.discountAmount)} บาท</strong></div>
+                        <div style="display:flex;justify-content:space-between;padding:8px 11px;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>มูลค่าหลังหักส่วนลด</span><strong>${money(totals.taxable)} บาท</strong></div>
+                        <div style="display:flex;justify-content:space-between;padding:8px 11px;border-bottom:2px solid #2563eb;font-size:11px;"><span>VAT ${money(totals.vatPercent)}%</span><strong>${money(totals.vatAmount)} บาท</strong></div>
+                        <div style="display:flex;justify-content:space-between;padding:10px 11px;background:#eff6ff;font-size:13px;"><span><b>ยอดรวมสุทธิ</b></span><strong style="color:#1d4ed8;">${money(totals.grandTotal)} บาท</strong></div>
+                    </div>
+                </div>
+            ` : '';
+
+            const receiptSummary = type === 'receipt' ? `
+                <div style="margin-top:14px;display:flex;justify-content:center;">
+                    <div style="width:100%;max-width:620px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;display:grid;grid-template-columns:1.35fr 1fr;align-items:stretch;">
+                        <div style="padding:12px 14px;background:#f8fbff;display:flex;flex-direction:column;justify-content:center;text-align:left;min-height:82px;box-sizing:border-box;">
+                            <div style="font-size:10px;font-weight:700;color:#2563eb;margin-bottom:5px;">จำนวนเงินตัวอักษร (Thai Baht)</div>
+                            <div style="font-size:11px;font-weight:600;color:#334155;line-height:1.65;word-break:break-word;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
+                        </div>
+                        <div style="border-left:1px solid #dbeafe;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>รวมเป็นเงิน</span><strong>${money(totals.subtotal)} บาท</strong></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>ส่วนลด ${money(totals.discountPercent)}%</span><strong style="color:#dc2626;">${money(totals.discountAmount)} บาท</strong></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:13px;"><span><b>ยอดสุทธิ</b></span><strong style="color:#1d4ed8;">${money(totals.grandTotal)} บาท</strong></div>
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+
             return `
-                <div id="document-paper" style="font-family:'Tahoma','Sarabun',Arial,sans-serif;color:#111827;background:#fff;line-height:1.5;">
-                    <div style="display:flex;justify-content:space-between;gap:24px;border-bottom:3px solid #2563eb;padding-bottom:14px;margin-bottom:18px;">
-                        <div>
-                            <div style="font-size:21px;font-weight:800;color:#1d4ed8;">Delivery Tracking & CRM</div>
-                            <div style="font-size:11px;color:#64748b;margin-top:3px;">ระบบจัดการลูกค้าและรายการจัดส่งสินค้า</div>
+                <div id="document-paper" style="width:100%;font-family:'Tahoma','Sarabun',Arial,sans-serif;color:#111827;background:#fff;line-height:1.5;box-sizing:border-box;">
+                    <div style="display:flex;justify-content:space-between;gap:24px;border-bottom:3px solid #2563eb;padding-bottom:14px;margin-bottom:16px;">
+                        <div style="flex:1;">
+                            <div style="font-size:19px;font-weight:800;color:#1d4ed8;">${escapeDocumentHTML(documentCompany.name)}</div>
+                            <div style="font-size:10px;color:#475569;margin-top:5px;line-height:1.6;">
+                                ${escapeDocumentHTML(documentCompany.address)}<br>
+                                โทร. ${escapeDocumentHTML(documentCompany.phone)}<br>
+                                เลขประจำตัวผู้เสียภาษี: <b>${escapeDocumentHTML(documentCompany.taxId)}</b>
+                            </div>
                         </div>
                         <div style="text-align:right;min-width:190px;">
                             <div style="font-size:22px;font-weight:800;color:#0f172a;">${title}</div>
-                            <div style="font-size:11px;color:#64748b;margin-top:4px;">เลขที่: <b>${escapeDocumentHTML(docNo)}</b></div>
-                            <div style="font-size:11px;color:#64748b;">วันที่: <b>${escapeDocumentHTML(dateText)}</b></div>
+                            <div style="font-size:10px;color:#64748b;margin-top:4px;">เลขที่: <b>${escapeDocumentHTML(docNo)}</b></div>
+                            <div style="font-size:10px;color:#64748b;">วันที่: <b>${escapeDocumentHTML(dateText)}</b></div>
                         </div>
                     </div>
 
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px;">
-                        <div style="border:1px solid #bfdbfe;border-radius:10px;padding:11px;background:#f8fbff;">
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                        <div style="border:1px solid #bfdbfe;border-radius:10px;padding:11px;background:#f8fbff;min-height:82px;">
                             <div style="font-size:10px;font-weight:700;color:#2563eb;margin-bottom:5px;">ข้อมูลลูกค้า</div>
-                            <div style="font-weight:700;font-size:13px;">${escapeDocumentHTML(customer.customerName || '-')}</div>
-                            <div style="font-size:11px;margin-top:3px;">${escapeDocumentHTML(customer.companyName || '-')}</div>
-                            ${customer.phone ? `<div style="font-size:11px;margin-top:3px;">โทร. ${escapeDocumentHTML(customer.phone)}</div>` : ''}
+                            <div style="font-weight:700;font-size:12px;">${escapeDocumentHTML(customer.customerName || '-')}</div>
+                            <div style="font-size:10px;margin-top:3px;">${escapeDocumentHTML(customer.companyName || '-')}</div>
+                            ${customer.phone ? `<div style="font-size:10px;margin-top:3px;">โทร. ${escapeDocumentHTML(customer.phone)}</div>` : ''}
+                            ${buyerTaxId ? `<div style="font-size:10px;margin-top:3px;">เลขประจำตัวผู้เสียภาษี: ${escapeDocumentHTML(buyerTaxId)}</div>` : ''}
                         </div>
-                        <div style="border:1px solid #cbd5e1;border-radius:10px;padding:11px;">
-                            <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px;">ที่อยู่จัดส่ง</div>
-                            <div style="font-size:11px;line-height:1.55;">${escapeDocumentHTML(customer.address || 'ไม่ระบุที่อยู่')}</div>
+                        <div style="border:1px solid #cbd5e1;border-radius:10px;padding:11px;min-height:82px;">
+                            <div style="font-size:10px;font-weight:700;color:#475569;margin-bottom:5px;">ที่อยู่จัดส่ง / ที่อยู่ลูกค้า</div>
+                            <div style="font-size:10px;line-height:1.55;">${escapeDocumentHTML(customer.address || 'ไม่ระบุที่อยู่')}</div>
                         </div>
                     </div>
 
-                    <table style="width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed;">
-                        <thead>
+                    <table style="width:100%;border-collapse:collapse;font-size:10px;table-layout:fixed;">
+                        <thead style="display:table-header-group;">
                             <tr style="background:#eff6ff;">
-                                <th style="border:1px solid #cbd5e1;padding:8px;width:8%;">ลำดับ</th>
+                                <th style="border:1px solid #cbd5e1;padding:8px;width:7%;">ลำดับ</th>
                                 <th style="border:1px solid #cbd5e1;padding:8px;text-align:left;">รายการสินค้า</th>
-                                <th style="border:1px solid #cbd5e1;padding:8px;width:12%;">จำนวน</th>
-                                ${showPrice ? '<th style="border:1px solid #cbd5e1;padding:8px;width:18%;text-align:right;">ราคาต่อหน่วย</th><th style="border:1px solid #cbd5e1;padding:8px;width:18%;text-align:right;">จำนวนเงิน</th>' : ''}
+                                <th style="border:1px solid #cbd5e1;padding:8px;width:11%;">จำนวน</th>
+                                ${showPrice ? '<th style="border:1px solid #cbd5e1;padding:8px;width:17%;text-align:right;">ราคาต่อหน่วย</th><th style="border:1px solid #cbd5e1;padding:8px;width:18%;text-align:right;">จำนวนเงิน</th>' : ''}
                             </tr>
                         </thead>
                         <tbody>${rows}</tbody>
                     </table>
 
-                    ${showPrice ? `
-                        <div style="display:flex;justify-content:flex-end;margin-top:14px;">
-                            <div style="width:300px;">
-                                <div style="display:flex;justify-content:space-between;border-bottom:1px solid #e2e8f0;padding:8px 0;font-size:12px;">
-                                    <span>รวมทั้งสิ้น</span>
-                                    <strong>${grandTotal.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})} บาท</strong>
-                                </div>
-                                ${type === 'receipt' ? `
-                                    <div style="margin-top:8px;padding:9px;background:#f8fafc;border-radius:8px;font-size:10px;line-height:1.6;">
-                                        <b>จำนวนเงินตัวอักษร (Thai Baht)</b><br>
-                                        ${thaiBahtText(grandTotal)}
-                                    </div>
-                                ` : ''}
+                    ${quotationSummary}
+                    ${receiptSummary}
+
+                    ${type === 'delivery' ? `
+                        <div style="margin-top:14px;display:flex;justify-content:flex-end;">
+                            <div style="width:320px;border:1px solid #cbd5e1;border-radius:9px;padding:10px;font-size:10px;">
+                                <div><b>จำนวนรวม:</b> ${items.reduce((s,i)=>s+i.quantity,0).toLocaleString()} ชิ้น</div>
+                                <div style="margin-top:3px;color:#64748b;">เอกสารนี้จัดทำเพื่อใช้เป็นใบส่งสินค้า</div>
                             </div>
                         </div>
                     ` : ''}
 
-                    ${note ? `<div style="margin-top:16px;border:1px dashed #cbd5e1;border-radius:9px;padding:9px;font-size:10px;"><b>หมายเหตุ:</b> ${escapeDocumentHTML(note)}</div>` : ''}
+                    ${note ? `<div style="margin-top:14px;border:1px dashed #cbd5e1;border-radius:9px;padding:9px;font-size:10px;"><b>หมายเหตุ:</b> ${escapeDocumentHTML(note)}</div>` : ''}
 
-                    <div style="margin-top:55px;display:grid;grid-template-columns:1fr 1fr;gap:50px;text-align:center;font-size:10px;color:#475569;">
+                    <div style="margin-top:48px;display:grid;grid-template-columns:1fr 1fr;gap:50px;text-align:center;font-size:10px;color:#475569;page-break-inside:avoid;">
                         <div>
                             <div style="height:28px;border-bottom:1px solid #94a3b8;"></div>
                             <div style="margin-top:6px;">ผู้จัดทำ / ผู้ส่งสินค้า</div>
                         </div>
                         <div>
                             <div style="height:28px;border-bottom:1px solid #94a3b8;"></div>
-                            <div style="margin-top:6px;">ผู้รับสินค้า${receiver ? `: ${escapeDocumentHTML(receiver)}` : ' / ลูกค้า'}</div>
+                            <div style="margin-top:6px;">${type === 'quotation' ? 'ผู้เสนอราคา / ผู้อนุมัติ' : `ผู้รับสินค้า${receiver ? `: ${escapeDocumentHTML(receiver)}` : ' / ลูกค้า'}`}</div>
                         </div>
                     </div>
 
-                    <div style="margin-top:35px;text-align:center;font-size:9px;color:#94a3b8;">
-                        เอกสารสร้างจากระบบ Delivery Tracking & CRM
+                    <div style="margin-top:30px;text-align:center;font-size:8px;color:#94a3b8;">
+                        เอกสารสร้างจากระบบ Delivery Tracking & CRM • ${escapeDocumentHTML(documentCompany.name)}
                     </div>
                 </div>
             `;
@@ -2343,6 +2446,21 @@ document.getElementById('item-input').addEventListener('blur', function() {
             documentState.date = document.getElementById('document-date-input').value;
             documentState.receiver = document.getElementById('document-receiver-input').value.trim();
             documentState.note = document.getElementById('document-note-input').value.trim();
+            documentState.discount = clampNumber(document.getElementById('document-discount-input').value, 0, 100);
+            documentState.vat = clampNumber(document.getElementById('document-vat-input').value, 0, 100);
+            documentState.buyerTaxId = document.getElementById('document-buyer-taxid-input').value.trim();
+        }
+
+        function updateDocumentFieldsVisibility(type) {
+            const taxFields = document.getElementById('document-tax-fields');
+            const vatField = document.getElementById('document-vat-field');
+            const buyerTaxField = document.getElementById('document-buyer-tax-field');
+            const receiverField = document.getElementById('document-receiver-field');
+
+            if (taxFields) taxFields.classList.toggle('hidden', type === 'delivery');
+            if (vatField) vatField.classList.toggle('hidden', type !== 'quotation');
+            if (buyerTaxField) buyerTaxField.classList.toggle('hidden', type === 'delivery');
+            if (receiverField) receiverField.classList.toggle('hidden', type === 'quotation');
         }
 
         function updateDocumentPreview() {
@@ -2353,18 +2471,25 @@ document.getElementById('item-input').addEventListener('blur', function() {
             syncDocumentStateFromInputs();
 
             const type = document.getElementById('document-type').value;
+            updateDocumentFieldsVisibility(type);
+
             const result = getDocumentItems(customer);
+            const totals = calculateDocumentTotals(result.items, type);
             const totalQty = result.items.reduce((sum, item) => sum + item.quantity, 0);
-            const total = result.items.reduce((sum, item) => sum + item.total, 0);
 
             const missingText = result.missing.length
                 ? `<div class="mt-2 text-rose-600 font-semibold">⚠️ สินค้าที่ไม่พบใน Manage Stock: ${escapeHTML(result.missing.join(', '))}</div>`
                 : '';
 
+            const totalLine = type === 'quotation'
+                ? `<div class="mt-1 font-bold text-sky-700">ยอดสุทธิหลังส่วนลดและ VAT: ${money(totals.grandTotal)} บาท</div>`
+                : `<div class="mt-1 font-bold text-sky-700">ยอดตามราคาปัจจุบันใน Manage Stock: ${money(totals.grandTotal)} บาท</div>`;
+
             summary.innerHTML = `
                 <div class="font-bold text-slate-800">${escapeHTML(customer.companyName || customer.customerName || '-')}</div>
                 <div class="mt-1">รายการ ${result.items.length} รายการ • จำนวนรวม ${totalQty.toLocaleString()} ชิ้น</div>
-                <div class="mt-1 font-bold text-sky-700">ยอดตามราคาปัจจุบันใน Manage Stock: ${total.toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2})} บาท</div>
+                ${type !== 'delivery' ? totalLine : ''}
+                ${type === 'quotation' ? `<div class="mt-1">ส่วนลด ${money(totals.discountPercent)}% • VAT ${money(totals.vatPercent)}%</div>` : type === 'receipt' ? `<div class="mt-1">ส่วนลด ${money(totals.discountPercent)}%</div>` : ''}
                 ${missingText}
             `;
 
@@ -2393,7 +2518,11 @@ document.getElementById('item-input').addEventListener('blur', function() {
             document.getElementById('document-date-input').value = getTodayISODateForDocument();
             document.getElementById('document-receiver-input').value = '';
             document.getElementById('document-note-input').value = '';
+            document.getElementById('document-discount-input').value = '0';
+            document.getElementById('document-vat-input').value = '7';
+            document.getElementById('document-buyer-taxid-input').value = '';
 
+            updateDocumentFieldsVisibility('delivery');
             updateDocumentPreview();
 
             const modal = document.getElementById('document-modal');
@@ -2425,7 +2554,15 @@ document.getElementById('item-input').addEventListener('blur', function() {
         }
 
         document.getElementById('document-type').addEventListener('change', updateDocumentPreview);
-        ['document-number-input','document-date-input','document-receiver-input','document-note-input'].forEach(id => {
+        [
+            'document-number-input',
+            'document-date-input',
+            'document-receiver-input',
+            'document-note-input',
+            'document-discount-input',
+            'document-vat-input',
+            'document-buyer-taxid-input'
+        ].forEach(id => {
             const el = document.getElementById(id);
             el.addEventListener('input', updateDocumentPreview);
             el.addEventListener('change', updateDocumentPreview);
@@ -2457,7 +2594,10 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         <title>${getDocumentTypeText(type)}</title>
                         <style>
                             @page{size:A4;margin:10mm}
+                            *{box-sizing:border-box}
                             body{margin:0;background:#fff;font-family:Tahoma,'Sarabun',Arial,sans-serif;}
+                            table{page-break-inside:auto}
+                            tr{page-break-inside:avoid;page-break-after:auto}
                             @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
                         </style>
                     </head>
@@ -2497,7 +2637,12 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     margin: 0,
                     filename: fileName,
                     image: { type: 'jpeg', quality: 0.98 },
-                    html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+                    html2canvas: {
+                        scale: 2,
+                        useCORS: true,
+                        backgroundColor: '#ffffff',
+                        letterRendering: true
+                    },
                     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                     pagebreak: { mode: ['css','legacy'] }
                 }).from(document.getElementById('pdf-document')).save();
@@ -2718,7 +2863,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
         window.clearCompletedItems = function(docId, customerName) {
             showConfirmModal(
                 'ล้างรายการที่ส่งแล้ว',
-                `ต้องการลบรายการสินค้าที่ "ส่งแล้ว" ของ "${customerName}" ออกจากหน้าจอใช่หรือไม่?`,
+                `ต้องการซ่อนรายการสินค้าที่ "ส่งแล้ว" ของ "${customerName}" ออกจากหน้าติดตามใช่หรือไม่?\n\nรายการจะยังคงเก็บไว้ใน "ประวัติการซื้อ" และข้อมูล CRM จะไม่ถูกลบ`,
                 async () => {
                     try {
                         const docRef = db.collection('deliveries').doc(docId);
@@ -2726,14 +2871,24 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         if (!docSnap.exists) return;
 
                         const data = docSnap.data();
-                        let currentSubItems = data.subItems || [];
+                        const currentSubItems = Array.isArray(data.subItems) ? data.subItems : [];
+                        const existingHistory = Array.isArray(data.purchaseHistory) ? data.purchaseHistory : [];
+                        const completedItems = currentSubItems.filter(s => s.status === 'completed');
                         const remainingItems = currentSubItems.filter(s => s.status !== 'completed');
 
-                        await docRef.update({ subItems: remainingItems });
-                        showToast(`เคลียร์รายการที่ส่งแล้วของ "${customerName}" เรียบร้อย`, 'success');
+                        const historyKeys = new Set(existingHistory.map(s => s.id ? `id:${s.id}` : `fallback:${s.text || ''}|${s.createdAt || ''}|${s.dueDate || ''}`));
+                        const archivedToAdd = completedItems.filter(s => {
+                            const key = s.id ? `id:${s.id}` : `fallback:${s.text || ''}|${s.createdAt || ''}|${s.dueDate || ''}`;
+                            if (historyKeys.has(key)) return false;
+                            historyKeys.add(key);
+                            return true;
+                        });
+
+                        await docRef.update({ subItems: remainingItems, purchaseHistory: [...existingHistory, ...archivedToAdd] });
+                        showToast(`ซ่อน ${completedItems.length} รายการออกจากหน้าติดตามแล้ว • ประวัติการซื้อยังอยู่ครบ`, 'success');
                     } catch (err) {
                         console.error(err);
-                        showToast('ไม่สามารถเคลียร์ข้อมูลได้', 'error');
+                        showToast('ไม่สามารถเคลียร์รายการที่ส่งแล้วได้', 'error');
                     }
                 }
             );
