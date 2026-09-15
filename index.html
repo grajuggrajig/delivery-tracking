@@ -23,6 +23,12 @@
             gap: 10px;
             align-items: end;
         }
+        #company-specific-products-container {
+            min-height: 180px;
+        }
+        #company-history-items-container {
+            min-height: 210px;
+        }
         @media (max-width: 760px) {
             #company-all-history-modal > div {
                 width: 98vw;
@@ -33,6 +39,17 @@
             }
             .company-product-grid .company-product-name {
                 grid-column: 1 / -1;
+            }
+            #company-specific-products-container > div {
+                grid-template-columns: 28px minmax(0,1fr);
+            }
+            #company-specific-products-container > div > div:nth-of-type(2),
+            #company-specific-products-container > div > div:nth-of-type(3) {
+                text-align: left;
+            }
+            #company-specific-products-container > div > div:last-child {
+                grid-column: 1 / -1;
+                justify-content: flex-end;
             }
         }
 
@@ -790,8 +807,57 @@
         const db = firebase.firestore();
 
         const statusBadge = document.getElementById('connection-status');
-        statusBadge.textContent = 'เชื่อมต่อ Server แล้ว';
-        statusBadge.className = 'text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium hidden sm:inline-block';
+
+        // ตรวจสอบการเชื่อมต่อ Firebase/Firestore จริง
+        let firestoreConnectionReady = false;
+        let firestoreStatusTimer = null;
+
+        function updateConnectionStatus(state, message) {
+            if (!statusBadge) return;
+            const states = {
+                connecting: ['bg-amber-100', 'text-amber-700'],
+                connected: ['bg-emerald-100', 'text-emerald-700'],
+                offline: ['bg-orange-100', 'text-orange-700'],
+                error: ['bg-red-100', 'text-red-700']
+            };
+            const cls = states[state] || states.connecting;
+            statusBadge.textContent = message;
+            statusBadge.className = `text-xs px-3 py-1 rounded-full ${cls[0]} ${cls[1]} font-medium hidden sm:inline-block`;
+        }
+
+        function startFirestoreConnectionMonitor() {
+            updateConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
+            if (firestoreStatusTimer) clearInterval(firestoreStatusTimer);
+
+            const check = async () => {
+                try {
+                    // อ่านข้อมูลจริงแบบ server-side เพื่อยืนยันว่า Firestore ใช้งานได้
+                    await db.collection('deliveries').limit(1).get({ source: 'server' });
+                    firestoreConnectionReady = true;
+                    updateConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
+                } catch (error) {
+                    firestoreConnectionReady = false;
+                    const code = error && error.code ? String(error.code) : '';
+                    if (code === 'unavailable' || !navigator.onLine) {
+                        updateConnectionStatus('offline', 'Server ไม่พร้อมชั่วคราว');
+                    } else {
+                        updateConnectionStatus('error', 'เชื่อมต่อ Server ไม่สำเร็จ');
+                    }
+                    console.warn('Firestore connection check:', error);
+                }
+            };
+
+            check();
+            firestoreStatusTimer = setInterval(check, 30000);
+
+            window.addEventListener('online', check, { passive: true });
+            window.addEventListener('offline', () => {
+                firestoreConnectionReady = false;
+                updateConnectionStatus('offline', 'ไม่มีอินเทอร์เน็ต');
+            }, { passive: true });
+        }
+
+        startFirestoreConnectionMonitor();
 
         let pendingItems = []; 
         let allDeliveries = [];
@@ -1036,7 +1102,7 @@ async function ensureProductInStandardStock(name, cost, price) {
     };
 }
 
-async function saveCompanyProduct(companyName, name, cost, price) {
+async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
     const cleanCompany = String(companyName || '').trim();
     const cleanName = String(name || '').trim();
     const numericCost = Number(cost) || 0;
@@ -1052,14 +1118,44 @@ async function saveCompanyProduct(companyName, name, cost, price) {
     }
 
     try {
-        // 1) ให้สินค้านี้มีอยู่ใน Manage Stock ด้วยเสมอ
         const stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice);
-
-        // 2) บันทึกราคาเฉพาะบริษัท แยกจากราคามาตรฐาน
         const companyKey = normalizeCompanyProductKey(cleanCompany);
+        const normalizedName = normalizeCompanyProductName(cleanName);
+
+        if (editId) {
+            const duplicate = allCompanyProducts.find(p =>
+                p.id !== editId &&
+                normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
+                normalizeCompanyProductName(p.name) === normalizedName
+            );
+            if (duplicate) {
+                showToast('มีสินค้านี้อยู่แล้วในราคาของบริษัทนี้', 'info');
+                return false;
+            }
+
+            const oldProduct = allCompanyProducts.find(p => p.id === editId);
+            if (!oldProduct) {
+                showToast('ไม่พบข้อมูลสินค้าที่ต้องการแก้ไข', 'info');
+                return false;
+            }
+
+            await db.collection('companyProducts').doc(editId).update({
+                companyKey,
+                companyName: cleanCompany,
+                name: cleanName,
+                cost: numericCost,
+                price: numericPrice,
+                stockProductId: (stockProduct && stockProduct.id) || oldProduct.stockProductId || '',
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ แล้ว`, 'success');
+            return true;
+        }
+
         const existing = allCompanyProducts.find(p =>
             normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
-            normalizeCompanyProductName(p.name) === normalizeCompanyProductName(cleanName)
+            normalizeCompanyProductName(p.name) === normalizedName
         );
 
         const payload = {
@@ -1085,10 +1181,61 @@ async function saveCompanyProduct(companyName, name, cost, price) {
         return true;
     } catch (err) {
         console.error('saveCompanyProduct:', err);
-        showToast('ไม่สามารถบันทึกสินค้าของบริษัทได้', 'error');
+        showToast('ไม่สามารถบันทึกสินค้าของบริษัทได้ กรุณาลองใหม่อีกครั้ง', 'error');
         return false;
     }
 }
+
+window.editCompanyProduct = function(id) {
+    const product = allCompanyProducts.find(p => p.id === id);
+    if (!product) {
+        showToast('ไม่พบข้อมูลสินค้าที่ต้องการแก้ไข', 'info');
+        return;
+    }
+
+    const nameInput = document.getElementById('company-product-name-input');
+    const costInput = document.getElementById('company-product-cost-input');
+    const priceInput = document.getElementById('company-product-price-input');
+    const editIdInput = document.getElementById('company-product-edit-id');
+    const saveBtn = document.getElementById('save-company-product-btn');
+    const cancelBtn = document.getElementById('cancel-company-product-edit');
+
+    if (!nameInput || !costInput || !priceInput || !saveBtn) return;
+
+    if (editIdInput) editIdInput.value = product.id;
+    nameInput.value = product.name || '';
+    costInput.value = Number(product.cost) || 0;
+    priceInput.value = Number(product.price) || 0;
+
+    saveBtn.textContent = '💾 บันทึกการแก้ไข';
+    saveBtn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
+    saveBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+    cancelBtn?.classList.remove('hidden');
+
+    nameInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    setTimeout(() => nameInput.focus(), 150);
+};
+
+window.cancelCompanyProductEdit = function() {
+    const editIdInput = document.getElementById('company-product-edit-id');
+    const nameInput = document.getElementById('company-product-name-input');
+    const costInput = document.getElementById('company-product-cost-input');
+    const priceInput = document.getElementById('company-product-price-input');
+    const saveBtn = document.getElementById('save-company-product-btn');
+    const cancelBtn = document.getElementById('cancel-company-product-edit');
+
+    if (editIdInput) editIdInput.value = '';
+    if (nameInput) nameInput.value = '';
+    if (costInput) costInput.value = '';
+    if (priceInput) priceInput.value = '';
+
+    if (saveBtn) {
+        saveBtn.textContent = '＋ เพิ่ม / บันทึกราคา';
+        saveBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+        saveBtn.classList.add('bg-sky-600', 'hover:bg-sky-700');
+    }
+    if (cancelBtn) cancelBtn.classList.add('hidden');
+};
 
 async function deleteCompanyProduct(id, name, companyName) {
     showConfirmModal(
@@ -1131,10 +1278,10 @@ function renderCompanyProductCatalog(companyName, filterText = '') {
     }
 
     container.innerHTML = products.map((p, index) => `
-        <div class="grid grid-cols-[40px_minmax(0,1fr)_130px_130px_85px] items-center gap-2 px-3.5 py-2.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs">
+        <div class="grid grid-cols-[34px_minmax(0,1fr)_105px_120px_115px] items-center gap-2 px-3.5 py-2.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs">
             <span class="text-[11px] text-sky-600 font-bold text-center">#${index + 1}</span>
             <div class="min-w-0">
-                <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}</div>
+                <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div>
                 <div class="text-[10px] text-slate-400 mt-0.5">เชื่อมกับ Manage Stock${p.stockProductId ? ' ✓' : ''}</div>
             </div>
             <div class="text-right">
@@ -1145,11 +1292,15 @@ function renderCompanyProductCatalog(companyName, filterText = '') {
                 <div class="text-[10px] text-slate-400">ราคาบริษัทนี้</div>
                 <div class="text-sm font-extrabold text-sky-600">${money(p.price)} ฿</div>
             </div>
-            <button type="button"
-                onclick="deleteCompanyProduct('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', '${escapeHTML(companyName).replace(/'/g, "\\'")}')"
-                class="px-2 py-1.5 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg">
-                ลบ
-            </button>
+            <div class="flex items-center justify-end gap-1.5">
+                <button type="button" onclick="editCompanyProduct('${p.id}')"
+                    class="px-2.5 py-1.5 text-[10px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-600 hover:text-white border border-sky-100 rounded-lg transition"
+                    title="แก้ไขชื่อ ต้นทุน หรือราคาของบริษัท">✏️ แก้ไข</button>
+                <button type="button"
+                    onclick="deleteCompanyProduct('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\'")}', '${escapeHTML(companyName).replace(/'/g, "\'")}')"
+                    class="px-2.5 py-1.5 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition"
+                    title="ลบสินค้าราคาประจำของบริษัท">ลบ</button>
+            </div>
         </div>
     `).join('');
 }
@@ -1200,10 +1351,16 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                             <input id="company-product-price-input" type="number" step="0.01" min="0" placeholder="280"
                                 class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
                         </div>
-                        <button type="button" id="save-company-product-btn"
-                            class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
-                            ＋ เพิ่ม / บันทึกราคา
-                        </button>
+                        <input type="hidden" id="company-product-edit-id" value="">
+                        <div class="flex gap-2 w-full">
+                            <button type="button" id="save-company-product-btn"
+                                class="flex-1 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                                ＋ เพิ่ม / บันทึกราคา
+                            </button>
+                            <button type="button" id="cancel-company-product-edit" onclick="cancelCompanyProductEdit()"
+                                class="hidden px-3 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold border border-slate-200 transition"
+                                title="ยกเลิกการแก้ไข">ยกเลิก</button>
+                        </div>
                     </div>
 
                     <div class="mt-3">
@@ -1227,7 +1384,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                         class="w-full px-3.5 py-2 text-xs border border-sky-200 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
                 </div>
 
-                <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1 mb-3">
+                <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1 mb-3 min-h-[210px]">
                     <!-- รายการสินค้าจะแสดงที่นี่ -->
                 </div>
 
@@ -1247,6 +1404,8 @@ function showCompanyHistoryModal(companyName, customerName, items) {
     const companyProductName = document.getElementById('company-product-name-input');
     const companyProductCost = document.getElementById('company-product-cost-input');
     const companyProductPrice = document.getElementById('company-product-price-input');
+    const companyProductEditId = document.getElementById('company-product-edit-id');
+    const cancelCompanyProductEditBtn = document.getElementById('cancel-company-product-edit');
     const saveCompanyProductBtn = document.getElementById('save-company-product-btn');
 
     const renderItems = (keyword = '') => {
@@ -1301,26 +1460,29 @@ function showCompanyHistoryModal(companyName, customerName, items) {
 
     saveCompanyProductBtn.addEventListener('click', async () => {
         if (saveCompanyProductBtn.disabled) return;
+
         const name = companyProductName.value.trim();
         const cost = Number(companyProductCost.value) || 0;
         const price = Number(companyProductPrice.value);
+        const editId = companyProductEditId ? companyProductEditId.value.trim() : '';
 
         saveCompanyProductBtn.disabled = true;
         saveCompanyProductBtn.textContent = 'กำลังบันทึก...';
 
-        const ok = await saveCompanyProduct(companyName, name, cost, price);
+        const ok = await saveCompanyProduct(companyName, name, cost, price, editId);
 
         saveCompanyProductBtn.disabled = false;
-        saveCompanyProductBtn.textContent = '＋ เพิ่ม / บันทึกราคา';
 
         if (ok) {
-            companyProductName.value = '';
-            companyProductCost.value = '';
-            companyProductPrice.value = '';
+            cancelCompanyProductEdit();
             renderCompanyProductCatalog(companyName, companyProductSearch.value);
             companyProductName.focus();
+        } else {
+            saveCompanyProductBtn.textContent = editId ? '💾 บันทึกการแก้ไข' : '＋ เพิ่ม / บันทึกราคา';
         }
     });
+
+    cancelCompanyProductEditBtn?.addEventListener('click', cancelCompanyProductEdit);
 
     companyProductSearch.addEventListener('input', e => {
         renderCompanyProductCatalog(companyName, e.target.value);
@@ -2411,6 +2573,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                     🖨️ Preview / พิมพ์
                                 </button>
                                 
+                                ${pendingCount > 0 ? `<button onclick="markAllSubItemsCompleted('${item.id}', '${escapeHTML(item.customerName)}')" title="เปลี่ยนรายการค้างส่งทั้งหมดเป็นส่งแล้วในครั้งเดียว" class="text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1">✓ ส่งทั้งหมด (${pendingCount})</button>` : ''}
+
                                 ${completedCount > 0 ? `<button onclick="clearCompletedItems('${item.id}', '${escapeHTML(item.customerName)}')" title="เคลียร์รายการที่ส่งแล้วออก เพื่อไม่ให้หน้าจอรก" class="text-[11px] font-medium text-amber-600 hover:text-amber-800 transition px-2 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200/60 flex items-center gap-1">🧹 ล้างรายการที่ส่งแล้ว</button>` : ''}
                                 
                                 <button onclick="deleteEntireCustomer('${item.id}', '${escapeHTML(item.customerName)}')" title="ลบข้อมูลลูกค้านี้ออกจากระบบ" class="text-[11px] font-medium text-slate-400 hover:text-rose-600 transition px-2 py-1 rounded-lg hover:bg-rose-50">ลบข้อมูล</button>
@@ -3201,6 +3365,64 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 console.error(err);
                 showToast('ไม่สามารถอัปเดตข้อมูลได้ กรุณาลองใหม่อีกครั้ง', 'error');
             }
+        };
+
+        // ส่งรายการค้างส่งทั้งหมดของลูกค้าในครั้งเดียว
+        window.markAllSubItemsCompleted = function(docId, customerName) {
+            const customer = allDeliveries.find(item => item.id === docId);
+            const pendingCount = customer && Array.isArray(customer.subItems)
+                ? customer.subItems.filter(s => s.status !== 'completed').length
+                : 0;
+
+            if (!pendingCount) {
+                showToast('ไม่มีรายการค้างส่งของลูกค้านี้', 'info');
+                return;
+            }
+
+            showConfirmModal(
+                'ยืนยันส่งสินค้าทั้งหมด',
+                `ต้องการเปลี่ยนรายการค้างส่งทั้งหมด ${pendingCount} รายการของ "${customerName}" เป็น "ส่งแล้ว" ในครั้งเดียวใช่หรือไม่?`,
+                async () => {
+                    try {
+                        const docRef = db.collection('deliveries').doc(docId);
+                        const docSnap = await docRef.get();
+
+                        if (!docSnap.exists) {
+                            showToast('ไม่พบข้อมูลลูกค้า กรุณารีเฟรชข้อมูลแล้วลองใหม่', 'error');
+                            return;
+                        }
+
+                        const data = docSnap.data() || {};
+                        const currentSubItems = Array.isArray(data.subItems) ? data.subItems : [];
+                        const pendingItems = currentSubItems.filter(s => s.status !== 'completed');
+
+                        if (!pendingItems.length) {
+                            showToast('รายการทั้งหมดถูกส่งแล้ว', 'info');
+                            return;
+                        }
+
+                        const updatedSubItems = currentSubItems.map(s =>
+                            s.status === 'completed' ? s : { ...s, status: 'completed' }
+                        );
+
+                        await docRef.update({ subItems: updatedSubItems });
+
+                        const localIndex = allDeliveries.findIndex(item => item.id === docId);
+                        if (localIndex > -1) {
+                            allDeliveries[localIndex] = {
+                                ...allDeliveries[localIndex],
+                                subItems: updatedSubItems
+                            };
+                        }
+
+                        renderCurrentData();
+                        showToast(`✓ ส่งทั้งหมด ${pendingItems.length} รายการของ "${customerName}" สำเร็จ`, 'success');
+                    } catch (err) {
+                        console.error('markAllSubItemsCompleted:', err);
+                        showToast('ไม่สามารถอัปเดตสถานะทั้งหมดได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                    }
+                }
+            );
         };
 
         window.clearCompletedItems = function(docId, customerName) {
