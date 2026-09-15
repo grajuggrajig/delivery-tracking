@@ -9,6 +9,34 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
+        /* ปรับพื้นที่หน้าประวัติสินค้าของบริษัทให้กว้างขึ้น โดยไม่กระทบส่วนอื่น */
+        #company-all-history-modal > div {
+            width: min(1100px, 96vw);
+            max-width: 1100px;
+        }
+        #company-history-items-container {
+            min-width: 0;
+        }
+        .company-product-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 150px 150px 110px;
+            gap: 10px;
+            align-items: end;
+        }
+        @media (max-width: 760px) {
+            #company-all-history-modal > div {
+                width: 98vw;
+                padding: 16px;
+            }
+            .company-product-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            .company-product-grid .company-product-name {
+                grid-column: 1 / -1;
+            }
+        }
+
+
         /* ซ่อน Scrollbar สำหรับเบราว์เซอร์ Chrome, Safari และ Opera */
         .no-scrollbar::-webkit-scrollbar {
             display: none;
@@ -48,47 +76,36 @@
 <body class="bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
    <header class="bg-white/85 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm flex-shrink-0">
-    <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center">
-        <!-- ฝั่งซ้าย: ปุ่ม toggle และ Title -->
-        <div class="flex items-center gap-3">
-            <button type="button" id="toggle-form-btn" onclick="toggleSidebarForm()" title="ซ่อน/แสดงฟอร์มเพิ่มข้อมูล" class="p-2 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition border border-slate-200/80 flex items-center justify-center shadow-2xs">
-                <svg id="toggle-icon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-            </button>
-            <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking & CRM</span>
-            </h1>
-        </div>
-
-        <!-- ฝั่งขวา: Badge และ ปุ่มจัดการต่างๆ -->
-        <div class="flex items-center gap-2">
-           
-            <button type="button" id="open-stock-modal-btn" class="px-3 py-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl border border-indigo-200 transition flex items-center gap-1 shadow-2xs">
-                🏷️ Manage Stock
-            </button>
-            
-            <button id="open-reminder-modal-btn" class="bg-white hover:bg-slate-50 text-slate-700 border border-sky-200 px-3 py-1.5 rounded-xl font-bold text-xs transition shadow-2xs flex items-center gap-1">
-                🔔 Reminders
-            </button>
-			
-<!-- Badge เวลาซิงค์ข้อมูล (Style 2: Cyber Live Indicator - Minimal/Transparent Version) -->
-<span id="connection-status" class="px-1.5 py-0.5 text-xs bg-transparent flex items-center gap-2 transition-all duration-300 cursor-default" title="เวลาที่ดึงข้อมูลล่าสุดจาก Server">
-    <span class="flex items-center justify-center">
-        <!-- ไฟวงแหวนเรืองแสงเบาๆ -->
-        <span class="relative flex h-2 w-2">
-            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"></span>
-        </span>
+        <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <!-- ปุ่มสลับซ่อน/แสดงฟอร์มด้านซ้าย -->
+                <button type="button" id="toggle-form-btn" onclick="toggleSidebarForm()" title="ซ่อน/แสดงฟอร์มเพิ่มข้อมูล" class="p-2 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition border border-slate-200/80 flex items-center justify-center shadow-2xs">
+                    <svg id="toggle-icon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                    </svg>
+                </button>
+                <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking & CRM</span>
+                </h1>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" id="open-stock-modal-btn" class="px-3 py-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl border border-indigo-200 transition flex items-center gap-1 shadow-2xs">
+                    🏷️ <span class="flex flex-col text-left">
+                        <span>Manage Stock</span>
+                    </span>
+                </button>
+				
+				<button
+    id="open-reminder-modal-btn"
+    class="bg-white/20 hover:bg-white/35 text-slate-700 border border-sky-200 bg-white px-3 py-1.5 rounded-xl font-bold text-xs transition shadow-2xs flex items-center gap-1">
+    🔔 <span class="flex flex-col text-left">
+        <span>Reminders</span>
     </span>
-    <span class="text-[11px] text-slate-500 font-medium tracking-wide">
-        LIVE <span class="text-slate-300 px-0.5">|</span> <strong id="sync-time-text" class="font-mono text-emerald-600 font-semibold">--:--</strong>
-    </span>
-</span>
-
+</button>
+                <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium hidden sm:inline-block">Connecting to Firebase...</span>
+            </div>
         </div>
-    </div>
-</header>
+    </header>
 
     <main class="max-w-7xl mx-auto px-4 mt-3 flex gap-4 w-full flex-grow h-[calc(100vh-100px)] overflow-hidden">
         
@@ -773,49 +790,18 @@
         const db = firebase.firestore();
 
         const statusBadge = document.getElementById('connection-status');
-        updateLastSyncTime();
+        statusBadge.textContent = 'เชื่อมต่อ Server แล้ว';
         statusBadge.className = 'text-xs px-3 py-1 rounded-full bg-emerald-100 text-emerald-700 font-medium hidden sm:inline-block';
 
         let pendingItems = []; 
         let allDeliveries = [];
         let allProducts = []; 
+        // ราคาสินค้าเฉพาะบริษัท แยกออกจากราคามาตรฐานใน Manage Stock
+        let allCompanyProducts = [];
         let currentFilter = 'all';
         let suggestionQuantities = {};
         let isFormVisible = true;
         let currentCrmCustomerId = null;
-
-
-
-
-	// ฟังก์ชันอัปเดตเวลา Last Sync
-function updateLastSyncTime() {
-    const statusBadge = document.getElementById('connection-status');
-    const syncTimeText = document.getElementById('sync-time-text');
-    
-    if (!statusBadge) return;
-
-    const now = new Date();
-    // ดึงเวลาในรูปแบบ HH:MM:SS น. (เช่น 14:30:15 น.)
-    const timeString = now.toLocaleTimeString('th-TH', { 
-        hour: '2-digit', 
-        minute: '2-digit', 
-        second: '2-digit' 
-    });
-
-    // อัปเดตข้อความเวลา
-    if (syncTimeText) {
-        syncTimeText.textContent = `${timeString} น.`;
-    } else {
-        statusBadge.innerHTML = `
-            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span>ซิงค์ล่าสุด: <strong class="text-slate-800">${timeString} น.</strong></span>
-        `;
-    }
-
-    // ปรับสไตล์ให้เป็นสีเขียว/เทา แสดงว่าปกติ
-    statusBadge.className = 'px-2.5 py-1 text-xs bg-emerald-50/60 text-slate-600 font-medium rounded-xl border border-emerald-200/80 shadow-2xs flex items-center gap-1.5 transition';
-}
-
 
 
 // ฟังก์ชันกดเช็คประวัติราคาของบริษัทปัจจุบัน
@@ -986,27 +972,259 @@ function showCompanyAllHistory(companyName) {
     showCompanyHistoryModal(companyName, customerInfo, allPurchasedItems);
 }
 
+function normalizeCompanyProductKey(value) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function normalizeCompanyProductName(value) {
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function getCompanySpecificProduct(companyName, productName) {
+    const companyKey = normalizeCompanyProductKey(companyName);
+    const productKey = normalizeCompanyProductName(
+        String(productName || '')
+            .replace(/\s*\(\s*[\d,]+(?:\.\d+)?\s*บาท\s*\)\s*$/i, '')
+            .replace(/\s*x\s*\d+\s*$/i, '')
+    );
+    if (!companyKey || !productKey) return null;
+
+    let exact = allCompanyProducts.find(p =>
+        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
+        normalizeCompanyProductName(p.name) === productKey
+    );
+    if (exact) return exact;
+
+    return allCompanyProducts.find(p => {
+        const pCompany = normalizeCompanyProductKey(p.companyKey || p.companyName);
+        const pName = normalizeCompanyProductName(p.name);
+        return pCompany === companyKey && pName &&
+            (pName.includes(productKey) || productKey.includes(pName));
+    }) || null;
+}
+
+function getEffectiveProductPrice(companyName, product) {
+    if (!product) return 0;
+    const companyProduct = getCompanySpecificProduct(companyName, product.name);
+    return companyProduct && Number.isFinite(Number(companyProduct.price))
+        ? Number(companyProduct.price)
+        : (Number(product.price) || 0);
+}
+
+async function ensureProductInStandardStock(name, cost, price) {
+    const normalized = normalizeCompanyProductName(name);
+    let stockProduct = allProducts.find(p =>
+        normalizeCompanyProductName(p.name) === normalized
+    );
+
+    // ถ้ามีสินค้าเดียวกันใน Manage Stock อยู่แล้ว จะไม่ทับราคามาตรฐาน
+    // เพราะราคาที่กำหนดจากหน้าบริษัทเป็นราคาสำหรับบริษัทนั้นเท่านั้น
+    if (stockProduct) return stockProduct;
+
+    const ref = await db.collection('products').add({
+        name: name.trim(),
+        cost: Number(cost) || 0,
+        price: Number(price) || 0,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+    return {
+        id: ref.id,
+        name: name.trim(),
+        cost: Number(cost) || 0,
+        price: Number(price) || 0
+    };
+}
+
+async function saveCompanyProduct(companyName, name, cost, price) {
+    const cleanCompany = String(companyName || '').trim();
+    const cleanName = String(name || '').trim();
+    const numericCost = Number(cost) || 0;
+    const numericPrice = Number(price);
+
+    if (!cleanCompany) {
+        showToast('ไม่พบชื่อบริษัท', 'error');
+        return false;
+    }
+    if (!cleanName || !Number.isFinite(numericPrice) || numericPrice <= 0) {
+        showToast('กรุณากรอกชื่อสินค้าและราคาขายให้ถูกต้อง', 'error');
+        return false;
+    }
+
+    try {
+        // 1) ให้สินค้านี้มีอยู่ใน Manage Stock ด้วยเสมอ
+        const stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice);
+
+        // 2) บันทึกราคาเฉพาะบริษัท แยกจากราคามาตรฐาน
+        const companyKey = normalizeCompanyProductKey(cleanCompany);
+        const existing = allCompanyProducts.find(p =>
+            normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
+            normalizeCompanyProductName(p.name) === normalizeCompanyProductName(cleanName)
+        );
+
+        const payload = {
+            companyKey,
+            companyName: cleanCompany,
+            name: cleanName,
+            cost: numericCost,
+            price: numericPrice,
+            stockProductId: stockProduct && stockProduct.id ? stockProduct.id : '',
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        };
+
+        if (existing && existing.id) {
+            await db.collection('companyProducts').doc(existing.id).update(payload);
+        } else {
+            await db.collection('companyProducts').add({
+                ...payload,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+
+        showToast(`บันทึก "${cleanName}" ในราคาของบริษัท "${cleanCompany}" แล้ว`, 'success');
+        return true;
+    } catch (err) {
+        console.error('saveCompanyProduct:', err);
+        showToast('ไม่สามารถบันทึกสินค้าของบริษัทได้', 'error');
+        return false;
+    }
+}
+
+async function deleteCompanyProduct(id, name, companyName) {
+    showConfirmModal(
+        'ลบสินค้าเฉพาะบริษัท',
+        `ต้องการลบ "${name}" ออกจากรายการสินค้าของบริษัท "${companyName}" ใช่หรือไม่?\n\nสินค้ามาตรฐานใน Manage Stock จะไม่ถูกลบ`,
+        async () => {
+            try {
+                await db.collection('companyProducts').doc(id).delete();
+                showToast(`ลบ "${name}" จากรายการของบริษัทแล้ว`, 'success');
+            } catch (err) {
+                console.error(err);
+                showToast('ไม่สามารถลบสินค้าของบริษัทได้', 'error');
+            }
+        }
+    );
+}
+
+function renderCompanyProductCatalog(companyName, filterText = '') {
+    const container = document.getElementById('company-specific-products-container');
+    const count = document.getElementById('company-specific-product-count');
+    if (!container) return;
+
+    const companyKey = normalizeCompanyProductKey(companyName);
+    const keyword = String(filterText || '').trim().toLowerCase();
+
+    const products = allCompanyProducts
+        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey)
+        .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword))
+        .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+
+    if (count) count.textContent = `${products.length} รายการ`;
+
+    if (!products.length) {
+        container.innerHTML = `
+            <div class="text-center py-7 text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                ยังไม่มีสินค้าราคาประจำของบริษัทนี้<br>
+                <span class="text-[10px]">เพิ่มสินค้าและราคาด้านบนได้เลย</span>
+            </div>`;
+        return;
+    }
+
+    container.innerHTML = products.map((p, index) => `
+        <div class="grid grid-cols-[40px_minmax(0,1fr)_130px_130px_85px] items-center gap-2 px-3.5 py-2.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs">
+            <span class="text-[11px] text-sky-600 font-bold text-center">#${index + 1}</span>
+            <div class="min-w-0">
+                <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}</div>
+                <div class="text-[10px] text-slate-400 mt-0.5">เชื่อมกับ Manage Stock${p.stockProductId ? ' ✓' : ''}</div>
+            </div>
+            <div class="text-right">
+                <div class="text-[10px] text-slate-400">ต้นทุน</div>
+                <div class="text-xs font-semibold text-slate-700">${money(p.cost)} ฿</div>
+            </div>
+            <div class="text-right">
+                <div class="text-[10px] text-slate-400">ราคาบริษัทนี้</div>
+                <div class="text-sm font-extrabold text-sky-600">${money(p.price)} ฿</div>
+            </div>
+            <button type="button"
+                onclick="deleteCompanyProduct('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', '${escapeHTML(companyName).replace(/'/g, "\\'")}')"
+                class="px-2 py-1.5 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg">
+                ลบ
+            </button>
+        </div>
+    `).join('');
+}
+
 function showCompanyHistoryModal(companyName, customerName, items) {
     let oldModal = document.getElementById('company-all-history-modal');
     if (oldModal) oldModal.remove();
 
+    const safeCompany = escapeHTML(companyName);
+    const safeCustomer = customerName ? `(ผู้ติดต่อ: ${escapeHTML(customerName)})` : '';
+
     const modalHtml = `
         <div id="company-all-history-modal" class="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-[200] flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl shadow-2xl max-w-lg w-full p-6 border border-slate-100 flex flex-col max-h-[85vh]">
+            <div class="bg-white rounded-3xl shadow-2xl w-[96vw] max-w-[1100px] p-5 md:p-6 border border-slate-100 flex flex-col max-h-[92vh]">
                 <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-100 flex-shrink-0">
-                    <div>
-                        <h3 class="text-sm font-bold text-slate-800">📦 ประวัติสินค้าทั้งหมดของ</h3>
-                        <p class="text-xs text-sky-600 font-bold mt-0.5">🏢 ${escapeHTML(companyName)} ${customerName ? `(ผู้ติดต่อ: ${escapeHTML(customerName)})` : ''}</p>
+                    <div class="min-w-0">
+                        <h3 class="text-base font-bold text-slate-800">📦 ประวัติสินค้าทั้งหมดของ</h3>
+                        <p class="text-xs text-sky-600 font-bold mt-0.5 truncate">🏢 ${safeCompany} ${safeCustomer}</p>
                     </div>
-                    <button type="button" onclick="document.getElementById('company-all-history-modal').remove()" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 text-xs font-bold">✕</button>
+                    <button type="button" onclick="document.getElementById('company-all-history-modal').remove()" class="w-8 h-8 flex items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 text-xs font-bold flex-shrink-0">✕</button>
                 </div>
 
-                <!-- ช่องค้นหาสินค้าในประวัติ และแสดงผลจำนวนรายการ -->
-                <div class="mb-3 flex-shrink-0 space-y-2">
-                    <input type="text" id="company-history-search" placeholder="🔍 ค้นหารายชื่อสินค้าในประวัติ..." class="w-full px-3.5 py-2 text-xs border border-sky-200 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
-                    <div class="flex justify-between items-center px-1">
-                        <span id="search-count-label" class="text-[11px] font-semibold text-slate-500">ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ</span>
+                <!-- สินค้าและราคาประจำบริษัท -->
+                <div class="mb-4 p-4 rounded-2xl bg-gradient-to-br from-sky-50/80 to-indigo-50/60 border border-sky-200 flex-shrink-0">
+                    <div class="flex items-center justify-between gap-2 mb-3">
+                        <div>
+                            <div class="text-sm font-bold text-slate-800">🏷️ เพิ่มสินค้า / ราคาของบริษัทนี้</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5">
+                                ราคานี้ใช้เฉพาะ <b>${safeCompany}</b> และสินค้าจะถูกบันทึกไว้ใน <b>Manage Stock</b> ด้วย
+                            </div>
+                        </div>
+                        <span id="company-specific-product-count" class="text-[10px] px-2.5 py-1 rounded-lg bg-white text-sky-700 border border-sky-100 font-bold">0 รายการ</span>
                     </div>
+
+                    <div class="company-product-grid">
+                        <div class="company-product-name">
+                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">ชื่อสินค้า *</label>
+                            <input id="company-product-name-input" type="text" placeholder="เช่น ดินสอ EE"
+                                class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">ต้นทุน (บาท)</label>
+                            <input id="company-product-cost-input" type="number" step="0.01" min="0" placeholder="0"
+                                class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">ราคาขายบริษัทนี้ *</label>
+                            <input id="company-product-price-input" type="number" step="0.01" min="0" placeholder="280"
+                                class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                        </div>
+                        <button type="button" id="save-company-product-btn"
+                            class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                            ＋ เพิ่ม / บันทึกราคา
+                        </button>
+                    </div>
+
+                    <div class="mt-3">
+                        <input id="company-specific-product-search" type="text" placeholder="🔍 ค้นหาสินค้าเฉพาะบริษัทนี้..."
+                            class="w-full px-3 py-2 text-xs border border-slate-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                    </div>
+
+                    <div id="company-specific-products-container" class="space-y-2 mt-3 max-h-52 overflow-y-auto no-scrollbar"></div>
+                </div>
+
+                <!-- ประวัติการซื้อ -->
+                <div class="mb-3 flex-shrink-0">
+                    <div class="flex items-center justify-between gap-3 mb-2">
+                        <div>
+                            <div class="text-sm font-bold text-slate-800">📋 ประวัติการซื้อสินค้า</div>
+                            <div class="text-[10px] text-slate-400">รายการที่ซื้อแล้วและรายการที่กำลังติดตามยังคงแสดงเหมือนเดิม</div>
+                        </div>
+                        <span id="search-count-label" class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ</span>
+                    </div>
+                    <input type="text" id="company-history-search" placeholder="🔍 ค้นหารายชื่อสินค้าในประวัติ..."
+                        class="w-full px-3.5 py-2 text-xs border border-sky-200 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
                 </div>
 
                 <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1 mb-3">
@@ -1025,12 +1243,19 @@ function showCompanyHistoryModal(companyName, customerName, items) {
     const searchInput = document.getElementById('company-history-search');
     const container = document.getElementById('company-history-items-container');
     const countLabel = document.getElementById('search-count-label');
+    const companyProductSearch = document.getElementById('company-specific-product-search');
+    const companyProductName = document.getElementById('company-product-name-input');
+    const companyProductCost = document.getElementById('company-product-cost-input');
+    const companyProductPrice = document.getElementById('company-product-price-input');
+    const saveCompanyProductBtn = document.getElementById('save-company-product-btn');
 
     const renderItems = (keyword = '') => {
         const kw = keyword.toLowerCase().trim();
-        const filtered = items.filter(item => item.text.toLowerCase().includes(kw) || item.dueDate.toLowerCase().includes(kw));
+        const filtered = items.filter(item =>
+            String(item.text || '').toLowerCase().includes(kw) ||
+            String(item.dueDate || '').toLowerCase().includes(kw)
+        );
 
-        // อัปเดตข้อความแสดงจำนวนที่ค้นพบ
         if (kw === '') {
             countLabel.innerHTML = `ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ`;
         } else {
@@ -1043,29 +1268,29 @@ function showCompanyHistoryModal(companyName, customerName, items) {
         }
 
         container.innerHTML = filtered.map((item, index) => {
-            let statusBadge = item.status === 'completed' 
-                ? '<span class="text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-lg font-bold shadow-2xs">✓ ส่งแล้ว</span>' 
+            let statusBadge = item.status === 'completed'
+                ? '<span class="text-emerald-700 bg-emerald-100/80 px-2.5 py-1 rounded-lg font-bold shadow-2xs">✓ ส่งแล้ว</span>'
                 : '<span class="text-amber-700 bg-amber-100/80 px-2.5 py-1 rounded-lg font-bold shadow-2xs">⏳ รอส่ง</span>';
-            
-            let profitText = item.totalProfit !== undefined && item.totalProfit !== null 
-                ? `<span class="text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold ml-2 shadow-2xs">💰 กำไร: +${Number(item.totalProfit).toLocaleString()} ฿</span>` 
+
+            let profitText = item.totalProfit !== undefined && item.totalProfit !== null
+                ? `<span class="text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold ml-2 shadow-2xs">💰 กำไร: +${Number(item.totalProfit).toLocaleString()} ฿</span>`
                 : '';
 
-            // ทำไฮไลท์คำค้นหาในชื่อสินค้าให้เด่นชัด (ถ้ามีการพิมพ์ค้นหา)
-            let highlightedText = escapeHTML(item.text);
+            let highlightedText = escapeHTML(item.text || '');
             if (kw) {
-                const regex = new RegExp(`(${kw})`, 'gi');
+                const safeKw = kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${safeKw})`, 'gi');
                 highlightedText = highlightedText.replace(regex, `<mark class="bg-amber-200 text-slate-900 rounded px-0.5">$1</mark>`);
             }
 
             return `
-                <div class="flex items-center justify-between p-3.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs transition-all text-xs">
-                    <div class="space-y-1 pr-2">
-                        <div class="font-bold text-slate-900 text-[13px] leading-relaxed">
+                <div class="flex items-center justify-between p-3.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs transition-all text-xs gap-3">
+                    <div class="space-y-1 pr-2 min-w-0">
+                        <div class="font-bold text-slate-900 text-[13px] leading-relaxed break-words">
                             <span class="text-sky-600 font-extrabold mr-1">#${index + 1}</span> ${highlightedText} ${profitText}
                         </div>
                         <div class="text-[11px] text-slate-500 flex items-center gap-1 font-medium">
-                            <span>📅 วันที่นัด/บันทึก:</span> <span class="text-slate-700 font-semibold">${escapeHTML(item.dueDate)}</span>
+                            <span>📅 วันที่นัด/บันทึก:</span> <span class="text-slate-700 font-semibold">${escapeHTML(item.dueDate || 'ไม่ระบุวันที่')}</span>
                         </div>
                     </div>
                     <div class="flex-shrink-0">${statusBadge}</div>
@@ -1074,13 +1299,48 @@ function showCompanyHistoryModal(companyName, customerName, items) {
         }).join('');
     };
 
+    saveCompanyProductBtn.addEventListener('click', async () => {
+        if (saveCompanyProductBtn.disabled) return;
+        const name = companyProductName.value.trim();
+        const cost = Number(companyProductCost.value) || 0;
+        const price = Number(companyProductPrice.value);
+
+        saveCompanyProductBtn.disabled = true;
+        saveCompanyProductBtn.textContent = 'กำลังบันทึก...';
+
+        const ok = await saveCompanyProduct(companyName, name, cost, price);
+
+        saveCompanyProductBtn.disabled = false;
+        saveCompanyProductBtn.textContent = '＋ เพิ่ม / บันทึกราคา';
+
+        if (ok) {
+            companyProductName.value = '';
+            companyProductCost.value = '';
+            companyProductPrice.value = '';
+            renderCompanyProductCatalog(companyName, companyProductSearch.value);
+            companyProductName.focus();
+        }
+    });
+
+    companyProductSearch.addEventListener('input', e => {
+        renderCompanyProductCatalog(companyName, e.target.value);
+    });
+
+    companyProductPrice.addEventListener('keypress', e => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveCompanyProductBtn.click();
+        }
+    });
+
+    renderCompanyProductCatalog(companyName);
     renderItems('');
 
     searchInput.addEventListener('input', (e) => {
         renderItems(e.target.value);
     });
 }
-		
+
 		
 		
 // ฟังก์ชันค้นหาประวัติราคาของบริษัทแบบยืดหยุ่น รองรับการเทียบชื่อสินค้าบางส่วน
@@ -1389,6 +1649,23 @@ function getCompanyPriceHistory(companyName, productName) {
             }
         });
 
+        // โหลดราคาสินค้าเฉพาะบริษัท แยกจาก products มาตรฐาน
+        db.collection('companyProducts').onSnapshot(snapshot => {
+            allCompanyProducts = [];
+            snapshot.forEach(doc => {
+                allCompanyProducts.push({ id: doc.id, ...doc.data() });
+            });
+
+            const historyModal = document.getElementById('company-all-history-modal');
+            if (historyModal) {
+                const companyText = historyModal.querySelector('.text-sky-600.font-bold');
+                if (companyText) {
+                    const raw = companyText.textContent.replace(/^🏢\s*/, '').replace(/\s*\(ผู้ติดต่อ:.*\)$/, '').trim();
+                    renderCompanyProductCatalog(raw, document.getElementById('company-specific-product-search')?.value || '');
+                }
+            }
+        });
+
         const itemInput = document.getElementById('item-input');
         const itemDueDateInput = document.getElementById('item-due-date');
         const addItemBtn = document.getElementById('add-item-btn');
@@ -1421,6 +1698,7 @@ function getCompanyPriceHistory(companyName, productName) {
 
         function renderSuggestionsTable(filterText = '') {
             const keyword = filterText.toLowerCase().trim();
+            const currentCompanyForPrice = document.getElementById('company-name').value.trim();
             const filteredItems = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
 
             if (filteredItems.length === 0) {
@@ -1457,7 +1735,12 @@ function getCompanyPriceHistory(companyName, productName) {
                 if (!suggestionQuantities[p.id]) suggestionQuantities[p.id] = 1;
                 const currentQty = suggestionQuantities[p.id];
                 const cost = p.cost || 0;
-                const profit = p.price - cost;
+                const companyProduct = getCompanySpecificProduct(currentCompanyForPrice, p.name);
+                const displayPrice = companyProduct ? Number(companyProduct.price) : Number(p.price || 0);
+                const profit = displayPrice - cost;
+                const companyPriceBadge = companyProduct
+                    ? `<span class="text-indigo-600 font-semibold">ราคาบริษัท: ${Number(displayPrice).toLocaleString()} ฿</span>`
+                    : '';
 
                 return `
                     <div class="flex items-center justify-between px-3.5 py-2.5 bg-white hover:bg-sky-50/60 rounded-2xl transition border border-slate-100 hover:border-sky-200 shadow-2xs gap-2">
@@ -1466,7 +1749,8 @@ function getCompanyPriceHistory(companyName, productName) {
                             <div class="truncate">
                                 <div class="font-semibold text-slate-800 text-xs truncate">${escapeHTML(p.name)}</div>
                                 <div class="text-[11px] text-slate-500 flex items-center gap-2">
-                                    <span>ราคา: <strong class="text-sky-600">${Number(p.price).toLocaleString()} ฿</strong></span>
+                                    <span>ราคา: <strong class="text-sky-600">${Number(displayPrice).toLocaleString()} ฿</strong></span>
+                                    ${companyPriceBadge}
                                     <span class="text-emerald-600 font-medium">กำไรหน่วยละ: +${Number(profit).toLocaleString()} ฿</span>
                                 </div>
                             </div>
@@ -1490,8 +1774,10 @@ function getCompanyPriceHistory(companyName, productName) {
                 const checkbox = document.getElementById(`chk-product-${p.id}`);
                 if (checkbox && checkbox.checked) {
                     const qty = suggestionQuantities[p.id] || 1;
+                    const currentCompany = document.getElementById('company-name').value.trim();
+                    const effectivePrice = getEffectiveProductPrice(currentCompany, p);
                     const cost = (p.cost || 0) * qty;
-                    const totalSell = p.price * qty;
+                    const totalSell = effectivePrice * qty;
                     const totalProfit = totalSell - cost;
                     const name = p.name;
 
@@ -1508,6 +1794,7 @@ function getCompanyPriceHistory(companyName, productName) {
                         
                         pendingItems[existingIndex].totalCost = newCost;
                         pendingItems[existingIndex].totalSell = newSell;
+                        pendingItems[existingIndex].unitPrice = effectivePrice;
                         pendingItems[existingIndex].totalProfit = newSell - newCost;
                         pendingItems[existingIndex].text = `${name} x ${newQty}`;
                     } else {
@@ -1515,7 +1802,7 @@ function getCompanyPriceHistory(companyName, productName) {
                             rawName: name,
                             text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
                             quantity: qty,
-                            unitPrice: p.price,
+                            unitPrice: effectivePrice,
                             totalCost: cost,
                             totalSell: totalSell,
                             totalProfit: totalProfit,
@@ -1552,14 +1839,14 @@ function getCompanyPriceHistory(companyName, productName) {
             }
 
             try {
-                await db.collection('products').add({
-                    name,
-                    cost,
-                    price,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
+                await ensureProductInStandardStock(name, cost, price);
 
-                showToast('บันทึกสินค้าลงสต็อกสำเร็จ', 'success');
+                const currentCompany = document.getElementById('company-name').value.trim();
+                if (currentCompany) {
+                    await saveCompanyProduct(currentCompany, name, cost, price);
+                } else {
+                    showToast('บันทึกสินค้าลงสต็อกสำเร็จ', 'success');
+                }
                 closeSuggestionModal();
 
                 const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
@@ -1569,7 +1856,7 @@ function getCompanyPriceHistory(companyName, productName) {
                     rawName: name,
                     text: `${name} x 1`,
                     quantity: 1,
-                    unitPrice: price,
+                    unitPrice: effectivePrice,
                     totalCost: cost,
                     totalSell: price,
                     totalProfit: profit,
@@ -1601,8 +1888,10 @@ function getCompanyPriceHistory(companyName, productName) {
             const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
             
             const productData = allProducts.find(p => p.id === id);
+            const currentCompany = document.getElementById('company-name').value.trim();
+            const effectivePrice = getEffectiveProductPrice(currentCompany, productData || { name, price });
             const cost = productData ? (productData.cost || 0) * qty : 0;
-            const totalSell = price * qty;
+            const totalSell = effectivePrice * qty;
             const totalProfit = totalSell - cost;
 
             const existingIndex = pendingItems.findIndex(item => {
@@ -1614,10 +1903,11 @@ function getCompanyPriceHistory(companyName, productName) {
                 pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
                 let newQty = pendingItems[existingIndex].quantity;
                 let newCost = (productData ? (productData.cost || 0) : 0) * newQty;
-                let newSell = price * newQty;
+                let newSell = effectivePrice * newQty;
                 
                 pendingItems[existingIndex].totalCost = newCost;
                 pendingItems[existingIndex].totalSell = newSell;
+                pendingItems[existingIndex].unitPrice = effectivePrice;
                 pendingItems[existingIndex].totalProfit = newSell - newCost;
                 pendingItems[existingIndex].text = `${name} x ${newQty}`;
             } else {
@@ -1799,8 +2089,12 @@ document.getElementById('item-input').addEventListener('blur', function() {
             }
 
             const foundProd = allProducts.find(p => p.name.toLowerCase() === cleanName.toLowerCase());
-            let unitPrice = foundProd ? foundProd.price : 0;
-            let unitCost = foundProd ? (foundProd.cost || 0) : 0;
+            const currentCompany = document.getElementById('company-name').value.trim();
+            const companyProduct = getCompanySpecificProduct(currentCompany, cleanName);
+            let unitPrice = companyProduct ? Number(companyProduct.price) : (foundProd ? Number(foundProd.price) : 0);
+            let unitCost = companyProduct && Number(companyProduct.cost) > 0
+                ? Number(companyProduct.cost)
+                : (foundProd ? (foundProd.cost || 0) : 0);
 
             const existingIndex = pendingItems.findIndex(item => {
                 let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
@@ -2252,8 +2546,13 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
                 if (!product && !missing.includes(itemName)) missing.push(itemName);
 
-                // ยึดราคาขายปัจจุบันจาก Manage Stock ก่อนเสมอ
-                const unitPrice = product ? (Number(product.price) || 0) : embeddedPrice;
+                // ราคาเฉพาะบริษัทมีสิทธิ์เหนือราคามาตรฐานของ Manage Stock
+                const companyProduct = product
+                    ? getCompanySpecificProduct(customer.companyName || '', product.name)
+                    : null;
+                const unitPrice = companyProduct
+                    ? (Number(companyProduct.price) || 0)
+                    : (product ? (Number(product.price) || 0) : embeddedPrice);
 
                 return {
                     name: product ? product.name : itemName,
