@@ -16,6 +16,33 @@
         }
         #company-history-items-container {
             min-width: 0;
+            width: 100%;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+
+        /* แก้เฉพาะรายการประวัติการซื้อให้ไม่ล้นกรอบบนหน้าจอแคบ */
+        #company-history-items-container > div {
+            min-width: 0;
+            max-width: 100%;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #company-history-items-container > div > div:first-child {
+            min-width: 0;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        #company-history-items-container > div > div:first-child > div {
+            min-width: 0;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        #company-history-items-container mark {
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
         .company-product-grid {
             display: grid;
@@ -33,6 +60,23 @@
             #company-all-history-modal > div {
                 width: 98vw;
                 padding: 16px;
+                box-sizing: border-box;
+                overflow-x: hidden;
+            }
+
+            /* จัดการ์ดประวัติการซื้อเป็นแนวตั้งเมื่อพื้นที่แคบ ป้องกันป้ายสถานะดันข้อความออกนอกกรอบ */
+            #company-history-items-container > div {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 8px !important;
+            }
+            #company-history-items-container > div > div:first-child {
+                width: 100%;
+                padding-right: 0 !important;
+            }
+            #company-history-items-container > div > div:last-child {
+                align-self: flex-end;
+                max-width: 100%;
             }
             .company-product-grid {
                 grid-template-columns: 1fr 1fr;
@@ -2871,7 +2915,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
             const quotationSummary = type === 'quotation' ? `
                 <div style="margin-top:16px;display:flex;justify-content:flex-end;">
                     <div style="width:100%;max-width:720px;border:1.2px solid #94a3b8;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);">
-                        <div style="padding:16px 18px;background:#f8fafc;border-right:1px solid #cbd5e1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;min-height:126px;box-sizing:border-box;">
+                        <div style="padding:16px 18px;background:#f8fafc;border-right:1px solid #cbd5e1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:126px;box-sizing:border-box;">
                             <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#64748b;text-transform:uppercase;margin-bottom:7px;">จำนวนเงินตัวอักษร (Thai Baht)</div>
                             <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.75;word-break:break-word;max-width:100%;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
                         </div>
@@ -2889,7 +2933,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
             const receiptSummary = type === 'receipt' ? `
                 <div style="margin-top:16px;display:flex;justify-content:flex-end;">
                     <div style="width:100%;max-width:720px;border:1.2px solid #94a3b8;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);">
-                        <div style="padding:16px 18px;background:#f8fafc;border-right:1px solid #cbd5e1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;min-height:112px;box-sizing:border-box;">
+                        <div style="padding:16px 18px;background:#f8fafc;border-right:1px solid #cbd5e1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:112px;box-sizing:border-box;">
                             <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#64748b;text-transform:uppercase;margin-bottom:7px;">จำนวนเงินตัวอักษร (Thai Baht)</div>
                             <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.75;word-break:break-word;max-width:100%;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
                         </div>
