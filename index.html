@@ -16,33 +16,6 @@
         }
         #company-history-items-container {
             min-width: 0;
-            width: 100%;
-            max-width: 100%;
-            box-sizing: border-box;
-        }
-
-        /* แก้เฉพาะรายการประวัติการซื้อให้ไม่ล้นกรอบบนหน้าจอแคบ */
-        #company-history-items-container > div {
-            min-width: 0;
-            max-width: 100%;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        #company-history-items-container > div > div:first-child {
-            min-width: 0;
-            max-width: 100%;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
-        #company-history-items-container > div > div:first-child > div {
-            min-width: 0;
-            max-width: 100%;
-            overflow-wrap: anywhere;
-            word-break: break-word;
-        }
-        #company-history-items-container mark {
-            overflow-wrap: anywhere;
-            word-break: break-word;
         }
         .company-product-grid {
             display: grid;
@@ -60,23 +33,6 @@
             #company-all-history-modal > div {
                 width: 98vw;
                 padding: 16px;
-                box-sizing: border-box;
-                overflow-x: hidden;
-            }
-
-            /* จัดการ์ดประวัติการซื้อเป็นแนวตั้งเมื่อพื้นที่แคบ ป้องกันป้ายสถานะดันข้อความออกนอกกรอบ */
-            #company-history-items-container > div {
-                flex-direction: column !important;
-                align-items: stretch !important;
-                gap: 8px !important;
-            }
-            #company-history-items-container > div > div:first-child {
-                width: 100%;
-                padding-right: 0 !important;
-            }
-            #company-history-items-container > div > div:last-child {
-                align-self: flex-end;
-                max-width: 100%;
             }
             .company-product-grid {
                 grid-template-columns: 1fr 1fr;
@@ -126,6 +82,71 @@
         #company-picker-modal { z-index: 120 !important; }
         #reminder-modal { z-index: 100 !important; }
         #toast-container { pointer-events: none; }
+
+        /* ปรับเฉพาะหน้าต่าง "📦 ดูสินค้าทั้งหมด" ให้พอดีกับหน้าจอเล็ก
+           โดยไม่กระทบ layout ของส่วนอื่น */
+        #company-all-history-modal {
+            overflow: hidden;
+        }
+        #company-all-history-modal > div {
+            min-width: 0;
+            max-width: 1100px;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        #company-specific-products-container,
+        #company-history-items-container {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+        }
+        #company-specific-products-container > div,
+        #company-history-items-container > div {
+            min-width: 0;
+            max-width: 100%;
+            box-sizing: border-box;
+        }
+        #company-history-items-container .history-item-main {
+            min-width: 0;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        #company-history-items-container .history-item-status {
+            flex-shrink: 0;
+            max-width: 100%;
+        }
+        #company-history-items-container .history-item-profit {
+            display: inline-flex;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            vertical-align: middle;
+        }
+
+        @media (max-width: 760px) {
+            #company-all-history-modal {
+                padding: 8px !important;
+            }
+            #company-all-history-modal > div {
+                width: 100%;
+                max-width: 100%;
+                max-height: 94vh;
+                padding: 12px !important;
+            }
+            #company-all-history-modal .history-item-row {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 8px;
+            }
+            #company-all-history-modal .history-item-status {
+                align-self: flex-start;
+            }
+            #company-all-history-modal .history-item-profit {
+                margin-left: 0;
+            }
+        }
 
         /* คลาสสำหรับควบคุมการซ่อน/แสดงแบบสไลด์ออกข้างอย่างนุ่มนวล */
         #form-section {
@@ -332,6 +353,7 @@
             <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
                 <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                     👥 เลือกลูกค้าเดิม หรือพิมพ์เพิ่มใหม่
+                    <span id="customer-count-label" class="text-[10px] font-semibold text-sky-600 bg-sky-50 px-2 py-0.5 rounded-lg border border-sky-100 whitespace-nowrap">(0 รายชื่อ)</span>
                 </span>
                 <button type="button" id="close-customer-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
                     ✕
@@ -1478,7 +1500,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                 : '<span class="text-amber-700 bg-amber-100/80 px-2.5 py-1 rounded-lg font-bold shadow-2xs">⏳ รอส่ง</span>';
 
             let profitText = item.totalProfit !== undefined && item.totalProfit !== null
-                ? `<span class="text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold ml-2 shadow-2xs">💰 กำไร: +${Number(item.totalProfit).toLocaleString()} ฿</span>`
+                ? `<span class="history-item-profit text-emerald-800 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg font-bold ml-2 shadow-2xs">💰 กำไร: +${Number(item.totalProfit).toLocaleString()} ฿</span>`
                 : '';
 
             let highlightedText = escapeHTML(item.text || '');
@@ -1489,16 +1511,16 @@ function showCompanyHistoryModal(companyName, customerName, items) {
             }
 
             return `
-                <div class="flex items-center justify-between p-3.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs transition-all text-xs gap-3">
-                    <div class="space-y-1 pr-2 min-w-0">
-                        <div class="font-bold text-slate-900 text-[13px] leading-relaxed break-words">
+                <div class="history-item-row flex items-center justify-between p-3.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs transition-all text-xs gap-3 min-w-0 max-w-full overflow-hidden">
+                    <div class="history-item-main space-y-1 pr-2 min-w-0 max-w-full">
+                        <div class="font-bold text-slate-900 text-[13px] leading-relaxed break-words overflow-wrap-anywhere">
                             <span class="text-sky-600 font-extrabold mr-1">#${index + 1}</span> ${highlightedText} ${profitText}
                         </div>
-                        <div class="text-[11px] text-slate-500 flex items-center gap-1 font-medium">
-                            <span>📅 วันที่นัด/บันทึก:</span> <span class="text-slate-700 font-semibold">${escapeHTML(item.dueDate || 'ไม่ระบุวันที่')}</span>
+                        <div class="text-[11px] text-slate-500 flex items-start gap-1 font-medium min-w-0 max-w-full break-words">
+                            <span class="flex-shrink-0">📅 วันที่นัด/บันทึก:</span> <span class="text-slate-700 font-semibold break-words">${escapeHTML(item.dueDate || 'ไม่ระบุวันที่')}</span>
                         </div>
                     </div>
-                    <div class="flex-shrink-0">${statusBadge}</div>
+                    <div class="history-item-status flex-shrink-0 max-w-full">${statusBadge}</div>
                 </div>
             `;
         }).join('');
@@ -1614,6 +1636,18 @@ function getCompanyPriceHistory(companyName, productName) {
 
         function renderCustomerList(filterText = '') {
             const keyword = filterText.toLowerCase().trim();
+
+            const uniqueCustomerNames = new Set(
+                allDeliveries
+                    .map(item => String(item.customerName || '').trim())
+                    .filter(Boolean)
+                    .map(name => name.toLowerCase())
+            );
+            const customerCountLabel = document.getElementById('customer-count-label');
+            if (customerCountLabel) {
+                customerCountLabel.textContent = `(${uniqueCustomerNames.size.toLocaleString()} รายชื่อ)`;
+            }
+
             const filtered = allDeliveries.filter(item => 
                 (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
                 (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
@@ -2917,7 +2951,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     <div style="width:100%;max-width:720px;border:1.2px solid #94a3b8;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);">
                         <div style="padding:16px 18px;background:#f8fafc;border-right:1px solid #cbd5e1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:126px;box-sizing:border-box;">
                             <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#64748b;text-transform:uppercase;margin-bottom:7px;">จำนวนเงินตัวอักษร (Thai Baht)</div>
-                            <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.75;word-break:break-word;max-width:100%;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
+                            <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.75;word-break:break-word;overflow-wrap:anywhere;max-width:100%;width:100%;text-align:center;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
                         </div>
                         <div style="padding:10px 14px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;">
                             <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #e2e8f0;font-size:10.5px;"><span>รวมก่อนหักส่วนลด</span><strong>${money(totals.subtotal)} บาท</strong></div>
@@ -2935,7 +2969,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     <div style="width:100%;max-width:720px;border:1.2px solid #94a3b8;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);">
                         <div style="padding:16px 18px;background:#f8fafc;border-right:1px solid #cbd5e1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:112px;box-sizing:border-box;">
                             <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#64748b;text-transform:uppercase;margin-bottom:7px;">จำนวนเงินตัวอักษร (Thai Baht)</div>
-                            <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.75;word-break:break-word;max-width:100%;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
+                            <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.75;word-break:break-word;overflow-wrap:anywhere;max-width:100%;width:100%;text-align:center;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
                         </div>
                         <div style="padding:10px 14px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;">
                             <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:10.5px;"><span>รวมเป็นเงิน</span><strong>${money(totals.subtotal)} บาท</strong></div>
