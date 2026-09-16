@@ -2869,28 +2869,34 @@ document.getElementById('item-input').addEventListener('blur', function() {
             `;
 
             const quotationSummary = type === 'quotation' ? `
-                <div style="margin-top:14px;display:flex;justify-content:flex-end;">
-                    <div style="width:320px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;">
-                        <div style="display:flex;justify-content:space-between;padding:8px 11px;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>รวมก่อนหักส่วนลด</span><strong>${money(totals.subtotal)} บาท</strong></div>
-                        <div style="display:flex;justify-content:space-between;padding:8px 11px;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>ส่วนลด ${money(totals.discountPercent)}%</span><strong style="color:#dc2626;">${money(totals.discountAmount)} บาท</strong></div>
-                        <div style="display:flex;justify-content:space-between;padding:8px 11px;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>มูลค่าหลังหักส่วนลด</span><strong>${money(totals.taxable)} บาท</strong></div>
-                        <div style="display:flex;justify-content:space-between;padding:8px 11px;border-bottom:2px solid #2563eb;font-size:11px;"><span>VAT ${money(totals.vatPercent)}%</span><strong>${money(totals.vatAmount)} บาท</strong></div>
-                        <div style="display:flex;justify-content:space-between;padding:10px 11px;background:#eff6ff;font-size:13px;"><span><b>ยอดรวมสุทธิ</b></span><strong style="color:#1d4ed8;">${money(totals.grandTotal)} บาท</strong></div>
+                <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                    <div style="width:100%;max-width:720px;border:1.2px solid #94a3b8;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);">
+                        <div style="padding:16px 18px;background:#f8fafc;border-right:1px solid #cbd5e1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;min-height:126px;box-sizing:border-box;">
+                            <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#64748b;text-transform:uppercase;margin-bottom:7px;">จำนวนเงินตัวอักษร (Thai Baht)</div>
+                            <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.75;word-break:break-word;max-width:100%;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
+                        </div>
+                        <div style="padding:10px 14px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #e2e8f0;font-size:10.5px;"><span>รวมก่อนหักส่วนลด</span><strong>${money(totals.subtotal)} บาท</strong></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #e2e8f0;font-size:10.5px;"><span>ส่วนลด ${money(totals.discountPercent)}%</span><strong style="color:#b91c1c;">${money(totals.discountAmount)} บาท</strong></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #e2e8f0;font-size:10.5px;"><span>มูลค่าหลังหักส่วนลด</span><strong>${money(totals.taxable)} บาท</strong></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid #94a3b8;font-size:10.5px;"><span>VAT ${money(totals.vatPercent)}%</span><strong>${money(totals.vatAmount)} บาท</strong></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin:8px -14px -10px;padding:10px 14px;background:#f1f5f9;border-top:2px solid #334155;font-size:13px;"><span style="font-weight:800;color:#0f172a;">ยอดรวมสุทธิ</span><strong style="font-size:14px;color:#0f172a;">${money(totals.grandTotal)} บาท</strong></div>
+                        </div>
                     </div>
                 </div>
             ` : '';
 
             const receiptSummary = type === 'receipt' ? `
-                <div style="margin-top:14px;display:flex;justify-content:center;">
-                    <div style="width:100%;max-width:620px;border:1px solid #dbeafe;border-radius:10px;overflow:hidden;display:grid;grid-template-columns:1.35fr 1fr;align-items:stretch;">
-                        <div style="padding:12px 14px;background:#f8fbff;display:flex;flex-direction:column;justify-content:center;text-align:left;min-height:82px;box-sizing:border-box;">
-                            <div style="font-size:10px;font-weight:700;color:#2563eb;margin-bottom:5px;">จำนวนเงินตัวอักษร (Thai Baht)</div>
-                            <div style="font-size:11px;font-weight:600;color:#334155;line-height:1.65;word-break:break-word;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
+                <div style="margin-top:16px;display:flex;justify-content:flex-end;">
+                    <div style="width:100%;max-width:720px;border:1.2px solid #94a3b8;border-radius:8px;overflow:hidden;background:#fff;box-shadow:0 1px 2px rgba(15,23,42,.04);display:grid;grid-template-columns:minmax(0,1.25fr) minmax(300px,1fr);">
+                        <div style="padding:16px 18px;background:#f8fafc;border-right:1px solid #cbd5e1;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;text-align:left;min-height:112px;box-sizing:border-box;">
+                            <div style="font-size:9px;font-weight:700;letter-spacing:.4px;color:#64748b;text-transform:uppercase;margin-bottom:7px;">จำนวนเงินตัวอักษร (Thai Baht)</div>
+                            <div style="font-size:12px;font-weight:700;color:#1e293b;line-height:1.75;word-break:break-word;max-width:100%;">${escapeDocumentHTML(thaiBahtText(totals.grandTotal))}</div>
                         </div>
-                        <div style="border-left:1px solid #dbeafe;padding:8px 12px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;">
-                            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>รวมเป็นเงิน</span><strong>${money(totals.subtotal)} บาท</strong></div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #e2e8f0;font-size:11px;"><span>ส่วนลด ${money(totals.discountPercent)}%</span><strong style="color:#dc2626;">${money(totals.discountAmount)} บาท</strong></div>
-                            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:13px;"><span><b>ยอดสุทธิ</b></span><strong style="color:#1d4ed8;">${money(totals.grandTotal)} บาท</strong></div>
+                        <div style="padding:10px 14px;display:flex;flex-direction:column;justify-content:center;box-sizing:border-box;">
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #e2e8f0;font-size:10.5px;"><span>รวมเป็นเงิน</span><strong>${money(totals.subtotal)} บาท</strong></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #94a3b8;font-size:10.5px;"><span>ส่วนลด ${money(totals.discountPercent)}%</span><strong style="color:#b91c1c;">${money(totals.discountAmount)} บาท</strong></div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin:8px -14px -10px;padding:10px 14px;background:#f1f5f9;border-top:2px solid #334155;font-size:13px;"><span style="font-weight:800;color:#0f172a;">ยอดสุทธิ</span><strong style="font-size:14px;color:#0f172a;">${money(totals.grandTotal)} บาท</strong></div>
                         </div>
                     </div>
                 </div>
