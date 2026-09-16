@@ -72,6 +72,17 @@
             padding: 0;
         }
 
+        /* ระบบชั้นแสดงผลกลาง: แจ้งเตือนและยืนยันต้องอยู่เหนือทุก Modal */
+        #confirm-modal { z-index: 10000 !important; }
+        #toast-container { z-index: 11000 !important; }
+        #toast-container > div { position: relative; z-index: 11001 !important; }
+        #company-all-history-modal, #crm-modal, #document-modal, #company-picker-modal, #reminder-modal, #stock-modal, #custom-item-suggestions, #customer-modal, #edit-modal, #edit-customer-modal, #edit-company-modal { z-index: 200 !important; }
+        #document-modal { z-index: 230 !important; }
+        #crm-modal { z-index: 220 !important; }
+        #company-picker-modal { z-index: 120 !important; }
+        #reminder-modal { z-index: 100 !important; }
+        #toast-container { pointer-events: none; }
+
         /* คลาสสำหรับควบคุมการซ่อน/แสดงแบบสไลด์ออกข้างอย่างนุ่มนวล */
         #form-section {
             transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
@@ -374,7 +385,7 @@
     </div>
 </div>
 
-    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[150] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
+    <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[10000] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="modal-content">
             <div class="text-3xl mb-3">⚠️</div>
             <h3 id="modal-title" class="text-base font-bold text-slate-800 mb-2">ยืนยันการทำรายการ</h3>
@@ -784,7 +795,7 @@
         <div id="pdf-document" style="width:210mm;min-height:297mm;padding:10mm 12mm 14mm;background:#fff;color:#111827;font-family:Tahoma,'Sarabun',Arial,sans-serif;font-size:12px;box-sizing:border-box;"></div>
     </div>
 
-    <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[11000] flex flex-col gap-2 pointer-events-none"></div>
 
     <footer class="text-center py-1.5 text-[11px] text-slate-400 border-t border-sky-100 flex-shrink-0">
         Delivery Tracking System © 2026
@@ -807,57 +818,38 @@
         const db = firebase.firestore();
 
         const statusBadge = document.getElementById('connection-status');
+        let firebaseConnectionState = 'connecting';
+        let firebaseServerConfirmed = false;
+        let lastConnectionErrorToast = 0;
 
-        // ตรวจสอบการเชื่อมต่อ Firebase/Firestore จริง
-        let firestoreConnectionReady = false;
-        let firestoreStatusTimer = null;
-
-        function updateConnectionStatus(state, message) {
+        function setConnectionStatus(state, message, showErrorToast = false) {
+            firebaseConnectionState = state;
             if (!statusBadge) return;
-            const states = {
-                connecting: ['bg-amber-100', 'text-amber-700'],
-                connected: ['bg-emerald-100', 'text-emerald-700'],
-                offline: ['bg-orange-100', 'text-orange-700'],
-                error: ['bg-red-100', 'text-red-700']
+            const styles = {
+                connecting: 'bg-amber-100 text-amber-700',
+                connected: 'bg-emerald-100 text-emerald-700',
+                offline: 'bg-rose-100 text-rose-700',
+                error: 'bg-red-100 text-red-700'
             };
-            const cls = states[state] || states.connecting;
             statusBadge.textContent = message;
-            statusBadge.className = `text-xs px-3 py-1 rounded-full ${cls[0]} ${cls[1]} font-medium hidden sm:inline-block`;
-        }
-
-        function startFirestoreConnectionMonitor() {
-            updateConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
-            if (firestoreStatusTimer) clearInterval(firestoreStatusTimer);
-
-            const check = async () => {
-                try {
-                    // อ่านข้อมูลจริงแบบ server-side เพื่อยืนยันว่า Firestore ใช้งานได้
-                    await db.collection('deliveries').limit(1).get({ source: 'server' });
-                    firestoreConnectionReady = true;
-                    updateConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
-                } catch (error) {
-                    firestoreConnectionReady = false;
-                    const code = error && error.code ? String(error.code) : '';
-                    if (code === 'unavailable' || !navigator.onLine) {
-                        updateConnectionStatus('offline', 'Server ไม่พร้อมชั่วคราว');
-                    } else {
-                        updateConnectionStatus('error', 'เชื่อมต่อ Server ไม่สำเร็จ');
-                    }
-                    console.warn('Firestore connection check:', error);
+            statusBadge.className = `text-xs px-3 py-1 rounded-full font-medium hidden sm:inline-block ${styles[state] || styles.connecting}`;
+            if (showErrorToast) {
+                const now = Date.now();
+                if (now - lastConnectionErrorToast > 8000) {
+                    lastConnectionErrorToast = now;
+                    showToast(message, 'error');
                 }
-            };
-
-            check();
-            firestoreStatusTimer = setInterval(check, 30000);
-
-            window.addEventListener('online', check, { passive: true });
-            window.addEventListener('offline', () => {
-                firestoreConnectionReady = false;
-                updateConnectionStatus('offline', 'ไม่มีอินเทอร์เน็ต');
-            }, { passive: true });
+            }
         }
 
-        startFirestoreConnectionMonitor();
+        setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
+
+        window.addEventListener('online', () => {
+            setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
+        });
+        window.addEventListener('offline', () => {
+            setConnectionStatus('offline', 'ออฟไลน์ — รอการเชื่อมต่อ', true);
+        });
 
         let pendingItems = []; 
         let allDeliveries = [];
@@ -975,32 +967,42 @@ function getCompanyPriceHistory(companyName, productName) {
             const descEl = document.getElementById('modal-desc');
             const btnConfirm = document.getElementById('modal-confirm');
             const btnCancel = document.getElementById('modal-cancel');
+            if (!modal || !modalContent || !btnConfirm || !btnCancel) return;
 
-            titleEl.textContent = title;
-            descEl.textContent = desc;
+            // บังคับให้อยู่ชั้นบนสุดทุกครั้ง แม้เปิดจาก Modal อื่น
+            modal.style.zIndex = '10000';
+            titleEl.textContent = title || 'ยืนยันการทำรายการ';
+            descEl.textContent = desc || 'คุณต้องการดำเนินการนี้ใช่หรือไม่?';
 
             modal.classList.remove('hidden');
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 modal.classList.remove('opacity-0');
                 modalContent.classList.remove('scale-95');
-            }, 10);
+            });
+
+            const oldConfirm = btnConfirm.cloneNode(true);
+            const oldCancel = btnCancel.cloneNode(true);
+            btnConfirm.replaceWith(oldConfirm);
+            btnCancel.replaceWith(oldCancel);
 
             const closeModal = () => {
                 modal.classList.add('opacity-0');
                 modalContent.classList.add('scale-95');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
-                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
-                btnCancel.replaceWith(btnCancel.cloneNode(true));
+                setTimeout(() => modal.classList.add('hidden'), 220);
             };
 
-            document.getElementById('modal-confirm').addEventListener('click', () => {
+            oldCancel.addEventListener('click', closeModal, { once: true });
+            oldConfirm.addEventListener('click', async () => {
+                oldConfirm.disabled = true;
+                oldConfirm.textContent = 'กำลังดำเนินการ...';
                 closeModal();
-                onConfirm();
+                try {
+                    await Promise.resolve(typeof onConfirm === 'function' ? onConfirm() : undefined);
+                } catch (err) {
+                    console.error('Confirmation action error:', err);
+                    showToast('ไม่สามารถดำเนินการได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                }
             }, { once: true });
-
-            document.getElementById('modal-cancel').addEventListener('click', closeModal, { once: true });
         }
 
         const customerModal = document.getElementById('customer-modal');
@@ -1801,7 +1803,7 @@ function getCompanyPriceHistory(companyName, productName) {
             );
         };
 
-        db.collection('products').orderBy('name').onSnapshot(snapshot => {
+        db.collection('products').orderBy('name').onSnapshot({ includeMetadataChanges: true }, snapshot => {
             allProducts = [];
             snapshot.forEach(doc => {
                 allProducts.push({ id: doc.id, ...doc.data() });
@@ -1809,10 +1811,17 @@ function getCompanyPriceHistory(companyName, productName) {
             if (!stockModal.classList.contains('hidden')) {
                 renderStockTable(stockSearchBox.value);
             }
+            if (!snapshot.metadata.fromCache) {
+                firebaseServerConfirmed = true;
+                setConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
+            }
+        }, error => {
+            console.error('Firestore products snapshot error:', error);
+            setConnectionStatus('error', 'เชื่อมต่อ Server ไม่ได้: โหลดสต็อกสินค้าไม่สำเร็จ', true);
         });
 
         // โหลดราคาสินค้าเฉพาะบริษัท แยกจาก products มาตรฐาน
-        db.collection('companyProducts').onSnapshot(snapshot => {
+        db.collection('companyProducts').onSnapshot({ includeMetadataChanges: true }, snapshot => {
             allCompanyProducts = [];
             snapshot.forEach(doc => {
                 allCompanyProducts.push({ id: doc.id, ...doc.data() });
@@ -1826,6 +1835,9 @@ function getCompanyPriceHistory(companyName, productName) {
                     renderCompanyProductCatalog(raw, document.getElementById('company-specific-product-search')?.value || '');
                 }
             }
+        }, error => {
+            console.error('Firestore companyProducts snapshot error:', error);
+            setConnectionStatus('error', 'เชื่อมต่อ Server ไม่ได้: โหลดราคาสินค้าบริษัทไม่สำเร็จ', true);
         });
 
         const itemInput = document.getElementById('item-input');
@@ -2402,18 +2414,30 @@ document.getElementById('item-input').addEventListener('blur', function() {
             }
         });
 
-        db.collection('deliveries').onSnapshot(snapshot => {
+        db.collection('deliveries').onSnapshot({ includeMetadataChanges: true }, snapshot => {
             allDeliveries = [];
             snapshot.forEach(doc => {
-                const data = doc.data();
-                let itemsList = data.subItems || [];
+                const data = doc.data() || {};
+                const itemsList = Array.isArray(data.subItems) ? data.subItems : [];
                 allDeliveries.push({ id: doc.id, ...data, subItems: itemsList });
             });
             applyFilterAndSearch();
+
+            // ยืนยันสถานะจาก Firestore จริง: cache อย่างเดียวจะไม่แสดงว่าเชื่อมต่อ Server แล้ว
+            if (!snapshot.metadata.fromCache) {
+                firebaseServerConfirmed = true;
+                setConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
+            } else if (!firebaseServerConfirmed) {
+                setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
+            }
         }, error => {
-            console.error(error);
-            document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm border border-red-100">เกิดข้อผิดพลาดในการโหลดข้อมูล กรุณาตรวจสอบสิทธิ์ Firebase Security Rules</div>`;
-            showToast('ไม่สามารถเชื่อมต่อฐานข้อมูลได้', 'error');
+            console.error('Firestore deliveries snapshot error:', error);
+            firebaseServerConfirmed = false;
+            const message = error && error.code === 'permission-denied'
+                ? 'เชื่อมต่อ Server ไม่ได้: ไม่มีสิทธิ์เข้าถึงข้อมูล'
+                : 'เชื่อมต่อ Server ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตและ Firebase';
+            setConnectionStatus('error', message, true);
+            document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm border border-red-100">${escapeHTML(message)}</div>`;
         });
 
         const clearItemBtn = document.getElementById('clear-item-btn');
@@ -3415,7 +3439,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             };
                         }
 
-                        renderCurrentData();
+                        applyFilterAndSearch();
                         showToast(`✓ ส่งทั้งหมด ${pendingItems.length} รายการของ "${customerName}" สำเร็จ`, 'success');
                     } catch (err) {
                         console.error('markAllSubItemsCompleted:', err);
@@ -3838,13 +3862,17 @@ function checkTodayReminders() {
     }).join('');
 }
 
-db.collection('reminders').onSnapshot(snapshot => {
+db.collection('reminders').onSnapshot({ includeMetadataChanges: true }, snapshot => {
     allReminders = [];
     snapshot.forEach(doc => allReminders.push({ id: doc.id, ...doc.data() }));
     allReminders.sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || ''), 'th'));
     renderReminders();
     checkTodayReminders();
-}, error => {
+    if (!snapshot.metadata.fromCache) {
+        firebaseServerConfirmed = true;
+        setConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
+    }
+    }, error => {
     console.error('Error loading reminders:', error);
     showToast('ไม่สามารถโหลดข้อมูลการแจ้งเตือนได้', 'error');
 });
