@@ -153,6 +153,34 @@
             transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
             overflow: hidden;
         }
+
+        /* ==================== LOGIN LOCK ==================== */
+        #login-lock-screen {
+            position: fixed;
+            inset: 0;
+            z-index: 50000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.72);
+            backdrop-filter: blur(8px);
+        }
+        #login-lock-screen.hidden { display: none !important; }
+        #login-card {
+            width: min(420px, 94vw);
+            background: #fff;
+            border: 1px solid rgba(226,232,240,.9);
+            border-radius: 28px;
+            box-shadow: 0 25px 70px rgba(15,23,42,.28);
+            padding: 28px;
+        }
+        #login-user-badge {
+            display: none;
+        }
+        @media (max-width: 640px) {
+            #login-card { padding: 22px; border-radius: 24px; }
+        }
 		/* บังคับซ่อน Scrollbar ทั้งหน้าจอ */
         html, body {
             overflow: hidden !important;
@@ -164,9 +192,46 @@
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
+
+    <!-- ==================== LOGIN LOCK SCREEN ==================== -->
+    <div id="login-lock-screen">
+        <div id="login-card">
+            <div class="text-center mb-6">
+                <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-600 to-indigo-600 text-white flex items-center justify-center text-3xl shadow-lg mb-4">📦</div>
+                <h2 class="text-xl font-extrabold text-slate-800">Delivery Tracking & CRM</h2>
+                <p class="text-xs text-slate-400 mt-1">กรุณาเข้าสู่ระบบก่อนใช้งาน</p>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">📧 อีเมล</label>
+                    <input id="login-email" type="email" autocomplete="username" required
+                        placeholder="กรอกอีเมลผู้ใช้งาน"
+                        class="w-full px-4 py-3 text-sm border border-sky-200 bg-sky-50/30 rounded-xl outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">🔒 รหัสผ่าน</label>
+                    <input id="login-password" type="password" autocomplete="current-password" required
+                        placeholder="กรอกรหัสผ่าน"
+                        class="w-full px-4 py-3 text-sm border border-sky-200 bg-sky-50/30 rounded-xl outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div id="login-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2.5"></div>
+                <button type="submit" id="login-submit-btn"
+                    class="w-full py-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:opacity-90 text-white rounded-xl text-sm font-bold shadow-md transition">
+                    🔐 เข้าสู่ระบบ
+                </button>
+            </form>
+
+            <div class="mt-5 pt-4 border-t border-slate-100 text-center text-[10px] text-slate-400">
+                ระบบล็อคอินผ่าน Firebase Authentication
+            </div>
+        </div>
+    </div>
+
 
    <header class="bg-white/85 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm flex-shrink-0">
         <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center">
@@ -196,6 +261,10 @@
     </span>
 </button>
                 <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium hidden sm:inline-block">Connecting to Firebase...</span>
+                <span id="login-user-badge" class="text-[11px] px-2.5 py-1.5 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 font-semibold max-w-[180px] truncate"></span>
+                <button type="button" id="logout-btn"
+                    class="hidden px-2.5 py-1.5 text-[11px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-100 rounded-xl transition"
+                    title="ออกจากระบบ">ออกจากระบบ</button>
             </div>
         </div>
     </header>
@@ -897,6 +966,94 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const loginLockScreen = document.getElementById('login-lock-screen');
+        const loginForm = document.getElementById('login-form');
+        const loginEmailInput = document.getElementById('login-email');
+        const loginPasswordInput = document.getElementById('login-password');
+        const loginError = document.getElementById('login-error');
+        const loginSubmitBtn = document.getElementById('login-submit-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const loginUserBadge = document.getElementById('login-user-badge');
+
+        function showLoginError(message) {
+            if (!loginError) return;
+            loginError.textContent = message;
+            loginError.classList.remove('hidden');
+        }
+
+        function setLoginLocked(locked) {
+            if (!loginLockScreen) return;
+            loginLockScreen.classList.toggle('hidden', !locked);
+            document.body.classList.toggle('login-locked', locked);
+        }
+
+        if (loginForm) {
+            loginForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                if (!loginSubmitBtn) return;
+
+                const email = loginEmailInput.value.trim();
+                const password = loginPasswordInput.value;
+
+                if (!email || !password) {
+                    showLoginError('กรุณากรอกอีเมลและรหัสผ่าน');
+                    return;
+                }
+
+                loginError?.classList.add('hidden');
+                loginSubmitBtn.disabled = true;
+                loginSubmitBtn.textContent = 'กำลังเข้าสู่ระบบ...';
+
+                try {
+                    await auth.signInWithEmailAndPassword(email, password);
+                } catch (error) {
+                    console.error('Firebase login error:', error);
+                    const messages = {
+                        'auth/invalid-credential': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
+                        'auth/invalid-email': 'รูปแบบอีเมลไม่ถูกต้อง',
+                        'auth/user-disabled': 'บัญชีผู้ใช้นี้ถูกปิดการใช้งาน',
+                        'auth/too-many-requests': 'มีการลองเข้าสู่ระบบหลายครั้ง กรุณารอสักครู่แล้วลองใหม่'
+                    };
+                    showLoginError(messages[error.code] || 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบ Firebase Authentication');
+                } finally {
+                    loginSubmitBtn.disabled = false;
+                    loginSubmitBtn.textContent = '🔐 เข้าสู่ระบบ';
+                }
+            });
+        }
+
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                try {
+                    await auth.signOut();
+                } catch (error) {
+                    console.error('Firebase logout error:', error);
+                    showToast('ไม่สามารถออกจากระบบได้', 'error');
+                }
+            });
+        }
+
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                setLoginLocked(false);
+                if (loginUserBadge) {
+                    loginUserBadge.textContent = `👤 ${user.email || 'ผู้ใช้งาน'}`;
+                    loginUserBadge.style.display = 'inline-flex';
+                }
+                logoutBtn?.classList.remove('hidden');
+                loginError?.classList.add('hidden');
+                if (loginPasswordInput) loginPasswordInput.value = '';
+            } else {
+                setLoginLocked(true);
+                if (loginUserBadge) {
+                    loginUserBadge.textContent = '';
+                    loginUserBadge.style.display = 'none';
+                }
+                logoutBtn?.classList.add('hidden');
+            }
+        });
 
         const statusBadge = document.getElementById('connection-status');
         let firebaseConnectionState = 'connecting';
@@ -1126,7 +1283,12 @@ function normalizeCompanyProductKey(value) {
 }
 
 function normalizeCompanyProductName(value) {
-    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    return String(value || '')
+        .normalize('NFKC')
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
 }
 
 function getCompanySpecificProduct(companyName, productName) {
@@ -1200,22 +1362,37 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
         return false;
     }
 
-    const companyKey = normalizeCompanyProductKey(cleanCompany);
-    const normalizedName = normalizeCompanyProductName(cleanName);
-
-    // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน = รายการเดิม
-    // ไม่ใช้ SKU/Barcode เพราะระบบนี้ระบุสินค้าด้วยชื่อสินค้าเป็นหลัก
-    const duplicate = allCompanyProducts.find(p =>
-        p.id !== editId &&
-        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
-        normalizeCompanyProductName(p.name) === normalizedName
-    );
-    if (duplicate) {
-        showToast(`⚠️ สินค้า "${cleanName}" มีอยู่แล้วในบริษัทนี้`, 'warning');
-        return false;
-    }
-
     try {
+        const companyKey = normalizeCompanyProductKey(cleanCompany);
+        const normalizedName = normalizeCompanyProductName(cleanName);
+
+        // ตรวจซ้ำจากข้อมูลในเครื่องก่อน เพื่อแจ้งเตือนได้ทันที
+        const localDuplicate = allCompanyProducts.find(p =>
+            p.id !== editId &&
+            normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
+            normalizeCompanyProductName(p.name) === normalizedName
+        );
+        if (localDuplicate) {
+            showToast(`สินค้านี้มีอยู่แล้วสำหรับบริษัท "${cleanCompany}"`, 'info');
+            return false;
+        }
+
+        // ตรวจซ้ำจาก Firestore อีกครั้ง ป้องกันกรณีข้อมูลหน้าจอยังไม่อัปเดต
+        const companySnapshot = await db.collection('companyProducts')
+            .where('companyKey', '==', companyKey)
+            .get();
+
+        const serverDuplicate = companySnapshot.docs.find(doc => {
+            if (editId && doc.id === editId) return false;
+            const data = doc.data() || {};
+            return normalizeCompanyProductName(data.name) === normalizedName;
+        });
+
+        if (serverDuplicate) {
+            showToast(`สินค้านี้มีอยู่แล้วสำหรับบริษัท "${cleanCompany}"`, 'info');
+            return false;
+        }
+
         const stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice);
 
         if (editId) {
@@ -1239,11 +1416,6 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
             return true;
         }
 
-        const existing = allCompanyProducts.find(p =>
-            normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
-            normalizeCompanyProductName(p.name) === normalizedName
-        );
-
         const payload = {
             companyKey,
             companyName: cleanCompany,
@@ -1254,14 +1426,10 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        if (existing && existing.id) {
-            await db.collection('companyProducts').doc(existing.id).update(payload);
-        } else {
-            await db.collection('companyProducts').add({
-                ...payload,
-                createdAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-        }
+        await db.collection('companyProducts').add({
+            ...payload,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
 
         showToast(`บันทึก "${cleanName}" ในราคาของบริษัท "${cleanCompany}" แล้ว`, 'success');
         return true;
@@ -1339,14 +1507,6 @@ async function deleteCompanyProduct(id, name, companyName) {
     );
 }
 
-function getCompanySpecificProductCount(companyName) {
-    const companyKey = normalizeCompanyProductKey(companyName);
-    if (!companyKey) return 0;
-    return allCompanyProducts.filter(p =>
-        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey
-    ).length;
-}
-
 function renderCompanyProductCatalog(companyName, filterText = '') {
     const container = document.getElementById('company-specific-products-container');
     const count = document.getElementById('company-specific-product-count');
@@ -1355,15 +1515,18 @@ function renderCompanyProductCatalog(companyName, filterText = '') {
     const companyKey = normalizeCompanyProductKey(companyName);
     const keyword = String(filterText || '').trim().toLowerCase();
 
-    // นับสินค้าทั้งหมดของบริษัท ไม่เปลี่ยนตามช่องค้นหา
     const companyProducts = allCompanyProducts
-        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey);
-
-    const products = companyProducts
-        .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword))
+        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey)
         .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
 
-    if (count) count.textContent = `${companyProducts.length} รายการ`;
+    const products = companyProducts
+        .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
+
+    if (count) {
+        count.textContent = keyword
+            ? `${products.length} / ${companyProducts.length} รายการ`
+            : `${companyProducts.length} รายการ`;
+    }
 
     if (!products.length) {
         container.innerHTML = `
@@ -1666,30 +1829,30 @@ function getCompanyPriceHistory(companyName, productName) {
         function renderCustomerList(filterText = '') {
             const keyword = filterText.toLowerCase().trim();
 
+            const customerCountLabel = document.getElementById('customer-count-label');
+
             const filtered = allDeliveries.filter(item => 
-                (item.customerName && String(item.customerName).toLowerCase().includes(keyword)) ||
-                (item.companyName && String(item.companyName).toLowerCase().includes(keyword)) ||
-                (item.phone && String(item.phone).toLowerCase().includes(keyword))
+                (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
+                (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
+                (item.phone && item.phone.toLowerCase().includes(keyword))
             );
 
-            // ตัวเลขด้านบนต้องเปลี่ยนตามผลค้นหา และนับเป็น "รายชื่อลูกค้าไม่ซ้ำ"
-            const uniqueFilteredCustomerNames = new Set(
+            const filteredCustomerNames = new Set(
                 filtered
-                    .map(item => String(item.customerName || '').trim())
+                    .map(item => String(item.customerName || '').trim().toLowerCase())
                     .filter(Boolean)
-                    .map(name => name.toLowerCase())
             );
-            const customerCountLabel = document.getElementById('customer-count-label');
+
             if (customerCountLabel) {
                 customerCountLabel.textContent = keyword
-                    ? `(พบ ${uniqueFilteredCustomerNames.size.toLocaleString()} รายชื่อ)`
-                    : `(${uniqueFilteredCustomerNames.size.toLocaleString()} รายชื่อ)`;
+                    ? `(พบ ${filteredCustomerNames.size.toLocaleString()} รายชื่อ)`
+                    : `(${filteredCustomerNames.size.toLocaleString()} รายชื่อ)`;
             }
 
             let htmlContent = '';
 
             if (keyword.length > 0) {
-                const exactMatch = allDeliveries.some(item => String(item.customerName || '').toLowerCase() === keyword);
+                const exactMatch = allDeliveries.some(item => item.customerName.toLowerCase() === keyword);
                 if (!exactMatch) {
                     htmlContent += `
                         <div onclick="addNewCustomerFromModal('${escapeHTML(filterText).replace(/'/g, "\\'")}')" 
@@ -1867,27 +2030,19 @@ function getCompanyPriceHistory(companyName, productName) {
                 const profit = p.price - cost;
                 const profitMargin = p.price > 0 ? ((profit / p.price) * 100).toFixed(1) : 0;
 
-                // แสดงว่ารายการสินค้านี้ถูกผูก/เพิ่มมาจากบริษัทใดบ้าง
-                const linkedCompanies = [...new Map(
+                const relatedCompanies = Array.from(new Set(
                     allCompanyProducts
-                        .filter(cp => {
-                            const sameStockId = cp.stockProductId && cp.stockProductId === p.id;
-                            const sameName = normalizeCompanyProductName(cp.name) === normalizeCompanyProductName(p.name);
-                            return sameStockId || sameName;
-                        })
-                        .map(cp => {
-                            const name = String(cp.companyName || '').trim();
-                            return [normalizeCompanyProductKey(name), name];
-                        })
-                        .filter(([key, name]) => key && name)
-                ).values()];
+                        .filter(cp => normalizeCompanyProductName(cp.name) === normalizeCompanyProductName(p.name))
+                        .map(cp => String(cp.companyName || cp.companyKey || '').trim())
+                        .filter(Boolean)
+                ));
 
-                const companySourceHtml = linkedCompanies.length
-                    ? `<div class="text-[10px] text-indigo-600 mt-1.5 flex items-start gap-1.5 flex-wrap">
-                            <span class="font-bold flex-shrink-0">🏢 บริษัท:</span>
-                            <span class="font-semibold">${linkedCompanies.map(escapeHTML).join(' • ')}</span>
+                const companyBadge = relatedCompanies.length
+                    ? `<div class="mt-1.5 flex items-start gap-1.5 text-[10px] text-indigo-700 bg-indigo-50 border border-indigo-100 rounded-lg px-2 py-1">
+                            <span class="flex-shrink-0">🏢</span>
+                            <span class="font-semibold">บริษัท: ${relatedCompanies.map(c => escapeHTML(c)).join(' • ')}</span>
                        </div>`
-                    : `<div class="text-[10px] text-slate-400 mt-1.5">🏢 ยังไม่มีการกำหนดราคาประจำบริษัท</div>`;
+                    : `<div class="mt-1.5 text-[10px] text-slate-400">🏢 ยังไม่มีราคาประจำบริษัท</div>`;
 
                 return `
                     <div class="flex items-center justify-between p-3 bg-white border border-slate-100 hover:border-sky-200 rounded-2xl shadow-2xs transition gap-2">
@@ -1898,7 +2053,7 @@ function getCompanyPriceHistory(companyName, productName) {
                                 <span>ราคาขาย: <strong class="text-sky-600">${Number(p.price).toLocaleString()} ฿</strong></span>
                                 <span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-semibold">กำไร: +${Number(profit).toLocaleString()} ฿ (${profitMargin}%)</span>
                             </div>
-                            ${companySourceHtml}
+                            ${companyBadge}
                         </div>
                         <div class="flex items-center gap-1.5 flex-shrink-0">
                             <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${p.price})" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
@@ -1969,9 +2124,10 @@ function getCompanyPriceHistory(companyName, productName) {
                 }
             }
 
-            // อัปเดตตัวเลขบนปุ่ม "📦 ดูสินค้าทั้งหมด" ของแต่ละบริษัททันที
-            if (typeof applyFilterAndSearch === 'function') {
-                applyFilterAndSearch();
+            // อัปเดตจำนวนสินค้าในปุ่ม 📦 ดูสินค้าทั้งหมด และข้อมูลบริษัทใน Manage Stock ทันที
+            applyFilterAndSearch();
+            if (!stockModal.classList.contains('hidden')) {
+                renderStockTable(stockSearchBox.value);
             }
         }, error => {
             console.error('Firestore companyProducts snapshot error:', error);
@@ -2697,7 +2853,6 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 const totalCount = item.subItems.length;
                 const pendingCount = item.subItems.filter(s => s.status === 'pending').length;
                 const completedCount = item.subItems.filter(s => s.status === 'completed').length;
-                const companyProductCount = getCompanySpecificProductCount(item.companyName);
                 
                 return `
                     <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden transition hover:shadow-md hover:border-indigo-200">
@@ -2723,7 +2878,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                 <button onclick="showCompanyAllHistory('${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" 
                                     class="text-[11px] font-medium text-sky-600 hover:text-sky-800 transition px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200/60 flex items-center gap-1"
                                     title="ดูประวัติสินค้าทั้งหมดที่บริษัทนี้เคยซื้อ">
-                                    📦 ดูสินค้าทั้งหมด <span class="ml-0.5 px-1.5 py-0.5 rounded-full bg-white text-sky-700 border border-sky-200 font-bold">${companyProductCount}</span>
+                                    📦 ดูสินค้าทั้งหมด
+                                    <span class="px-1.5 py-0.5 rounded-full bg-white text-sky-700 border border-sky-100 font-bold">${allCompanyProducts.filter(cp => normalizeCompanyProductKey(cp.companyKey || cp.companyName) === normalizeCompanyProductKey(item.companyName || '')).length}</span>
                                 </button>
                                 <button onclick="openDocumentModal('${item.id}')"
                                     class="text-[11px] font-bold text-emerald-700 hover:text-white transition px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 border border-emerald-200/60 flex items-center gap-1"
