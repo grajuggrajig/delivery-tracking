@@ -161,6 +161,9 @@
             padding: 0;
         }
 		
+
+        #company-shared-catalog-modal { z-index: 240 !important; }
+        #company-shared-catalog-modal > div { min-width: 0; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -465,6 +468,50 @@
         </div>
     </div>
 </div>
+
+
+    <!-- Modal: รับรายการสินค้าจากบริษัทอื่น -->
+    <div id="company-shared-catalog-modal"
+        class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[240] hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden border border-slate-100 transform scale-95 transition-transform duration-200">
+            <div class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-600 text-white px-5 py-4 flex items-center justify-between">
+                <div>
+                    <div class="text-sm font-bold">🔗 รับรายการสินค้าจากบริษัทอื่น</div>
+                    <div id="company-shared-catalog-subtitle" class="text-[11px] text-white/80 mt-0.5">
+                        เลือกบริษัทต้นทาง แล้วนำสินค้ามาใช้ในบริษัทปัจจุบัน
+                    </div>
+                </div>
+                <button type="button" id="close-company-shared-catalog-modal"
+                    class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg">✕</button>
+            </div>
+
+            <div class="p-4 border-b border-slate-100 bg-slate-50/70 space-y-3">
+                <select id="company-shared-source-select"
+                    class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-400">
+                    <option value="">เลือกบริษัทต้นทาง...</option>
+                </select>
+                <input id="company-shared-search" type="text"
+                    placeholder="🔍 ค้นหาสินค้าของบริษัทต้นทาง..."
+                    class="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-400">
+            </div>
+
+            <div id="company-shared-catalog-list"
+                class="p-4 space-y-2 overflow-y-auto no-scrollbar flex-1">
+                <div class="text-center py-8 text-xs text-slate-400">เลือกบริษัทต้นทางก่อน</div>
+            </div>
+
+            <div class="px-4 py-3 border-t border-slate-100 bg-white flex justify-end gap-2">
+                <button type="button" id="cancel-company-shared-catalog"
+                    class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">
+                    ยกเลิก
+                </button>
+                <button type="button" id="import-company-shared-catalog"
+                    class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm">
+                    ✓ รับรายการที่เลือก
+                </button>
+            </div>
+        </div>
+    </div>
 
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[10000] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="modal-content">
@@ -1185,6 +1232,192 @@ async function ensureProductInStandardStock(name, cost, price) {
     };
 }
 
+
+/* ==================== SHARED COMPANY PRODUCT CATALOG ====================
+   บริษัทปลายทางสามารถ "รับรายการ" จากบริษัทต้นทางได้
+   - สินค้าถูกคัดลอกเป็นรายการของบริษัทปลายทาง (แก้ราคาได้อิสระ)
+   - ถ้าต้องการให้ราคาเท่ากัน สามารถเลือก "ใช้ราคาเดียวกับบริษัทต้นทาง"
+   - ไม่ลบ/แก้ข้อมูลบริษัทต้นทาง
+   - ยังเพิ่มสินค้าใหม่ให้บริษัทปลายทางได้ตามเดิม
+========================================================================= */
+(function initSharedCompanyCatalog() {
+    const getEl = id => document.getElementById(id);
+
+    function sharedCompanyNames(targetCompany) {
+        const names = new Set();
+        (allCompanyProducts || []).forEach(p => {
+            const n = String(p.companyName || p.companyKey || '').trim();
+            if (n && normalizeCompanyProductKey(n) !== normalizeCompanyProductKey(targetCompany || '')) names.add(n);
+        });
+        return Array.from(names).sort((a,b) => a.localeCompare(b, 'th'));
+    }
+
+    function sourceProducts(sourceCompany, keyword = '') {
+        const key = normalizeCompanyProductKey(sourceCompany || '');
+        const q = normalizeCompanyProductName(keyword || '');
+        return (allCompanyProducts || [])
+            .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === key)
+            .filter(p => !q || normalizeCompanyProductName(p.name).includes(q))
+            .sort((a,b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+    }
+
+    function renderSharedList() {
+        const list = getEl('company-shared-catalog-list');
+        const source = getEl('company-shared-source-select')?.value || '';
+        const keyword = getEl('company-shared-search')?.value || '';
+        if (!list) return;
+
+        if (!source) {
+            list.innerHTML = '<div class="text-center py-8 text-xs text-slate-400">เลือกบริษัทต้นทางก่อน</div>';
+            return;
+        }
+
+        const products = sourceProducts(source, keyword);
+        if (!products.length) {
+            list.innerHTML = '<div class="text-center py-8 text-xs text-slate-400">ไม่พบรายการสินค้า</div>';
+            return;
+        }
+
+        list.innerHTML = products.map(p => `
+            <label class="flex items-center gap-3 p-3 bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl cursor-pointer transition">
+                <input type="checkbox" class="shared-product-check w-4 h-4 accent-indigo-600"
+                    data-id="${escapeHTML(p.id)}">
+                <div class="min-w-0 flex-1">
+                    <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name || '')}</div>
+                    <div class="text-[10px] text-slate-400 mt-0.5">
+                        ต้นทุน ${money(Number(p.cost) || 0)} ฿ · ราคาบริษัทต้นทาง ${money(Number(p.price) || 0)} ฿
+                    </div>
+                </div>
+            </label>`).join('');
+    }
+
+    function openSharedModal(companyName) {
+        const modal = getEl('company-shared-catalog-modal');
+        const select = getEl('company-shared-source-select');
+        const subtitle = getEl('company-shared-catalog-subtitle');
+        if (!modal || !select) return;
+
+        select.innerHTML = '<option value="">เลือกบริษัทต้นทาง...</option>' +
+            sharedCompanyNames(companyName).map(n => `<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');
+
+        if (subtitle) subtitle.textContent = `บริษัทปลายทาง: ${companyName || '-'} · รายการที่รับมาจะเพิ่มเข้าในบริษัทนี้โดยไม่ลบต้นทาง`;
+
+        getEl('company-shared-search').value = '';
+        getEl('company-shared-catalog-list').innerHTML =
+            '<div class="text-center py-8 text-xs text-slate-400">เลือกบริษัทต้นทางก่อน</div>';
+
+        modal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0');
+            modal.querySelector(':scope > div')?.classList.remove('scale-95');
+        });
+    }
+
+    function closeSharedModal() {
+        const modal = getEl('company-shared-catalog-modal');
+        if (!modal) return;
+        modal.classList.add('opacity-0');
+        modal.querySelector(':scope > div')?.classList.add('scale-95');
+        setTimeout(() => modal.classList.add('hidden'), 180);
+    }
+
+    async function importSelected(companyName) {
+        const source = getEl('company-shared-source-select')?.value || '';
+        const checks = Array.from(document.querySelectorAll('.shared-product-check:checked'));
+        if (!source) return showToast('กรุณาเลือกบริษัทต้นทาง', 'warning');
+        if (!checks.length) return showToast('กรุณาเลือกรายการสินค้าที่ต้องการรับ', 'warning');
+
+        const targetKey = normalizeCompanyProductKey(companyName || '');
+        const sourceKey = normalizeCompanyProductKey(source);
+        if (!targetKey || targetKey === sourceKey) return showToast('บริษัทต้นทางและปลายทางต้องเป็นคนละบริษัท', 'warning');
+
+        let added = 0, skipped = 0;
+        const batch = db.batch();
+
+        for (const check of checks) {
+            const sourceProduct = (allCompanyProducts || []).find(p => p.id === check.dataset.id);
+            if (!sourceProduct) continue;
+
+            const normalizedName = normalizeCompanyProductName(sourceProduct.name);
+            const exists = (allCompanyProducts || []).find(p =>
+                normalizeCompanyProductKey(p.companyKey || p.companyName) === targetKey &&
+                normalizeCompanyProductName(p.name) === normalizedName
+            );
+
+            if (exists) {
+                skipped++;
+                continue;
+            }
+
+            const stockProduct = await ensureProductInStandardStock(
+                sourceProduct.name,
+                Number(sourceProduct.cost) || 0,
+                Number(sourceProduct.price) || 0
+            );
+
+            const ref = db.collection('companyProducts').doc();
+            batch.set(ref, {
+                companyKey: targetKey,
+                companyName: String(companyName).trim(),
+                name: String(sourceProduct.name || '').trim(),
+                cost: Number(sourceProduct.cost) || 0,
+                price: Number(sourceProduct.price) || 0,
+                stockProductId: (stockProduct && stockProduct.id) || sourceProduct.stockProductId || '',
+                sharedFromCompanyKey: sourceKey,
+                sharedFromCompanyName: source,
+                sharedFromProductId: sourceProduct.id || '',
+                sharedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            added++;
+        }
+
+        if (!added) {
+            closeSharedModal();
+            return showToast(`ไม่มีรายการใหม่ที่ต้องเพิ่ม (ซ้ำ ${skipped} รายการ)`, 'info');
+        }
+
+        await batch.commit();
+        closeSharedModal();
+        showToast(`รับสินค้า ${added} รายการจาก "${source}" สำเร็จ${skipped ? ` · ข้ามรายการซ้ำ ${skipped}` : ''}`, 'success');
+
+        // รีเฟรชเฉพาะ catalog ของบริษัทปัจจุบัน
+        const search = getEl('company-specific-product-search')?.value || '';
+        if (typeof renderCompanyProductCatalog === 'function') {
+            renderCompanyProductCatalog(companyName, search);
+        }
+    }
+
+    // Public hook for the existing dynamically-created company history modal.
+    window.openSharedCompanyCatalog = openSharedModal;
+    window.closeSharedCompanyCatalog = closeSharedModal;
+    window.importSelectedSharedCompanyCatalog = importSelected;
+
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('#company-shared-catalog-btn');
+        if (btn) {
+            const companyInput = getEl('company-name');
+            const companyName = String(companyInput?.value || '').trim();
+            if (!companyName) return showToast('กรุณาเลือกหรือกรอกชื่อบริษัทปลายทางก่อน', 'warning');
+            openSharedModal(companyName);
+        }
+    });
+
+    getEl('company-shared-source-select')?.addEventListener('change', renderSharedList);
+    getEl('company-shared-search')?.addEventListener('input', renderSharedList);
+    getEl('close-company-shared-catalog-modal')?.addEventListener('click', closeSharedModal);
+    getEl('cancel-company-shared-catalog')?.addEventListener('click', closeSharedModal);
+    getEl('import-company-shared-catalog')?.addEventListener('click', () => {
+        const companyName = String(getEl('company-name')?.value || '').trim();
+        importSelected(companyName).catch(err => {
+            console.error('importSelectedSharedCompanyCatalog:', err);
+            showToast('ไม่สามารถรับรายการสินค้าได้ กรุณาลองใหม่อีกครั้ง', 'error');
+        });
+    });
+})();
+
+
 async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
     const cleanCompany = String(companyName || '').trim();
     const cleanName = String(name || '').trim();
@@ -1430,6 +1663,10 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                             </div>
                         </div>
                         <span id="company-specific-product-count" class="text-[10px] px-2.5 py-1 rounded-lg bg-white text-sky-700 border border-sky-100 font-bold">0 รายการ</span>
+                        <button type="button" id="company-shared-catalog-btn"
+                            class="text-[10px] px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold hover:bg-indigo-100 transition">
+                            🔗 รับสินค้าจากบริษัทอื่น
+                        </button>
                     </div>
 
                     <div class="company-product-grid">
