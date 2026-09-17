@@ -336,10 +336,23 @@
         <span id="company-count-badge" class="text-xs px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-semibold border border-sky-100">
             พบรายชื่อบริษัท: 0 แห่ง
         </span>
-        <div class="flex gap-1 bg-slate-100 p-1 rounded-xl text-xs font-medium">
-            <button id="filter-all" onclick="setFilter('all')" class="px-3 py-1.5 rounded-lg bg-white text-slate-700 shadow-2xs transition">ทั้งหมด</button>
-            <button id="filter-pending" onclick="setFilter('pending')" class="px-3 py-1.5 rounded-lg text-slate-500 hover:text-slate-700 transition">ค้างส่ง</button>
-        </div>
+        <!-- ส่วนปุ่มฟิลเตอร์สถานะ (ทั้งหมด / ค้างส่ง) ดีไซน์ใหม่ ทันสมัยและโดดเด่น -->
+
+<div class="inline-flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200 text-[11px] font-medium">
+    <button id="filter-all" onclick="setFilter('all')" 
+        class="px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 cursor-pointer bg-white text-slate-800 shadow-xs font-semibold">
+        <span>📂</span>
+        <span>ทั้งหมด</span>
+        <span id="all-count-badge" class="px-1.5 py-0.2 text-[10px] rounded-full bg-slate-100 text-slate-600 font-bold">0</span>
+    </button>
+    
+    <button id="filter-pending" onclick="setFilter('pending')" 
+        class="px-3 py-1.5 rounded-lg transition-all duration-200 flex items-center gap-1 cursor-pointer text-slate-500 hover:text-slate-700">
+        <span>⏳</span>
+        <span>ค้างส่ง</span>
+        <span id="pending-count-badge" class="px-1.5 py-0.2 text-[10px] rounded-full bg-amber-100 text-amber-700 font-bold">0</span>
+    </button>
+</div>
     </div>
 </div>
 
