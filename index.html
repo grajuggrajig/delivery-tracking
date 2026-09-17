@@ -434,7 +434,7 @@
                 </div>
             </form>
             <div class="mb-3 flex items-center justify-between">
-                <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก... (จำนวนจะอัปเดตตามผลค้นหา)" class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
             </div>
             <div id="stock-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1">
                 <div class="text-center py-8 text-xs text-slate-400 italic">กำลังโหลดรายการสต็อกสินค้า...</div>
@@ -1849,12 +1849,20 @@ function getCompanyPriceHistory(companyName, productName) {
         });
 
         function renderStockTable(filterText = '') {
-            const keyword = filterText.toLowerCase().trim();
-            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
+            const keyword = String(filterText || '').toLowerCase().trim();
 
+            // ค้นหาเฉพาะรายการที่ตรงกับคำค้น และป้องกันกรณีชื่อสินค้าว่าง
+            const filtered = allProducts.filter(p => {
+                const productName = String(p?.name || '');
+                return productName.toLowerCase().includes(keyword);
+            });
+
+            // อัปเดตจำนวนให้ตรงกับ "รายการที่กำลังแสดงหลังค้นหา"
             const badge = document.getElementById('stock-count-badge');
             if (badge) {
-                badge.textContent = `${allProducts.length} รายการ`;
+                badge.textContent = keyword
+                    ? `พบ ${filtered.length} จาก ${allProducts.length} รายการ`
+                    : `${allProducts.length} รายการ`;
             }
 
             if (filtered.length === 0) {
