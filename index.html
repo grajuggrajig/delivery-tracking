@@ -1200,22 +1200,25 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
         return false;
     }
 
+    const companyKey = normalizeCompanyProductKey(cleanCompany);
+    const normalizedName = normalizeCompanyProductName(cleanName);
+
+    // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน = รายการเดิม
+    // ไม่ใช้ SKU/Barcode เพราะระบบนี้ระบุสินค้าด้วยชื่อสินค้าเป็นหลัก
+    const duplicate = allCompanyProducts.find(p =>
+        p.id !== editId &&
+        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
+        normalizeCompanyProductName(p.name) === normalizedName
+    );
+    if (duplicate) {
+        showToast(`⚠️ สินค้า "${cleanName}" มีอยู่แล้วในบริษัทนี้`, 'warning');
+        return false;
+    }
+
     try {
         const stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice);
-        const companyKey = normalizeCompanyProductKey(cleanCompany);
-        const normalizedName = normalizeCompanyProductName(cleanName);
 
         if (editId) {
-            const duplicate = allCompanyProducts.find(p =>
-                p.id !== editId &&
-                normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
-                normalizeCompanyProductName(p.name) === normalizedName
-            );
-            if (duplicate) {
-                showToast('มีสินค้านี้อยู่แล้วในราคาของบริษัทนี้', 'info');
-                return false;
-            }
-
             const oldProduct = allCompanyProducts.find(p => p.id === editId);
             if (!oldProduct) {
                 showToast('ไม่พบข้อมูลสินค้าที่ต้องการแก้ไข', 'info');
@@ -1336,6 +1339,14 @@ async function deleteCompanyProduct(id, name, companyName) {
     );
 }
 
+function getCompanySpecificProductCount(companyName) {
+    const companyKey = normalizeCompanyProductKey(companyName);
+    if (!companyKey) return 0;
+    return allCompanyProducts.filter(p =>
+        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey
+    ).length;
+}
+
 function renderCompanyProductCatalog(companyName, filterText = '') {
     const container = document.getElementById('company-specific-products-container');
     const count = document.getElementById('company-specific-product-count');
@@ -1344,12 +1355,15 @@ function renderCompanyProductCatalog(companyName, filterText = '') {
     const companyKey = normalizeCompanyProductKey(companyName);
     const keyword = String(filterText || '').trim().toLowerCase();
 
-    const products = allCompanyProducts
-        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey)
+    // นับสินค้าทั้งหมดของบริษัท ไม่เปลี่ยนตามช่องค้นหา
+    const companyProducts = allCompanyProducts
+        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey);
+
+    const products = companyProducts
         .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword))
         .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
 
-    if (count) count.textContent = `${products.length} รายการ`;
+    if (count) count.textContent = `${companyProducts.length} รายการ`;
 
     if (!products.length) {
         container.innerHTML = `
@@ -1652,27 +1666,30 @@ function getCompanyPriceHistory(companyName, productName) {
         function renderCustomerList(filterText = '') {
             const keyword = filterText.toLowerCase().trim();
 
-            const uniqueCustomerNames = new Set(
-                allDeliveries
+            const filtered = allDeliveries.filter(item => 
+                (item.customerName && String(item.customerName).toLowerCase().includes(keyword)) ||
+                (item.companyName && String(item.companyName).toLowerCase().includes(keyword)) ||
+                (item.phone && String(item.phone).toLowerCase().includes(keyword))
+            );
+
+            // ตัวเลขด้านบนต้องเปลี่ยนตามผลค้นหา และนับเป็น "รายชื่อลูกค้าไม่ซ้ำ"
+            const uniqueFilteredCustomerNames = new Set(
+                filtered
                     .map(item => String(item.customerName || '').trim())
                     .filter(Boolean)
                     .map(name => name.toLowerCase())
             );
             const customerCountLabel = document.getElementById('customer-count-label');
             if (customerCountLabel) {
-                customerCountLabel.textContent = `(${uniqueCustomerNames.size.toLocaleString()} รายชื่อ)`;
+                customerCountLabel.textContent = keyword
+                    ? `(พบ ${uniqueFilteredCustomerNames.size.toLocaleString()} รายชื่อ)`
+                    : `(${uniqueFilteredCustomerNames.size.toLocaleString()} รายชื่อ)`;
             }
-
-            const filtered = allDeliveries.filter(item => 
-                (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
-                (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
-                (item.phone && item.phone.toLowerCase().includes(keyword))
-            );
 
             let htmlContent = '';
 
             if (keyword.length > 0) {
-                const exactMatch = allDeliveries.some(item => item.customerName.toLowerCase() === keyword);
+                const exactMatch = allDeliveries.some(item => String(item.customerName || '').toLowerCase() === keyword);
                 if (!exactMatch) {
                     htmlContent += `
                         <div onclick="addNewCustomerFromModal('${escapeHTML(filterText).replace(/'/g, "\\'")}')" 
@@ -1850,15 +1867,38 @@ function getCompanyPriceHistory(companyName, productName) {
                 const profit = p.price - cost;
                 const profitMargin = p.price > 0 ? ((profit / p.price) * 100).toFixed(1) : 0;
 
+                // แสดงว่ารายการสินค้านี้ถูกผูก/เพิ่มมาจากบริษัทใดบ้าง
+                const linkedCompanies = [...new Map(
+                    allCompanyProducts
+                        .filter(cp => {
+                            const sameStockId = cp.stockProductId && cp.stockProductId === p.id;
+                            const sameName = normalizeCompanyProductName(cp.name) === normalizeCompanyProductName(p.name);
+                            return sameStockId || sameName;
+                        })
+                        .map(cp => {
+                            const name = String(cp.companyName || '').trim();
+                            return [normalizeCompanyProductKey(name), name];
+                        })
+                        .filter(([key, name]) => key && name)
+                ).values()];
+
+                const companySourceHtml = linkedCompanies.length
+                    ? `<div class="text-[10px] text-indigo-600 mt-1.5 flex items-start gap-1.5 flex-wrap">
+                            <span class="font-bold flex-shrink-0">🏢 บริษัท:</span>
+                            <span class="font-semibold">${linkedCompanies.map(escapeHTML).join(' • ')}</span>
+                       </div>`
+                    : `<div class="text-[10px] text-slate-400 mt-1.5">🏢 ยังไม่มีการกำหนดราคาประจำบริษัท</div>`;
+
                 return `
                     <div class="flex items-center justify-between p-3 bg-white border border-slate-100 hover:border-sky-200 rounded-2xl shadow-2xs transition gap-2">
-                        <div class="truncate">
+                        <div class="truncate min-w-0">
                             <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}</div>
                             <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5 flex-wrap">
                                 <span>ต้นทุน: <strong class="text-slate-700">${Number(cost).toLocaleString()} ฿</strong></span>
                                 <span>ราคาขาย: <strong class="text-sky-600">${Number(p.price).toLocaleString()} ฿</strong></span>
                                 <span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-semibold">กำไร: +${Number(profit).toLocaleString()} ฿ (${profitMargin}%)</span>
                             </div>
+                            ${companySourceHtml}
                         </div>
                         <div class="flex items-center gap-1.5 flex-shrink-0">
                             <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${p.price})" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
@@ -1927,6 +1967,11 @@ function getCompanyPriceHistory(companyName, productName) {
                     const raw = companyText.textContent.replace(/^🏢\s*/, '').replace(/\s*\(ผู้ติดต่อ:.*\)$/, '').trim();
                     renderCompanyProductCatalog(raw, document.getElementById('company-specific-product-search')?.value || '');
                 }
+            }
+
+            // อัปเดตตัวเลขบนปุ่ม "📦 ดูสินค้าทั้งหมด" ของแต่ละบริษัททันที
+            if (typeof applyFilterAndSearch === 'function') {
+                applyFilterAndSearch();
             }
         }, error => {
             console.error('Firestore companyProducts snapshot error:', error);
@@ -2652,6 +2697,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 const totalCount = item.subItems.length;
                 const pendingCount = item.subItems.filter(s => s.status === 'pending').length;
                 const completedCount = item.subItems.filter(s => s.status === 'completed').length;
+                const companyProductCount = getCompanySpecificProductCount(item.companyName);
                 
                 return `
                     <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden transition hover:shadow-md hover:border-indigo-200">
@@ -2677,7 +2723,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                 <button onclick="showCompanyAllHistory('${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" 
                                     class="text-[11px] font-medium text-sky-600 hover:text-sky-800 transition px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200/60 flex items-center gap-1"
                                     title="ดูประวัติสินค้าทั้งหมดที่บริษัทนี้เคยซื้อ">
-                                    📦 ดูสินค้าทั้งหมด
+                                    📦 ดูสินค้าทั้งหมด <span class="ml-0.5 px-1.5 py-0.5 rounded-full bg-white text-sky-700 border border-sky-200 font-bold">${companyProductCount}</span>
                                 </button>
                                 <button onclick="openDocumentModal('${item.id}')"
                                     class="text-[11px] font-bold text-emerald-700 hover:text-white transition px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 border border-emerald-200/60 flex items-center gap-1"
