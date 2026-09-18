@@ -161,9 +161,6 @@
             padding: 0;
         }
 		
-
-        #company-shared-catalog-modal { z-index: 240 !important; }
-        #company-shared-catalog-modal > div { min-width: 0; }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
@@ -437,7 +434,7 @@
                 </div>
             </form>
             <div class="mb-3 flex items-center justify-between">
-                <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก... (จำนวนจะอัปเดตตามผลค้นหา)" class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
             </div>
             <div id="stock-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1">
                 <div class="text-center py-8 text-xs text-slate-400 italic">กำลังโหลดรายการสต็อกสินค้า...</div>
@@ -468,50 +465,6 @@
         </div>
     </div>
 </div>
-
-
-    <!-- Modal: รับรายการสินค้าจากบริษัทอื่น -->
-    <div id="company-shared-catalog-modal"
-        class="fixed inset-0 bg-slate-950/50 backdrop-blur-sm z-[240] hidden flex items-center justify-center p-4 opacity-0 transition-all duration-200">
-        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden border border-slate-100 transform scale-95 transition-transform duration-200">
-            <div class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-600 text-white px-5 py-4 flex items-center justify-between">
-                <div>
-                    <div class="text-sm font-bold">🔗 รับรายการสินค้าจากบริษัทอื่น</div>
-                    <div id="company-shared-catalog-subtitle" class="text-[11px] text-white/80 mt-0.5">
-                        เลือกบริษัทต้นทาง แล้วนำสินค้ามาใช้ในบริษัทปัจจุบัน
-                    </div>
-                </div>
-                <button type="button" id="close-company-shared-catalog-modal"
-                    class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg">✕</button>
-            </div>
-
-            <div class="p-4 border-b border-slate-100 bg-slate-50/70 space-y-3">
-                <select id="company-shared-source-select"
-                    class="w-full px-3 py-2.5 text-xs border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-400">
-                    <option value="">เลือกบริษัทต้นทาง...</option>
-                </select>
-                <input id="company-shared-search" type="text"
-                    placeholder="🔍 ค้นหาสินค้าของบริษัทต้นทาง..."
-                    class="w-full px-3.5 py-2.5 text-xs border border-slate-200 rounded-xl bg-white outline-none focus:ring-2 focus:ring-indigo-400">
-            </div>
-
-            <div id="company-shared-catalog-list"
-                class="p-4 space-y-2 overflow-y-auto no-scrollbar flex-1">
-                <div class="text-center py-8 text-xs text-slate-400">เลือกบริษัทต้นทางก่อน</div>
-            </div>
-
-            <div class="px-4 py-3 border-t border-slate-100 bg-white flex justify-end gap-2">
-                <button type="button" id="cancel-company-shared-catalog"
-                    class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">
-                    ยกเลิก
-                </button>
-                <button type="button" id="import-company-shared-catalog"
-                    class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm">
-                    ✓ รับรายการที่เลือก
-                </button>
-            </div>
-        </div>
-    </div>
 
     <div id="confirm-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[10000] hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
         <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="modal-content">
@@ -1232,192 +1185,6 @@ async function ensureProductInStandardStock(name, cost, price) {
     };
 }
 
-
-/* ==================== SHARED COMPANY PRODUCT CATALOG ====================
-   บริษัทปลายทางสามารถ "รับรายการ" จากบริษัทต้นทางได้
-   - สินค้าถูกคัดลอกเป็นรายการของบริษัทปลายทาง (แก้ราคาได้อิสระ)
-   - ถ้าต้องการให้ราคาเท่ากัน สามารถเลือก "ใช้ราคาเดียวกับบริษัทต้นทาง"
-   - ไม่ลบ/แก้ข้อมูลบริษัทต้นทาง
-   - ยังเพิ่มสินค้าใหม่ให้บริษัทปลายทางได้ตามเดิม
-========================================================================= */
-(function initSharedCompanyCatalog() {
-    const getEl = id => document.getElementById(id);
-
-    function sharedCompanyNames(targetCompany) {
-        const names = new Set();
-        (allCompanyProducts || []).forEach(p => {
-            const n = String(p.companyName || p.companyKey || '').trim();
-            if (n && normalizeCompanyProductKey(n) !== normalizeCompanyProductKey(targetCompany || '')) names.add(n);
-        });
-        return Array.from(names).sort((a,b) => a.localeCompare(b, 'th'));
-    }
-
-    function sourceProducts(sourceCompany, keyword = '') {
-        const key = normalizeCompanyProductKey(sourceCompany || '');
-        const q = normalizeCompanyProductName(keyword || '');
-        return (allCompanyProducts || [])
-            .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === key)
-            .filter(p => !q || normalizeCompanyProductName(p.name).includes(q))
-            .sort((a,b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
-    }
-
-    function renderSharedList() {
-        const list = getEl('company-shared-catalog-list');
-        const source = getEl('company-shared-source-select')?.value || '';
-        const keyword = getEl('company-shared-search')?.value || '';
-        if (!list) return;
-
-        if (!source) {
-            list.innerHTML = '<div class="text-center py-8 text-xs text-slate-400">เลือกบริษัทต้นทางก่อน</div>';
-            return;
-        }
-
-        const products = sourceProducts(source, keyword);
-        if (!products.length) {
-            list.innerHTML = '<div class="text-center py-8 text-xs text-slate-400">ไม่พบรายการสินค้า</div>';
-            return;
-        }
-
-        list.innerHTML = products.map(p => `
-            <label class="flex items-center gap-3 p-3 bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl cursor-pointer transition">
-                <input type="checkbox" class="shared-product-check w-4 h-4 accent-indigo-600"
-                    data-id="${escapeHTML(p.id)}">
-                <div class="min-w-0 flex-1">
-                    <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name || '')}</div>
-                    <div class="text-[10px] text-slate-400 mt-0.5">
-                        ต้นทุน ${money(Number(p.cost) || 0)} ฿ · ราคาบริษัทต้นทาง ${money(Number(p.price) || 0)} ฿
-                    </div>
-                </div>
-            </label>`).join('');
-    }
-
-    function openSharedModal(companyName) {
-        const modal = getEl('company-shared-catalog-modal');
-        const select = getEl('company-shared-source-select');
-        const subtitle = getEl('company-shared-catalog-subtitle');
-        if (!modal || !select) return;
-
-        select.innerHTML = '<option value="">เลือกบริษัทต้นทาง...</option>' +
-            sharedCompanyNames(companyName).map(n => `<option value="${escapeHTML(n)}">${escapeHTML(n)}</option>`).join('');
-
-        if (subtitle) subtitle.textContent = `บริษัทปลายทาง: ${companyName || '-'} · รายการที่รับมาจะเพิ่มเข้าในบริษัทนี้โดยไม่ลบต้นทาง`;
-
-        getEl('company-shared-search').value = '';
-        getEl('company-shared-catalog-list').innerHTML =
-            '<div class="text-center py-8 text-xs text-slate-400">เลือกบริษัทต้นทางก่อน</div>';
-
-        modal.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            modal.classList.remove('opacity-0');
-            modal.querySelector(':scope > div')?.classList.remove('scale-95');
-        });
-    }
-
-    function closeSharedModal() {
-        const modal = getEl('company-shared-catalog-modal');
-        if (!modal) return;
-        modal.classList.add('opacity-0');
-        modal.querySelector(':scope > div')?.classList.add('scale-95');
-        setTimeout(() => modal.classList.add('hidden'), 180);
-    }
-
-    async function importSelected(companyName) {
-        const source = getEl('company-shared-source-select')?.value || '';
-        const checks = Array.from(document.querySelectorAll('.shared-product-check:checked'));
-        if (!source) return showToast('กรุณาเลือกบริษัทต้นทาง', 'warning');
-        if (!checks.length) return showToast('กรุณาเลือกรายการสินค้าที่ต้องการรับ', 'warning');
-
-        const targetKey = normalizeCompanyProductKey(companyName || '');
-        const sourceKey = normalizeCompanyProductKey(source);
-        if (!targetKey || targetKey === sourceKey) return showToast('บริษัทต้นทางและปลายทางต้องเป็นคนละบริษัท', 'warning');
-
-        let added = 0, skipped = 0;
-        const batch = db.batch();
-
-        for (const check of checks) {
-            const sourceProduct = (allCompanyProducts || []).find(p => p.id === check.dataset.id);
-            if (!sourceProduct) continue;
-
-            const normalizedName = normalizeCompanyProductName(sourceProduct.name);
-            const exists = (allCompanyProducts || []).find(p =>
-                normalizeCompanyProductKey(p.companyKey || p.companyName) === targetKey &&
-                normalizeCompanyProductName(p.name) === normalizedName
-            );
-
-            if (exists) {
-                skipped++;
-                continue;
-            }
-
-            const stockProduct = await ensureProductInStandardStock(
-                sourceProduct.name,
-                Number(sourceProduct.cost) || 0,
-                Number(sourceProduct.price) || 0
-            );
-
-            const ref = db.collection('companyProducts').doc();
-            batch.set(ref, {
-                companyKey: targetKey,
-                companyName: String(companyName).trim(),
-                name: String(sourceProduct.name || '').trim(),
-                cost: Number(sourceProduct.cost) || 0,
-                price: Number(sourceProduct.price) || 0,
-                stockProductId: (stockProduct && stockProduct.id) || sourceProduct.stockProductId || '',
-                sharedFromCompanyKey: sourceKey,
-                sharedFromCompanyName: source,
-                sharedFromProductId: sourceProduct.id || '',
-                sharedAt: firebase.firestore.FieldValue.serverTimestamp(),
-                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
-            added++;
-        }
-
-        if (!added) {
-            closeSharedModal();
-            return showToast(`ไม่มีรายการใหม่ที่ต้องเพิ่ม (ซ้ำ ${skipped} รายการ)`, 'info');
-        }
-
-        await batch.commit();
-        closeSharedModal();
-        showToast(`รับสินค้า ${added} รายการจาก "${source}" สำเร็จ${skipped ? ` · ข้ามรายการซ้ำ ${skipped}` : ''}`, 'success');
-
-        // รีเฟรชเฉพาะ catalog ของบริษัทปัจจุบัน
-        const search = getEl('company-specific-product-search')?.value || '';
-        if (typeof renderCompanyProductCatalog === 'function') {
-            renderCompanyProductCatalog(companyName, search);
-        }
-    }
-
-    // Public hook for the existing dynamically-created company history modal.
-    window.openSharedCompanyCatalog = openSharedModal;
-    window.closeSharedCompanyCatalog = closeSharedModal;
-    window.importSelectedSharedCompanyCatalog = importSelected;
-
-    document.addEventListener('click', e => {
-        const btn = e.target.closest('#company-shared-catalog-btn');
-        if (btn) {
-            const companyInput = getEl('company-name');
-            const companyName = String(companyInput?.value || '').trim();
-            if (!companyName) return showToast('กรุณาเลือกหรือกรอกชื่อบริษัทปลายทางก่อน', 'warning');
-            openSharedModal(companyName);
-        }
-    });
-
-    getEl('company-shared-source-select')?.addEventListener('change', renderSharedList);
-    getEl('company-shared-search')?.addEventListener('input', renderSharedList);
-    getEl('close-company-shared-catalog-modal')?.addEventListener('click', closeSharedModal);
-    getEl('cancel-company-shared-catalog')?.addEventListener('click', closeSharedModal);
-    getEl('import-company-shared-catalog')?.addEventListener('click', () => {
-        const companyName = String(getEl('company-name')?.value || '').trim();
-        importSelected(companyName).catch(err => {
-            console.error('importSelectedSharedCompanyCatalog:', err);
-            showToast('ไม่สามารถรับรายการสินค้าได้ กรุณาลองใหม่อีกครั้ง', 'error');
-        });
-    });
-})();
-
-
 async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
     const cleanCompany = String(companyName || '').trim();
     const cleanName = String(name || '').trim();
@@ -1663,10 +1430,6 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                             </div>
                         </div>
                         <span id="company-specific-product-count" class="text-[10px] px-2.5 py-1 rounded-lg bg-white text-sky-700 border border-sky-100 font-bold">0 รายการ</span>
-                        <button type="button" id="company-shared-catalog-btn"
-                            class="text-[10px] px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold hover:bg-indigo-100 transition">
-                            🔗 รับสินค้าจากบริษัทอื่น
-                        </button>
                     </div>
 
                     <div class="company-product-grid">
@@ -1702,7 +1465,74 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                             class="w-full px-3 py-2 text-xs border border-slate-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
                     </div>
 
+                    <div class="mt-3 flex items-center justify-end">
+                        <button type="button" id="open-company-import-btn"
+    class="px-3 py-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50/50 rounded-xl text-xs font-bold transition flex items-center gap-1.5"
+    title="นำเข้าสินค้าจากบริษัทอื่น">
+    🔗 รับสินค้าจากบริษัทอื่น
+</button>
+                    </div>
+
                     <div id="company-specific-products-container" class="space-y-2 mt-3 max-h-52 overflow-y-auto no-scrollbar"></div>
+                </div>
+
+                <!-- Modal ย่อย: รับสินค้าจากบริษัทอื่น -->
+                <div id="company-import-modal" class="fixed inset-0 bg-slate-950/55 backdrop-blur-sm z-[250] hidden items-center justify-center p-4">
+                    <div id="company-import-modal-box" class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden border border-slate-100">
+                        <div class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-600 text-white px-5 py-4 flex items-center justify-between flex-shrink-0">
+                            <div class="min-w-0">
+                                <div class="text-base font-bold">🔗 รับสินค้าจากบริษัทอื่น</div>
+                                <div class="text-[11px] text-white/80 mt-0.5">
+                                    นำสินค้าจากบริษัทต้นทางมาเพิ่มให้ <b>${safeCompany}</b> โดยเริ่มต้นด้วยราคาเดียวกับบริษัทต้นทาง
+                                </div>
+                            </div>
+                            <button type="button" id="close-company-import-btn"
+                                class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg transition">✕</button>
+                        </div>
+
+                        <div class="p-4 border-b border-slate-100 bg-slate-50/70 flex-shrink-0">
+                            <label class="block text-xs font-bold text-slate-700 mb-1.5">🏢 เลือกบริษัทต้นทาง</label>
+                            <select id="company-import-source-select"
+                                class="w-full px-3 py-2.5 text-xs border border-indigo-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-indigo-400">
+                                <option value="">-- เลือกบริษัทต้นทาง --</option>
+                            </select>
+                            <div id="company-import-source-info" class="text-[10px] text-slate-400 mt-1.5">
+                                เมื่อเลือกบริษัทต้นทาง ระบบจะแสดงสินค้าที่บริษัทนั้นมีอยู่
+                            </div>
+                        </div>
+
+                        <div class="px-4 pt-3 flex-shrink-0">
+                            <div class="flex items-center justify-between gap-2 mb-2">
+                                <div class="text-xs font-bold text-slate-700">📦 รายการสินค้าของบริษัทต้นทาง</div>
+                                <span id="company-import-selected-count"
+                                    class="text-[10px] px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold">เลือก 0 รายการ</span>
+                            </div>
+                            <input id="company-import-search" type="text"
+                                placeholder="🔍 ค้นหาสินค้าในบริษัทต้นทาง..."
+                                class="w-full px-3.5 py-2 text-xs border border-sky-200 bg-sky-50/40 rounded-xl outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                        </div>
+
+                        <div id="company-import-products-container"
+                            class="p-4 space-y-2 overflow-y-auto no-scrollbar flex-1 min-h-0">
+                            <div class="text-center py-10 text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                                กรุณาเลือกบริษัทต้นทางก่อน
+                            </div>
+                        </div>
+
+                        <div class="px-4 py-3 border-t border-slate-100 bg-white flex items-center justify-between gap-2 flex-shrink-0">
+                            <button type="button" id="company-import-select-all-btn"
+                                class="px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">
+                                ☑️ เลือกทั้งหมด
+                            </button>
+                            <div class="flex gap-2">
+                                <button type="button" id="company-import-cancel-btn"
+                                    class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition">ยกเลิก</button>
+                                <button type="button" id="company-import-confirm-btn"
+                                    class="px-5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed"
+                                    disabled>⬇️ นำเข้ารายการ</button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- ประวัติการซื้อ -->
@@ -1817,6 +1647,234 @@ function showCompanyHistoryModal(companyName, customerName, items) {
     });
 
     cancelCompanyProductEditBtn?.addEventListener('click', cancelCompanyProductEdit);
+
+    // ------------------------------------------------------------
+    // รับสินค้าจากบริษัทอื่น
+    // ------------------------------------------------------------
+    const companyImportModal = document.getElementById('company-import-modal');
+    const companyImportSourceSelect = document.getElementById('company-import-source-select');
+    const companyImportSearch = document.getElementById('company-import-search');
+    const companyImportProductsContainer = document.getElementById('company-import-products-container');
+    const companyImportSelectedCount = document.getElementById('company-import-selected-count');
+    const companyImportConfirmBtn = document.getElementById('company-import-confirm-btn');
+    const companyImportSelectAllBtn = document.getElementById('company-import-select-all-btn');
+    const closeCompanyImportBtn = document.getElementById('close-company-import-btn');
+    const companyImportCancelBtn = document.getElementById('company-import-cancel-btn');
+
+    let companyImportSourceProducts = [];
+    let companyImportSelectedIds = new Set();
+
+    function closeCompanyImportModal() {
+        if (!companyImportModal) return;
+        companyImportModal.classList.add('hidden');
+        companyImportModal.classList.remove('flex');
+        companyImportSelectedIds.clear();
+        companyImportSourceProducts = [];
+        if (companyImportSearch) companyImportSearch.value = '';
+        if (companyImportProductsContainer) {
+            companyImportProductsContainer.innerHTML = `
+                <div class="text-center py-10 text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    กรุณาเลือกบริษัทต้นทางก่อน
+                </div>`;
+        }
+        if (companyImportSelectedCount) companyImportSelectedCount.textContent = 'เลือก 0 รายการ';
+        if (companyImportConfirmBtn) companyImportConfirmBtn.disabled = true;
+    }
+
+    function renderCompanyImportSources() {
+        if (!companyImportSourceSelect) return;
+        const targetKey = normalizeCompanyProductKey(companyName);
+        const sourceMap = new Map();
+
+        allCompanyProducts.forEach(p => {
+            const name = String(p.companyName || '').trim();
+            const key = normalizeCompanyProductKey(p.companyKey || name);
+            if (!key || key === targetKey || !name) return;
+            if (!sourceMap.has(key)) sourceMap.set(key, name);
+        });
+
+        const sources = [...sourceMap.entries()].sort((a, b) => a[1].localeCompare(b[1], 'th'));
+        companyImportSourceSelect.innerHTML =
+            '<option value="">-- เลือกบริษัทต้นทาง --</option>' +
+            sources.map(([key, name]) => `<option value="${encodeURIComponent(key)}">${escapeHTML(name)}</option>`).join('');
+
+        if (!sources.length) {
+            companyImportSourceSelect.innerHTML = '<option value="">-- ยังไม่มีบริษัทต้นทางที่มีรายการสินค้า --</option>';
+        }
+    }
+
+    function updateCompanyImportSelectionUI() {
+        if (companyImportSelectedCount) companyImportSelectedCount.textContent = `เลือก ${companyImportSelectedIds.size} รายการ`;
+        if (companyImportConfirmBtn) companyImportConfirmBtn.disabled = companyImportSelectedIds.size === 0;
+        companyImportProductsContainer?.querySelectorAll('input[data-import-product-id]').forEach(cb => {
+            cb.checked = companyImportSelectedIds.has(cb.dataset.importProductId);
+        });
+        const selectable = companyImportSourceProducts.filter(p => !allCompanyProducts.some(target =>
+            normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(companyName) &&
+            normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
+        ));
+        const allVisibleSelected = selectable.length > 0 && selectable.every(p => companyImportSelectedIds.has(p.id));
+        if (companyImportSelectAllBtn) companyImportSelectAllBtn.textContent = allVisibleSelected ? '☐ ยกเลิกเลือกทั้งหมด' : '☑️ เลือกทั้งหมด';
+    }
+
+    function renderCompanyImportProducts(filterText = '') {
+        if (!companyImportProductsContainer) return;
+        const keyword = String(filterText || '').trim().toLowerCase();
+        const filtered = companyImportSourceProducts.filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
+
+        if (!filtered.length) {
+            companyImportProductsContainer.innerHTML = `
+                <div class="text-center py-10 text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                    ${companyImportSourceProducts.length ? `ไม่พบสินค้าที่ตรงกับ “${escapeHTML(filterText)}”` : 'บริษัทต้นทางนี้ยังไม่มีรายการสินค้า'}
+                </div>`;
+            updateCompanyImportSelectionUI();
+            return;
+        }
+
+        companyImportProductsContainer.innerHTML = filtered.map(p => {
+            const checked = companyImportSelectedIds.has(p.id);
+            const alreadyExists = allCompanyProducts.some(target =>
+                normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(companyName) &&
+                normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
+            );
+            return `
+                <label class="flex items-center gap-3 p-3 rounded-2xl border ${alreadyExists ? 'border-amber-200 bg-amber-50/50' : 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30'} transition cursor-pointer">
+                    <input type="checkbox" data-import-product-id="${escapeHTML(p.id)}" class="w-4 h-4 accent-indigo-600 flex-shrink-0" ${checked ? 'checked' : ''} ${alreadyExists ? 'disabled' : ''}>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div>
+                        <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-1">
+                            <span>ต้นทุน: <b>${money(Number(p.cost) || 0)} ฿</b></span>
+                            <span class="text-indigo-700">ราคาต้นทาง: <b>${money(Number(p.price) || 0)} ฿</b></span>
+                        </div>
+                    </div>
+                    ${alreadyExists ? '<span class="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded-lg flex-shrink-0">มีอยู่แล้ว</span>' : '<span class="text-[10px] font-semibold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg flex-shrink-0">นำเข้าได้</span>'}
+                </label>`;
+        }).join('');
+
+        companyImportProductsContainer.querySelectorAll('input[data-import-product-id]').forEach(cb => {
+            cb.addEventListener('change', () => {
+                const id = cb.dataset.importProductId;
+                if (cb.checked) companyImportSelectedIds.add(id);
+                else companyImportSelectedIds.delete(id);
+                updateCompanyImportSelectionUI();
+            });
+        });
+        updateCompanyImportSelectionUI();
+    }
+
+    async function importSelectedCompanyProducts() {
+        if (!companyImportConfirmBtn || companyImportConfirmBtn.disabled) return;
+        const selected = companyImportSourceProducts.filter(p => companyImportSelectedIds.has(p.id));
+        if (!selected.length) { showToast('กรุณาเลือกสินค้าที่ต้องการนำเข้า', 'info'); return; }
+
+        const targetKey = normalizeCompanyProductKey(companyName);
+        const sourceKey = companyImportSourceSelect?.value ? decodeURIComponent(companyImportSourceSelect.value) : '';
+        const sourceName = selected[0]?.companyName || '';
+        const importable = selected.filter(sourceProduct => !allCompanyProducts.some(target =>
+            normalizeCompanyProductKey(target.companyKey || target.companyName) === targetKey &&
+            normalizeCompanyProductName(target.name) === normalizeCompanyProductName(sourceProduct.name)
+        ));
+
+        if (!importable.length) {
+            showToast('สินค้าที่เลือกมีอยู่ในบริษัทนี้แล้วทั้งหมด', 'info');
+            return;
+        }
+
+        companyImportConfirmBtn.disabled = true;
+        companyImportConfirmBtn.textContent = 'กำลังนำเข้า...';
+
+        try {
+            let batch = db.batch();
+            let batchCount = 0;
+            let importedCount = 0;
+
+            for (const sourceProduct of importable) {
+                let stockProductId = sourceProduct.stockProductId || '';
+                if (!stockProductId) {
+                    const stockProduct = await ensureProductInStandardStock(sourceProduct.name, Number(sourceProduct.cost) || 0, Number(sourceProduct.price) || 0);
+                    stockProductId = stockProduct?.id || '';
+                }
+
+                const targetRef = db.collection('companyProducts').doc();
+                batch.set(targetRef, {
+                    companyKey: targetKey,
+                    companyName: String(companyName || '').trim(),
+                    name: String(sourceProduct.name || '').trim(),
+                    cost: Number(sourceProduct.cost) || 0,
+                    price: Number(sourceProduct.price) || 0,
+                    stockProductId,
+                    sourceCompanyKey: sourceKey || normalizeCompanyProductKey(sourceProduct.companyName),
+                    sourceCompanyName: String(sourceProduct.companyName || sourceName || '').trim(),
+                    sourceCompanyProductId: sourceProduct.id,
+                    importedFromCompany: true,
+                    importedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                batchCount++;
+                importedCount++;
+
+                if (batchCount === 450) {
+                    await batch.commit();
+                    batch = db.batch();
+                    batchCount = 0;
+                }
+            }
+            if (batchCount > 0) await batch.commit();
+
+            companyImportSelectedIds.clear();
+            renderCompanyProductCatalog(companyName, companyProductSearch?.value || '');
+            renderCompanyImportProducts(companyImportSearch?.value || '');
+            showToast(`นำเข้าสินค้าจาก "${sourceName}" สำเร็จ ${importedCount} รายการ โดยใช้ราคาเริ่มต้นจากบริษัทต้นทาง`, 'success');
+        } catch (err) {
+            console.error('importSelectedCompanyProducts:', err);
+            showToast('ไม่สามารถนำเข้าสินค้าจากบริษัทต้นทางได้ กรุณาตรวจสอบการเชื่อมต่อ Server แล้วลองใหม่', 'error');
+        } finally {
+            companyImportConfirmBtn.disabled = companyImportSelectedIds.size === 0;
+            companyImportConfirmBtn.textContent = '⬇️ นำเข้ารายการ';
+        }
+    }
+
+    document.getElementById('open-company-import-btn')?.addEventListener('click', () => {
+        renderCompanyImportSources();
+        if (companyImportSourceSelect) companyImportSourceSelect.value = '';
+        if (companyImportSearch) companyImportSearch.value = '';
+        companyImportSelectedIds.clear();
+        companyImportSourceProducts = [];
+        if (companyImportModal) { companyImportModal.classList.remove('hidden'); companyImportModal.classList.add('flex'); }
+        renderCompanyImportProducts('');
+    });
+
+    closeCompanyImportBtn?.addEventListener('click', closeCompanyImportModal);
+    companyImportCancelBtn?.addEventListener('click', closeCompanyImportModal);
+    companyImportModal?.addEventListener('click', e => { if (e.target === companyImportModal) closeCompanyImportModal(); });
+
+    companyImportSourceSelect?.addEventListener('change', e => {
+        const sourceKey = e.target.value ? decodeURIComponent(e.target.value) : '';
+        companyImportSelectedIds.clear();
+        companyImportSourceProducts = allCompanyProducts.filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === sourceKey)
+            .slice().sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+        const sourceName = companyImportSourceProducts[0]?.companyName || '';
+        const info = document.getElementById('company-import-source-info');
+        if (info) info.textContent = sourceName ? `บริษัทต้นทาง: ${sourceName} • พบ ${companyImportSourceProducts.length} รายการ` : 'เมื่อเลือกบริษัทต้นทาง ระบบจะแสดงสินค้าที่บริษัทนั้นมีอยู่';
+        renderCompanyImportProducts(companyImportSearch?.value || '');
+    });
+
+    companyImportSearch?.addEventListener('input', e => renderCompanyImportProducts(e.target.value));
+
+    companyImportSelectAllBtn?.addEventListener('click', () => {
+        const keyword = String(companyImportSearch?.value || '').trim().toLowerCase();
+        const visible = companyImportSourceProducts.filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
+        const selectable = visible.filter(p => !allCompanyProducts.some(target =>
+            normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(companyName) &&
+            normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
+        ));
+        const allSelected = selectable.length > 0 && selectable.every(p => companyImportSelectedIds.has(p.id));
+        selectable.forEach(p => allSelected ? companyImportSelectedIds.delete(p.id) : companyImportSelectedIds.add(p.id));
+        updateCompanyImportSelectionUI();
+    });
+
+    companyImportConfirmBtn?.addEventListener('click', importSelectedCompanyProducts);
 
     companyProductSearch.addEventListener('input', e => {
         renderCompanyProductCatalog(companyName, e.target.value);
@@ -2086,20 +2144,16 @@ function getCompanyPriceHistory(companyName, productName) {
         });
 
         function renderStockTable(filterText = '') {
-            const keyword = String(filterText || '').toLowerCase().trim();
+            const keyword = filterText.toLowerCase().trim();
+            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
 
-            // ค้นหาเฉพาะรายการที่ตรงกับคำค้น และป้องกันกรณีชื่อสินค้าว่าง
-            const filtered = allProducts.filter(p => {
-                const productName = String(p?.name || '');
-                return productName.toLowerCase().includes(keyword);
-            });
-
-            // อัปเดตจำนวนให้ตรงกับ "รายการที่กำลังแสดงหลังค้นหา"
             const badge = document.getElementById('stock-count-badge');
             if (badge) {
-                badge.textContent = keyword
-                    ? `พบ ${filtered.length} จาก ${allProducts.length} รายการ`
-                    : `${allProducts.length} รายการ`;
+                if (keyword) {
+                    badge.textContent = `พบ ${filtered.length} จาก ${allProducts.length} รายการ`;
+                } else {
+                    badge.textContent = `${allProducts.length} รายการ`;
+                }
             }
 
             if (filtered.length === 0) {
