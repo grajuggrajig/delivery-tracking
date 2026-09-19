@@ -164,6 +164,7 @@
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
@@ -195,7 +196,11 @@
         <span>Reminders</span>
     </span>
 </button>
-                <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium hidden sm:inline-block">Connecting to Firebase...</span>
+                <div class="flex items-center gap-2">
+                    <span id="logged-in-user" class="hidden lg:inline-block text-[11px] px-2.5 py-1 rounded-xl bg-slate-50 text-slate-600 border border-slate-200 max-w-[220px] truncate" title=""></span>
+                    <button type="button" id="logout-btn" class="text-xs px-3 py-1.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-200 hover:bg-rose-100 transition font-semibold" title="ออกจากระบบ">🚪 ออกจากระบบ</button>
+                    <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium hidden sm:inline-block">Connecting to Firebase...</span>
+                </div>
             </div>
         </div>
     </header>
@@ -897,6 +902,60 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        // ใช้ Firebase Authentication เป็นด่านก่อนเข้า CRM
+        // หากยังไม่ได้เข้าสู่ระบบ ให้กลับไปหน้า Login ทันที
+        let currentUser = null;
+        let authReady = false;
+        const LOGIN_PAGE = 'login(1).html';
+        const CRM_PAGE = 'CRM_updated_company_import(1).html';
+
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => {
+            console.warn('ตั้งค่าการจดจำการเข้าสู่ระบบไม่สำเร็จ:', err);
+        });
+
+        auth.onAuthStateChanged(function(user) {
+            authReady = true;
+            currentUser = user || null;
+
+            const userBadge = document.getElementById('logged-in-user');
+            if (userBadge) {
+                if (user) {
+                    const display = user.displayName || user.email || 'ผู้ใช้งาน';
+                    userBadge.textContent = `👤 ${display}`;
+                    userBadge.title = user.email || display;
+                } else {
+                    userBadge.textContent = '';
+                    userBadge.title = '';
+                }
+            }
+
+            if (!user) {
+                // ป้องกันการใช้งาน CRM โดยไม่มีบัญชีที่ผ่าน Authentication
+                window.location.replace(LOGIN_PAGE);
+                return;
+            }
+        });
+
+        const logoutBtn = document.getElementById('logout-btn');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async function() {
+                try {
+                    logoutBtn.disabled = true;
+                    logoutBtn.textContent = 'กำลังออก...';
+                    await auth.signOut();
+                    window.location.replace(LOGIN_PAGE);
+                } catch (error) {
+                    console.error('Logout error:', error);
+                    logoutBtn.disabled = false;
+                    logoutBtn.textContent = '🚪 ออกจากระบบ';
+                    if (typeof showToast === 'function') {
+                        showToast('ไม่สามารถออกจากระบบได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                    }
+                }
+            });
+        }
 
         const statusBadge = document.getElementById('connection-status');
         let firebaseConnectionState = 'connecting';
