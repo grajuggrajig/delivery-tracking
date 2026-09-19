@@ -908,8 +908,7 @@
         // หากยังไม่ได้เข้าสู่ระบบ ให้กลับไปหน้า Login ทันที
         let currentUser = null;
         let authReady = false;
-        const LOGIN_PAGE = 'login(1).html';
-        const CRM_PAGE = 'CRM_updated_company_import(1).html';
+        const LOGIN_PAGE = 'login_CRM_ready.html';
 
         auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => {
             console.warn('ตั้งค่าการจดจำการเข้าสู่ระบบไม่สำเร็จ:', err);
