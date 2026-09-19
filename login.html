@@ -7,10 +7,13 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+	
     <style>
         body { font-family: Arial, "Noto Sans Thai", sans-serif; }
         .glass { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
     </style>
+	
+	
 </head>
 <body class="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-100 text-slate-800 flex items-center justify-center p-4">
 
@@ -118,7 +121,7 @@ function friendlyError(code) {
 
 auth.onAuthStateChanged(function(user) {
     if (user) {
-        window.location.replace('CRM_login_ready.html');
+        window.location.replace('index.html');
     }
 });
 
@@ -138,7 +141,7 @@ form.addEventListener('submit', async function(e) {
         showMessage('เข้าสู่ระบบสำเร็จ กำลังเปิดระบบ...', 'success');
         message.classList.remove('hidden');
         setTimeout(() => {
-            window.location.replace('CRM_login_ready.html');
+            window.location.replace('index.html');
         }, 350);
     } catch (error) {
         showMessage(friendlyError(error.code));
