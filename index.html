@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ฟ<!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
@@ -162,9 +162,7 @@
         }
 		
     </style>
-	<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
@@ -899,13 +897,6 @@
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
-		
-		// ตรวจสอบสถานะการล็อกอิน หากยังไม่เข้าสู่ระบบให้เด้งกลับไปหน้า login.html
-			firebase.auth().onAuthStateChanged(function(user) {
-			if (!user) {
-			window.location.replace('login.html');
-			}
-		});
 
         const statusBadge = document.getElementById('connection-status');
         let firebaseConnectionState = 'connecting';
