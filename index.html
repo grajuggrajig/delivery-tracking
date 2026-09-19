@@ -161,14 +161,46 @@
             padding: 0;
         }
 		
+    
+        /* ==================== FIREBASE LOGIN + ADMIN USER MANAGEMENT ==================== */
+        #login-lock-screen { position:fixed; inset:0; z-index:50000; display:flex; align-items:center; justify-content:center; padding:20px; background:rgba(15,23,42,.78); backdrop-filter:blur(9px); }
+        #login-lock-screen.hidden { display:none !important; }
+        #login-card { width:min(430px,94vw); background:#fff; border:1px solid rgba(226,232,240,.95); border-radius:28px; box-shadow:0 25px 80px rgba(15,23,42,.30); padding:28px; }
+        #login-user-badge { display:none; }
+        #admin-user-modal.hidden { display:none !important; }
+        @media(max-width:640px){ #login-card{padding:22px;border-radius:24px;} }
     </style>
-	<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-	<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body class="bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
+
+   
+    <!-- ==================== LOGIN LOCK SCREEN ==================== -->
+    <div id="login-lock-screen">
+        <div id="login-card">
+            <div class="text-center mb-6">
+                <div class="mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br from-sky-600 to-indigo-600 text-white flex items-center justify-center text-3xl shadow-lg mb-4">📦</div>
+                <h2 class="text-xl font-extrabold text-slate-800">Delivery Tracking & CRM</h2>
+                <p class="text-xs text-slate-400 mt-1">กรุณาเข้าสู่ระบบก่อนใช้งาน</p>
+            </div>
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">👤 ชื่อผู้ใช้</label>
+                    <input id="login-username" type="text" autocomplete="username" placeholder="ชื่อผู้ใช้" class="w-full px-3 py-3 text-sm border border-sky-200 bg-sky-50/30 rounded-xl outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">🔑 รหัสผ่าน</label>
+                    <input id="login-password" type="password" autocomplete="current-password" placeholder="รหัสผ่าน" class="w-full px-3 py-3 text-sm border border-sky-200 bg-sky-50/30 rounded-xl outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white">
+                </div>
+                <div id="login-error" class="hidden text-xs text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2.5"></div>
+                <button id="login-submit-btn" type="submit" class="w-full py-3 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white rounded-xl text-sm font-bold shadow-sm transition">🔐 เข้าสู่ระบบ</button>
+            </form>
+            <div class="text-[10px] text-slate-400 text-center mt-4">บัญชีผู้ใช้จัดการโดย Admin ผ่าน Firebase Authentication</div>
+        </div>
+    </div>
 
    <header class="bg-white/85 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm flex-shrink-0">
         <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center">
@@ -197,6 +229,9 @@
         <span>Reminders</span>
     </span>
 </button>
+                <span id="login-user-badge" class="text-xs px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-semibold border border-sky-100 hidden sm:inline-flex">👤 ผู้ใช้งาน</span>
+                <button type="button" id="open-admin-users-btn" class="hidden px-3 py-1.5 text-xs bg-violet-50 hover:bg-violet-100 text-violet-700 font-semibold rounded-xl border border-violet-200 transition items-center gap-1">👥 จัดการผู้ใช้</button>
+                <button type="button" id="logout-btn" class="hidden px-3 py-1.5 text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl border border-rose-200 transition">🚪 ออกจากระบบ</button>
                 <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium hidden sm:inline-block">Connecting to Firebase...</span>
             </div>
         </div>
@@ -878,6 +913,32 @@
         <div id="pdf-document" style="width:210mm;min-height:297mm;padding:10mm 12mm 14mm;background:#fff;color:#111827;font-family:Tahoma,'Sarabun',Arial,sans-serif;font-size:12px;box-sizing:border-box;"></div>
     </div>
 
+    
+    <!-- ==================== ADMIN USER MANAGEMENT ==================== -->
+    <div id="admin-user-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[40000] hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
+            <div class="bg-gradient-to-r from-violet-600 via-indigo-600 to-sky-600 text-white px-5 py-4 flex items-center justify-between">
+                <div><div class="text-base font-bold">👥 จัดการผู้ใช้</div><div class="text-xs text-white/80 mt-1">Admin สามารถสร้างบัญชี ตั้งชื่อผู้ใช้ รหัสผ่าน และกำหนดสิทธิ์ได้</div></div>
+                <button type="button" id="close-admin-users-btn" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg">✕</button>
+            </div>
+            <div class="p-5 overflow-y-auto no-scrollbar">
+                <div class="rounded-2xl border border-violet-100 bg-violet-50/50 p-4 mb-5">
+                    <div class="text-sm font-bold text-slate-800 mb-3">➕ สร้างผู้ใช้ใหม่</div>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                        <input id="admin-new-username" type="text" placeholder="ชื่อผู้ใช้ เช่น sale01" class="px-3 py-2.5 text-xs border border-violet-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-violet-400">
+                        <input id="admin-new-displayname" type="text" placeholder="ชื่อแสดง เช่น ฝ่ายขาย" class="px-3 py-2.5 text-xs border border-violet-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-violet-400">
+                        <input id="admin-new-password" type="password" autocomplete="new-password" placeholder="รหัสผ่านอย่างน้อย 6 ตัว" class="px-3 py-2.5 text-xs border border-violet-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-violet-400">
+                        <select id="admin-new-role" class="px-3 py-2.5 text-xs border border-violet-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-violet-400"><option value="user">👤 User</option><option value="admin">🛡️ Admin</option></select>
+                    </div>
+                    <div class="flex justify-end mt-3"><button type="button" id="admin-create-user-btn" class="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-sm">➕ สร้างบัญชี</button></div>
+                </div>
+                <div class="flex items-center justify-between mb-3"><div><div class="text-sm font-bold text-slate-800">📋 รายชื่อผู้ใช้</div><div class="text-[11px] text-slate-400">เปิด/ปิดการใช้งานและเปลี่ยนสิทธิ์ได้ทันที</div></div><span id="admin-user-count" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-semibold">0 บัญชี</span></div>
+                <div id="admin-user-list" class="space-y-2"></div>
+            </div>
+            <div class="px-5 py-3 border-t border-slate-100 flex justify-end bg-white"><button type="button" id="admin-user-close-bottom" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold">ปิดหน้าต่าง</button></div>
+        </div>
+    </div>
+
     <div id="toast-container" class="fixed bottom-5 right-5 z-[11000] flex flex-col gap-2 pointer-events-none"></div>
 
     <footer class="text-center py-1.5 text-[11px] text-slate-400 border-t border-sky-100 flex-shrink-0">
@@ -886,26 +947,176 @@
 
     <script>
         const firebaseConfig = {
-  apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
-  authDomain: "delivery-tracking-2313a.firebaseapp.com",
-  projectId: "delivery-tracking-2313a",
-  storageBucket: "delivery-tracking-2313a.firebasestorage.app",
-  messagingSenderId: "631670801383",
-  appId: "1:631670801383:web:e720570af97bad7011f342",
-  measurementId: "G-BB2D5DJH3F"
-};
+            apiKey: "AIzaSyBAQ347hnwb3a30u0ckyHK1QWV9eUEMiWE",
+            authDomain: "delivery-tracking-2313a.firebaseapp.com",
+            projectId: "delivery-tracking-2313a",
+            storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+            messagingSenderId: "631670801383",
+            appId: "1:631670801383:web:e720570af97bad7011f342",
+            measurementId: "G-BB2D5DJH3F"
+        };
 
         if (!firebase.apps.length) {
             firebase.initializeApp(firebaseConfig);
         }
         const db = firebase.firestore();
-		
-		// ตรวจสอบสถานะการล็อกอิน หากยังไม่เข้าสู่ระบบให้เด้งกลับไปหน้า login.html
-			firebase.auth().onAuthStateChanged(function(user) {
-			if (!user) {
-			window.location.replace('login.html');
-			}
-		});
+        const auth = firebase.auth();
+        let currentAuthUser = null;
+        let currentUserProfile = null;
+        let adminUsersCache = [];
+        const USER_EMAIL_DOMAIN = 'delivery-tracking-2313a.firebaseapp.com';
+        let adminUserCreatorApp = null;
+        let adminUserCreatorAuth = null;
+
+        function usernameToAuthEmail(username) {
+            const value = String(username || '').trim().toLowerCase();
+            if (value.includes('@')) return value;
+            return value.replace(/[^a-z0-9._-]/g, '_') + '@' + USER_EMAIL_DOMAIN;
+        }
+
+        function showLoginError(message) {
+            const el = document.getElementById('login-error');
+            if (!el) return;
+            el.textContent = message;
+            el.classList.remove('hidden');
+        }
+
+        function setLoginLocked(locked) {
+            const el = document.getElementById('login-lock-screen');
+            if (!el) return;
+            el.classList.toggle('hidden', !locked);
+            document.body.classList.toggle('login-locked', locked);
+        }
+
+        async function ensureUserProfile(user) {
+            const ref = db.collection('users').doc(user.uid);
+            const snap = await ref.get();
+            if (snap.exists) return { id: snap.id, ...snap.data() };
+            const firstUsers = await db.collection('users').limit(1).get();
+            if (firstUsers.empty) {
+                const profile = { uid:user.uid, username:user.email.split('@')[0], displayName:user.email.split('@')[0], role:'admin', active:true, email:user.email, createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
+                await ref.set(profile);
+                return { id:user.uid, ...profile };
+            }
+            throw new Error('บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
+        }
+
+        async function handleAuthState(user) {
+            currentAuthUser = user || null;
+            if (!user) {
+                currentUserProfile = null;
+                document.getElementById('login-user-badge')?.classList.add('hidden');
+                document.getElementById('open-admin-users-btn')?.classList.add('hidden');
+                document.getElementById('logout-btn')?.classList.add('hidden');
+                // index.html เป็นหน้าหลักหลัง Login เท่านั้น
+                // เมื่อไม่มี session ให้กลับไปหน้า Login และไม่ใช้ login overlay ซ้อนอีก
+                if (!window.location.pathname.endsWith('/login.html') && !window.location.pathname.endsWith('login.html')) {
+                    window.location.replace('login.html');
+                }
+                return;
+            }
+            try {
+                const profile = await ensureUserProfile(user);
+                if (profile.active === false) { await auth.signOut(); showLoginError('บัญชีนี้ถูกปิดการใช้งาน'); return; }
+                currentUserProfile = profile;
+                setLoginLocked(false);
+                const badge = document.getElementById('login-user-badge');
+                if (badge) { badge.textContent = `👤 ${profile.displayName || profile.username || user.email}`; badge.classList.remove('hidden'); }
+                const adminBtn = document.getElementById('open-admin-users-btn');
+                if (adminBtn) { adminBtn.classList.toggle('hidden', profile.role !== 'admin'); adminBtn.classList.toggle('inline-flex', profile.role === 'admin'); }
+                document.getElementById('logout-btn')?.classList.remove('hidden');
+                document.getElementById('login-error')?.classList.add('hidden');
+                document.getElementById('login-password').value = '';
+            } catch (error) {
+                console.error('User profile error:', error);
+                await auth.signOut();
+                showLoginError(error.message || 'บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
+            }
+        }
+
+        document.getElementById('login-form')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+            if (!username || !password) { showLoginError('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน'); return; }
+            const btn = document.getElementById('login-submit-btn');
+            btn.disabled = true; btn.textContent = 'กำลังเข้าสู่ระบบ...';
+            try {
+                await auth.signInWithEmailAndPassword(usernameToAuthEmail(username), password);
+            } catch (error) {
+                console.error('Firebase login error:', error);
+                const messages = {'auth/invalid-credential':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','auth/user-not-found':'ไม่พบบัญชีผู้ใช้นี้','auth/wrong-password':'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง','auth/invalid-email':'ชื่อผู้ใช้ไม่ถูกต้อง','auth/user-disabled':'บัญชีผู้ใช้นี้ถูกปิดการใช้งาน','auth/too-many-requests':'มีการลองเข้าสู่ระบบหลายครั้ง กรุณารอสักครู่'};
+                showLoginError(messages[error.code] || 'เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบ Firebase Authentication');
+            } finally { btn.disabled=false; btn.textContent='🔐 เข้าสู่ระบบ'; }
+        });
+
+        document.getElementById('logout-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('logout-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'กำลังออกจากระบบ...'; }
+            try {
+                await auth.signOut();
+                window.location.replace('login.html');
+            } catch(e) {
+                console.error('Firebase logout error:', e);
+                if (btn) { btn.disabled = false; btn.textContent = '🚪 ออกจากระบบ'; }
+                showToast('ไม่สามารถออกจากระบบได้', 'error');
+            }
+        });
+
+        async function loadAdminUsers() {
+            if (currentUserProfile?.role !== 'admin') return;
+            const snap = await db.collection('users').orderBy('createdAt','desc').get().catch(async () => db.collection('users').get());
+            adminUsersCache = []; snap.forEach(doc => adminUsersCache.push({id:doc.id,...doc.data()}));
+            const count = document.getElementById('admin-user-count'); if(count) count.textContent = `${adminUsersCache.length.toLocaleString('th-TH')} บัญชี`;
+            const list = document.getElementById('admin-user-list'); if(!list) return;
+            list.innerHTML = adminUsersCache.map(u => `
+                <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border border-slate-100 bg-white">
+                    <div class="min-w-0"><div class="font-bold text-sm text-slate-800">👤 ${escapeHTML(u.displayName || u.username || '-')}</div><div class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(u.username || u.email || '-')} · ${u.role === 'admin' ? '🛡️ Admin' : '👤 User'}</div></div>
+                    <div class="flex items-center gap-2"><select data-user-role="${u.id}" class="px-2.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"><option value="user" ${u.role==='user'?'selected':''}>User</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select><button type="button" data-user-toggle="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold ${u.active===false?'bg-slate-100 text-slate-500':'bg-emerald-50 text-emerald-700'}">${u.active===false?'ปิดใช้งาน':'เปิดใช้งาน'}</button></div>
+                </div>`).join('') || '<div class="text-center py-8 text-slate-400 text-sm">ยังไม่มีผู้ใช้</div>';
+        }
+
+        async function createAdminUser() {
+            if (currentUserProfile?.role !== 'admin') return;
+            const username = document.getElementById('admin-new-username').value.trim();
+            const displayName = document.getElementById('admin-new-displayname').value.trim() || username;
+            const password = document.getElementById('admin-new-password').value;
+            const role = document.getElementById('admin-new-role').value;
+            if (!/^[^\s]{3,40}$/.test(username)) { showToast('ชื่อผู้ใช้ต้องมีอย่างน้อย 3 ตัวอักษรและห้ามมีช่องว่าง','error'); return; }
+            if (password.length < 6) { showToast('รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร','error'); return; }
+            const btn = document.getElementById('admin-create-user-btn'); btn.disabled=true; btn.textContent='กำลังสร้าง...';
+            try {
+                const email = usernameToAuthEmail(username);
+                adminUserCreatorApp = adminUserCreatorApp || firebase.initializeApp(firebaseConfig, 'adminUserCreator');
+                adminUserCreatorAuth = adminUserCreatorApp.auth();
+                const cred = await adminUserCreatorAuth.createUserWithEmailAndPassword(email, password);
+                await db.collection('users').doc(cred.user.uid).set({uid:cred.user.uid, username, displayName, role, active:true, email, createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp(), createdBy:currentAuthUser.uid});
+                await adminUserCreatorAuth.signOut();
+                document.getElementById('admin-new-username').value=''; document.getElementById('admin-new-displayname').value=''; document.getElementById('admin-new-password').value=''; document.getElementById('admin-new-role').value='user';
+                showToast(`สร้างผู้ใช้ “${username}” สำเร็จ`,'success'); await loadAdminUsers();
+            } catch(error) {
+                console.error('Create user error:',error);
+                const messages={'auth/email-already-in-use':'ชื่อผู้ใช้นี้มีอยู่แล้ว','auth/invalid-email':'ชื่อผู้ใช้ไม่ถูกต้อง','auth/weak-password':'รหัสผ่านอ่อนเกินไป'};
+                showToast(messages[error.code] || 'ไม่สามารถสร้างผู้ใช้ได้ กรุณาตรวจสอบ Firebase Authentication','error');
+            } finally { btn.disabled=false; btn.textContent='➕ สร้างบัญชี'; }
+        }
+
+        document.getElementById('admin-user-list')?.addEventListener('change', async (e) => {
+            const id = e.target.getAttribute('data-user-role'); if(!id) return;
+            try { await db.collection('users').doc(id).update({role:e.target.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); showToast('เปลี่ยนสิทธิ์ผู้ใช้แล้ว','success'); if(id===currentAuthUser?.uid) await handleAuthState(currentAuthUser); } catch(err){ console.error(err); showToast('ไม่สามารถเปลี่ยนสิทธิ์ได้','error'); }
+        });
+        document.getElementById('admin-user-list')?.addEventListener('click', async (e) => {
+            const btn=e.target.closest('[data-user-toggle]'); if(!btn) return; const id=btn.getAttribute('data-user-toggle');
+            if(id===currentAuthUser?.uid){ showToast('ไม่สามารถปิดบัญชีของตัวเองขณะกำลังใช้งานได้','info'); return; }
+            const u=adminUsersCache.find(x=>x.id===id); if(!u) return;
+            try { await db.collection('users').doc(id).update({active:u.active===false,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); showToast(u.active===false?'เปิดใช้งานบัญชีแล้ว':'ปิดการใช้งานบัญชีแล้ว','success'); await loadAdminUsers(); } catch(err){console.error(err);showToast('ไม่สามารถเปลี่ยนสถานะได้','error');}
+        });
+
+        document.getElementById('open-admin-users-btn')?.addEventListener('click', async () => { if(currentUserProfile?.role!=='admin') return; document.getElementById('admin-user-modal').classList.remove('hidden'); await loadAdminUsers(); });
+        const closeAdminUsers=()=>document.getElementById('admin-user-modal').classList.add('hidden');
+        document.getElementById('close-admin-users-btn')?.addEventListener('click',closeAdminUsers); document.getElementById('admin-user-close-bottom')?.addEventListener('click',closeAdminUsers);
+        document.getElementById('admin-create-user-btn')?.addEventListener('click',createAdminUser);
+        auth.onAuthStateChanged(handleAuthState);
 
         const statusBadge = document.getElementById('connection-status');
         let firebaseConnectionState = 'connecting';
@@ -2910,72 +3121,22 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
         function applyFilterAndSearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase().trim();
-
-            // ค้นหาข้อมูลก่อน แล้วจึงใช้ตัวกรองสถานะ
-            // เพื่อให้ตัวเลข "ทั้งหมด" และ "ค้างส่ง" แสดงจากข้อมูลที่ค้นพบจริง
             const matchedDeliveries = allDeliveries.filter(item => {
-                const subItems = Array.isArray(item.subItems) ? item.subItems : [];
-                const notes = Array.isArray(item.customerNotes) ? item.customerNotes : [];
-
-                return (
-                    (item.customerName && String(item.customerName).toLowerCase().includes(keyword)) ||
-                    (item.companyName && String(item.companyName).toLowerCase().includes(keyword)) ||
-                    (item.phone && String(item.phone).toLowerCase().includes(keyword)) ||
-                    (item.address && String(item.address).toLowerCase().includes(keyword)) ||
-                    subItems.some(sub => String(sub.text || '').toLowerCase().includes(keyword)) ||
-                    notes.some(note =>
-                        String(note.note || '').toLowerCase().includes(keyword) ||
-                        String(note.contactDate || '').toLowerCase().includes(keyword)
-                    )
-                );
+                return (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
+                    (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
+                    (item.phone && item.phone.toLowerCase().includes(keyword)) ||
+                    (item.address && item.address.toLowerCase().includes(keyword)) ||
+                    (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword))) ||
+                    (item.customerNotes && item.customerNotes.some(note => (note.note || '').toLowerCase().includes(keyword) || (note.contactDate || '').toLowerCase().includes(keyword)));
             });
-
-            // ============================================================
-            // อัปเดตตัวเลขจากข้อมูลจริงที่ค้นพบ
-            // ทั้งหมด = จำนวนรายการสินค้าทั้งหมดในข้อมูลที่ค้นพบ
-            // ค้างส่ง = จำนวนรายการสินค้าที่มีสถานะไม่ใช่ completed
-            // ไม่ขึ้นกับว่ากำลังเลือกแท็บ "ทั้งหมด" หรือ "ค้างส่ง"
-            // ============================================================
-            const discoveredItemCount = matchedDeliveries.reduce((total, item) => {
-                const subItems = Array.isArray(item.subItems) ? item.subItems : [];
-                return total + subItems.length;
-            }, 0);
-
-            const discoveredPendingCount = matchedDeliveries.reduce((total, item) => {
-                const subItems = Array.isArray(item.subItems) ? item.subItems : [];
-                return total + subItems.filter(sub => sub.status !== 'completed').length;
-            }, 0);
-
-            const allCountBadge = document.getElementById('all-count-badge');
-            const pendingCountBadge = document.getElementById('pending-count-badge');
-
-            if (allCountBadge) {
-                allCountBadge.textContent = discoveredItemCount.toLocaleString('th-TH');
-            }
-
-            if (pendingCountBadge) {
-                pendingCountBadge.textContent = discoveredPendingCount.toLocaleString('th-TH');
-            }
-
-            // ใช้ตัวกรองสถานะเฉพาะกับรายการที่จะนำไปแสดงผล
-            const filtered = currentFilter === 'pending'
-                ? matchedDeliveries.filter(item => {
-                    const subItems = Array.isArray(item.subItems) ? item.subItems : [];
-                    return subItems.some(sub => sub.status !== 'completed');
-                })
-                : matchedDeliveries;
-
-            const uniqueCompanies = new Set(
-                matchedDeliveries
-                    .map(item => item.companyName ? String(item.companyName).trim() : '')
-                    .filter(company => company !== '')
-            );
-
+            const discoveredItemCount = matchedDeliveries.reduce((total, item) => total + (Array.isArray(item.subItems) ? item.subItems.length : 0), 0);
+            const discoveredPendingCount = matchedDeliveries.reduce((total, item) => total + (Array.isArray(item.subItems) ? item.subItems.filter(sub => sub.status !== 'completed').length : 0), 0);
+            document.getElementById('all-count-badge')?.replaceChildren(document.createTextNode(discoveredItemCount.toLocaleString('th-TH')));
+            document.getElementById('pending-count-badge')?.replaceChildren(document.createTextNode(discoveredPendingCount.toLocaleString('th-TH')));
+            let filtered = currentFilter === 'pending' ? matchedDeliveries.filter(item => Array.isArray(item.subItems) && item.subItems.some(sub => sub.status !== 'completed')) : matchedDeliveries;
+            const uniqueCompanies = new Set(filtered.map(item => item.companyName ? item.companyName.trim() : '').filter(company => company !== ''));
             const companyBadge = document.getElementById('company-count-badge');
-            if (companyBadge) {
-                companyBadge.textContent = `พบรายชื่อบริษัท: ${matchedDeliveries.length} รายการ (บริษัทไม่ซ้ำ: ${uniqueCompanies.size} แห่ง)`;
-            }
-
+            if (companyBadge) companyBadge.textContent = `พบรายชื่อบริษัท: ${filtered.length} แห่ง (บริษัทไม่ซ้ำ: ${uniqueCompanies.size} แห่ง)`;
             renderList(filtered);
         }
 
