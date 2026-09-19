@@ -143,12 +143,11 @@ form.addEventListener('submit', async function(e) {
         showMessage('เข้าสู่ระบบสำเร็จ กำลังเปิดระบบ...', 'success');
         message.classList.remove('hidden');
 
-        setTimeout(() => {
+        setTimeout(function() {
             window.location.replace('index.html');
-        }, 350);
+        }, 500);
 
     } catch (error) {
-
         console.error('========== FIREBASE LOGIN ERROR ==========');
         console.error('Code:', error.code);
         console.error('Message:', error.message);
