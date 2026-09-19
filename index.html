@@ -947,7 +947,7 @@
 
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyBAQ347hnwb3a30u0ckyHK1QWV9eUEMiWE",
+            apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
             authDomain: "delivery-tracking-2313a.firebaseapp.com",
             projectId: "delivery-tracking-2313a",
             storageBucket: "delivery-tracking-2313a.firebasestorage.app",
@@ -961,6 +961,9 @@
         }
         const db = firebase.firestore();
         const auth = firebase.auth();
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(error => {
+            console.warn('Firebase Auth persistence warning:', error);
+        });
         let currentAuthUser = null;
         let currentUserProfile = null;
         let adminUsersCache = [];
