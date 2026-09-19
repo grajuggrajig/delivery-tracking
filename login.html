@@ -127,6 +127,7 @@ auth.onAuthStateChanged(function(user) {
 
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
+
     const mail = email.value.trim();
     const pass = password.value;
 
@@ -138,27 +139,31 @@ form.addEventListener('submit', async function(e) {
 
     try {
         await auth.signInWithEmailAndPassword(mail, pass);
+
         showMessage('เข้าสู่ระบบสำเร็จ กำลังเปิดระบบ...', 'success');
         message.classList.remove('hidden');
+
         setTimeout(() => {
             window.location.replace('index.html');
         }, 350);
-    ```javascript
-} catch (error) {
-    console.error('Firebase Login Error:', error);
-    console.error('Error Code:', error.code);
-    console.error('Error Message:', error.message);
 
-    showMessage(
-        friendlyError(error.code) +
-        ' [' + (error.code || 'unknown-error') + ']'
-    );
+    } catch (error) {
 
-    message.classList.remove('hidden');
-    loginBtn.disabled = false;
-    loginBtn.textContent = '🔓 เข้าสู่ระบบ';
-}
-```
+        console.error('========== FIREBASE LOGIN ERROR ==========');
+        console.error('Code:', error.code);
+        console.error('Message:', error.message);
+        console.error('Full Error:', error);
+
+        showMessage(
+            friendlyError(error.code) +
+            ' [' + (error.code || 'unknown-error') + ']'
+        );
+
+        message.classList.remove('hidden');
+
+        loginBtn.disabled = false;
+        loginBtn.textContent = '🔓 เข้าสู่ระบบ';
+    }
 });
 
 document.getElementById('toggle-password').addEventListener('click', function() {
