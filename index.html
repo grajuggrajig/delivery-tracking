@@ -1950,8 +1950,14 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                         </div>
                         <span id="search-count-label" class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ</span>
                     </div>
-                    <input type="text" id="company-history-search" placeholder="🔍 ค้นหารายชื่อสินค้าในประวัติ..."
-                        class="w-full px-3.5 py-2 text-xs border border-sky-200 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+                    <div class="flex items-center gap-2 w-full">
+                        <input type="text" id="company-history-search" placeholder="🔍 ค้นหารายชื่อสินค้าในประวัติ..."
+                            class="flex-1 min-w-0 px-3.5 py-2.5 text-xs border border-sky-200 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
+                        <button type="button" id="company-history-search-btn"
+                            class="flex-shrink-0 px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                            🔍 ค้นหา
+                        </button>
+                    </div>
                 </div>
 
                 <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-1 min-h-0 pr-1 mb-2">
@@ -2296,8 +2302,23 @@ function showCompanyHistoryModal(companyName, customerName, items) {
     renderCompanyProductCatalog(companyName);
     renderItems('');
 
+    const searchButton = document.getElementById('company-history-search-btn');
+
+    // ค้นหาได้ทั้งกดปุ่ม และกด Enter โดยยังคงค้นหาแบบทันทีขณะพิมพ์เหมือนเดิม
+    searchButton?.addEventListener('click', () => {
+        renderItems(searchInput.value);
+        searchInput.focus();
+    });
+
     searchInput.addEventListener('input', (e) => {
         renderItems(e.target.value);
+    });
+
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            renderItems(searchInput.value);
+        }
     });
 }
 
