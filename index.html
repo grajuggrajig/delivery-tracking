@@ -2585,7 +2585,7 @@ function getCompanyPriceHistory(companyName, productName) {
             }
             if (!snapshot.metadata.fromCache) {
                 firebaseServerConfirmed = true;
-                setConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
+                setConnectionStatus('connected', 'Connected to Server');
             }
         }, error => {
             console.error('Firestore products snapshot error:', error);
