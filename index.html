@@ -163,48 +163,52 @@
 		
     
         /* ==================== FIREBASE LOGIN + ADMIN USER MANAGEMENT ==================== */
-        /* Login is handled exclusively by login.html. Keep the legacy form in the DOM for compatibility, but never render it on index.html. */
+        /* ==================== AUTH STARTUP / LOGIN ====================
+           index.html ไม่แสดงฟอร์ม Login อีกต่อไป
+           ผู้ใช้เข้าสู่ระบบผ่าน login.html เท่านั้น
+           ระหว่าง Firebase ตรวจสอบ session จะไม่แสดงหน้า CRM ชั่วคราว
+           เพื่อป้องกันอาการหน้ากระพริบ/เห็น Login แวบหนึ่งตอนกด F5 */
         #login-lock-screen { display:none !important; }
-        body.auth-pending { visibility:hidden; }
-        body.auth-ready { visibility:visible; }
-
-        /* Premium global CRM visual layer — presentation only; existing components/functions remain unchanged. */
-        body {
-            background: radial-gradient(circle at 12% 8%, rgba(14,165,233,.10), transparent 28%),
-                        radial-gradient(circle at 88% 10%, rgba(99,102,241,.10), transparent 30%),
-                        #f5f8fc !important;
+        #login-card { display:none !important; }
+        #auth-startup-screen {
+            position:fixed; inset:0; z-index:60000;
+            display:flex; align-items:center; justify-content:center;
+            background:#f8fafc; transition:opacity .18s ease;
         }
-        header {
-            background:rgba(255,255,255,.92) !important;
-            border-bottom:1px solid rgba(148,163,184,.18) !important;
-            box-shadow:0 8px 28px rgba(15,23,42,.06) !important;
+        #auth-startup-screen.hidden { display:none !important; }
+        #auth-startup-screen .auth-startup-card {
+            width:min(360px,90vw); text-align:center; padding:28px;
+            background:#fff; border:1px solid #e2e8f0; border-radius:24px;
+            box-shadow:0 18px 55px rgba(15,23,42,.10);
         }
-        header h1 { letter-spacing:-.025em; }
-        main > section, main > section > div {
-            border-color:rgba(148,163,184,.18) !important;
-            box-shadow:0 10px 30px rgba(15,23,42,.045) !important;
+        #auth-startup-screen .auth-spinner {
+            width:34px; height:34px; margin:0 auto 12px;
+            border:3px solid #dbeafe; border-top-color:#2563eb;
+            border-radius:50%; animation:authSpin .75s linear infinite;
         }
-        input, textarea, select {
-            transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease, transform .18s ease;
-        }
-        button { transition: transform .16s ease, box-shadow .16s ease, background-color .16s ease, border-color .16s ease; }
-        button:hover:not(:disabled) { transform:translateY(-1px); }
-        #connection-status { letter-spacing:.01em; box-shadow:0 2px 8px rgba(15,23,42,.04); }
-        #login-lock-screen.hidden { display:none !important; }
-        #login-card { width:min(430px,94vw); background:#fff; border:1px solid rgba(226,232,240,.95); border-radius:28px; box-shadow:0 25px 80px rgba(15,23,42,.30); padding:28px; }
+        @keyframes authSpin { to { transform:rotate(360deg); } }
         #login-user-badge { display:none; }
         #admin-user-modal.hidden { display:none !important; }
-        @media(max-width:640px){ #login-card{padding:22px;border-radius:24px;} }
+        @media(max-width:640px){ #auth-startup-screen .auth-startup-card{padding:22px;border-radius:22px;} }
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
-<body class="bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0 auth-pending">
+<body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
    
-    <!-- ==================== LOGIN LOCK SCREEN ==================== -->
+    <!-- ==================== AUTH STARTUP ==================== -->
+    <div id="auth-startup-screen" aria-live="polite">
+        <div class="auth-startup-card">
+            <div class="auth-spinner" aria-hidden="true"></div>
+            <div class="text-sm font-bold text-slate-700">กำลังตรวจสอบการเข้าสู่ระบบ...</div>
+            <div class="text-xs text-slate-400 mt-1">กรุณารอสักครู่</div>
+        </div>
+    </div>
+
+    <!-- ==================== LOGIN LOCK SCREEN (สำรอง/ไม่แสดงใน index) ==================== -->
     <div id="login-lock-screen">
         <div id="login-card">
             <div class="text-center mb-6">
@@ -996,8 +1000,7 @@
         const USER_EMAIL_DOMAIN = 'delivery-tracking-2313a.firebaseapp.com';
         let adminUserCreatorApp = null;
         let adminUserCreatorAuth = null;
-        let authRedirectTimer = null;
-        let authInitializationFinished = false;
+        document.body.classList.add('auth-pending');
 
         function usernameToAuthEmail(username) {
             const value = String(username || '').trim().toLowerCase();
@@ -1014,8 +1017,9 @@
 
         function setLoginLocked(locked) {
             const el = document.getElementById('login-lock-screen');
-            if (el) el.classList.add('hidden');
-            document.body.classList.toggle('login-locked', false);
+            if (!el) return;
+            el.classList.toggle('hidden', !locked);
+            document.body.classList.toggle('login-locked', locked);
         }
 
         async function ensureUserProfile(user) {
@@ -1031,12 +1035,16 @@
             throw new Error('บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
         }
 
-        async function handleAuthState(user) {
-            if (authRedirectTimer) {
-                clearTimeout(authRedirectTimer);
-                authRedirectTimer = null;
-            }
+        let authStateResolved = false;
+        let authRedirecting = false;
 
+        function finishAuthStartup() {
+            authStateResolved = true;
+            document.body.classList.remove('auth-pending');
+            document.getElementById('auth-startup-screen')?.classList.add('hidden');
+        }
+
+        async function handleAuthState(user) {
             currentAuthUser = user || null;
 
             if (!user) {
@@ -1045,50 +1053,56 @@
                 document.getElementById('open-admin-users-btn')?.classList.add('hidden');
                 document.getElementById('logout-btn')?.classList.add('hidden');
 
-                // Do not bounce to login immediately during a refresh. Firebase may still
-                // be restoring the LOCAL session. Give the auth state a short grace period.
-                authRedirectTimer = setTimeout(() => {
-                    if (!auth.currentUser) {
-                        window.location.replace('login.html');
-                    }
-                }, 1200);
+                // index.html เป็นหน้าหลักหลัง Login เท่านั้น
+                // ไม่มี Login overlay บนหน้านี้อีกต่อไป
+                if (!authRedirecting) {
+                    authRedirecting = true;
+                    window.location.replace('login.html');
+                }
                 return;
             }
 
             try {
                 const profile = await ensureUserProfile(user);
+
                 if (profile.active === false) {
+                    finishAuthStartup();
                     await auth.signOut();
-                    window.location.replace('login.html');
+                    showLoginError('บัญชีนี้ถูกปิดการใช้งาน');
                     return;
                 }
 
                 currentUserProfile = profile;
-                authInitializationFinished = true;
-                document.body.classList.remove('auth-pending');
-                document.body.classList.add('auth-ready');
-                setLoginLocked(false);
 
                 const badge = document.getElementById('login-user-badge');
                 if (badge) {
                     badge.textContent = `👤 ${profile.displayName || profile.username || user.email}`;
                     badge.classList.remove('hidden');
                 }
+
                 const adminBtn = document.getElementById('open-admin-users-btn');
                 if (adminBtn) {
                     adminBtn.classList.toggle('hidden', profile.role !== 'admin');
                     adminBtn.classList.toggle('inline-flex', profile.role === 'admin');
                 }
+
                 document.getElementById('logout-btn')?.classList.remove('hidden');
                 document.getElementById('login-error')?.classList.add('hidden');
-                const passwordEl = document.getElementById('login-password');
-                if (passwordEl) passwordEl.value = '';
+
+                const loginPassword = document.getElementById('login-password');
+                if (loginPassword) loginPassword.value = '';
+
+                // แสดง CRM หลังยืนยัน session + profile สำเร็จแล้วเท่านั้น
+                finishAuthStartup();
             } catch (error) {
                 console.error('User profile error:', error);
-                try { await auth.signOut(); } catch (_) {}
-                document.body.classList.remove('auth-pending');
-                document.body.classList.add('auth-ready');
-                window.location.replace('login.html');
+                finishAuthStartup();
+                await auth.signOut();
+                showLoginError(error.message || 'บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
+                if (!authRedirecting) {
+                    authRedirecting = true;
+                    window.location.replace('login.html');
+                }
             }
         }
 
@@ -1174,13 +1188,7 @@
         const closeAdminUsers=()=>document.getElementById('admin-user-modal').classList.add('hidden');
         document.getElementById('close-admin-users-btn')?.addEventListener('click',closeAdminUsers); document.getElementById('admin-user-close-bottom')?.addEventListener('click',closeAdminUsers);
         document.getElementById('admin-create-user-btn')?.addEventListener('click',createAdminUser);
-        // Wait for Firebase to restore the LOCAL session before deciding whether to redirect.
         auth.onAuthStateChanged(handleAuthState);
-        setTimeout(() => {
-            if (!authInitializationFinished && !auth.currentUser && window.location.pathname.endsWith('index.html')) {
-                window.location.replace('login.html');
-            }
-        }, 3500);
 
         const statusBadge = document.getElementById('connection-status');
         let firebaseConnectionState = 'connecting';
