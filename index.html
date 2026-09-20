@@ -272,7 +272,7 @@
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
         <!-- ฝั่งซ้าย: ปุ่มซ่อน/แสดง Sidebar และ โลโก้/ชื่อระบบ -->
         <div class="flex items-center gap-3">
-            <button type="button" id="toggle-form-btn" onclick="toggleSidebarForm()" title="ซ่อน/แสดงฟอร์มเพิ่มข้อมูล" class="p-2 text-white/90 hover:text-white hover:bg-white/15 rounded-xl transition-all duration-200 border border-white/30 flex items-center justify-center shadow-2xs active:scale-95">
+            <button type="button" id="toggle-form-btn" onclick="toggleSidebarForm()" title="Hide/Show Form" class="p-2 text-white/90 hover:text-white hover:bg-white/15 rounded-xl transition-all duration-200 border border-white/30 flex items-center justify-center shadow-2xs active:scale-95">
                 <svg id="toggle-icon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
@@ -283,31 +283,31 @@
             </h1>
         </div>
 
-        <!-- ฝั่งขวา: เมนูจัดการ, ผู้ใช้งาน และปุ่มควบคุมต่างๆ (ใส่กรอบวิ่งวิ้งๆ) -->
+        <!-- ฝั่งขวา: เมนูจัดการ, ผู้ใช้งาน และปุ่มควบคุมต่างๆ (ภาษาอังกฤษทั้งหมด + กรอบวิ่งวิ้งๆ) -->
         <div class="flex items-center gap-2">
             <!-- ปุ่มจัดการสต็อก -->
             <button type="button" id="open-stock-modal-btn" class="glow-border-btn px-3 py-2 text-xs text-white font-bold rounded-xl flex items-center gap-1.5 active:scale-95">
-                🏷️ <span>Manage Stock</span>
+                🏷️ <span>Stock Management</span>
             </button>
             
             <!-- ปุ่มแจ้งเตือน -->
             <button type="button" id="open-reminder-modal-btn" class="glow-border-btn px-3 py-2 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 active:scale-95">
-                🔔 <span>Reminders</span>
+                🔔 <span>REM (Reminders</span>
             </button>
 
             <!-- ข้อมูลผู้ใช้งาน -->
             <span id="login-user-badge" class="glow-border-btn text-xs px-3 py-2 rounded-xl text-white font-bold hidden sm:inline-flex items-center gap-1.5">
-                👤 <span class="truncate max-w-[120px]">ผู้ใช้งาน</span>
+                👤 <span class="truncate max-w-[120px]">User</span>
             </span>
             
             <!-- ปุ่มจัดการผู้ใช้ -->
             <button type="button" id="open-admin-users-btn" class="glow-border-btn hidden px-3 py-2 text-xs text-white font-bold rounded-xl items-center gap-1.5 active:scale-95">
-                👥 จัดการผู้ใช้
+                👥 Users Management
             </button>
             
             <!-- ปุ่มออกจากระบบ -->
             <button type="button" id="logout-btn" class="glow-border-btn hidden px-3 py-2 text-xs text-white font-bold rounded-xl active:scale-95">
-                🚪 ออกจากระบบ
+                🚪 Logout
             </button>
 
             <!-- สถานะ Firebase Connection -->
