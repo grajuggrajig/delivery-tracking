@@ -4641,7 +4641,7 @@ db.collection('reminders').onSnapshot({ includeMetadataChanges: true }, snapshot
     checkTodayReminders();
     if (!snapshot.metadata.fromCache) {
         firebaseServerConfirmed = true;
-        setConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
+        setConnectionStatus('connected', 'ONLINE');
     }
     }, error => {
     console.error('Error loading reminders:', error);
