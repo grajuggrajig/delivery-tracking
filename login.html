@@ -68,7 +68,7 @@
         </form>
 
         <div class="px-6 pb-6 text-center">
-            <p class="text-[11px] text-slate-400">Powered by Firebase Security/p>
+            <p class="text-[11px] text-slate-400">Secured by Firebase Authentication</p>
         </div>
     </div>
 </div>
@@ -88,7 +88,7 @@ if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 
 // ให้สถานะการเข้าสู่ระบบใช้งานร่วมกันระหว่างหน้า Login และหน้า CRM
-const authPersistenceReady = auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(error) {
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(error) {
     console.warn('ตั้งค่าการจดจำการเข้าสู่ระบบไม่สำเร็จ:', error);
 });
 
@@ -142,7 +142,6 @@ form.addEventListener('submit', async function(e) {
     message.classList.add('hidden');
 
     try {
-        await authPersistenceReady;
         await auth.signInWithEmailAndPassword(mail, pass);
 
         showMessage('เข้าสู่ระบบสำเร็จ กำลังเปิดระบบ...', 'success');
