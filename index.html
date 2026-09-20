@@ -190,6 +190,42 @@
         #login-user-badge { display:none; }
         #admin-user-modal.hidden { display:none !important; }
         @media(max-width:640px){ #auth-startup-screen .auth-startup-card{padding:22px;border-radius:22px;} }
+		
+		@keyframes borderGlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.glow-border-btn {
+    position: relative;
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    transition: all 0.3s ease;
+}
+
+.glow-border-btn::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ffffff, #9333ea, #38bdf8, #ffffff);
+    background-size: 300% 300%;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: borderGlow 4s linear infinite;
+}
+
+/* ทำให้เส้นกรอบวิ่งวิ้งๆ เด่นชัดขึ้นเมื่อเอาเมาส์ชี้ (Hover) หรือตลอดเวลา */
+.glow-border-btn:hover::after {
+    opacity: 1;
+}
+
+.glow-border-btn:hover {
+    border-color: transparent;
+    box-shadow: 0 0 12px rgba(255, 255, 255, 0.3);
+}
     </style>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -236,7 +272,7 @@
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
         <!-- ฝั่งซ้าย: ปุ่มซ่อน/แสดง Sidebar และ โลโก้/ชื่อระบบ -->
         <div class="flex items-center gap-3">
-            <button type="button" id="toggle-form-btn" onclick="toggleSidebarForm()" title="ซ่อน/แสดงฟอร์มเพิ่มข้อมูล" class="p-2 text-white/90 hover:text-white hover:bg-white/15 rounded-xl transition-all duration-200 border border-white/20 flex items-center justify-center shadow-2xs active:scale-95">
+            <button type="button" id="toggle-form-btn" onclick="toggleSidebarForm()" title="ซ่อน/แสดงฟอร์มเพิ่มข้อมูล" class="p-2 text-white/90 hover:text-white hover:bg-white/15 rounded-xl transition-all duration-200 border border-white/30 flex items-center justify-center shadow-2xs active:scale-95">
                 <svg id="toggle-icon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                 </svg>
@@ -247,35 +283,35 @@
             </h1>
         </div>
 
-        <!-- ฝั่งขวา: เมนูจัดการ, ผู้ใช้งาน และปุ่มควบคุมต่างๆ -->
-        <div class="flex items-center gap-1.5">
+        <!-- ฝั่งขวา: เมนูจัดการ, ผู้ใช้งาน และปุ่มควบคุมต่างๆ (ใส่กรอบวิ่งวิ้งๆ) -->
+        <div class="flex items-center gap-2">
             <!-- ปุ่มจัดการสต็อก -->
-            <button type="button" id="open-stock-modal-btn" class="px-3 py-2 text-xs text-white hover:bg-white/15 font-bold rounded-xl transition-all duration-200 flex items-center gap-1.5 active:scale-95">
+            <button type="button" id="open-stock-modal-btn" class="glow-border-btn px-3 py-2 text-xs text-white font-bold rounded-xl flex items-center gap-1.5 active:scale-95">
                 🏷️ <span>Manage Stock</span>
             </button>
             
             <!-- ปุ่มแจ้งเตือน -->
-            <button type="button" id="open-reminder-modal-btn" class="px-3 py-2 text-white hover:bg-white/15 rounded-xl font-bold text-xs transition-all duration-200 flex items-center gap-1.5 active:scale-95">
+            <button type="button" id="open-reminder-modal-btn" class="glow-border-btn px-3 py-2 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 active:scale-95">
                 🔔 <span>Reminders</span>
             </button>
 
             <!-- ข้อมูลผู้ใช้งาน -->
-            <span id="login-user-badge" class="text-xs px-3 py-2 rounded-xl text-white font-bold hidden sm:inline-flex items-center gap-1.5 hover:bg-white/10 transition-all duration-200">
+            <span id="login-user-badge" class="glow-border-btn text-xs px-3 py-2 rounded-xl text-white font-bold hidden sm:inline-flex items-center gap-1.5">
                 👤 <span class="truncate max-w-[120px]">ผู้ใช้งาน</span>
             </span>
             
             <!-- ปุ่มจัดการผู้ใช้ -->
-            <button type="button" id="open-admin-users-btn" class="hidden px-3 py-2 text-xs text-white hover:bg-white/15 font-bold rounded-xl transition-all duration-200 items-center gap-1.5 active:scale-95">
+            <button type="button" id="open-admin-users-btn" class="glow-border-btn hidden px-3 py-2 text-xs text-white font-bold rounded-xl items-center gap-1.5 active:scale-95">
                 👥 จัดการผู้ใช้
             </button>
             
             <!-- ปุ่มออกจากระบบ -->
-            <button type="button" id="logout-btn" class="hidden px-3 py-2 text-xs text-white hover:bg-white/15 font-bold rounded-xl transition-all duration-200 items-center gap-1.5 active:scale-95">
+            <button type="button" id="logout-btn" class="glow-border-btn hidden px-3 py-2 text-xs text-white font-bold rounded-xl active:scale-95">
                 🚪 ออกจากระบบ
             </button>
 
-            <!-- สถานะ Firebase Connection (ลบพื้นหลัง เหลือแค่เส้นกรอบและตัวหนังสือสีขาว) -->
-            <span id="connection-status" class="text-xs px-3 py-1.5 rounded-full bg-transparent text-white border border-white/70 font-semibold hidden sm:inline-block shadow-2xs animate-pulse ml-2">
+            <!-- สถานะ Firebase Connection -->
+            <span id="connection-status" class="glow-border-btn text-xs px-3 py-1.5 rounded-full text-white font-semibold hidden sm:inline-block animate-pulse ml-1">
                 Connecting to Firebase...
             </span>
         </div>
