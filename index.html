@@ -125,6 +125,31 @@
             vertical-align: middle;
         }
 
+        /* ปรับพื้นที่ในหน้าต่างประวัติสินค้า: ลดส่วนรายการสินค้าประจำบริษัท
+           และเพิ่มพื้นที่ให้ "ประวัติการซื้อสินค้า" อ่านรายการได้ชัดเจน */
+        #company-all-history-modal > div {
+            max-height: 94vh;
+            overflow: hidden;
+        }
+        #company-all-history-modal .company-products-panel {
+            max-height: 38vh;
+            overflow: hidden;
+        }
+        #company-all-history-modal #company-specific-products-container {
+            max-height: 105px !important;
+            overflow-y: auto;
+        }
+        #company-all-history-modal #company-history-items-container {
+            flex: 1 1 0%;
+            min-height: 260px;
+            max-height: none;
+        }
+        @media (max-height: 820px) {
+            #company-all-history-modal .company-products-panel { max-height: 34vh; }
+            #company-all-history-modal #company-specific-products-container { max-height: 85px !important; }
+            #company-all-history-modal #company-history-items-container { min-height: 230px; }
+        }
+
         @media (max-width: 760px) {
             #company-all-history-modal {
                 padding: 8px !important;
@@ -1195,8 +1220,42 @@
             list.innerHTML = adminUsersCache.map(u => `
                 <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border border-slate-100 bg-white">
                     <div class="min-w-0"><div class="font-bold text-sm text-slate-800">👤 ${escapeHTML(u.displayName || u.username || '-')}</div><div class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(u.username || u.email || '-')} · ${u.role === 'admin' ? '🛡️ Admin' : '👤 User'}</div></div>
-                    <div class="flex items-center gap-2"><select data-user-role="${u.id}" class="px-2.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"><option value="user" ${u.role==='user'?'selected':''}>User</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select><button type="button" data-user-toggle="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold ${u.active===false?'bg-slate-100 text-slate-500':'bg-emerald-50 text-emerald-700'}">${u.active===false?'ปิดใช้งาน':'เปิดใช้งาน'}</button></div>
+                    <div class="flex items-center gap-2 flex-wrap justify-end"><select data-user-role="${u.id}" class="px-2.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"><option value="user" ${u.role==='user'?'selected':''}>User</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select><button type="button" data-user-toggle="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold ${u.active===false?'bg-slate-100 text-slate-500':'bg-emerald-50 text-emerald-700'}">${u.active===false?'ปิดใช้งาน':'เปิดใช้งาน'}</button><button type="button" data-user-delete="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition" title="ลบผู้ใช้ออกจากระบบ">🗑️ ลบ</button></div>
                 </div>`).join('') || '<div class="text-center py-8 text-slate-400 text-sm">ยังไม่มีผู้ใช้</div>';
+        }
+
+        async function deleteAdminUser(userId) {
+            if (currentUserProfile?.role !== 'admin') {
+                showToast('เฉพาะ Admin เท่านั้นที่สามารถลบผู้ใช้ได้', 'error');
+                return;
+            }
+            if (!userId || userId === currentAuthUser?.uid) {
+                showToast('ไม่สามารถลบบัญชีที่กำลังใช้งานอยู่ได้', 'info');
+                return;
+            }
+
+            const target = adminUsersCache.find(u => u.id === userId);
+            if (!target) {
+                showToast('ไม่พบข้อมูลผู้ใช้ที่ต้องการลบ', 'error');
+                return;
+            }
+
+            showConfirmModal(
+                'ยืนยันการลบผู้ใช้',
+                `ต้องการลบผู้ใช้ “${target.displayName || target.username || target.email || '-'}” ออกจากระบบใช่หรือไม่? ผู้ใช้นี้จะไม่สามารถเข้าสู่ระบบ CRM ได้อีก`,
+                async () => {
+                    try {
+                        // ลบโปรไฟล์ผู้ใช้จาก Firestore เพื่อถอนสิทธิ์การใช้งานระบบทันที
+                        // ไม่แตะข้อมูลลูกค้า/สินค้า/ประวัติการซื้อของระบบ
+                        await db.collection('users').doc(userId).delete();
+                        showToast('ลบผู้ใช้ออกจากระบบแล้ว', 'success');
+                        await loadAdminUsers();
+                    } catch (error) {
+                        console.error('Delete user error:', error);
+                        showToast('ไม่สามารถลบผู้ใช้ได้ กรุณาตรวจสอบสิทธิ์ Firebase', 'error');
+                    }
+                }
+            );
         }
 
         async function createAdminUser() {
@@ -1229,6 +1288,11 @@
             try { await db.collection('users').doc(id).update({role:e.target.value,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); showToast('เปลี่ยนสิทธิ์ผู้ใช้แล้ว','success'); if(id===currentAuthUser?.uid) await handleAuthState(currentAuthUser); } catch(err){ console.error(err); showToast('ไม่สามารถเปลี่ยนสิทธิ์ได้','error'); }
         });
         document.getElementById('admin-user-list')?.addEventListener('click', async (e) => {
+            const deleteBtn = e.target.closest('[data-user-delete]');
+            if (deleteBtn) {
+                await deleteAdminUser(deleteBtn.getAttribute('data-user-delete'));
+                return;
+            }
             const btn=e.target.closest('[data-user-toggle]'); if(!btn) return; const id=btn.getAttribute('data-user-toggle');
             if(id===currentAuthUser?.uid){ showToast('ไม่สามารถปิดบัญชีของตัวเองขณะกำลังใช้งานได้','info'); return; }
             const u=adminUsersCache.find(x=>x.id===id); if(!u) return;
@@ -1761,7 +1825,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                 </div>
 
                 <!-- สินค้าและราคาประจำบริษัท -->
-                <div class="mb-4 p-4 rounded-2xl bg-gradient-to-br from-sky-50/80 to-indigo-50/60 border border-sky-200 flex-shrink-0">
+                <div class="company-products-panel mb-4 p-4 rounded-2xl bg-gradient-to-br from-sky-50/80 to-indigo-50/60 border border-sky-200 flex-shrink-0">
                     <div class="flex items-center justify-between gap-2 mb-3">
                         <div>
                             <div class="text-sm font-bold text-slate-800">🏷️ เพิ่มสินค้า / ราคาของบริษัทนี้</div>
@@ -1876,7 +1940,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                 </div>
 
                 <!-- ประวัติการซื้อ -->
-                <div class="mb-3 flex-shrink-0">
+                <div class="mb-2 flex-shrink-0">
                     <div class="flex items-center justify-between gap-3 mb-2">
                         <div>
                             <div class="text-sm font-bold text-slate-800">📋 ประวัติการซื้อสินค้า</div>
@@ -1888,7 +1952,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                         class="w-full px-3.5 py-2 text-xs border border-sky-200 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
                 </div>
 
-                <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1 mb-3 min-h-[210px]">
+                <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-1 min-h-[260px] pr-1 mb-2">
                     <!-- รายการสินค้าจะแสดงที่นี่ -->
                 </div>
 
