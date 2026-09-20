@@ -232,40 +232,55 @@
         </div>
     </div>
 
-   <header class="bg-white/85 backdrop-blur-md border-b border-sky-100 sticky top-0 z-30 shadow-sm flex-shrink-0">
-        <div class="max-w-7xl mx-auto px-4 py-2.5 flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <!-- ปุ่มสลับซ่อน/แสดงฟอร์มด้านซ้าย -->
-                <button type="button" id="toggle-form-btn" onclick="toggleSidebarForm()" title="ซ่อน/แสดงฟอร์มเพิ่มข้อมูล" class="p-2 text-slate-600 hover:text-sky-600 hover:bg-sky-50 rounded-xl transition border border-slate-200/80 flex items-center justify-center shadow-2xs">
-                    <svg id="toggle-icon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-                <h1 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-                    📦 <span class="bg-gradient-to-r from-sky-600 to-blue-600 bg-clip-text text-transparent">Delivery Tracking & CRM</span>
-                </h1>
-            </div>
-            <div class="flex items-center gap-2">
-                <button type="button" id="open-stock-modal-btn" class="px-3 py-1.5 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold rounded-xl border border-indigo-200 transition flex items-center gap-1 shadow-2xs">
-                    🏷️ <span class="flex flex-col text-left">
-                        <span>Manage Stock</span>
-                    </span>
-                </button>
-				
-				<button
-    id="open-reminder-modal-btn"
-    class="bg-white/20 hover:bg-white/35 text-slate-700 border border-sky-200 bg-white px-3 py-1.5 rounded-xl font-bold text-xs transition shadow-2xs flex items-center gap-1">
-    🔔 <span class="flex flex-col text-left">
-        <span>Reminders</span>
-    </span>
-</button>
-                <span id="login-user-badge" class="text-xs px-3 py-1.5 rounded-xl bg-sky-50 text-sky-700 font-semibold border border-sky-100 hidden sm:inline-flex">👤 ผู้ใช้งาน</span>
-                <button type="button" id="open-admin-users-btn" class="hidden px-3 py-1.5 text-xs bg-violet-50 hover:bg-violet-100 text-violet-700 font-semibold rounded-xl border border-violet-200 transition items-center gap-1">👥 จัดการผู้ใช้</button>
-                <button type="button" id="logout-btn" class="hidden px-3 py-1.5 text-xs bg-rose-50 hover:bg-rose-100 text-rose-700 font-semibold rounded-xl border border-rose-200 transition">🚪 ออกจากระบบ</button>
-                <span id="connection-status" class="text-xs px-3 py-1 rounded-full bg-amber-100 text-amber-700 font-medium hidden sm:inline-block">Connecting to Firebase...</span>
-            </div>
+   <header class="bg-gradient-to-r from-violet-600 via-indigo-600 to-sky-600 backdrop-blur-md border-b border-indigo-400/30 sticky top-0 z-35 shadow-md flex-shrink-0 transition-all duration-300 text-white">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+        <!-- ฝั่งซ้าย: ปุ่มซ่อน/แสดง Sidebar และ โลโก้/ชื่อระบบ -->
+        <div class="flex items-center gap-3">
+            <button type="button" id="toggle-form-btn" onclick="toggleSidebarForm()" title="ซ่อน/แสดงฟอร์มเพิ่มข้อมูล" class="p-2 text-white/90 hover:text-white hover:bg-white/15 rounded-xl transition-all duration-200 border border-white/20 flex items-center justify-center shadow-2xs active:scale-95">
+                <svg id="toggle-icon" class="w-5 h-5 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                </svg>
+            </button>
+            <h1 class="text-xl font-extrabold text-white flex items-center gap-2.5 tracking-tight drop-shadow-xs">
+                <span class="flex items-center justify-center w-9 h-9 rounded-xl bg-white/20 backdrop-blur-sm text-white shadow-inner text-lg border border-white/30">📦</span> 
+                <span>Delivery Tracking & CRM</span>
+            </h1>
         </div>
-    </header>
+
+        <!-- ฝั่งขวา: เมนูจัดการ, ผู้ใช้งาน และปุ่มควบคุมต่างๆ -->
+        <div class="flex items-center gap-1.5">
+            <!-- ปุ่มจัดการสต็อก -->
+            <button type="button" id="open-stock-modal-btn" class="px-3 py-2 text-xs text-white hover:bg-white/15 font-bold rounded-xl transition-all duration-200 flex items-center gap-1.5 active:scale-95">
+                🏷️ <span>Manage Stock</span>
+            </button>
+            
+            <!-- ปุ่มแจ้งเตือน -->
+            <button type="button" id="open-reminder-modal-btn" class="px-3 py-2 text-white hover:bg-white/15 rounded-xl font-bold text-xs transition-all duration-200 flex items-center gap-1.5 active:scale-95">
+                🔔 <span>Reminders</span>
+            </button>
+
+            <!-- ข้อมูลผู้ใช้งาน -->
+            <span id="login-user-badge" class="text-xs px-3 py-2 rounded-xl text-white font-bold hidden sm:inline-flex items-center gap-1.5 hover:bg-white/10 transition-all duration-200">
+                👤 <span class="truncate max-w-[120px]">ผู้ใช้งาน</span>
+            </span>
+            
+            <!-- ปุ่มจัดการผู้ใช้ -->
+            <button type="button" id="open-admin-users-btn" class="hidden px-3 py-2 text-xs text-white hover:bg-white/15 font-bold rounded-xl transition-all duration-200 items-center gap-1.5 active:scale-95">
+                👥 จัดการผู้ใช้
+            </button>
+            
+            <!-- ปุ่มออกจากระบบ -->
+            <button type="button" id="logout-btn" class="hidden px-3 py-2 text-xs text-white hover:bg-white/15 font-bold rounded-xl transition-all duration-200 items-center gap-1.5 active:scale-95">
+                🚪 ออกจากระบบ
+            </button>
+
+            <!-- สถานะ Firebase Connection (ลบพื้นหลัง เหลือแค่เส้นกรอบและตัวหนังสือสีขาว) -->
+            <span id="connection-status" class="text-xs px-3 py-1.5 rounded-full bg-transparent text-white border border-white/70 font-semibold hidden sm:inline-block shadow-2xs animate-pulse ml-2">
+                Connecting to Firebase...
+            </span>
+        </div>
+    </div>
+</header>
 
     <main class="max-w-7xl mx-auto px-4 mt-3 flex gap-4 w-full flex-grow h-[calc(100vh-100px)] overflow-hidden">
         
@@ -1198,14 +1213,11 @@
         function setConnectionStatus(state, message, showErrorToast = false) {
             firebaseConnectionState = state;
             if (!statusBadge) return;
-            const styles = {
-                connecting: 'bg-amber-100 text-amber-700',
-                connected: 'bg-emerald-100 text-emerald-700',
-                offline: 'bg-rose-100 text-rose-700',
-                error: 'bg-red-100 text-red-700'
-            };
+            
+            // ลบสีพื้นหลังและสีข้อความเดิมออก ให้คงความโปร่งใสและกรอบสีขาวไว้เสมอ
             statusBadge.textContent = message;
-            statusBadge.className = `text-xs px-3 py-1 rounded-full font-medium hidden sm:inline-block ${styles[state] || styles.connecting}`;
+            statusBadge.className = `text-xs px-3 py-1.5 rounded-full bg-transparent text-white border border-white/70 font-semibold hidden sm:inline-block shadow-2xs animate-pulse ml-2`;
+            
             if (showErrorToast) {
                 const now = Date.now();
                 if (now - lastConnectionErrorToast > 8000) {
