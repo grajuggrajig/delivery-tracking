@@ -1494,6 +1494,13 @@ function getCompanyPriceHistory(companyName, productName) {
 
             const oldConfirm = btnConfirm.cloneNode(true);
             const oldCancel = btnCancel.cloneNode(true);
+
+            // รีเซ็ตสถานะปุ่มทุกครั้งที่เปิด Confirm Modal
+            // ป้องกันปุ่มค้างเป็น "กำลังดำเนินการ..." จากการกดรายการก่อนหน้า
+            oldConfirm.disabled = false;
+            oldConfirm.textContent = 'ยืนยัน';
+            oldCancel.disabled = false;
+
             btnConfirm.replaceWith(oldConfirm);
             btnCancel.replaceWith(oldCancel);
 
