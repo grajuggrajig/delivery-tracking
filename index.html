@@ -73,10 +73,16 @@
         }
 
         /* ระบบชั้นแสดงผลกลาง: แจ้งเตือนและยืนยันต้องอยู่เหนือทุก Modal */
-        #confirm-modal { z-index: 10000 !important; }
-        #toast-container { z-index: 11000 !important; }
-        #toast-container > div { position: relative; z-index: 11001 !important; }
-        #company-all-history-modal, #crm-modal, #document-modal, #company-picker-modal, #reminder-modal, #stock-modal, #custom-item-suggestions, #customer-modal, #edit-modal, #edit-customer-modal, #edit-company-modal { z-index: 200 !important; }
+        /* ชั้นแสดงผล: Modal หลัก < Confirm < Toast เพื่อไม่ให้แจ้งเตือนถูกบัง */
+        #company-all-history-modal { z-index: 200 !important; }
+        #company-purchase-history-modal { z-index: 300 !important; }
+        #crm-modal { z-index: 220 !important; }
+        #document-modal { z-index: 230 !important; }
+        #company-picker-modal, #reminder-modal, #stock-modal, #custom-item-suggestions, #customer-modal, #edit-modal, #edit-customer-modal, #edit-company-modal { z-index: 200 !important; }
+        #admin-user-modal { z-index: 9000 !important; }
+        #confirm-modal { z-index: 65000 !important; }
+        #toast-container { z-index: 70000 !important; }
+        #toast-container > div { position: relative; z-index: 70001 !important; }
         #document-modal { z-index: 230 !important; }
         #crm-modal { z-index: 220 !important; }
         #company-picker-modal { z-index: 120 !important; }
@@ -362,7 +368,6 @@
                 </span>
             </label>
             <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
-            <div id="company-product-hint" class="hidden mt-1.5 text-[10px] text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5">พบรายการสินค้าของบริษัทเดิมแล้ว</div>
         </div>
         
         <div>
@@ -567,22 +572,23 @@
         <div class="flex justify-between items-center pb-3 mb-2 border-b border-slate-100">
             <span class="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
                 📋 เลือกรายการสินค้าจากสต็อก (เลือกได้หลายรายการ)
-                <span id="suggestion-stock-count" class="ml-1 px-2 py-0.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-100 font-bold normal-case tracking-normal">0 รายการ</span>
-                <span id="suggestion-selected-count" class="px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold normal-case tracking-normal">เลือก 0</span>
+                <span id="suggestion-selected-count" class="text-[10px] px-2 py-0.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-100 font-bold">เลือกแล้ว 0 รายการ</span>
             </span>
             <button type="button" id="close-suggestion-modal" class="w-7 h-7 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition text-xs font-bold">
                 ✕
             </button>
         </div>
-        <div class="mb-3">
-            <input type="text" id="suggestion-search-box" placeholder="🔍 พิมพ์เพื่อกรองชื่อสินค้า..." class="w-full px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+        <div class="mb-3 flex items-center gap-2">
+            <input type="text" id="suggestion-search-box" placeholder="🔍 พิมพ์เพื่อกรองชื่อสินค้า..." class="flex-1 px-3.5 py-2 text-xs border border-sky-100 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+            <button type="button" onclick="selectAllVisibleSuggestions()" class="flex-shrink-0 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-[10px] font-semibold transition">☑️ เลือกทั้งหมด</button>
+            <button type="button" onclick="clearSuggestionSelections()" class="flex-shrink-0 px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl text-[10px] font-semibold transition">ล้าง</button>
         </div>
         <div id="suggestions-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1"></div>
         
         <!-- ปุ่มยืนยันเพิ่มสินค้าที่เลือก -->
         <div class="pt-3 mt-3 border-t border-slate-100 flex justify-end gap-2">
             <button type="button" onclick="closeSuggestionModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-semibold transition">ยกเลิก</button>
-            <button type="button" onclick="confirmSelectedSuggestions()" class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold transition shadow-sm">✓ เพิ่มรายการที่เลือกทั้งหมด</button>
+            <button type="button" id="confirm-selected-suggestions-btn" onclick="confirmSelectedSuggestions()" disabled class="px-5 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-semibold transition shadow-sm disabled:opacity-50 disabled:cursor-not-allowed">✓ เพิ่มรายการที่เลือกทั้งหมด</button>
         </div>
     </div>
 </div>
@@ -1002,7 +1008,7 @@
     <div id="admin-user-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[40000] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
             <div class="bg-gradient-to-r from-violet-600 via-indigo-600 to-sky-600 text-white px-5 py-4 flex items-center justify-between">
-                <div><div class="text-base font-bold">👥 จัดการผู้ใช้</div><div class="text-xs text-white/80 mt-1">Admin สามารถสร้างบัญชี ตั้งชื่อผู้ใช้ รหัสผ่าน และกำหนดสิทธิ์ได้</div></div>
+                <div><div class="text-base font-bold">👥 จัดการผู้ใช้</div><div class="text-xs text-white/80 mt-1">Admin สามารถสร้างบัญชี ตั้งชื่อผู้ใช้ รหัสผ่าน กำหนดสิทธิ์ เปิด/ปิด และลบผู้ใช้ออกจากระบบได้</div></div>
                 <button type="button" id="close-admin-users-btn" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg">✕</button>
             </div>
             <div class="p-5 overflow-y-auto no-scrollbar">
@@ -1015,6 +1021,15 @@
                         <select id="admin-new-role" class="px-3 py-2.5 text-xs border border-violet-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-violet-400"><option value="user">👤 User</option><option value="admin">🛡️ Admin</option></select>
                     </div>
                     <div class="flex justify-end mt-3"><button type="button" id="admin-create-user-btn" class="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white rounded-xl text-xs font-bold shadow-sm">➕ สร้างบัญชี</button></div>
+                </div>
+                <div class="rounded-2xl border border-amber-100 bg-amber-50/70 p-4 mb-5">
+                    <div class="flex flex-wrap items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-amber-800">🛡️ จัดข้อมูลเก่าเข้าบัญชี Admin</div>
+                            <div class="text-[11px] text-amber-700/80 mt-1 leading-relaxed">ใช้ครั้งเดียวสำหรับข้อมูลเดิมที่ยังไม่มี ownerUid เพื่อให้ข้อมูล CRM/บริษัท/แจ้งเตือนเดิมยังอยู่กับ Admin โดยไม่ถูกแชร์ให้ User อื่น</div>
+                        </div>
+                        <button type="button" id="admin-claim-legacy-btn" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm">🔐 จัดข้อมูลเดิม</button>
+                    </div>
                 </div>
                 <div class="flex items-center justify-between mb-3"><div><div class="text-sm font-bold text-slate-800">📋 รายชื่อผู้ใช้</div><div class="text-[11px] text-slate-400">เปิด/ปิดการใช้งานและเปลี่ยนสิทธิ์ได้ทันที</div></div><span id="admin-user-count" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-semibold">0 บัญชี</span></div>
                 <div id="admin-user-list" class="space-y-2"></div>
@@ -1051,6 +1066,9 @@
         let currentAuthUser = null;
         let currentUserProfile = null;
         let adminUsersCache = [];
+        let userDataListenersStarted = false;
+        let userDataScopeKey = '';
+        let userDataUnsubscribers = [];
         const USER_EMAIL_DOMAIN = 'delivery-tracking-2313a.firebaseapp.com';
         let adminUserCreatorApp = null;
         let adminUserCreatorAuth = null;
@@ -1080,12 +1098,6 @@
             const ref = db.collection('users').doc(user.uid);
             const snap = await ref.get();
             if (snap.exists) return { id: snap.id, ...snap.data() };
-            const firstUsers = await db.collection('users').limit(1).get();
-            if (firstUsers.empty) {
-                const profile = { uid:user.uid, username:user.email.split('@')[0], displayName:user.email.split('@')[0], role:'admin', active:true, email:user.email, createdAt:firebase.firestore.FieldValue.serverTimestamp(), updatedAt:firebase.firestore.FieldValue.serverTimestamp() };
-                await ref.set(profile);
-                return { id:user.uid, ...profile };
-            }
             throw new Error('บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
         }
 
@@ -1146,6 +1158,10 @@
                 const loginPassword = document.getElementById('login-password');
                 if (loginPassword) loginPassword.value = '';
 
+                // เริ่มโหลดข้อมูล CRM หลังยืนยันตัวตน + profile แล้วเท่านั้น
+                // ข้อมูล CRM/บริษัท/แจ้งเตือนจะถูก scope ด้วย Firebase UID
+                startUserScopedDataListeners();
+
                 // แสดง CRM หลังยืนยัน session + profile สำเร็จแล้วเท่านั้น
                 finishAuthStartup();
             } catch (error) {
@@ -1197,8 +1213,8 @@
             const list = document.getElementById('admin-user-list'); if(!list) return;
             list.innerHTML = adminUsersCache.map(u => `
                 <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border border-slate-100 bg-white">
-                    <div class="min-w-0"><div class="font-bold text-sm text-slate-800">👤 ${escapeHTML(u.displayName || u.username || '-')}</div><div class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(u.username || u.email || '-')} · ${u.role === 'admin' ? '🛡️ Admin' : '👤 User'}</div></div>
-                    <div class="flex items-center gap-2"><select data-user-role="${u.id}" class="px-2.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"><option value="user" ${u.role==='user'?'selected':''}>User</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select><button type="button" data-user-toggle="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold ${u.active===false?'bg-slate-100 text-slate-500':'bg-emerald-50 text-emerald-700'}">${u.active===false?'ปิดใช้งาน':'เปิดใช้งาน'}</button></div>
+                    <div class="min-w-0"><div class="font-bold text-sm text-slate-800">👤 ${escapeHTML(u.displayName || u.username || '-')}</div><div class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(u.username || u.email || '-')} · ${u.role === 'admin' ? '🛡️ Admin' : '👤 User'}${u.active===false ? ' · 🔒 ปิดใช้งาน' : ''}</div></div>
+                    <div class="flex items-center gap-2 flex-wrap justify-end"><select data-user-role="${u.id}" class="px-2.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"><option value="user" ${u.role==='user'?'selected':''}>User</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select><button type="button" data-user-toggle="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold ${u.active===false?'bg-slate-100 text-slate-500':'bg-emerald-50 text-emerald-700'}">${u.active===false?'เปิดใช้งาน':'ปิดใช้งาน'}</button><button type="button" data-user-delete="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition">🗑️ ลบ user</button></div>
                 </div>`).join('') || '<div class="text-center py-8 text-slate-400 text-sm">ยังไม่มีผู้ใช้</div>';
         }
 
@@ -1236,6 +1252,81 @@
             if(id===currentAuthUser?.uid){ showToast('ไม่สามารถปิดบัญชีของตัวเองขณะกำลังใช้งานได้','info'); return; }
             const u=adminUsersCache.find(x=>x.id===id); if(!u) return;
             try { await db.collection('users').doc(id).update({active:u.active===false,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); showToast(u.active===false?'เปิดใช้งานบัญชีแล้ว':'ปิดการใช้งานบัญชีแล้ว','success'); await loadAdminUsers(); } catch(err){console.error(err);showToast('ไม่สามารถเปลี่ยนสถานะได้','error');}
+        });
+        document.getElementById('admin-user-list')?.addEventListener('click', async (e) => {
+            const btn=e.target.closest('[data-user-delete]'); if(!btn) return;
+            const id=btn.getAttribute('data-user-delete');
+            if(currentUserProfile?.role !== 'admin') return;
+            if(id===currentAuthUser?.uid){ showToast('ไม่สามารถลบบัญชีของตัวเองขณะกำลังใช้งานได้','info'); return; }
+            const u=adminUsersCache.find(x=>x.id===id); if(!u) return;
+            const username = u.username || u.email || id;
+            showConfirmModal('ลบผู้ใช้', `ต้องการลบผู้ใช้ “${username}” ออกจากระบบหรือไม่? การลบนี้จะลบโปรไฟล์สิทธิ์ใน Firestore ทำให้บัญชีไม่สามารถเข้าใช้งาน CRM ได้อีก`, async () => {
+                btn.disabled = true;
+                try {
+                    await db.collection('users').doc(id).delete();
+                    showToast(`ลบผู้ใช้ “${username}” ออกจากระบบแล้ว`, 'success');
+                    await loadAdminUsers();
+                } catch(err) {
+                    console.error('Delete user profile error:', err);
+                    showToast('ไม่สามารถลบผู้ใช้ได้ กรุณาตรวจสอบสิทธิ์ Firestore แล้วลองใหม่', 'error');
+                    btn.disabled = false;
+                }
+            });
+        });
+
+        async function claimLegacyDataToCurrentAdmin() {
+            if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) return;
+
+            const btn = document.getElementById('admin-claim-legacy-btn');
+            if (btn) { btn.disabled = true; btn.textContent = 'กำลังจัดข้อมูล...'; }
+
+            try {
+                const collections = ['deliveries', 'companyProducts', 'reminders'];
+                let total = 0;
+
+                for (const collectionName of collections) {
+                    const snapshot = await db.collection(collectionName).get();
+                    let batch = db.batch();
+                    let batchCount = 0;
+
+                    for (const doc of snapshot.docs) {
+                        const data = doc.data() || {};
+                        if (data.ownerUid) continue;
+
+                        batch.update(doc.ref, {
+                            ownerUid: currentAuthUser.uid,
+                            ownerMigratedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        batchCount++;
+                        total++;
+
+                        if (batchCount >= 450) {
+                            await batch.commit();
+                            batch = db.batch();
+                            batchCount = 0;
+                        }
+                    }
+
+                    if (batchCount > 0) await batch.commit();
+                }
+
+                showToast(total
+                    ? `จัดข้อมูลเดิมเข้า Admin สำเร็จ ${total.toLocaleString('th-TH')} รายการ`
+                    : 'ไม่พบข้อมูลเก่าที่ต้องจัดการ ข้อมูลทั้งหมดมี ownerUid แล้ว', 'success');
+            } catch (err) {
+                console.error('claimLegacyDataToCurrentAdmin:', err);
+                showToast('ไม่สามารถจัดข้อมูลเดิมได้ กรุณาตรวจสอบ Firestore Rules แล้วลองใหม่', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = '🔐 จัดข้อมูลเดิม'; }
+            }
+        }
+
+        document.getElementById('admin-claim-legacy-btn')?.addEventListener('click', () => {
+            showConfirmModal(
+                'จัดข้อมูลเดิมเข้าบัญชี Admin',
+                'ระบบจะเพิ่ม ownerUid ให้เฉพาะข้อมูลใน deliveries, companyProducts และ reminders ที่ยังไม่มี ownerUid เท่านั้น ข้อมูลที่มี ownerUid อยู่แล้วจะไม่ถูกเปลี่ยน ต้องการดำเนินการหรือไม่?',
+                claimLegacyDataToCurrentAdmin
+            );
         });
 
         document.getElementById('open-admin-users-btn')?.addEventListener('click', async () => { if(currentUserProfile?.role!=='admin') return; document.getElementById('admin-user-modal').classList.remove('hidden'); await loadAdminUsers(); });
@@ -1282,7 +1373,6 @@
         let allCompanyProducts = [];
         let currentFilter = 'all';
         let suggestionQuantities = {};
-        let suggestionSelectedKeys = new Set();
         let isFormVisible = true;
         let currentCrmCustomerId = null;
 
@@ -1407,6 +1497,13 @@ function getCompanyPriceHistory(companyName, productName) {
 
             const oldConfirm = btnConfirm.cloneNode(true);
             const oldCancel = btnCancel.cloneNode(true);
+
+            // รีเซ็ตสถานะปุ่มทุกครั้งที่เปิด Confirm Modal
+            // ป้องกันปุ่มค้างเป็น "กำลังดำเนินการ..." จากการกดรายการก่อนหน้า
+            oldConfirm.disabled = false;
+            oldConfirm.textContent = 'ยืนยัน';
+            oldCancel.disabled = false;
+
             btnConfirm.replaceWith(oldConfirm);
             btnCancel.replaceWith(oldCancel);
 
@@ -1466,13 +1563,7 @@ function showCompanyAllHistory(companyName) {
 }
 
 function normalizeCompanyProductKey(value) {
-    return String(value || '')
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, ' ')
-        .replace(/\s*\(\s*สำนักงานใหญ่\s*\)\s*$/i, '')
-        .replace(/\s+สำนักงานใหญ่\s*$/i, '')
-        .trim();
+    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 function normalizeCompanyProductName(value) {
@@ -1502,31 +1593,40 @@ function getCompanySpecificProduct(companyName, productName) {
     }) || null;
 }
 
-function updateCompanyProductHint() {
-    const input = document.getElementById('company-name');
-    const hint = document.getElementById('company-product-hint');
-    if (!input || !hint) return;
-
-    const companyName = input.value.trim();
-    const companyKey = normalizeCompanyProductKey(companyName);
-    const count = companyKey
-        ? allCompanyProducts.filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey).length
-        : 0;
-
-    if (count > 0) {
-        hint.textContent = `✓ บริษัทนี้มีรายการสินค้าเดิม ${count.toLocaleString('th-TH')} รายการ — ไม่ต้องเพิ่มสินค้าใหม่ซ้ำ`;
-        hint.classList.remove('hidden');
-    } else {
-        hint.classList.add('hidden');
-    }
-}
-
 function getEffectiveProductPrice(companyName, product) {
     if (!product) return 0;
     const companyProduct = getCompanySpecificProduct(companyName, product.name);
     return companyProduct && Number.isFinite(Number(companyProduct.price))
         ? Number(companyProduct.price)
         : (Number(product.price) || 0);
+}
+
+// ผูกสินค้าในสต็อกกลางเข้ากับบริษัทโดยอัตโนมัติครั้งแรกที่บริษัทเลือกสินค้านั้น
+// ครั้งต่อไปจะใช้รายการ companyProducts เดิมทันที ไม่ต้องเพิ่มซ้ำ แม้จะเพิ่มผู้ติดต่อ/รายการจัดส่งใหม่
+async function ensureCompanyProductFromStock(companyName, stockProduct) {
+    const cleanCompany = String(companyName || '').trim();
+    if (!cleanCompany || !stockProduct || !currentAuthUser?.uid) return null;
+
+    const existing = getCompanySpecificProduct(cleanCompany, stockProduct.name);
+    if (existing) return existing;
+
+    const companyKey = normalizeCompanyProductKey(cleanCompany);
+    const payload = {
+        companyKey,
+        companyName: cleanCompany,
+        name: String(stockProduct.name || '').trim(),
+        cost: Number(stockProduct.cost) || 0,
+        price: Number(stockProduct.price) || 0,
+        stockProductId: stockProduct.id || '',
+        ownerUid: currentAuthUser.uid,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    };
+
+    const ref = await db.collection('companyProducts').add(payload);
+    const created = { id: ref.id, ...payload };
+    allCompanyProducts.push(created);
+    return created;
 }
 
 async function ensureProductInStandardStock(name, cost, price) {
@@ -1594,7 +1694,7 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
                 return false;
             }
 
-            await db.collection('companyProducts').doc(editId).update({
+            const updatePayload = {
                 companyKey,
                 companyName: cleanCompany,
                 name: cleanName,
@@ -1602,7 +1702,11 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
                 price: numericPrice,
                 stockProductId: (stockProduct && stockProduct.id) || oldProduct.stockProductId || '',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-            });
+            };
+            if (!oldProduct.ownerUid && currentAuthUser?.uid) {
+                updatePayload.ownerUid = currentAuthUser.uid;
+            }
+            await db.collection('companyProducts').doc(editId).update(updatePayload);
 
             showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ แล้ว`, 'success');
             return true;
@@ -1620,6 +1724,7 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
             cost: numericCost,
             price: numericPrice,
             stockProductId: stockProduct && stockProduct.id ? stockProduct.id : '',
+            ownerUid: currentAuthUser.uid,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
@@ -1842,7 +1947,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
 </button>
                     </div>
 
-                    <div id="company-specific-products-container" class="space-y-2 mt-3 max-h-52 overflow-y-auto no-scrollbar"></div>
+                    <div id="company-specific-products-container" class="space-y-2 mt-3 max-h-[34vh] min-h-[180px] overflow-y-auto no-scrollbar"></div>
                 </div>
 
                 <!-- Modal ย่อย: รับสินค้าจากบริษัทอื่น -->
@@ -1904,21 +2009,44 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                     </div>
                 </div>
 
-                <!-- ประวัติการซื้อ -->
-                <div class="mb-3 flex-shrink-0">
-                    <div class="flex items-center justify-between gap-3 mb-2">
-                        <div>
-                            <div class="text-sm font-bold text-slate-800">📋 ประวัติการซื้อสินค้า</div>
-                            <div class="text-[10px] text-slate-400">รายการที่ซื้อแล้วและรายการที่กำลังติดตามยังคงแสดงเหมือนเดิม</div>
+                <!-- หน้าต่างย่อย: ประวัติการซื้อสินค้า -->
+                <div id="company-purchase-history-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
+                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[88vh] flex flex-col overflow-hidden border border-slate-100">
+                        <div class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-600 text-white px-5 py-4 flex items-center justify-between flex-shrink-0">
+                            <div class="min-w-0">
+                                <div class="text-base font-bold">📋 ประวัติการซื้อสินค้า</div>
+                                <div class="text-[11px] text-white/80 mt-0.5 truncate">🏢 ${safeCompany} ${safeCustomer}</div>
+                            </div>
+                            <button type="button" id="close-company-purchase-history-btn" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg transition">✕</button>
                         </div>
-                        <span id="search-count-label" class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ</span>
+                        <div class="p-4 border-b border-slate-100 bg-slate-50/70 flex-shrink-0">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="text-xs font-bold text-slate-700">🔎 ค้นหารายการสินค้า</div>
+                                <span id="search-count-label" class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ</span>
+                            </div>
+                            <input type="text" id="company-history-search" placeholder="🔍 ค้นหาชื่อสินค้า หรือวันที่..." autocomplete="off"
+                                class="w-full px-3.5 py-3 text-sm border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition text-slate-700">
+                        </div>
+                        <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-1 min-h-0 p-4">
+                            <!-- รายการสินค้าจะแสดงที่นี่ -->
+                        </div>
+                        <div class="px-5 py-3 border-t border-slate-100 flex justify-end bg-white flex-shrink-0">
+                            <button type="button" id="close-company-purchase-history-bottom" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">ปิดหน้าต่าง</button>
+                        </div>
                     </div>
-                    <input type="text" id="company-history-search" placeholder="🔍 ค้นหารายชื่อสินค้าในประวัติ..."
-                        class="w-full px-3.5 py-2 text-xs border border-sky-200 bg-sky-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition text-slate-700">
                 </div>
 
-                <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1 mb-3 min-h-[210px]">
-                    <!-- รายการสินค้าจะแสดงที่นี่ -->
+                <!-- ประวัติการซื้อ: เปิดเป็นหน้าต่างแยก เพื่อเพิ่มพื้นที่ให้รายการสินค้าของบริษัท -->
+                <div class="mb-3 flex-shrink-0 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3.5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-slate-800">📋 ประวัติการซื้อสินค้า</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5">แยกหน้าต่างสำหรับค้นหาและดูรายการที่ซื้อแล้ว / กำลังติดตาม เพื่อให้รายการสินค้าด้านบนมองเห็นได้ชัดเจน</div>
+                        </div>
+                        <button type="button" id="open-company-purchase-history-btn" class="flex-shrink-0 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95">
+                            📋 เปิดประวัติการซื้อ <span id="company-purchase-history-count" class="ml-1 px-1.5 py-0.5 rounded-lg bg-white/20">${items.length}</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div class="pt-2 border-t border-slate-100 flex justify-end flex-shrink-0">
@@ -1930,9 +2058,14 @@ function showCompanyHistoryModal(companyName, customerName, items) {
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+    const purchaseHistoryModal = document.getElementById('company-purchase-history-modal');
+    const openPurchaseHistoryBtn = document.getElementById('open-company-purchase-history-btn');
+    const closePurchaseHistoryBtn = document.getElementById('close-company-purchase-history-btn');
+    const closePurchaseHistoryBottomBtn = document.getElementById('close-company-purchase-history-bottom');
     const searchInput = document.getElementById('company-history-search');
     const container = document.getElementById('company-history-items-container');
     const countLabel = document.getElementById('search-count-label');
+    const purchaseHistoryCount = document.getElementById('company-purchase-history-count');
     const companyProductSearch = document.getElementById('company-specific-product-search');
     const companyProductName = document.getElementById('company-product-name-input');
     const companyProductCost = document.getElementById('company-product-cost-input');
@@ -2176,6 +2309,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                     sourceCompanyName: String(sourceProduct.companyName || sourceName || '').trim(),
                     sourceCompanyProductId: sourceProduct.id,
                     importedFromCompany: true,
+                    ownerUid: currentAuthUser.uid,
                     importedAt: firebase.firestore.FieldValue.serverTimestamp(),
                     createdAt: firebase.firestore.FieldValue.serverTimestamp(),
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -2259,9 +2393,30 @@ function showCompanyHistoryModal(companyName, customerName, items) {
     renderCompanyProductCatalog(companyName);
     renderItems('');
 
-    searchInput.addEventListener('input', (e) => {
+    const closePurchaseHistory = () => {
+        if (!purchaseHistoryModal) return;
+        purchaseHistoryModal.classList.add('hidden');
+        purchaseHistoryModal.classList.remove('flex');
+    };
+
+    openPurchaseHistoryBtn?.addEventListener('click', () => {
+        if (!purchaseHistoryModal) return;
+        purchaseHistoryModal.classList.remove('hidden');
+        purchaseHistoryModal.classList.add('flex');
+        renderItems(searchInput?.value || '');
+        setTimeout(() => searchInput?.focus(), 50);
+    });
+    closePurchaseHistoryBtn?.addEventListener('click', closePurchaseHistory);
+    closePurchaseHistoryBottomBtn?.addEventListener('click', closePurchaseHistory);
+    purchaseHistoryModal?.addEventListener('click', e => {
+        if (e.target === purchaseHistoryModal) closePurchaseHistory();
+    });
+
+    searchInput?.addEventListener('input', (e) => {
         renderItems(e.target.value);
     });
+
+    if (purchaseHistoryCount) purchaseHistoryCount.textContent = items.length.toLocaleString('th-TH');
 }
 
 		
@@ -2621,32 +2776,102 @@ function getCompanyPriceHistory(companyName, productName) {
             setConnectionStatus('error', 'เชื่อมต่อ Server ไม่ได้: โหลดสต็อกสินค้าไม่สำเร็จ', true);
         });
 
-        // โหลดราคาสินค้าเฉพาะบริษัท แยกจาก products มาตรฐาน
-        db.collection('companyProducts').onSnapshot({ includeMetadataChanges: true }, snapshot => {
-            allCompanyProducts = [];
-            snapshot.forEach(doc => {
-                allCompanyProducts.push({ id: doc.id, ...doc.data() });
+        // โหลดราคาสินค้าเฉพาะบริษัท โดย scope ตาม Firebase UID
+        // products มาตรฐานยังคงเป็นข้อมูลกลางร่วมกันทุกผู้ใช้
+        function startUserScopedDataListeners() {
+            if (!currentAuthUser?.uid || !currentUserProfile) return;
+
+            const nextScopeKey = `${currentAuthUser.uid}:${currentUserProfile.role || 'user'}`;
+            if (userDataListenersStarted && userDataScopeKey === nextScopeKey) return;
+
+            userDataUnsubscribers.forEach(unsub => {
+                try { if (typeof unsub === 'function') unsub(); } catch (e) {}
             });
+            userDataUnsubscribers = [];
+            userDataScopeKey = nextScopeKey;
+            userDataListenersStarted = true;
 
-            const historyModal = document.getElementById('company-all-history-modal');
-            if (historyModal) {
-                const companyText = historyModal.querySelector('.text-sky-600.font-bold');
-                if (companyText) {
-                    const raw = companyText.textContent.replace(/^🏢\s*/, '').replace(/\s*\(ผู้ติดต่อ:.*\)$/, '').trim();
-                    renderCompanyProductCatalog(raw, document.getElementById('company-specific-product-search')?.value || '');
-                }
-            }
+            const isAdmin = currentUserProfile.role === 'admin';
+            const uid = currentAuthUser.uid;
 
-            updateCompanyProductHint();
+            const scopedRef = (collectionName) => {
+                const ref = db.collection(collectionName);
+                return isAdmin ? ref : ref.where('ownerUid', '==', uid);
+            };
 
-            // อัปเดตตัวเลขบนปุ่ม "📦 ดูสินค้าทั้งหมด" ของแต่ละบริษัททันที
-            if (typeof applyFilterAndSearch === 'function') {
-                applyFilterAndSearch();
-            }
-        }, error => {
-            console.error('Firestore companyProducts snapshot error:', error);
-            setConnectionStatus('error', 'เชื่อมต่อ Server ไม่ได้: โหลดราคาสินค้าบริษัทไม่สำเร็จ', true);
-        });
+            // -------------------- COMPANY PRODUCTS --------------------
+            userDataUnsubscribers.push(
+                scopedRef('companyProducts').onSnapshot({ includeMetadataChanges: true }, snapshot => {
+                    allCompanyProducts = [];
+                    snapshot.forEach(doc => {
+                        allCompanyProducts.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    const historyModal = document.getElementById('company-all-history-modal');
+                    if (historyModal) {
+                        const companyText = historyModal.querySelector('.text-sky-600.font-bold');
+                        if (companyText) {
+                            const raw = companyText.textContent.replace(/^🏢\s*/, '').replace(/\s*\(ผู้ติดต่อ:.*\)$/, '').trim();
+                            renderCompanyProductCatalog(raw, document.getElementById('company-specific-product-search')?.value || '');
+                        }
+                    }
+
+                    if (typeof applyFilterAndSearch === 'function') {
+                        applyFilterAndSearch();
+                    }
+                }, error => {
+                    console.error('Firestore companyProducts snapshot error:', error);
+                    setConnectionStatus('error', 'เชื่อมต่อ Server ไม่ได้: โหลดราคาสินค้าบริษัทไม่สำเร็จ', true);
+                })
+            );
+
+            // -------------------- DELIVERIES / CRM --------------------
+            userDataUnsubscribers.push(
+                scopedRef('deliveries').onSnapshot({ includeMetadataChanges: true }, snapshot => {
+                    allDeliveries = [];
+                    snapshot.forEach(doc => {
+                        const data = doc.data() || {};
+                        const itemsList = Array.isArray(data.subItems) ? data.subItems : [];
+                        allDeliveries.push({ id: doc.id, ...data, subItems: itemsList });
+                    });
+                    applyFilterAndSearch();
+
+                    if (!snapshot.metadata.fromCache) {
+                        firebaseServerConfirmed = true;
+                        setConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
+                    } else if (!firebaseServerConfirmed) {
+                        setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
+                    }
+                }, error => {
+                    console.error('Firestore deliveries snapshot error:', error);
+                    firebaseServerConfirmed = false;
+                    const message = error && error.code === 'permission-denied'
+                        ? 'เชื่อมต่อ Server ไม่ได้: ไม่มีสิทธิ์เข้าถึงข้อมูล'
+                        : 'เชื่อมต่อ Server ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตและ Firebase';
+                    setConnectionStatus('error', message, true);
+                    document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm border border-red-100">${escapeHTML(message)}</div>`;
+                })
+            );
+
+            // -------------------- REMINDERS --------------------
+            userDataUnsubscribers.push(
+                scopedRef('reminders').onSnapshot({ includeMetadataChanges: true }, snapshot => {
+                    allReminders = [];
+                    snapshot.forEach(doc => allReminders.push({ id: doc.id, ...doc.data() }));
+                    allReminders.sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || ''), 'th'));
+                    renderReminders();
+                    checkTodayReminders();
+
+                    if (!snapshot.metadata.fromCache) {
+                        firebaseServerConfirmed = true;
+                        setConnectionStatus('connected', 'ONLINE');
+                    }
+                }, error => {
+                    console.error('Error loading reminders:', error);
+                    showToast('ไม่สามารถโหลดข้อมูลการแจ้งเตือนได้', 'error');
+                })
+            );
+        }
 
         const itemInput = document.getElementById('item-input');
         const itemDueDateInput = document.getElementById('item-due-date');
@@ -2659,96 +2884,60 @@ function getCompanyPriceHistory(companyName, productName) {
         const suggestionSearchBox = document.getElementById('suggestion-search-box');
         const suggestionsTableContainer = document.getElementById('suggestions-table-container');
 
-        function getSuggestionCatalog() {
-            const currentCompany = document.getElementById('company-name')?.value.trim() || '';
-            const companyKey = normalizeCompanyProductKey(currentCompany);
-            const byName = new Map();
-
-            // 1) สินค้ามาตรฐานจาก Manage Stock
-            allProducts.forEach(p => {
-                const name = String(p.name || '').trim();
-                const nameKey = normalizeCompanyProductName(name);
-                if (!nameKey) return;
-                const companyProduct = companyKey ? getCompanySpecificProduct(currentCompany, name) : null;
-                byName.set(nameKey, {
-                    key: `stock:${p.id}`,
-                    id: p.id,
-                    name,
-                    stockProduct: p,
-                    companyProduct,
-                    cost: companyProduct && Number.isFinite(Number(companyProduct.cost))
-                        ? Number(companyProduct.cost)
-                        : Number(p.cost) || 0,
-                    price: companyProduct && Number.isFinite(Number(companyProduct.price))
-                        ? Number(companyProduct.price)
-                        : Number(p.price) || 0,
-                    fromCompany: !!companyProduct
-                });
-            });
-
-            // 2) ถ้าบริษัทนี้เคยมีรายการสินค้าไว้แล้ว ให้ดึงเข้ามาแสดงอัตโนมัติ
-            //    แม้สินค้านั้นจะยังไม่อยู่ใน allProducts จาก snapshot ล่าสุดก็ตาม
-            if (companyKey) {
-                allCompanyProducts
-                    .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey)
-                    .forEach(cp => {
-                        const name = String(cp.name || '').trim();
-                        const nameKey = normalizeCompanyProductName(name);
-                        if (!nameKey) return;
-                        const stockProduct = allProducts.find(p =>
-                            (cp.stockProductId && p.id === cp.stockProductId) ||
-                            normalizeCompanyProductName(p.name) === nameKey
-                        );
-                        const existing = byName.get(nameKey);
-                        if (existing) {
-                            existing.companyProduct = cp;
-                            existing.fromCompany = true;
-                            existing.cost = Number.isFinite(Number(cp.cost)) ? Number(cp.cost) : existing.cost;
-                            existing.price = Number.isFinite(Number(cp.price)) ? Number(cp.price) : existing.price;
-                        } else {
-                            byName.set(nameKey, {
-                                key: `company:${cp.id}`,
-                                id: cp.id,
-                                name,
-                                stockProduct,
-                                companyProduct: cp,
-                                cost: Number(cp.cost) || (stockProduct ? Number(stockProduct.cost) || 0 : 0),
-                                price: Number(cp.price) || (stockProduct ? Number(stockProduct.price) || 0 : 0),
-                                fromCompany: true
-                            });
-                        }
-                    });
-            }
-
-            return Array.from(byName.values()).sort((a, b) =>
-                normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th')
-            );
-        }
+        // เก็บรายการสินค้าที่ติ๊กเลือกไว้ แม้ผู้ใช้จะค้นหา/กรองรายการใหม่
+        const selectedSuggestionIds = new Set();
 
         function updateSuggestionSelectionUI() {
-            const selectedCount = document.getElementById('suggestion-selected-count');
-            const countBadge = document.getElementById('suggestion-stock-count');
-            const catalog = getSuggestionCatalog();
-            const visibleCount = catalog.filter(item => {
-                const keyword = String(suggestionSearchBox?.value || '').trim().toLowerCase();
-                return !keyword || item.name.toLowerCase().includes(keyword);
-            }).length;
-            if (countBadge) countBadge.textContent = `ทั้งหมด ${catalog.length.toLocaleString('th-TH')} รายการ${visibleCount !== catalog.length ? ` • แสดง ${visibleCount.toLocaleString('th-TH')}` : ''}`;
-            if (selectedCount) selectedCount.textContent = `เลือก ${suggestionSelectedKeys.size.toLocaleString('th-TH')}`;
+            const countEl = document.getElementById('suggestion-selected-count');
+            const confirmBtn = document.getElementById('confirm-selected-suggestions-btn');
+            const count = selectedSuggestionIds.size;
+            if (countEl) countEl.textContent = `เลือกแล้ว ${count.toLocaleString('th-TH')} รายการ`;
+            if (confirmBtn) {
+                confirmBtn.disabled = count === 0;
+                confirmBtn.classList.toggle('opacity-50', count === 0);
+                confirmBtn.classList.toggle('cursor-not-allowed', count === 0);
+            }
+        }
 
-            document.querySelectorAll('#suggestions-table-container input[data-suggestion-key]').forEach(cb => {
-                cb.checked = suggestionSelectedKeys.has(cb.dataset.suggestionKey);
+        function syncVisibleSuggestionChecks() {
+            suggestionsTableContainer.querySelectorAll('input[data-suggestion-check]').forEach(cb => {
+                cb.checked = selectedSuggestionIds.has(cb.value);
             });
+            updateSuggestionSelectionUI();
+        }
+
+        function toggleSuggestionSelection(id, checked) {
+            if (checked) selectedSuggestionIds.add(String(id));
+            else selectedSuggestionIds.delete(String(id));
+            updateSuggestionSelectionUI();
+        }
+
+        function selectAllVisibleSuggestions() {
+            const visible = suggestionsTableContainer.querySelectorAll('input[data-suggestion-check]');
+            if (!visible.length) return;
+            const shouldSelect = Array.from(visible).some(cb => !cb.checked);
+            visible.forEach(cb => {
+                cb.checked = shouldSelect;
+                toggleSuggestionSelection(cb.value, shouldSelect);
+            });
+            updateSuggestionSelectionUI();
+        }
+
+        function clearSuggestionSelections() {
+            selectedSuggestionIds.clear();
+            updateSuggestionSelectionUI();
+            syncVisibleSuggestionChecks();
         }
 
         function openSuggestionModal() {
+            selectedSuggestionIds.clear();
+            updateSuggestionSelectionUI();
             suggestionBox.classList.remove('hidden');
             setTimeout(() => {
                 suggestionBox.classList.remove('opacity-0');
                 suggestionModalBox.classList.remove('scale-95');
             }, 10);
             suggestionSearchBox.value = itemInput.value;
-            suggestionSelectedKeys.clear();
             renderSuggestionsTable(suggestionSearchBox.value);
             suggestionSearchBox.focus();
         }
@@ -2758,21 +2947,19 @@ function getCompanyPriceHistory(companyName, productName) {
             suggestionModalBox.classList.add('scale-95');
             setTimeout(() => {
                 suggestionBox.classList.add('hidden');
-                suggestionSelectedKeys.clear();
-                updateSuggestionSelectionUI();
             }, 200);
         }
 
         function renderSuggestionsTable(filterText = '') {
-            const keyword = String(filterText || '').toLowerCase().trim();
-            const catalog = getSuggestionCatalog();
-            const filteredItems = catalog.filter(item => item.name.toLowerCase().includes(keyword));
+            const keyword = filterText.toLowerCase().trim();
+            const currentCompanyForPrice = document.getElementById('company-name').value.trim();
+            const filteredItems = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
 
             if (filteredItems.length === 0) {
                 suggestionsTableContainer.innerHTML = `
                     <div class="space-y-3">
                         <div class="px-3 py-3 text-xs text-slate-500 italic text-center bg-slate-50 rounded-2xl border border-slate-100">
-                            ${catalog.length === 0 ? 'ยังไม่มีสินค้าในสต็อกสำหรับบริษัทนี้' : `ไม่พบสินค้า "${escapeHTML(filterText)}"`}
+                            ไม่พบสินค้า "${escapeHTML(filterText)}" ในสต็อก สามารถเพิ่มด่วนได้ที่นี่ 👇
                         </div>
                         <div class="bg-sky-50/70 p-3.5 rounded-2xl border border-sky-100 space-y-2.5">
                             <div>
@@ -2793,107 +2980,134 @@ function getCompanyPriceHistory(companyName, productName) {
                                 💾 บันทึกเข้าสต็อกและเพิ่มลงรายการทันที
                             </button>
                         </div>
-                    </div>`;
-                updateSuggestionSelectionUI();
+                    </div>
+                `;
                 return;
             }
 
-            suggestionsTableContainer.innerHTML = filteredItems.map(item => {
-                if (!suggestionQuantities[item.key]) suggestionQuantities[item.key] = 1;
-                const currentQty = suggestionQuantities[item.key];
-                const cost = Number(item.cost) || 0;
-                const displayPrice = Number(item.price) || 0;
+            suggestionsTableContainer.innerHTML = filteredItems.map(p => {
+                if (!suggestionQuantities[p.id]) suggestionQuantities[p.id] = 1;
+                const currentQty = suggestionQuantities[p.id];
+                const cost = p.cost || 0;
+                const companyProduct = getCompanySpecificProduct(currentCompanyForPrice, p.name);
+                const displayPrice = companyProduct ? Number(companyProduct.price) : Number(p.price || 0);
                 const profit = displayPrice - cost;
-                const companyPriceBadge = item.fromCompany
-                    ? `<span class="text-indigo-600 font-semibold">ราคาบริษัท: ${displayPrice.toLocaleString('th-TH')} ฿</span>`
+                const companyPriceBadge = companyProduct
+                    ? `<span class="text-indigo-600 font-semibold">ราคาบริษัท: ${Number(displayPrice).toLocaleString()} ฿</span>`
                     : '';
-                const checked = suggestionSelectedKeys.has(item.key) ? 'checked' : '';
 
                 return `
                     <div class="flex items-center justify-between px-3.5 py-2.5 bg-white hover:bg-sky-50/60 rounded-2xl transition border border-slate-100 hover:border-sky-200 shadow-2xs gap-2">
-                        <div class="flex items-center gap-2.5 truncate flex-grow min-w-0">
-                            <input type="checkbox" data-suggestion-key="${escapeHTML(item.key)}" value="${escapeHTML(item.key)}" ${checked} class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-400 cursor-pointer flex-shrink-0">
+                        <div class="flex items-center gap-2.5 truncate flex-grow">
+                            <input type="checkbox" id="chk-product-${p.id}" value="${p.id}" data-suggestion-check onchange="toggleSuggestionSelection('${p.id}', this.checked)" class="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-400 cursor-pointer">
                             <div class="truncate">
-                                <div class="font-semibold text-slate-800 text-xs truncate">${escapeHTML(item.name)}</div>
-                                <div class="text-[11px] text-slate-500 flex items-center gap-2 flex-wrap">
-                                    <span>ราคา: <strong class="text-sky-600">${displayPrice.toLocaleString('th-TH')} ฿</strong></span>
+                                <div class="font-semibold text-slate-800 text-xs truncate">${escapeHTML(p.name)}</div>
+                                <div class="text-[11px] text-slate-500 flex items-center gap-2">
+                                    <span>ราคา: <strong class="text-sky-600">${Number(displayPrice).toLocaleString()} ฿</strong></span>
                                     ${companyPriceBadge}
-                                    <span class="text-emerald-600 font-medium">กำไรหน่วยละ: +${profit.toLocaleString('th-TH')} ฿</span>
+                                    <span class="text-emerald-600 font-medium">กำไรหน่วยละ: +${Number(profit).toLocaleString()} ฿</span>
                                 </div>
                             </div>
                         </div>
                         <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <button type="button" onclick="adjustSuggestionQty('${escapeHTML(item.key)}', -1)" class="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 font-bold text-xs transition shadow-2xs">-</button>
-                            <span id="suggestion-qty-${CSS.escape(item.key).replace(/\\/g, '')}" class="w-6 text-center font-bold text-xs text-slate-800">${currentQty}</span>
-                            <button type="button" onclick="adjustSuggestionQty('${escapeHTML(item.key)}', 1)" class="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 font-bold text-xs transition shadow-2xs">+</button>
+                            <button type="button" onclick="adjustSuggestionQty('${p.id}', -1)" class="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 font-bold text-xs transition shadow-2xs">-</button>
+                            <span id="suggestion-qty-${p.id}" class="w-6 text-center font-bold text-xs text-slate-800">${currentQty}</span>
+                            <button type="button" onclick="adjustSuggestionQty('${p.id}', 1)" class="w-6 h-6 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-md text-slate-700 font-bold text-xs transition shadow-2xs">+</button>
                         </div>
-                    </div>`;
+                    </div>
+                `;
             }).join('');
-
-            suggestionsTableContainer.querySelectorAll('input[data-suggestion-key]').forEach(cb => {
-                cb.addEventListener('change', () => {
-                    const key = cb.dataset.suggestionKey;
-                    if (cb.checked) suggestionSelectedKeys.add(key);
-                    else suggestionSelectedKeys.delete(key);
-                    updateSuggestionSelectionUI();
-                });
-            });
-            updateSuggestionSelectionUI();
+            syncVisibleSuggestionChecks();
         }
 
         // ฟังก์ชันยืนยันเพิ่มสินค้าหลายรายการที่ติ๊กเลือกพร้อมกัน
-        // ฟังก์ชันยืนยันเพิ่มสินค้าหลายรายการที่ติ๊กเลือกพร้อมกัน
-        window.confirmSelectedSuggestions = function() {
+        window.confirmSelectedSuggestions = async function() {
             const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
-            const catalog = getSuggestionCatalog();
-            const selectedItems = catalog.filter(item => suggestionSelectedKeys.has(item.key));
+            const currentCompany = document.getElementById('company-name').value.trim();
 
-            if (selectedItems.length === 0) {
+            if (!currentCompany) {
+                showToast('กรุณากรอกหรือเลือกชื่อบริษัทก่อนเลือกสินค้า', 'error');
+                return;
+            }
+
+            const selectedProducts = allProducts.filter(p => selectedSuggestionIds.has(String(p.id)));
+            if (selectedProducts.length === 0) {
                 showToast('กรุณาเลือกติ๊กสินค้าอย่างน้อย 1 รายการ', 'error');
                 return;
             }
 
-            selectedItems.forEach(item => {
-                const qty = Math.max(1, Number(suggestionQuantities[item.key]) || 1);
-                const name = item.name;
-                const unitCost = Number(item.cost) || 0;
-                const unitPrice = Number(item.price) || 0;
-                const totalCost = unitCost * qty;
-                const totalSell = unitPrice * qty;
-                const totalProfit = totalSell - totalCost;
+            const confirmBtn = document.getElementById('confirm-selected-suggestions-btn');
+            if (confirmBtn) {
+                confirmBtn.disabled = true;
+                confirmBtn.textContent = 'กำลังเพิ่มรายการ...';
+            }
 
-                const existingIndex = pendingItems.findIndex(pending => {
-                    const itemCleanName = pending.rawName || pending.text.replace(/\s*x\s*\d+$/, '').trim();
-                    return normalizeCompanyProductName(itemCleanName) === normalizeCompanyProductName(name) && pending.dueDate === dueDate;
-                });
+            let addedCount = 0;
+            try {
+                for (const p of selectedProducts) {
+                    const qty = suggestionQuantities[p.id] || 1;
+                    const companyProduct = getCompanySpecificProduct(currentCompany, p.name);
 
-                if (existingIndex > -1) {
-                    const newQty = (pendingItems[existingIndex].quantity || 1) + qty;
-                    pendingItems[existingIndex].quantity = newQty;
-                    pendingItems[existingIndex].text = `${name} x ${newQty}`;
-                    pendingItems[existingIndex].unitPrice = unitPrice;
-                    pendingItems[existingIndex].totalCost = unitCost * newQty;
-                    pendingItems[existingIndex].totalSell = unitPrice * newQty;
-                    pendingItems[existingIndex].totalProfit = (unitPrice * newQty) - (unitCost * newQty);
-                } else {
-                    pendingItems.push({
-                        rawName: name,
-                        text: `${name} x ${qty}`,
-                        quantity: qty,
-                        unitPrice,
-                        totalCost,
-                        totalSell,
-                        totalProfit,
-                        dueDate
+                    // ถ้าบริษัทนี้ยังไม่มีราคาประจำ ระบบจะผูกสินค้าจาก Manage Stock ให้บริษัทอัตโนมัติ
+                    // ถ้ามีอยู่แล้ว จะใช้ราคาของบริษัทเดิมทันที ไม่ต้องเพิ่มสินค้าใหม่ซ้ำ
+                    await ensureCompanyProductFromStock(currentCompany, p);
+
+                    const effectivePrice = companyProduct
+                        ? Number(companyProduct.price) || Number(p.price) || 0
+                        : Number(p.price) || 0;
+                    const unitCost = companyProduct && Number.isFinite(Number(companyProduct.cost))
+                        ? Number(companyProduct.cost)
+                        : Number(p.cost) || 0;
+                    const cost = unitCost * qty;
+                    const totalSell = effectivePrice * qty;
+                    const totalProfit = totalSell - cost;
+                    const name = p.name;
+
+                    const existingIndex = pendingItems.findIndex(item => {
+                        const itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
+                        return normalizeCompanyProductName(itemCleanName) === normalizeCompanyProductName(name) && item.dueDate === dueDate;
                     });
-                }
-                suggestionQuantities[item.key] = 1;
-            });
 
-            renderPendingItems();
-            suggestionSelectedKeys.clear();
-            closeSuggestionModal();
-            showToast(`เพิ่มสินค้า ${selectedItems.length} รายการสำเร็จ`, 'success');
+                    if (existingIndex > -1) {
+                        pendingItems[existingIndex].quantity = (pendingItems[existingIndex].quantity || 1) + qty;
+                        const newQty = pendingItems[existingIndex].quantity;
+                        const newCost = unitCost * newQty;
+                        const newSell = effectivePrice * newQty;
+                        pendingItems[existingIndex].totalCost = newCost;
+                        pendingItems[existingIndex].totalSell = newSell;
+                        pendingItems[existingIndex].unitPrice = effectivePrice;
+                        pendingItems[existingIndex].totalProfit = newSell - newCost;
+                        pendingItems[existingIndex].text = `${name} x ${newQty}`;
+                    } else {
+                        pendingItems.push({
+                            rawName: name,
+                            text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
+                            quantity: qty,
+                            unitPrice: effectivePrice,
+                            totalCost: cost,
+                            totalSell: totalSell,
+                            totalProfit: totalProfit,
+                            dueDate: dueDate
+                        });
+                    }
+                    addedCount++;
+                    suggestionQuantities[p.id] = 1;
+                }
+
+                renderPendingItems();
+                clearSuggestionSelections();
+                closeSuggestionModal();
+                showToast(`เพิ่มสินค้า ${addedCount.toLocaleString('th-TH')} รายการสำเร็จ`, 'success');
+            } catch (err) {
+                console.error('confirmSelectedSuggestions:', err);
+                showToast('ไม่สามารถเพิ่มสินค้าที่เลือกได้ กรุณาลองใหม่อีกครั้ง', 'error');
+            } finally {
+                if (confirmBtn) {
+                    confirmBtn.disabled = selectedSuggestionIds.size === 0;
+                    confirmBtn.textContent = '✓ เพิ่มรายการที่เลือกทั้งหมด';
+                    updateSuggestionSelectionUI();
+                }
+            }
         };
 
         window.quickAddAndSelectStock = async function() {
@@ -2911,26 +3125,30 @@ function getCompanyPriceHistory(companyName, productName) {
             }
 
             try {
-                await ensureProductInStandardStock(name, cost, price);
+                const stockProduct = await ensureProductInStandardStock(name, cost, price);
 
                 const currentCompany = document.getElementById('company-name').value.trim();
+                let effectivePrice = price;
+                let effectiveCost = cost;
                 if (currentCompany) {
-                    await saveCompanyProduct(currentCompany, name, cost, price);
+                    const companyProduct = await ensureCompanyProductFromStock(currentCompany, stockProduct);
+                    effectivePrice = Number(companyProduct?.price) || price;
+                    effectiveCost = Number(companyProduct?.cost) || cost;
                 } else {
                     showToast('บันทึกสินค้าลงสต็อกสำเร็จ', 'success');
                 }
                 closeSuggestionModal();
 
                 const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
-                const profit = price - cost;
+                const profit = effectivePrice - effectiveCost;
 
                 pendingItems.push({
                     rawName: name,
                     text: `${name} x 1`,
                     quantity: 1,
                     unitPrice: effectivePrice,
-                    totalCost: cost,
-                    totalSell: price,
+                    totalCost: effectiveCost,
+                    totalSell: effectivePrice,
                     totalProfit: profit,
                     dueDate: dueDate
                 });
@@ -2942,10 +3160,12 @@ function getCompanyPriceHistory(companyName, productName) {
             }
         };
 
-        window.adjustSuggestionQty = function(key, delta) {
-            if (!suggestionQuantities[key]) suggestionQuantities[key] = 1;
-            suggestionQuantities[key] = Math.max(1, suggestionQuantities[key] + delta);
-            renderSuggestionsTable(suggestionSearchBox.value);
+        window.adjustSuggestionQty = function(id, delta) {
+            if (!suggestionQuantities[id]) suggestionQuantities[id] = 1;
+            suggestionQuantities[id] += delta;
+            if (suggestionQuantities[id] < 1) suggestionQuantities[id] = 1;
+            const span = document.getElementById(`suggestion-qty-${id}`);
+            if (span) span.textContent = suggestionQuantities[id];
         };
 
         let isAddingSuggestion = false;
@@ -3139,7 +3359,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
         let isAddingItem = false;
 
-        addItemBtn.addEventListener('click', () => {
+        addItemBtn.addEventListener('click', async () => {
             if (isAddingItem) return;
             isAddingItem = true;
 
@@ -3160,7 +3380,21 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
             const foundProd = allProducts.find(p => p.name.toLowerCase() === cleanName.toLowerCase());
             const currentCompany = document.getElementById('company-name').value.trim();
-            const companyProduct = getCompanySpecificProduct(currentCompany, cleanName);
+            let companyProduct = getCompanySpecificProduct(currentCompany, cleanName);
+
+            // ถ้าเลือก/พิมพ์สินค้าที่มีอยู่ใน Manage Stock และเป็นบริษัทใหม่
+            // ให้ผูกสินค้านั้นกับบริษัทโดยอัตโนมัติ เพียงครั้งแรกเท่านั้น
+            if (!companyProduct && currentCompany && foundProd) {
+                try {
+                    companyProduct = await ensureCompanyProductFromStock(currentCompany, foundProd);
+                } catch (err) {
+                    console.error('ensureCompanyProductFromStock:', err);
+                    showToast('ไม่สามารถผูกสินค้าเข้ากับบริษัทนี้ได้', 'error');
+                    isAddingItem = false;
+                    return;
+                }
+            }
+
             let unitPrice = companyProduct ? Number(companyProduct.price) : (foundProd ? Number(foundProd.price) : 0);
             let unitCost = companyProduct && Number(companyProduct.cost) > 0
                 ? Number(companyProduct.cost)
@@ -3216,13 +3450,6 @@ document.getElementById('item-input').addEventListener('blur', function() {
         const phoneInput = document.getElementById('phone');
         const addressInput = document.getElementById('address');
 
-        companyNameInput.addEventListener('input', () => {
-            updateCompanyProductHint();
-            if (!suggestionBox.classList.contains('hidden')) {
-                renderSuggestionsTable(suggestionSearchBox.value);
-            }
-        });
-
         customerNameInput.addEventListener('input', (e) => {
             const enteredName = e.target.value.trim();
             const found = allDeliveries.find(item => item.customerName === enteredName);
@@ -3230,7 +3457,6 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 companyNameInput.value = found.companyName || '';
                 phoneInput.value = found.phone || '';
                 addressInput.value = found.address || '';
-                updateCompanyProductHint();
             }
         });
 
@@ -3257,9 +3483,24 @@ document.getElementById('item-input').addEventListener('blur', function() {
             submitBtn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังบันทึก...`;
 
             try {
-                const snapshot = await db.collection('deliveries')
-                    .where('customerName', '==', customerName)
-                    .get();
+                let snapshot;
+                if (currentUserProfile?.role === 'admin') {
+                    snapshot = await db.collection('deliveries')
+                        .where('customerName', '==', customerName)
+                        .get();
+                } else {
+                    const scopedSnapshot = await db.collection('deliveries')
+                        .where('ownerUid', '==', currentAuthUser.uid)
+                        .get();
+                    const matchingDocs = [];
+                    scopedSnapshot.forEach(doc => {
+                        const data = doc.data() || {};
+                        if (String(data.customerName || '').trim() === customerName) {
+                            matchingDocs.push(doc);
+                        }
+                    });
+                    snapshot = { empty: matchingDocs.length === 0, docs: matchingDocs };
+                }
 
                 const newSubItemsObjs = pendingItems.map(item => ({
                     id: 'sub_' + Math.random().toString(36).substring(2, 9),
@@ -3281,13 +3522,10 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     
                     existingItems.push(...newSubItemsObjs);
 
-                    const finalCompanyName = companyName || docData.companyName || '';
                     await docRef.update({
                         subItems: existingItems,
-                        companyName: finalCompanyName,
-                        companyKey: normalizeCompanyProductKey(finalCompanyName),
+                        companyName: companyName || docData.companyName || '',
                         phone: phone || docData.phone || '',
-
                         address: address || docData.address || '',
                         customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : [],
                         purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : []
@@ -3298,12 +3536,12 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     const data = {
                         customerName,
                         companyName,
-                        companyKey: normalizeCompanyProductKey(companyName),
                         phone,
                         address,
                         subItems: newSubItemsObjs,
                         customerNotes: [],
                         purchaseHistory: [],
+                        ownerUid: currentAuthUser.uid,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     };
                     await db.collection('deliveries').add(data);
@@ -3322,31 +3560,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
             }
         });
 
-        db.collection('deliveries').onSnapshot({ includeMetadataChanges: true }, snapshot => {
-            allDeliveries = [];
-            snapshot.forEach(doc => {
-                const data = doc.data() || {};
-                const itemsList = Array.isArray(data.subItems) ? data.subItems : [];
-                allDeliveries.push({ id: doc.id, ...data, subItems: itemsList });
-            });
-            applyFilterAndSearch();
-
-            // ยืนยันสถานะจาก Firestore จริง: cache อย่างเดียวจะไม่แสดงว่าเชื่อมต่อ Server แล้ว
-            if (!snapshot.metadata.fromCache) {
-                firebaseServerConfirmed = true;
-                setConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
-            } else if (!firebaseServerConfirmed) {
-                setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
-            }
-        }, error => {
-            console.error('Firestore deliveries snapshot error:', error);
-            firebaseServerConfirmed = false;
-            const message = error && error.code === 'permission-denied'
-                ? 'เชื่อมต่อ Server ไม่ได้: ไม่มีสิทธิ์เข้าถึงข้อมูล'
-                : 'เชื่อมต่อ Server ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตและ Firebase';
-            setConnectionStatus('error', message, true);
-            document.getElementById('delivery-list').innerHTML = `<div class="bg-red-50 text-red-600 p-4 rounded-xl text-center text-sm border border-red-100">${escapeHTML(message)}</div>`;
-        });
+        // Delivery listener จะเริ่มจาก startUserScopedDataListeners() หลังยืนยัน user profile แล้ว
 
         const clearItemBtn = document.getElementById('clear-item-btn');
         clearItemBtn.addEventListener('click', () => {
@@ -4605,6 +4819,7 @@ async function saveReminder() {
             showToast('แก้ไขการแจ้งเตือนเรียบร้อยแล้ว', 'success');
         } else {
             reminderData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+            reminderData.ownerUid = currentAuthUser.uid;
             await db.collection('reminders').add(reminderData);
             showToast(`เพิ่มการแจ้งเตือน ${rounds.length} รอบเรียบร้อยแล้ว`, 'success');
         }
@@ -4764,20 +4979,7 @@ function checkTodayReminders() {
     }).join('');
 }
 
-db.collection('reminders').onSnapshot({ includeMetadataChanges: true }, snapshot => {
-    allReminders = [];
-    snapshot.forEach(doc => allReminders.push({ id: doc.id, ...doc.data() }));
-    allReminders.sort((a, b) => String(a.companyName || '').localeCompare(String(b.companyName || ''), 'th'));
-    renderReminders();
-    checkTodayReminders();
-    if (!snapshot.metadata.fromCache) {
-        firebaseServerConfirmed = true;
-        setConnectionStatus('connected', 'ONLINE');
-    }
-    }, error => {
-    console.error('Error loading reminders:', error);
-    showToast('ไม่สามารถโหลดข้อมูลการแจ้งเตือนได้', 'error');
-});
+// Reminder listener จะเริ่มจาก startUserScopedDataListeners() หลังยืนยัน user profile แล้ว
 
 setTimeout(() => checkTodayReminders(), 1000);
 setInterval(() => checkTodayReminders(), 60000);
