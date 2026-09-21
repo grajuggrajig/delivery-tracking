@@ -73,10 +73,16 @@
         }
 
         /* ระบบชั้นแสดงผลกลาง: แจ้งเตือนและยืนยันต้องอยู่เหนือทุก Modal */
-        #confirm-modal { z-index: 61000 !important; }
-        #toast-container { z-index: 62000 !important; }
-        #toast-container > div { position: relative; z-index: 62001 !important; }
-        #company-all-history-modal, #crm-modal, #document-modal, #company-picker-modal, #reminder-modal, #stock-modal, #custom-item-suggestions, #customer-modal, #edit-modal, #edit-customer-modal, #edit-company-modal { z-index: 200 !important; }
+        /* ชั้นแสดงผล: Modal หลัก < Confirm < Toast เพื่อไม่ให้แจ้งเตือนถูกบัง */
+        #company-all-history-modal { z-index: 200 !important; }
+        #company-purchase-history-modal { z-index: 300 !important; }
+        #crm-modal { z-index: 220 !important; }
+        #document-modal { z-index: 230 !important; }
+        #company-picker-modal, #reminder-modal, #stock-modal, #custom-item-suggestions, #customer-modal, #edit-modal, #edit-customer-modal, #edit-company-modal { z-index: 200 !important; }
+        #admin-user-modal { z-index: 9000 !important; }
+        #confirm-modal { z-index: 65000 !important; }
+        #toast-container { z-index: 70000 !important; }
+        #toast-container > div { position: relative; z-index: 70001 !important; }
         #document-modal { z-index: 230 !important; }
         #crm-modal { z-index: 220 !important; }
         #company-picker-modal { z-index: 120 !important; }
@@ -132,8 +138,7 @@
             #company-all-history-modal > div {
                 width: 100%;
                 max-width: 100%;
-                height: 96vh;
-                max-height: 96vh;
+                max-height: 94vh;
                 padding: 12px !important;
             }
             #company-all-history-modal .history-item-row {
@@ -1000,7 +1005,7 @@
     <div id="admin-user-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-[40000] hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden border border-slate-200">
             <div class="bg-gradient-to-r from-violet-600 via-indigo-600 to-sky-600 text-white px-5 py-4 flex items-center justify-between">
-                <div><div class="text-base font-bold">👥 จัดการผู้ใช้</div><div class="text-xs text-white/80 mt-1">Admin สามารถสร้างบัญชี ตั้งชื่อผู้ใช้ รหัสผ่าน และกำหนดสิทธิ์ได้</div></div>
+                <div><div class="text-base font-bold">👥 จัดการผู้ใช้</div><div class="text-xs text-white/80 mt-1">Admin สามารถสร้างบัญชี ตั้งชื่อผู้ใช้ รหัสผ่าน กำหนดสิทธิ์ เปิด/ปิด และลบผู้ใช้ออกจากระบบได้</div></div>
                 <button type="button" id="close-admin-users-btn" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg">✕</button>
             </div>
             <div class="p-5 overflow-y-auto no-scrollbar">
@@ -1195,8 +1200,8 @@
             const list = document.getElementById('admin-user-list'); if(!list) return;
             list.innerHTML = adminUsersCache.map(u => `
                 <div class="flex flex-wrap items-center justify-between gap-3 p-3 rounded-2xl border border-slate-100 bg-white">
-                    <div class="min-w-0"><div class="font-bold text-sm text-slate-800">👤 ${escapeHTML(u.displayName || u.username || '-')}</div><div class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(u.username || u.email || '-')} · ${u.role === 'admin' ? '🛡️ Admin' : '👤 User'}</div></div>
-                    <div class="flex items-center gap-2 flex-wrap justify-end"><select data-user-role="${u.id}" class="px-2.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"><option value="user" ${u.role==='user'?'selected':''}>User</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select><button type="button" data-user-toggle="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold ${u.active===false?'bg-slate-100 text-slate-500':'bg-emerald-50 text-emerald-700'}">${u.active===false?'เปิดใช้งาน':'ปิดใช้งาน'}</button><button type="button" data-user-delete="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-100">🗑️ ลบ</button></div>
+                    <div class="min-w-0"><div class="font-bold text-sm text-slate-800">👤 ${escapeHTML(u.displayName || u.username || '-')}</div><div class="text-[11px] text-slate-400 mt-0.5">${escapeHTML(u.username || u.email || '-')} · ${u.role === 'admin' ? '🛡️ Admin' : '👤 User'}${u.active===false ? ' · 🔒 ปิดใช้งาน' : ''}</div></div>
+                    <div class="flex items-center gap-2 flex-wrap justify-end"><select data-user-role="${u.id}" class="px-2.5 py-2 text-xs border border-slate-200 rounded-xl bg-white"><option value="user" ${u.role==='user'?'selected':''}>User</option><option value="admin" ${u.role==='admin'?'selected':''}>Admin</option></select><button type="button" data-user-toggle="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold ${u.active===false?'bg-slate-100 text-slate-500':'bg-emerald-50 text-emerald-700'}">${u.active===false?'เปิดใช้งาน':'ปิดใช้งาน'}</button><button type="button" data-user-delete="${u.id}" class="px-3 py-2 rounded-xl text-xs font-bold bg-rose-50 text-rose-600 hover:bg-rose-100 transition">🗑️ ลบ user</button></div>
                 </div>`).join('') || '<div class="text-center py-8 text-slate-400 text-sm">ยังไม่มีผู้ใช้</div>';
         }
 
@@ -1235,32 +1240,25 @@
             const u=adminUsersCache.find(x=>x.id===id); if(!u) return;
             try { await db.collection('users').doc(id).update({active:u.active===false,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}); showToast(u.active===false?'เปิดใช้งานบัญชีแล้ว':'ปิดการใช้งานบัญชีแล้ว','success'); await loadAdminUsers(); } catch(err){console.error(err);showToast('ไม่สามารถเปลี่ยนสถานะได้','error');}
         });
-
-        async function deleteAdminUser(userId) {
-            if (currentUserProfile?.role !== 'admin') return;
-            if (!userId || userId === currentAuthUser?.uid) {
-                showToast('ไม่สามารถลบบัญชี Admin ที่กำลังใช้งานอยู่ได้','info');
-                return;
-            }
-            const u = adminUsersCache.find(x => x.id === userId);
-            if (!u) return;
-            const name = u.displayName || u.username || u.email || userId;
-            showConfirmModal('ลบผู้ใช้งาน', `ต้องการลบผู้ใช้ “${name}” ออกจากระบบใช่หรือไม่?`, async () => {
+        document.getElementById('admin-user-list')?.addEventListener('click', async (e) => {
+            const btn=e.target.closest('[data-user-delete]'); if(!btn) return;
+            const id=btn.getAttribute('data-user-delete');
+            if(currentUserProfile?.role !== 'admin') return;
+            if(id===currentAuthUser?.uid){ showToast('ไม่สามารถลบบัญชีของตัวเองขณะกำลังใช้งานได้','info'); return; }
+            const u=adminUsersCache.find(x=>x.id===id); if(!u) return;
+            const username = u.username || u.email || id;
+            showConfirmModal('ลบผู้ใช้', `ต้องการลบผู้ใช้ “${username}” ออกจากระบบหรือไม่? การลบนี้จะลบโปรไฟล์สิทธิ์ใน Firestore ทำให้บัญชีไม่สามารถเข้าใช้งาน CRM ได้อีก`, async () => {
+                btn.disabled = true;
                 try {
-                    await db.collection('users').doc(userId).delete();
-                    showToast(`ลบผู้ใช้ “${name}” ออกจากระบบแล้ว`, 'success');
+                    await db.collection('users').doc(id).delete();
+                    showToast(`ลบผู้ใช้ “${username}” ออกจากระบบแล้ว`, 'success');
                     await loadAdminUsers();
-                } catch (err) {
-                    console.error('Delete user error:', err);
-                    showToast('ไม่สามารถลบผู้ใช้ได้ กรุณาตรวจสอบสิทธิ์ Firestore', 'error');
+                } catch(err) {
+                    console.error('Delete user profile error:', err);
+                    showToast('ไม่สามารถลบผู้ใช้ได้ กรุณาตรวจสอบสิทธิ์ Firestore แล้วลองใหม่', 'error');
+                    btn.disabled = false;
                 }
             });
-        }
-
-        document.getElementById('admin-user-list')?.addEventListener('click', async (e) => {
-            const btn = e.target.closest('[data-user-delete]');
-            if (!btn) return;
-            await deleteAdminUser(btn.getAttribute('data-user-delete'));
         });
 
         document.getElementById('open-admin-users-btn')?.addEventListener('click', async () => { if(currentUserProfile?.role!=='admin') return; document.getElementById('admin-user-modal').classList.remove('hidden'); await loadAdminUsers(); });
@@ -1779,7 +1777,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
 
     const modalHtml = `
         <div id="company-all-history-modal" class="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-[200] flex items-center justify-center p-4">
-            <div class="bg-white rounded-3xl shadow-2xl w-[96vw] max-w-[1100px] p-5 md:p-6 border border-slate-100 flex flex-col h-[94vh] max-h-[94vh] overflow-hidden">
+            <div class="bg-white rounded-3xl shadow-2xl w-[96vw] max-w-[1100px] p-5 md:p-6 border border-slate-100 flex flex-col max-h-[92vh]">
                 <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-100 flex-shrink-0">
                     <div class="min-w-0">
                         <h3 class="text-base font-bold text-slate-800">📦 ประวัติสินค้าทั้งหมดของ</h3>
@@ -1789,7 +1787,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                 </div>
 
                 <!-- สินค้าและราคาประจำบริษัท -->
-                <div class="mb-3 p-4 rounded-2xl bg-gradient-to-br from-sky-50/80 to-indigo-50/60 border border-sky-200 flex-shrink-0 max-h-[43vh] overflow-hidden">
+                <div class="mb-4 p-4 rounded-2xl bg-gradient-to-br from-sky-50/80 to-indigo-50/60 border border-sky-200 flex-shrink-0">
                     <div class="flex items-center justify-between gap-2 mb-3">
                         <div>
                             <div class="text-sm font-bold text-slate-800">🏷️ เพิ่มสินค้า / ราคาของบริษัทนี้</div>
@@ -1841,7 +1839,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
 </button>
                     </div>
 
-                    <div id="company-specific-products-container" class="space-y-2 mt-3 max-h-32 overflow-y-auto no-scrollbar"></div>
+                    <div id="company-specific-products-container" class="space-y-2 mt-3 max-h-[34vh] min-h-[180px] overflow-y-auto no-scrollbar"></div>
                 </div>
 
                 <!-- Modal ย่อย: รับสินค้าจากบริษัทอื่น -->
@@ -1903,29 +1901,47 @@ function showCompanyHistoryModal(companyName, customerName, items) {
                     </div>
                 </div>
 
-                <!-- ประวัติการซื้อ: แยกเป็นพื้นที่ค้นหา + รายการที่เลื่อนดูได้ -->
-                <div class="flex flex-col flex-1 min-h-0 rounded-2xl border border-sky-200 bg-white shadow-sm overflow-hidden">
-                    <div class="p-3 bg-sky-50/60 border-b border-sky-100 flex-shrink-0">
-                        <div class="flex items-center justify-between gap-3 mb-2">
+                <!-- หน้าต่างย่อย: ประวัติการซื้อสินค้า -->
+                <div id="company-purchase-history-modal" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center p-4">
+                    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl max-h-[88vh] flex flex-col overflow-hidden border border-slate-100">
+                        <div class="bg-gradient-to-r from-indigo-600 via-blue-600 to-sky-600 text-white px-5 py-4 flex items-center justify-between flex-shrink-0">
                             <div class="min-w-0">
-                                <div class="text-sm font-bold text-slate-800">📋 ประวัติการซื้อสินค้า</div>
-                                <div class="text-[10px] text-slate-400 truncate">รายการที่ซื้อแล้วและรายการที่กำลังติดตามยังคงแสดงเหมือนเดิม</div>
+                                <div class="text-base font-bold">📋 ประวัติการซื้อสินค้า</div>
+                                <div class="text-[11px] text-white/80 mt-0.5 truncate">🏢 ${safeCompany} ${safeCustomer}</div>
                             </div>
-                            <span id="search-count-label" class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ</span>
+                            <button type="button" id="close-company-purchase-history-btn" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg transition">✕</button>
                         </div>
-                        <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-sky-500 text-xs">🔍</span>
-                            <input type="text" id="company-history-search" placeholder="ค้นหารายชื่อสินค้าในประวัติ..."
-                                class="w-full pl-9 pr-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition text-slate-700">
+                        <div class="p-4 border-b border-slate-100 bg-slate-50/70 flex-shrink-0">
+                            <div class="flex items-center justify-between gap-3 mb-2">
+                                <div class="text-xs font-bold text-slate-700">🔎 ค้นหารายการสินค้า</div>
+                                <span id="search-count-label" class="text-[11px] font-semibold text-slate-500 whitespace-nowrap">ทั้งหมด <span class="text-sky-600 font-bold">${items.length}</span> รายการ</span>
+                            </div>
+                            <input type="text" id="company-history-search" placeholder="🔍 ค้นหาชื่อสินค้า หรือวันที่..." autocomplete="off"
+                                class="w-full px-3.5 py-3 text-sm border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition text-slate-700">
                         </div>
-                    </div>
-
-                    <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-1 min-h-0 p-3 bg-slate-50/30">
-                        <!-- รายการสินค้าจะแสดงที่นี่ -->
+                        <div id="company-history-items-container" class="space-y-2 overflow-y-auto no-scrollbar flex-1 min-h-0 p-4">
+                            <!-- รายการสินค้าจะแสดงที่นี่ -->
+                        </div>
+                        <div class="px-5 py-3 border-t border-slate-100 flex justify-end bg-white flex-shrink-0">
+                            <button type="button" id="close-company-purchase-history-bottom" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition">ปิดหน้าต่าง</button>
+                        </div>
                     </div>
                 </div>
 
-                <div class="pt-2 mt-2 border-t border-slate-100 flex justify-end flex-shrink-0">
+                <!-- ประวัติการซื้อ: เปิดเป็นหน้าต่างแยก เพื่อเพิ่มพื้นที่ให้รายการสินค้าของบริษัท -->
+                <div class="mb-3 flex-shrink-0 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3.5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div class="min-w-0">
+                            <div class="text-sm font-bold text-slate-800">📋 ประวัติการซื้อสินค้า</div>
+                            <div class="text-[10px] text-slate-500 mt-0.5">แยกหน้าต่างสำหรับค้นหาและดูรายการที่ซื้อแล้ว / กำลังติดตาม เพื่อให้รายการสินค้าด้านบนมองเห็นได้ชัดเจน</div>
+                        </div>
+                        <button type="button" id="open-company-purchase-history-btn" class="flex-shrink-0 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold shadow-sm transition active:scale-95">
+                            📋 เปิดประวัติการซื้อ <span id="company-purchase-history-count" class="ml-1 px-1.5 py-0.5 rounded-lg bg-white/20">${items.length}</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 flex justify-end flex-shrink-0">
                     <button type="button" onclick="document.getElementById('company-all-history-modal').remove()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs transition">ปิดหน้าต่าง</button>
                 </div>
             </div>
@@ -1934,9 +1950,14 @@ function showCompanyHistoryModal(companyName, customerName, items) {
 
     document.body.insertAdjacentHTML('beforeend', modalHtml);
 
+    const purchaseHistoryModal = document.getElementById('company-purchase-history-modal');
+    const openPurchaseHistoryBtn = document.getElementById('open-company-purchase-history-btn');
+    const closePurchaseHistoryBtn = document.getElementById('close-company-purchase-history-btn');
+    const closePurchaseHistoryBottomBtn = document.getElementById('close-company-purchase-history-bottom');
     const searchInput = document.getElementById('company-history-search');
     const container = document.getElementById('company-history-items-container');
     const countLabel = document.getElementById('search-count-label');
+    const purchaseHistoryCount = document.getElementById('company-purchase-history-count');
     const companyProductSearch = document.getElementById('company-specific-product-search');
     const companyProductName = document.getElementById('company-product-name-input');
     const companyProductCost = document.getElementById('company-product-cost-input');
@@ -2263,9 +2284,30 @@ function showCompanyHistoryModal(companyName, customerName, items) {
     renderCompanyProductCatalog(companyName);
     renderItems('');
 
-    searchInput.addEventListener('input', (e) => {
+    const closePurchaseHistory = () => {
+        if (!purchaseHistoryModal) return;
+        purchaseHistoryModal.classList.add('hidden');
+        purchaseHistoryModal.classList.remove('flex');
+    };
+
+    openPurchaseHistoryBtn?.addEventListener('click', () => {
+        if (!purchaseHistoryModal) return;
+        purchaseHistoryModal.classList.remove('hidden');
+        purchaseHistoryModal.classList.add('flex');
+        renderItems(searchInput?.value || '');
+        setTimeout(() => searchInput?.focus(), 50);
+    });
+    closePurchaseHistoryBtn?.addEventListener('click', closePurchaseHistory);
+    closePurchaseHistoryBottomBtn?.addEventListener('click', closePurchaseHistory);
+    purchaseHistoryModal?.addEventListener('click', e => {
+        if (e.target === purchaseHistoryModal) closePurchaseHistory();
+    });
+
+    searchInput?.addEventListener('input', (e) => {
         renderItems(e.target.value);
     });
+
+    if (purchaseHistoryCount) purchaseHistoryCount.textContent = items.length.toLocaleString('th-TH');
 }
 
 		
