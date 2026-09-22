@@ -836,15 +836,28 @@
         </div>
     </div>
 
-    <!-- Modal: แก้ไขชื่อลูกค้า -->
+    <!-- Modal: แก้ไขข้อมูลลูกค้าทั้งหมด (เพิ่มเฉพาะความสามารถแก้ไขข้อมูลลูกค้าจากหน้าหลัก) -->
     <div id="edit-customer-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 opacity-0 transition-opacity duration-300">
-        <div class="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-customer-modal-content">
+        <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-customer-modal-content">
             <div class="text-2xl mb-3">👤</div>
-            <h3 class="text-base font-bold text-slate-800 mb-2">แก้ไขชื่อลูกค้า</h3>
+            <h3 class="text-base font-bold text-slate-800 mb-1">แก้ไขข้อมูลลูกค้า</h3>
+            <p class="text-[11px] text-slate-400 mb-4">แก้ไขชื่อบริษัท เบอร์โทร และที่อยู่ของลูกค้าได้จากหน้าหลัก</p>
             <div class="space-y-3 mb-5">
                 <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อลูกค้าใหม่</label>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">👤 ชื่อลูกค้า</label>
                     <input type="text" id="edit-customer-text" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">🏢 ชื่อบริษัท / ร้านค้า</label>
+                    <input type="text" id="edit-customer-company" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">📞 เบอร์โทรศัพท์</label>
+                    <input type="tel" id="edit-customer-phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">📍 ที่อยู่จัดส่ง</label>
+                    <textarea id="edit-customer-address" rows="3" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition resize-none"></textarea>
                 </div>
             </div>
             <div class="flex gap-3">
@@ -3676,7 +3689,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             <div class="flex items-center gap-2.5 flex-wrap">
                                 <div class="inline-flex items-center gap-1.5 font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2.5 py-0.5 rounded-md border border-indigo-200/60">
                                     <span>${escapeHTML(item.customerName)}</span>
-                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขชื่อลูกค้า" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
+                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขข้อมูลลูกค้า (ชื่อ บริษัท เบอร์โทร ที่อยู่)" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
                                 </div>
                                 <div class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100 text-[11px]">
                                     <span>${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
@@ -4311,19 +4324,39 @@ document.getElementById('item-input').addEventListener('blur', function() {
             );
         }
 
-        window.openEditCustomerModal = function(docId, currentCustomerName) {
+        window.openEditCustomerModal = async function(docId, currentCustomerName) {
             const modal = document.getElementById('edit-customer-modal');
             const modalContent = document.getElementById('edit-customer-modal-content');
             const inputField = document.getElementById('edit-customer-text');
+            const companyField = document.getElementById('edit-customer-company');
+            const phoneField = document.getElementById('edit-customer-phone');
+            const addressField = document.getElementById('edit-customer-address');
             const btnConfirm = document.getElementById('edit-customer-confirm');
             const btnCancel = document.getElementById('edit-customer-cancel');
 
-            inputField.value = currentCustomerName || '';
+            // ดึงข้อมูลเดิมของลูกค้ารายนี้มาแสดงในช่องแก้ไข โดยไม่แตะข้อมูลส่วนอื่น
+            try {
+                const docSnap = await db.collection('deliveries').doc(docId).get();
+                if (!docSnap.exists) {
+                    showToast('ไม่พบข้อมูลลูกค้ารายนี้', 'error');
+                    return;
+                }
+                const data = docSnap.data() || {};
+                inputField.value = data.customerName || currentCustomerName || '';
+                companyField.value = data.companyName || '';
+                phoneField.value = data.phone || '';
+                addressField.value = data.address || '';
+            } catch (err) {
+                console.error('โหลดข้อมูลลูกค้าเพื่อแก้ไขไม่สำเร็จ:', err);
+                showToast('ไม่สามารถโหลดข้อมูลลูกค้าได้', 'error');
+                return;
+            }
 
             modal.classList.remove('hidden');
             setTimeout(() => {
                 modal.classList.remove('opacity-0');
                 modalContent.classList.remove('scale-95');
+                inputField.focus();
             }, 10);
 
             const closeModal = () => {
@@ -4338,17 +4371,32 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
             btnConfirm.addEventListener('click', async () => {
                 const newCustomerName = inputField.value.trim();
+                const newCompanyName = companyField.value.trim();
+                const newPhone = phoneField.value.trim();
+                const newAddress = addressField.value.trim();
+
                 if (!newCustomerName) {
-                    showToast('กรุณากรอกชื่อลูกค้าใหม่', 'error');
+                    showToast('กรุณากรอกชื่อลูกค้า', 'error');
                     return;
                 }
+
+                btnConfirm.disabled = true;
+                btnConfirm.textContent = 'กำลังบันทึก...';
+
                 try {
-                    await db.collection('deliveries').doc(docId).update({ customerName: newCustomerName });
-                    showToast('แก้ไขชื่อลูกค้าสำเร็จ', 'success');
+                    await db.collection('deliveries').doc(docId).update({
+                        customerName: newCustomerName,
+                        companyName: newCompanyName,
+                        phone: newPhone,
+                        address: newAddress
+                    });
+                    showToast('แก้ไขข้อมูลลูกค้าสำเร็จ', 'success');
                     closeModal();
                 } catch (err) {
-                    console.error(err);
-                    showToast('ไม่สามารถแก้ไขชื่อลูกค้าได้', 'error');
+                    console.error('แก้ไขข้อมูลลูกค้าไม่สำเร็จ:', err);
+                    showToast('ไม่สามารถแก้ไขข้อมูลลูกค้าได้', 'error');
+                    btnConfirm.disabled = false;
+                    btnConfirm.textContent = 'บันทึกการแก้ไข';
                 }
             }, { once: true });
 
