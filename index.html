@@ -1362,6 +1362,7 @@
         let firebaseConnectionState = 'connecting';
         let firebaseServerConfirmed = false;
         let lastConnectionErrorToast = 0;
+        let firebaseWritePending = false;
 
         function setConnectionStatus(state, message, showErrorToast = false) {
             firebaseConnectionState = state;
@@ -1380,6 +1381,7 @@
         // Online ต้องได้รับการยืนยันจาก Firestore จริง ไม่ใช่ดูจาก Wi-Fi อย่างเดียว
         function refreshConnectionStatus(){
             if(!navigator.onLine) return setConnectionStatus('offline','Offline · ไม่มีอินเทอร์เน็ต');
+            if(firebaseWritePending) return setConnectionStatus('connecting','กำลังซิงค์ข้อมูล...');
             if(firebaseServerConfirmed) return setConnectionStatus('connected','Online · Synced');
             setConnectionStatus('connecting','กำลังเชื่อมต่อ Firebase...');
         }
@@ -2857,7 +2859,9 @@ function getCompanyPriceHistory(companyName, productName) {
                     });
                     applyFilterAndSearch();
 
-                    if (!snapshot.metadata.fromCache) {
+                    if (snapshot.metadata.hasPendingWrites || firebaseWritePending) {
+                        if (navigator.onLine) setConnectionStatus('connecting', 'กำลังซิงค์ข้อมูล...');
+                    } else if (!snapshot.metadata.fromCache) {
                         firebaseServerConfirmed = true;
                         if (navigator.onLine) setConnectionStatus('connected', 'Online · Synced');
                     } else if (!firebaseServerConfirmed) {
@@ -4388,21 +4392,61 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     return;
                 }
 
-                btnConfirm.disabled = true;
+                    btnConfirm.disabled = true;
                 btnConfirm.textContent = 'กำลังบันทึก...';
+                firebaseWritePending = true;
+                setConnectionStatus('connecting', 'กำลังซิงค์ข้อมูล...');
+
+                const saveData = {
+                    customerName: newCustomerName,
+                    companyName: newCompanyName,
+                    phone: newPhone,
+                    address: newAddress
+                };
 
                 try {
-                    await db.collection('deliveries').doc(docId).update({
-                        customerName: newCustomerName,
-                        companyName: newCompanyName,
-                        phone: newPhone,
-                        address: newAddress
-                    });
+                    if (!navigator.onLine) {
+                        throw new Error('OFFLINE');
+                    }
+
+                    // กระตุ้น Firestore network ให้กลับมารับคำสั่งเขียนก่อนบันทึกทุกครั้ง
+                    if (typeof db.enableNetwork === 'function') {
+                        await db.enableNetwork();
+                    }
+
+                    const docRef = db.collection('deliveries').doc(docId);
+                    const updatePromise = docRef.update(saveData);
+                    const timeoutPromise = new Promise((_, reject) =>
+                        setTimeout(() => reject(new Error('SAVE_TIMEOUT')), 12000)
+                    );
+
+                    try {
+                        await Promise.race([updatePromise, timeoutPromise]);
+                    } catch (firstErr) {
+                        // หาก Firestore transport ค้าง ให้รีสตาร์ท network แล้วลองคำสั่งเดิมอีกครั้ง
+                        if (firstErr?.message !== 'SAVE_TIMEOUT') throw firstErr;
+                        if (typeof db.disableNetwork === 'function' && typeof db.enableNetwork === 'function') {
+                            try { await db.disableNetwork(); } catch (e) {}
+                            await db.enableNetwork();
+                        }
+                        await docRef.update(saveData);
+                    }
+
+                    firebaseWritePending = false;
+                    firebaseServerConfirmed = true;
+                    setConnectionStatus('connected', 'Online · Synced');
                     showToast('แก้ไขข้อมูลลูกค้าสำเร็จ', 'success');
                     closeModal();
                 } catch (err) {
                     console.error('แก้ไขข้อมูลลูกค้าไม่สำเร็จ:', err);
-                    showToast('ไม่สามารถแก้ไขข้อมูลลูกค้าได้', 'error');
+                    firebaseWritePending = false;
+                    if (!navigator.onLine || err?.message === 'OFFLINE') {
+                        setConnectionStatus('offline', 'Offline · ไม่มีอินเทอร์เน็ต');
+                        showToast('ไม่สามารถบันทึกได้ เนื่องจากไม่มีการเชื่อมต่ออินเทอร์เน็ต', 'error');
+                    } else {
+                        refreshConnectionStatus();
+                        showToast('ไม่สามารถบันทึกข้อมูลได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                    }
                     btnConfirm.disabled = false;
                     btnConfirm.textContent = 'บันทึกการแก้ไข';
                 }
