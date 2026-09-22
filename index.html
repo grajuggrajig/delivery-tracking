@@ -223,6 +223,15 @@
     animation: borderGlow 4s linear infinite;
 }
 
+/* สถานะ Online/Offline แบบสากล */
+#connection-status.status-online{background:rgba(16,185,129,.16);border-color:rgba(167,243,208,.45)}
+#connection-status.status-syncing{background:rgba(245,158,11,.14);border-color:rgba(253,230,138,.42)}
+#connection-status.status-offline,#connection-status.status-error{background:rgba(244,63,94,.16);border-color:rgba(254,205,211,.45)}
+#connection-status.status-online #connection-status-dot{background:#34d399!important;animation:none;box-shadow:0 0 0 4px rgba(52,211,153,.14)}
+#connection-status.status-syncing #connection-status-dot{background:#fbbf24!important}
+#connection-status.status-offline #connection-status-dot,#connection-status.status-error #connection-status-dot{background:#fb7185!important;animation:none;box-shadow:0 0 0 4px rgba(251,113,133,.14)}
+@media(max-width:640px){#logout-btn{width:38px;height:38px}}
+
 /* ทำให้เส้นกรอบวิ่งวิ้งๆ เด่นชัดขึ้นเมื่อเอาเมาส์ชี้ (Hover) หรือตลอดเวลา */
 .glow-border-btn:hover::after {
     opacity: 1;
@@ -311,14 +320,15 @@
                 👥 Users Management
             </button>
             
-            <!-- ปุ่มออกจากระบบ -->
-            <button type="button" id="logout-btn" class="glow-border-btn hidden px-3 py-2 text-xs text-white font-bold rounded-xl active:scale-95">
-                🚪 Logout
+            <!-- ปุ่มออกจากระบบ: แสดงเฉพาะสัญลักษณ์แบบสากล -->
+            <button type="button" id="logout-btn" aria-label="Logout" title="ออกจากระบบ" class="hidden w-10 h-10 p-0 text-center rounded-xl text-white/90 hover:text-white hover:bg-white/15 border border-white/30 hover:border-white/60 transition-all duration-200 active:scale-95 shadow-sm">
+                <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
             </button>
 
-            <!-- สถานะ Firebase Connection -->
-            <span id="connection-status" class="glow-border-btn text-xs px-3 py-1.5 rounded-full text-white font-semibold hidden sm:inline-block animate-pulse ml-1">
-                Connecting to Firebase...
+            <!-- สถานะการเชื่อมต่อจริง -->
+            <span id="connection-status" role="status" aria-live="polite" class="hidden sm:inline-flex items-center gap-2 text-[11px] px-3 py-2 rounded-xl bg-white/10 text-white border border-white/25 font-semibold ml-1 shadow-sm transition-all duration-300">
+                <span id="connection-status-dot" class="w-2 h-2 rounded-full bg-amber-300 animate-pulse"></span>
+                <span id="connection-status-text">กำลังตรวจสอบการเชื่อมต่อ...</span>
             </span>
         </div>
     </div>
@@ -1213,7 +1223,7 @@
                 window.location.replace('login.html');
             } catch(e) {
                 console.error('Firebase logout error:', e);
-                if (btn) { btn.disabled = false; btn.textContent = '🚪 ออกจากระบบ'; }
+                if (btn) { btn.disabled = false; }
                 showToast('ไม่สามารถออกจากระบบได้', 'error');
             }
         });
@@ -1356,28 +1366,26 @@
         function setConnectionStatus(state, message, showErrorToast = false) {
             firebaseConnectionState = state;
             if (!statusBadge) return;
-            
-            // ลบสีพื้นหลังและสีข้อความเดิมออก ให้คงความโปร่งใสและกรอบสีขาวไว้เสมอ
-            statusBadge.textContent = message;
-            statusBadge.className = `text-xs px-3 py-1.5 rounded-full bg-transparent text-white border border-white/70 font-semibold hidden sm:inline-block shadow-2xs animate-pulse ml-2`;
-            
-            if (showErrorToast) {
-                const now = Date.now();
-                if (now - lastConnectionErrorToast > 8000) {
-                    lastConnectionErrorToast = now;
-                    showToast(message, 'error');
-                }
-            }
+            const dot = document.getElementById('connection-status-dot');
+            const text = document.getElementById('connection-status-text');
+            const labels = { connecting:'กำลังซิงค์ข้อมูล...', connected:'Online · Synced', offline:'Offline · รอการเชื่อมต่อ', error:'Connection issue' };
+            statusBadge.classList.remove('status-online','status-syncing','status-offline','status-error','animate-pulse');
+            statusBadge.classList.add(state==='connected'?'status-online':state==='connecting'?'status-syncing':state==='offline'?'status-offline':'status-error');
+            if(state==='connecting'||state==='error') statusBadge.classList.add('animate-pulse');
+            if(text) text.textContent=message||labels[state]||labels.connecting;
+            if(dot) dot.setAttribute('title',labels[state]||'Connection status');
+            if(showErrorToast){const now=Date.now();if(now-lastConnectionErrorToast>8000){lastConnectionErrorToast=now;showToast(message||labels[state],'error')}}
         }
 
-        setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
-
-        window.addEventListener('online', () => {
-            setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
-        });
-        window.addEventListener('offline', () => {
-            setConnectionStatus('offline', 'ออฟไลน์ — รอการเชื่อมต่อ', true);
-        });
+        // Online ต้องได้รับการยืนยันจาก Firestore จริง ไม่ใช่ดูจาก Wi-Fi อย่างเดียว
+        function refreshConnectionStatus(){
+            if(!navigator.onLine) return setConnectionStatus('offline','Offline · ไม่มีอินเทอร์เน็ต');
+            if(firebaseServerConfirmed) return setConnectionStatus('connected','Online · Synced');
+            setConnectionStatus('connecting','กำลังเชื่อมต่อ Firebase...');
+        }
+        refreshConnectionStatus();
+        window.addEventListener('online',()=>{firebaseServerConfirmed=false;setConnectionStatus('connecting','กำลังเชื่อมต่อ Firebase...')});
+        window.addEventListener('offline',()=>setConnectionStatus('offline','Offline · ไม่มีอินเทอร์เน็ต'));
 
         let pendingItems = []; 
         let allDeliveries = [];
@@ -2782,7 +2790,7 @@ function getCompanyPriceHistory(companyName, productName) {
             }
             if (!snapshot.metadata.fromCache) {
                 firebaseServerConfirmed = true;
-                setConnectionStatus('connected', 'Connected to Server');
+                if (navigator.onLine) setConnectionStatus('connected', 'Online · Synced');
             }
         }, error => {
             console.error('Firestore products snapshot error:', error);
@@ -2851,7 +2859,7 @@ function getCompanyPriceHistory(companyName, productName) {
 
                     if (!snapshot.metadata.fromCache) {
                         firebaseServerConfirmed = true;
-                        setConnectionStatus('connected', 'เชื่อมต่อ Server แล้ว');
+                        if (navigator.onLine) setConnectionStatus('connected', 'Online · Synced');
                     } else if (!firebaseServerConfirmed) {
                         setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Server...');
                     }
