@@ -4332,120 +4332,123 @@ document.getElementById('item-input').addEventListener('blur', function() {
             );
         }
 
-        window.openEditCustomerModal = async function(docId, currentCustomerName) {
-            const modal = document.getElementById('edit-customer-modal');
-            const modalContent = document.getElementById('edit-customer-modal-content');
-            const inputField = document.getElementById('edit-customer-text');
-            const companyField = document.getElementById('edit-customer-company');
-            const phoneField = document.getElementById('edit-customer-phone');
-            const addressField = document.getElementById('edit-customer-address');
-            const btnConfirm = document.getElementById('edit-customer-confirm');
-            const btnCancel = document.getElementById('edit-customer-cancel');
+        // ------------------------------------------------------------
+        // แก้ไขข้อมูลลูกค้า: ใช้ Event Listener เดียวตลอดอายุหน้า
+        // ป้องกันปุ่ม "กำลังบันทึก..." ค้างเมื่อแก้ไขลูกค้ารายถัดไป
+        // ------------------------------------------------------------
+        let activeEditCustomerDocId = null;
+        let activeEditCustomerClosing = false;
 
-            // ดึงข้อมูลเดิมของลูกค้ารายนี้มาแสดงในช่องแก้ไข โดยไม่แตะข้อมูลส่วนอื่น
+        const editCustomerModal = document.getElementById('edit-customer-modal');
+        const editCustomerModalContent = document.getElementById('edit-customer-modal-content');
+        const editCustomerInput = document.getElementById('edit-customer-text');
+        const editCustomerCompany = document.getElementById('edit-customer-company');
+        const editCustomerPhone = document.getElementById('edit-customer-phone');
+        const editCustomerAddress = document.getElementById('edit-customer-address');
+        const editCustomerConfirm = document.getElementById('edit-customer-confirm');
+        const editCustomerCancel = document.getElementById('edit-customer-cancel');
+
+        function closeEditCustomerModal() {
+            activeEditCustomerClosing = true;
+            activeEditCustomerDocId = null;
+
+            editCustomerConfirm.disabled = false;
+            editCustomerConfirm.textContent = 'บันทึกการแก้ไข';
+
+            editCustomerModal.classList.add('opacity-0');
+            editCustomerModalContent.classList.add('scale-95');
+            setTimeout(() => {
+                editCustomerModal.classList.add('hidden');
+                activeEditCustomerClosing = false;
+            }, 250);
+        }
+
+        window.openEditCustomerModal = async function(docId, currentCustomerName) {
+            // ถ้ามี Modal เดิมกำลังปิดอยู่ ให้ยกเลิกสถานะเก่าก่อนเปิดรายการใหม่
+            activeEditCustomerClosing = false;
+            activeEditCustomerDocId = null;
+
+            editCustomerConfirm.disabled = true;
+            editCustomerConfirm.textContent = 'กำลังโหลดข้อมูล...';
+
             try {
                 const docSnap = await db.collection('deliveries').doc(docId).get();
                 if (!docSnap.exists) {
                     showToast('ไม่พบข้อมูลลูกค้ารายนี้', 'error');
+                    editCustomerConfirm.disabled = false;
+                    editCustomerConfirm.textContent = 'บันทึกการแก้ไข';
                     return;
                 }
+
                 const data = docSnap.data() || {};
-                inputField.value = data.customerName || currentCustomerName || '';
-                companyField.value = data.companyName || '';
-                phoneField.value = data.phone || '';
-                addressField.value = data.address || '';
+                editCustomerInput.value = data.customerName || currentCustomerName || '';
+                editCustomerCompany.value = data.companyName || '';
+                editCustomerPhone.value = data.phone || '';
+                editCustomerAddress.value = data.address || '';
+                activeEditCustomerDocId = docId;
+
+                editCustomerModal.classList.remove('hidden');
+                requestAnimationFrame(() => {
+                    editCustomerModal.classList.remove('opacity-0');
+                    editCustomerModalContent.classList.remove('scale-95');
+                });
+
+                editCustomerConfirm.disabled = false;
+                editCustomerConfirm.textContent = 'บันทึกการแก้ไข';
+                setTimeout(() => editCustomerInput.focus(), 30);
             } catch (err) {
                 console.error('โหลดข้อมูลลูกค้าเพื่อแก้ไขไม่สำเร็จ:', err);
                 showToast('ไม่สามารถโหลดข้อมูลลูกค้าได้', 'error');
+                activeEditCustomerDocId = null;
+                editCustomerConfirm.disabled = false;
+                editCustomerConfirm.textContent = 'บันทึกการแก้ไข';
+            }
+        };
+
+        // ผูกปุ่มเพียงครั้งเดียว ไม่สร้าง Listener ซ้ำทุกครั้งที่เปิด Modal
+        editCustomerConfirm.addEventListener('click', async () => {
+            const docId = activeEditCustomerDocId;
+            if (!docId || editCustomerConfirm.disabled || activeEditCustomerClosing) return;
+
+            const newCustomerName = editCustomerInput.value.trim();
+            const newCompanyName = editCustomerCompany.value.trim();
+            const newPhone = editCustomerPhone.value.trim();
+            const newAddress = editCustomerAddress.value.trim();
+
+            if (!newCustomerName) {
+                showToast('กรุณากรอกชื่อลูกค้า', 'error');
+                editCustomerInput.focus();
                 return;
             }
 
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                modal.classList.remove('opacity-0');
-                modalContent.classList.remove('scale-95');
-                inputField.focus();
-            }, 10);
+            editCustomerConfirm.disabled = true;
+            editCustomerConfirm.textContent = 'กำลังบันทึก...';
 
-            const closeModal = () => {
-                modal.classList.add('opacity-0');
-                modalContent.classList.add('scale-95');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
-                btnConfirm.replaceWith(btnConfirm.cloneNode(true));
-                btnCancel.replaceWith(btnCancel.cloneNode(true));
-            };
+            try {
+                await db.collection('deliveries').doc(docId).update({
+                    customerName: newCustomerName,
+                    companyName: newCompanyName,
+                    phone: newPhone,
+                    address: newAddress
+                });
 
-            btnConfirm.addEventListener('click', async () => {
-                const newCustomerName = inputField.value.trim();
-                const newCompanyName = companyField.value.trim();
-                const newPhone = phoneField.value.trim();
-                const newAddress = addressField.value.trim();
+                // เคลียร์สถานะปุ่มทันทีหลัง Firebase รับคำสั่งสำเร็จ
+                editCustomerConfirm.disabled = false;
+                editCustomerConfirm.textContent = 'บันทึกการแก้ไข';
+                showToast('แก้ไขข้อมูลลูกค้าสำเร็จ', 'success');
+                closeEditCustomerModal();
+            } catch (err) {
+                console.error('แก้ไขข้อมูลลูกค้าไม่สำเร็จ:', err);
+                editCustomerConfirm.disabled = false;
+                editCustomerConfirm.textContent = 'บันทึกการแก้ไข';
+                showToast('ไม่สามารถแก้ไขข้อมูลลูกค้าได้ กรุณาลองใหม่อีกครั้ง', 'error');
+            }
+        });
 
-                if (!newCustomerName) {
-                    showToast('กรุณากรอกชื่อลูกค้า', 'error');
-                    return;
-                }
-
-                btnConfirm.disabled = true;
-                btnConfirm.textContent = 'กำลังบันทึก...';
-
-                try {
-                    // ตรวจสอบว่า Firebase ติดต่อ Server ได้จริงก่อนเขียนข้อมูล
-                    // เพื่อป้องกันปุ่มค้างที่ "กำลังบันทึก..." เมื่อ Firestore อยู่ในสถานะรอซิงค์
-                    if (!navigator.onLine) {
-                        throw new Error('OFFLINE');
-                    }
-
-                    firebaseServerConfirmed = false;
-                    setConnectionStatus('connecting', 'กำลังตรวจสอบการเชื่อมต่อ...');
-
-                    const docRef = db.collection('deliveries').doc(docId);
-                    if (typeof db.enableNetwork === 'function') {
-                        await db.enableNetwork();
-                    }
-
-                    // source: server บังคับให้ตรวจสอบกับ Firestore Server จริง
-                    await Promise.race([
-                        docRef.get({ source: 'server' }),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('SERVER_TIMEOUT')), 10000))
-                    ]);
-
-                    await Promise.race([
-                        docRef.update({
-                            customerName: newCustomerName,
-                            companyName: newCompanyName,
-                            phone: newPhone,
-                            address: newAddress
-                        }),
-                        new Promise((_, reject) => setTimeout(() => reject(new Error('SAVE_TIMEOUT')), 12000))
-                    ]);
-
-                    firebaseServerConfirmed = true;
-                    setConnectionStatus('connected', 'Online · Synced');
-                    showToast('แก้ไขข้อมูลลูกค้าสำเร็จ', 'success');
-                    closeModal();
-                } catch (err) {
-                    console.error('แก้ไขข้อมูลลูกค้าไม่สำเร็จ:', err);
-                    firebaseServerConfirmed = false;
-                    if (!navigator.onLine || err.message === 'OFFLINE') {
-                        setConnectionStatus('offline', 'Offline · ไม่มีอินเทอร์เน็ต');
-                        showToast('ขณะนี้ไม่มีอินเทอร์เน็ต กรุณาเชื่อมต่อแล้วลองบันทึกอีกครั้ง', 'error');
-                    } else if (err.message === 'SERVER_TIMEOUT' || err.message === 'SAVE_TIMEOUT') {
-                        setConnectionStatus('connecting', 'กำลังเชื่อมต่อ Firebase...');
-                        showToast('การเชื่อมต่อ Server ใช้เวลานานเกินไป กรุณารอสักครู่แล้วลองบันทึกอีกครั้ง', 'error');
-                    } else {
-                        setConnectionStatus('error', 'Connection issue');
-                        showToast('ไม่สามารถแก้ไขข้อมูลลูกค้าได้ กรุณาลองใหม่อีกครั้ง', 'error');
-                    }
-                    btnConfirm.disabled = false;
-                    btnConfirm.textContent = 'บันทึกการแก้ไข';
-                }
-            }, { once: true });
-
-            btnCancel.addEventListener('click', closeModal, { once: true });
-        };
+        editCustomerCancel.addEventListener('click', closeEditCustomerModal);
+        editCustomerModal.addEventListener('click', (e) => {
+            if (e.target === editCustomerModal) closeEditCustomerModal();
+        });
 
         window.openEditCompanyModal = function(docId, currentCompany) {
             const modal = document.getElementById('edit-company-modal');
