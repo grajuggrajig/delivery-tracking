@@ -379,34 +379,37 @@
             </label>
             <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
         </div>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">
-                    <span class="inline-flex flex-col">
-                        <span>📞 เบอร์โทรศัพท์</span>
-                        <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">Phone Number</span>
-                    </span>
-                </label>
-                <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
+        
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                <span class="inline-flex flex-col">
+                    <span>📞 เบอร์โทรศัพท์</span>
+                    <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">Phone Number</span>
+                </span>
+            </label>
+            <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
+        </div>
+
+        <!-- ช่องทางติดต่อ Line ID: รองรับหลาย ID -->
+        <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">
+                <span class="inline-flex flex-col">
+                    <span>💬 Line ID</span>
+                    <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">Line Contact (หลาย ID ได้)</span>
+                </span>
+            </label>
+            <div class="flex items-center gap-1.5">
+                <input type="text" id="line-id-input" autocomplete="off" placeholder="เช่น dream123" class="min-w-0 flex-1 px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
+                <button type="button" id="open-line-input-btn" title="เปิด Line จาก ID ที่พิมพ์" class="w-9 h-9 flex-shrink-0 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition font-bold text-sm">🔗</button>
+                <button type="button" id="add-line-id-btn" title="เพิ่ม Line ID" class="w-9 h-9 flex-shrink-0 rounded-xl bg-sky-50 text-sky-600 hover:bg-sky-100 border border-sky-200 transition font-bold text-base">＋</button>
             </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-600 mb-1">
-                    <span class="inline-flex flex-col">
-                        <span>💬 Line ID</span>
-                        <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">LINE Contact</span>
-                    </span>
-                </label>
-                <div class="flex items-center gap-1.5">
-                    <input type="text" id="line-id" autocomplete="off" placeholder="เช่น mylineid" class="min-w-0 flex-1 px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
-                    <button type="button" id="line-link-btn" onclick="openLineChatFromInput()" title="เปิดแชท LINE" aria-label="เปิดแชท LINE" class="w-9 h-9 flex-shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition flex items-center justify-center text-sm shadow-2xs">🔗</button>
-                </div>
-            </div>
+            <div id="line-id-list" class="flex flex-wrap gap-1.5 mt-1.5"></div>
         </div>
 
         <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">
                 <span class="inline-flex flex-col">
-                    <span>📍 ที่อยู่จัดส่ง</span>
+                                        <span>📍 ที่อยู่จัดส่ง</span>
                     <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">Shipping Address</span>
                 </span>
             </label>
@@ -874,17 +877,15 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">🏢 ชื่อบริษัท / ร้านค้า</label>
                     <input type="text" id="edit-customer-company" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">📞 เบอร์โทรศัพท์</label>
-                        <input type="tel" id="edit-customer-phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-600 mb-1">💬 Line ID</label>
-                        <div class="flex items-center gap-1.5">
-                            <input type="text" id="edit-customer-line-id" autocomplete="off" placeholder="เช่น mylineid" class="min-w-0 flex-1 px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                            <button type="button" id="edit-customer-line-link-btn" title="เปิดแชท LINE" aria-label="เปิดแชท LINE" class="w-9 h-9 flex-shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition flex items-center justify-center text-sm shadow-2xs">🔗</button>
-                        </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">📞 เบอร์โทรศัพท์</label>
+                    <input type="tel" id="edit-customer-phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">💬 Line ID <span class="text-[9px] text-slate-400 font-normal">(หลาย ID ได้ • 1 ID ต่อ 1 บรรทัด)</span></label>
+                    <div class="flex items-start gap-1.5">
+                        <textarea id="edit-customer-lineids" rows="2" placeholder="dream123&#10;dream.office" class="min-w-0 flex-1 px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-1 focus:ring-sky-400 focus:bg-white transition resize-none"></textarea>
+                        <button type="button" id="open-edit-line-btn" title="เปิด Line จาก ID แรก" class="w-9 h-9 flex-shrink-0 rounded-xl bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 transition font-bold text-sm">🔗</button>
                     </div>
                 </div>
                 <div>
@@ -1418,6 +1419,65 @@
         let suggestionQuantities = {};
         let isFormVisible = true;
         let currentCrmCustomerId = null;
+
+        // Line ID ของลูกค้าที่กำลังกรอกในฟอร์มหลัก
+        let pendingLineIds = [];
+
+        function normalizeLineId(value) {
+            return String(value || '').trim().replace(/^@+/, '');
+        }
+
+        function getCustomerLineIds(customer) {
+            if (!customer) return [];
+            const source = Array.isArray(customer.lineIds)
+                ? customer.lineIds
+                : (customer.lineId ? [customer.lineId] : []);
+            return [...new Set(source.map(normalizeLineId).filter(Boolean))];
+        }
+
+        function renderPendingLineIds() {
+            const box = document.getElementById('line-id-list');
+            if (!box) return;
+            if (!pendingLineIds.length) {
+                box.innerHTML = '';
+                return;
+            }
+            box.innerHTML = pendingLineIds.map((id, index) => `
+                <span class="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-green-50 text-green-700 border border-green-100 text-[10px] font-semibold max-w-full">
+                    <span class="truncate max-w-[170px]">@${escapeHTML(id)}</span>
+                    <button type="button" onclick="openLineChat('${encodeURIComponent(id)}')" title="เปิด Line ID นี้" class="text-green-600 hover:text-green-800 px-0.5">🔗</button>
+                    <button type="button" onclick="removePendingLineId(${index})" title="ลบ Line ID นี้" class="text-slate-400 hover:text-rose-600 px-0.5">✕</button>
+                </span>
+            `).join('');
+        }
+
+        window.removePendingLineId = function(index) {
+            if (index >= 0 && index < pendingLineIds.length) {
+                pendingLineIds.splice(index, 1);
+                renderPendingLineIds();
+            }
+        };
+
+        window.openLineChat = function(encodedId) {
+            const id = normalizeLineId(decodeURIComponent(String(encodedId || '')));
+            if (!id) {
+                showToast('ไม่พบ Line ID', 'error');
+                return;
+            }
+            window.open(`https://line.me/ti/p/~${encodeURIComponent(id)}`, '_blank', 'noopener,noreferrer');
+        };
+
+        function openLineFromInput(inputId) {
+            const el = document.getElementById(inputId);
+            if (!el) return;
+            const raw = String(el.value || '').split(/[\n,]+/).map(normalizeLineId).filter(Boolean)[0] || '';
+            if (!raw) {
+                showToast('กรุณาพิมพ์ Line ID ก่อน', 'info');
+                el.focus();
+                return;
+            }
+            window.open(`https://line.me/ti/p/~${encodeURIComponent(raw)}`, '_blank', 'noopener,noreferrer');
+        }
 
 
 // ฟังก์ชันกดเช็คประวัติราคาของบริษัทปัจจุบัน
@@ -2578,7 +2638,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 const rowBg = index % 2 === 0 ? 'bg-white hover:bg-sky-50/70 border-slate-100' : 'bg-slate-50/70 hover:bg-sky-50/90 border-slate-200/60';
                 
                 return `
-                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}', '${escapeHTML(item.lineId || '').replace(/'/g, "\\'")}')" 
+                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}', '${encodeURIComponent(JSON.stringify(getCustomerLineIds(item)))}')" 
                          class="flex items-center justify-between p-3 rounded-2xl border ${rowBg} shadow-2xs transition cursor-pointer group mb-1.5">
                         <div class="flex items-center gap-3 truncate">
                             <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
@@ -2600,13 +2660,19 @@ function getCompanyPriceHistory(companyName, productName) {
             customerListContainer.innerHTML = htmlContent;
         }
 
-        window.selectCustomerItem = function(name, company, phone, address, lineId) {
+        window.selectCustomerItem = function(name, company, phone, address, lineIdsJson) {
             customerNameInput.value = name;
             companyNameInput.value = company;
             phoneInput.value = phone;
-            const lineInput = document.getElementById('line-id');
-            if (lineInput) lineInput.value = lineId || '';
             addressInput.value = address;
+            try {
+                const parsed = JSON.parse(decodeURIComponent(lineIdsJson || '%5B%5D'));
+                pendingLineIds = Array.isArray(parsed) ? [...new Set(parsed.map(normalizeLineId).filter(Boolean))] : [];
+            } catch (_) {
+                pendingLineIds = [];
+            }
+            if (lineIdInput) lineIdInput.value = '';
+            renderPendingLineIds();
             closeCustomerModal();
             showToast(`เลือกข้อมูลของ "${name}" เรียบร้อย`, 'info');
         };
@@ -2615,8 +2681,9 @@ function getCompanyPriceHistory(companyName, productName) {
             customerNameInput.value = name;
             companyNameInput.value = '';
             phoneInput.value = '';
-            const lineInput = document.getElementById('line-id');
-            if (lineInput) lineInput.value = '';
+            pendingLineIds = [];
+            if (lineIdInput) lineIdInput.value = '';
+            renderPendingLineIds();
             addressInput.value = '';
             closeCustomerModal();
             showToast(`ตั้งชื่อลูกค้าใหม่เป็น "${name}" แล้ว`, 'info');
@@ -2656,9 +2723,7 @@ function getCompanyPriceHistory(companyName, productName) {
         }
 
         closeStockModalBtn.addEventListener('click', closeStockModalFunc);
-
-        // ป้องกันหน้าต่าง Stock Management เด้งปิดจากการคลิกพื้นที่นอกกรอบโดยไม่ตั้งใจ
-        // ให้ปิดได้เฉพาะปุ่ม ✕ เพื่อไม่ให้การค้นหา/แก้ไขรายการสะดุด
+        // ป้องกันการปิด Stock Management โดยไม่ตั้งใจจากการคลิกนอกกรอบ
         stockModal.addEventListener('click', (e) => {
             e.stopPropagation();
         });
@@ -3506,9 +3571,43 @@ document.getElementById('item-input').addEventListener('blur', function() {
             if (found) {
                 companyNameInput.value = found.companyName || '';
                 phoneInput.value = found.phone || '';
+                pendingLineIds = getCustomerLineIds(found);
+                if (lineIdInput) lineIdInput.value = '';
+                renderPendingLineIds();
                 addressInput.value = found.address || '';
             }
         });
+
+        const lineIdInput = document.getElementById('line-id-input');
+        const addLineIdBtn = document.getElementById('add-line-id-btn');
+        const openLineInputBtn = document.getElementById('open-line-input-btn');
+
+        addLineIdBtn?.addEventListener('click', () => {
+            const value = normalizeLineId(lineIdInput?.value);
+            if (!value) {
+                showToast('กรุณากรอก Line ID ก่อนเพิ่ม', 'info');
+                lineIdInput?.focus();
+                return;
+            }
+            if (pendingLineIds.some(id => id.toLowerCase() === value.toLowerCase())) {
+                showToast('Line ID นี้ถูกเพิ่มไว้แล้ว', 'info');
+                lineIdInput.value = '';
+                return;
+            }
+            pendingLineIds.push(value);
+            lineIdInput.value = '';
+            renderPendingLineIds();
+            lineIdInput.focus();
+        });
+
+        lineIdInput?.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                addLineIdBtn?.click();
+            }
+        });
+
+        openLineInputBtn?.addEventListener('click', () => openLineFromInput('line-id-input'));
 
         const deliveryForm = document.getElementById('delivery-form');
         const submitBtn = document.getElementById('submit-btn');
@@ -3563,8 +3662,12 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
                 const companyName = companyNameInput.value.trim();
                 const phone = phoneInput.value.trim();
-                const lineId = normalizeLineId(document.getElementById('line-id')?.value || '');
                 const address = addressInput.value.trim();
+                const typedLineId = normalizeLineId(lineIdInput?.value || '');
+                const currentLineIds = [...pendingLineIds];
+                if (typedLineId && !currentLineIds.some(id => id.toLowerCase() === typedLineId.toLowerCase())) {
+                    currentLineIds.push(typedLineId);
+                }
 
                 if (!snapshot.empty) {
                     const docRef = snapshot.docs[0].ref;
@@ -3577,6 +3680,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         subItems: existingItems,
                         companyName: companyName || docData.companyName || '',
                         phone: phone || docData.phone || '',
+                        lineIds: currentLineIds.length ? currentLineIds : getCustomerLineIds(docData),
                         address: address || docData.address || '',
                         customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : [],
                         purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : []
@@ -3588,7 +3692,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         customerName,
                         companyName,
                         phone,
-                        lineId,
+                        lineIds: currentLineIds,
                         address,
                         subItems: newSubItemsObjs,
                         customerNotes: [],
@@ -3602,6 +3706,9 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
                 deliveryForm.reset();
                 pendingItems = [];
+                pendingLineIds = [];
+                if (lineIdInput) lineIdInput.value = '';
+                renderPendingLineIds();
                 renderPendingItems();
             } catch (err) {
                 console.error('บันทึกข้อมูลไม่สำเร็จ:', err);
@@ -3728,14 +3835,20 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             <div class="flex items-center gap-2.5 flex-wrap">
                                 <div class="inline-flex items-center gap-1.5 font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2.5 py-0.5 rounded-md border border-indigo-200/60">
                                     <span>${escapeHTML(item.customerName)}</span>
-                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขข้อมูลลูกค้า (ชื่อ บริษัท เบอร์โทร Line ID ที่อยู่)" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
+                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขข้อมูลลูกค้า (ชื่อ บริษัท เบอร์โทร ที่อยู่)" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
                                 </div>
                                 <div class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100 text-[11px]">
                                     <span>${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
                                     <button onclick="openEditCompanyModal('${item.id}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" title="แก้ไขชื่อบริษัท" class="text-purple-400 hover:text-purple-700 transition">✏️</button>
                                 </div>
                                 ${item.phone ? `<a href="tel:${escapeHTML(item.phone)}" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100 shadow-2xs hover:underline">📞 ${escapeHTML(item.phone)}</a>` : ''}
-                                ${item.lineId ? `<button type="button" onclick="event.stopPropagation(); openLineChat('${escapeHTML(item.lineId).replace(/'/g, "\\'")}')" title="เปิดแชท LINE" class="text-[11px] text-emerald-700 hover:text-white font-semibold bg-emerald-50 hover:bg-emerald-500 px-2 py-0.5 rounded-md border border-emerald-100 shadow-2xs transition">💬 LINE: ${escapeHTML(item.lineId)}</button>` : ''}
+                                ${getCustomerLineIds(item).map(lineId => `
+                                    <span class="inline-flex items-center gap-0.5 text-[10px] text-green-700 font-semibold bg-green-50 px-1.5 py-0.5 rounded-md border border-green-100">
+                                        <a href="https://line.me/ti/p/~${encodeURIComponent(lineId)}" target="_blank" rel="noopener noreferrer" title="เปิดแชท/โปรไฟล์ Line: @${escapeHTML(lineId)}" class="hover:text-green-900 hover:underline">💬 @${escapeHTML(lineId)}</a>
+                                        <a href="https://line.me/ti/p/~${encodeURIComponent(lineId)}" target="_blank" rel="noopener noreferrer" title="เปิด Line" class="text-green-600 hover:text-green-900 px-0.5">🔗</a>
+                                        <button type="button" onclick="deleteCustomerLineId('${item.id}', '${encodeURIComponent(lineId)}')" title="ลบ Line ID นี้ทันที" class="text-slate-400 hover:text-rose-600 px-0.5">✕</button>
+                                    </span>
+                                `).join('')}
                             </div>
                             
                             <div class="flex items-center gap-2">
@@ -4376,37 +4489,10 @@ document.getElementById('item-input').addEventListener('blur', function() {
         const editCustomerInput = document.getElementById('edit-customer-text');
         const editCustomerCompany = document.getElementById('edit-customer-company');
         const editCustomerPhone = document.getElementById('edit-customer-phone');
-        const editCustomerLineId = document.getElementById('edit-customer-line-id');
+        const editCustomerLineIds = document.getElementById('edit-customer-lineids');
         const editCustomerAddress = document.getElementById('edit-customer-address');
         const editCustomerConfirm = document.getElementById('edit-customer-confirm');
         const editCustomerCancel = document.getElementById('edit-customer-cancel');
-
-        function normalizeLineId(value) {
-            return String(value || '').trim().replace(/^@+/, '');
-        }
-
-        function getLineChatUrl(lineId) {
-            const id = normalizeLineId(lineId);
-            return id ? `https://line.me/R/ti/p/~${encodeURIComponent(id)}` : '';
-        }
-
-        window.openLineChat = function(lineId) {
-            const url = getLineChatUrl(lineId);
-            if (!url) {
-                showToast('ยังไม่มี Line ID ของลูกค้ารายนี้', 'info');
-                return;
-            }
-            window.open(url, '_blank', 'noopener,noreferrer');
-        };
-
-        window.openLineChatFromInput = function() {
-            const input = document.getElementById('line-id');
-            openLineChat(input ? input.value : '');
-        };
-
-        document.getElementById('edit-customer-line-link-btn')?.addEventListener('click', () => {
-            openLineChat(editCustomerLineId ? editCustomerLineId.value : '');
-        });
 
         function closeEditCustomerModal() {
             activeEditCustomerClosing = true;
@@ -4444,7 +4530,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 editCustomerInput.value = data.customerName || currentCustomerName || '';
                 editCustomerCompany.value = data.companyName || '';
                 editCustomerPhone.value = data.phone || '';
-                editCustomerLineId.value = data.lineId || '';
+                editCustomerLineIds.value = getCustomerLineIds(data).join('\n');
                 editCustomerAddress.value = data.address || '';
                 activeEditCustomerDocId = docId;
 
@@ -4474,7 +4560,12 @@ document.getElementById('item-input').addEventListener('blur', function() {
             const newCustomerName = editCustomerInput.value.trim();
             const newCompanyName = editCustomerCompany.value.trim();
             const newPhone = editCustomerPhone.value.trim();
-            const newLineId = normalizeLineId(editCustomerLineId.value);
+            const newLineIds = [...new Set(
+                String(editCustomerLineIds.value || '')
+                    .split(/[\n,]+/)
+                    .map(normalizeLineId)
+                    .filter(Boolean)
+            )];
             const newAddress = editCustomerAddress.value.trim();
 
             if (!newCustomerName) {
@@ -4491,7 +4582,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     customerName: newCustomerName,
                     companyName: newCompanyName,
                     phone: newPhone,
-                    lineId: newLineId,
+                    lineIds: newLineIds,
                     address: newAddress
                 });
 
@@ -4511,6 +4602,44 @@ document.getElementById('item-input').addEventListener('blur', function() {
         editCustomerCancel.addEventListener('click', closeEditCustomerModal);
         editCustomerModal.addEventListener('click', (e) => {
             if (e.target === editCustomerModal) closeEditCustomerModal();
+        });
+
+        // ลบ Line ID จากข้อมูลหลักได้ทันที โดยไม่ต้องเปิดหน้าต่างแก้ไข
+        window.deleteCustomerLineId = async function(docId, encodedLineId) {
+            const lineId = normalizeLineId(decodeURIComponent(String(encodedLineId || '')));
+            if (!docId || !lineId) return;
+
+            try {
+                const docRef = db.collection('deliveries').doc(docId);
+                const snap = await docRef.get();
+                if (!snap.exists) {
+                    showToast('ไม่พบข้อมูลลูกค้า', 'error');
+                    return;
+                }
+
+                const data = snap.data() || {};
+                const remaining = getCustomerLineIds(data).filter(
+                    id => id.toLowerCase() !== lineId.toLowerCase()
+                );
+
+                const updateData = { lineIds: remaining };
+                if (data.lineId) updateData.lineId = firebase.firestore.FieldValue.delete();
+                await docRef.update(updateData);
+
+                showToast(`ลบ Line ID @${lineId} แล้ว`, 'success');
+            } catch (err) {
+                console.error('ลบ Line ID ไม่สำเร็จ:', err);
+                showToast('ไม่สามารถลบ Line ID ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+            }
+        };
+
+        document.getElementById('open-edit-line-btn')?.addEventListener('click', () => {
+            const raw = String(editCustomerLineIds?.value || '').split(/[\n,]+/).map(normalizeLineId).filter(Boolean)[0] || '';
+            if (!raw) {
+                showToast('ยังไม่มี Line ID ในข้อมูลลูกค้า', 'info');
+                return;
+            }
+            window.open(`https://line.me/ti/p/~${encodeURIComponent(raw)}`, '_blank', 'noopener,noreferrer');
         });
 
         window.openEditCompanyModal = function(docId, currentCompany) {
