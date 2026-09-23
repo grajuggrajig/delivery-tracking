@@ -2630,9 +2630,11 @@ function getCompanyPriceHistory(companyName, productName) {
         }
 
         closeStockModalBtn.addEventListener('click', closeStockModalFunc);
-        stockModal.addEventListener('click', (e) => {
-            if (e.target === stockModal) closeStockModalFunc();
-        });
+
+        // ป้องกันหน้าต่างจัดการสต็อกเด้งปิดโดยไม่ตั้งใจเมื่อคลิก/ลากเมาส์นอกกรอบ
+        // หน้าต่างนี้จะปิดได้เฉพาะปุ่ม ✕ เท่านั้น (และไม่เปลี่ยน Modal อื่น)
+        // เดิมมี backdrop click ที่เรียก closeStockModalFunc() ซึ่งทำให้คลิกพื้นที่ด้านนอก
+        // แล้วหน้าต่างปิดทันทีระหว่างค้นหาหรือกรอกข้อมูล
 
         function resetStockForm() {
             stockForm.reset();
