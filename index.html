@@ -9,9 +9,6 @@
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
 
-        .line-link-btn { -webkit-tap-highlight-color: transparent; }
-        .line-link-btn:active { transform: scale(.96); }
-
         /* ปรับพื้นที่หน้าประวัติสินค้าของบริษัทให้กว้างขึ้น โดยไม่กระทบส่วนอื่น */
         #company-all-history-modal > div {
             width: min(1100px, 96vw);
@@ -382,29 +379,30 @@
             </label>
             <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
         </div>
-        
-        <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">
-                <span class="inline-flex flex-col">
-                    <span>📞 เบอร์โทรศัพท์</span>
-                    <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">Phone Number</span>
-                </span>
-            </label>
-            <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
-        </div>
-        <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1">
-                <span class="inline-flex flex-col">
-                    <span>💬 Line ID</span>
-                    <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">LINE Contact</span>
-                </span>
-            </label>
-            <div class="flex items-center gap-1.5">
-                <input type="text" id="line-id" autocomplete="off" placeholder="เช่น mylineid" class="flex-1 min-w-0 px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
-                <button type="button" id="line-link-btn" onclick="openLineChat('line-id')" title="เปิดแชท LINE" aria-label="เปิดแชท LINE" class="line-link-btn w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition shadow-2xs text-sm font-bold">↗</button>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">
+                    <span class="inline-flex flex-col">
+                        <span>📞 เบอร์โทรศัพท์</span>
+                        <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">Phone Number</span>
+                    </span>
+                </label>
+                <input type="tel" id="phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-600 mb-1">
+                    <span class="inline-flex flex-col">
+                        <span>💬 Line ID</span>
+                        <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">LINE Contact</span>
+                    </span>
+                </label>
+                <div class="flex items-center gap-1.5">
+                    <input type="text" id="line-id" autocomplete="off" placeholder="เช่น mylineid" class="min-w-0 flex-1 px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
+                    <button type="button" id="line-link-btn" onclick="openLineChatFromInput()" title="เปิดแชท LINE" aria-label="เปิดแชท LINE" class="w-9 h-9 flex-shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition flex items-center justify-center text-sm shadow-2xs">🔗</button>
+                </div>
             </div>
         </div>
-        
+
         <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">
                 <span class="inline-flex flex-col">
@@ -866,7 +864,7 @@
         <div class="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 border border-slate-100 transform scale-95 transition-transform duration-300" id="edit-customer-modal-content">
             <div class="text-2xl mb-3">👤</div>
             <h3 class="text-base font-bold text-slate-800 mb-1">แก้ไขข้อมูลลูกค้า</h3>
-            <p class="text-[11px] text-slate-400 mb-4">แก้ไขชื่อบริษัท เบอร์โทร Line ID และที่อยู่ของลูกค้าได้จากหน้าหลัก</p>
+            <p class="text-[11px] text-slate-400 mb-4">แก้ไขชื่อบริษัท เบอร์โทร และที่อยู่ของลูกค้าได้จากหน้าหลัก</p>
             <div class="space-y-3 mb-5">
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">👤 ชื่อลูกค้า</label>
@@ -876,15 +874,17 @@
                     <label class="block text-xs font-semibold text-slate-600 mb-1">🏢 ชื่อบริษัท / ร้านค้า</label>
                     <input type="text" id="edit-customer-company" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">📞 เบอร์โทรศัพท์</label>
-                    <input type="tel" id="edit-customer-phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-600 mb-1">💬 Line ID</label>
-                    <div class="flex items-center gap-1.5">
-                        <input type="text" id="edit-customer-line-id" autocomplete="off" placeholder="เช่น mylineid" class="flex-1 min-w-0 px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
-                        <button type="button" onclick="openLineChat('edit-customer-line-id')" title="เปิดแชท LINE" aria-label="เปิดแชท LINE" class="line-link-btn w-9 h-9 flex-shrink-0 flex items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 transition shadow-2xs text-sm font-bold">↗</button>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">📞 เบอร์โทรศัพท์</label>
+                        <input type="tel" id="edit-customer-phone" placeholder="0812345678" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-600 mb-1">💬 Line ID</label>
+                        <div class="flex items-center gap-1.5">
+                            <input type="text" id="edit-customer-line-id" autocomplete="off" placeholder="เช่น mylineid" class="min-w-0 flex-1 px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
+                            <button type="button" id="edit-customer-line-link-btn" title="เปิดแชท LINE" aria-label="เปิดแชท LINE" class="w-9 h-9 flex-shrink-0 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition flex items-center justify-center text-sm shadow-2xs">🔗</button>
+                        </div>
                     </div>
                 </div>
                 <div>
@@ -2531,8 +2531,7 @@ function getCompanyPriceHistory(companyName, productName) {
             const filtered = allDeliveries.filter(item => 
                 (item.customerName && String(item.customerName).toLowerCase().includes(keyword)) ||
                 (item.companyName && String(item.companyName).toLowerCase().includes(keyword)) ||
-                (item.phone && String(item.phone).toLowerCase().includes(keyword)) ||
-                (item.lineId && String(item.lineId).toLowerCase().includes(keyword))
+                (item.phone && String(item.phone).toLowerCase().includes(keyword))
             );
 
             // ตัวเลขด้านบนต้องเปลี่ยนตามผลค้นหา และนับเป็น "รายชื่อลูกค้าไม่ซ้ำ"
@@ -2579,7 +2578,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 const rowBg = index % 2 === 0 ? 'bg-white hover:bg-sky-50/70 border-slate-100' : 'bg-slate-50/70 hover:bg-sky-50/90 border-slate-200/60';
                 
                 return `
-                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.lineId || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}')" 
+                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}', '${escapeHTML(item.lineId || '').replace(/'/g, "\\'")}')" 
                          class="flex items-center justify-between p-3 rounded-2xl border ${rowBg} shadow-2xs transition cursor-pointer group mb-1.5">
                         <div class="flex items-center gap-3 truncate">
                             <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
@@ -2590,7 +2589,6 @@ function getCompanyPriceHistory(companyName, productName) {
                                 <div class="text-[11px] text-slate-500 truncate flex items-center gap-2">
                                     <span>🏢 ${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
                                     ${item.phone ? `<span>📞 ${escapeHTML(item.phone)}</span>` : ''}
-                                    ${item.lineId ? `<span>💬 ${escapeHTML(item.lineId)}</span>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -2602,11 +2600,12 @@ function getCompanyPriceHistory(companyName, productName) {
             customerListContainer.innerHTML = htmlContent;
         }
 
-        window.selectCustomerItem = function(name, company, phone, lineId, address) {
+        window.selectCustomerItem = function(name, company, phone, address, lineId) {
             customerNameInput.value = name;
             companyNameInput.value = company;
             phoneInput.value = phone;
-            lineIdInput.value = lineId || '';
+            const lineInput = document.getElementById('line-id');
+            if (lineInput) lineInput.value = lineId || '';
             addressInput.value = address;
             closeCustomerModal();
             showToast(`เลือกข้อมูลของ "${name}" เรียบร้อย`, 'info');
@@ -2616,7 +2615,8 @@ function getCompanyPriceHistory(companyName, productName) {
             customerNameInput.value = name;
             companyNameInput.value = '';
             phoneInput.value = '';
-            lineIdInput.value = '';
+            const lineInput = document.getElementById('line-id');
+            if (lineInput) lineInput.value = '';
             addressInput.value = '';
             closeCustomerModal();
             showToast(`ตั้งชื่อลูกค้าใหม่เป็น "${name}" แล้ว`, 'info');
@@ -2657,12 +2657,10 @@ function getCompanyPriceHistory(companyName, productName) {
 
         closeStockModalBtn.addEventListener('click', closeStockModalFunc);
 
-        // ล็อกหน้าต่าง Stock Management ไว้ขณะใช้งาน: คลิกด้านนอกไม่ปิด Modal
+        // ป้องกันหน้าต่าง Stock Management เด้งปิดจากการคลิกพื้นที่นอกกรอบโดยไม่ตั้งใจ
+        // ให้ปิดได้เฉพาะปุ่ม ✕ เพื่อไม่ให้การค้นหา/แก้ไขรายการสะดุด
         stockModal.addEventListener('click', (e) => {
-            if (e.target === stockModal) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
+            e.stopPropagation();
         });
 
         function resetStockForm() {
@@ -3500,22 +3498,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
         const companyNameInput = document.getElementById('company-name');
         const phoneInput = document.getElementById('phone');
-        const lineIdInput = document.getElementById('line-id');
         const addressInput = document.getElementById('address');
-
-        window.openLineChat = function(inputId) {
-            const input = document.getElementById(inputId);
-            const raw = input ? String(input.value || '').trim() : '';
-            if (!raw) {
-                showToast('กรุณากรอก Line ID ก่อนเปิดแชท', 'info');
-                if (input) input.focus();
-                return;
-            }
-            const target = /^https?:\/\//i.test(raw)
-                ? raw
-                : `https://line.me/R/ti/p/~${encodeURIComponent(raw.replace(/^@+/, ''))}`;
-            window.open(target, '_blank', 'noopener,noreferrer');
-        };
 
         customerNameInput.addEventListener('input', (e) => {
             const enteredName = e.target.value.trim();
@@ -3523,7 +3506,6 @@ document.getElementById('item-input').addEventListener('blur', function() {
             if (found) {
                 companyNameInput.value = found.companyName || '';
                 phoneInput.value = found.phone || '';
-                lineIdInput.value = found.lineId || '';
                 addressInput.value = found.address || '';
             }
         });
@@ -3581,7 +3563,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
                 const companyName = companyNameInput.value.trim();
                 const phone = phoneInput.value.trim();
-                const lineId = lineIdInput.value.trim();
+                const lineId = normalizeLineId(document.getElementById('line-id')?.value || '');
                 const address = addressInput.value.trim();
 
                 if (!snapshot.empty) {
@@ -3595,7 +3577,6 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         subItems: existingItems,
                         companyName: companyName || docData.companyName || '',
                         phone: phone || docData.phone || '',
-                        lineId: lineId || docData.lineId || '',
                         address: address || docData.address || '',
                         customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : [],
                         purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : []
@@ -3747,13 +3728,14 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             <div class="flex items-center gap-2.5 flex-wrap">
                                 <div class="inline-flex items-center gap-1.5 font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2.5 py-0.5 rounded-md border border-indigo-200/60">
                                     <span>${escapeHTML(item.customerName)}</span>
-                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขข้อมูลลูกค้า (ชื่อ บริษัท เบอร์โทร ที่อยู่)" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
+                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขข้อมูลลูกค้า (ชื่อ บริษัท เบอร์โทร Line ID ที่อยู่)" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
                                 </div>
                                 <div class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100 text-[11px]">
                                     <span>${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
                                     <button onclick="openEditCompanyModal('${item.id}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" title="แก้ไขชื่อบริษัท" class="text-purple-400 hover:text-purple-700 transition">✏️</button>
                                 </div>
                                 ${item.phone ? `<a href="tel:${escapeHTML(item.phone)}" class="text-[11px] text-indigo-600 hover:text-indigo-800 font-semibold bg-white/80 px-2 py-0.5 rounded-md border border-indigo-100 shadow-2xs hover:underline">📞 ${escapeHTML(item.phone)}</a>` : ''}
+                                ${item.lineId ? `<button type="button" onclick="event.stopPropagation(); openLineChat('${escapeHTML(item.lineId).replace(/'/g, "\\'")}')" title="เปิดแชท LINE" class="text-[11px] text-emerald-700 hover:text-white font-semibold bg-emerald-50 hover:bg-emerald-500 px-2 py-0.5 rounded-md border border-emerald-100 shadow-2xs transition">💬 LINE: ${escapeHTML(item.lineId)}</button>` : ''}
                             </div>
                             
                             <div class="flex items-center gap-2">
@@ -4399,6 +4381,33 @@ document.getElementById('item-input').addEventListener('blur', function() {
         const editCustomerConfirm = document.getElementById('edit-customer-confirm');
         const editCustomerCancel = document.getElementById('edit-customer-cancel');
 
+        function normalizeLineId(value) {
+            return String(value || '').trim().replace(/^@+/, '');
+        }
+
+        function getLineChatUrl(lineId) {
+            const id = normalizeLineId(lineId);
+            return id ? `https://line.me/R/ti/p/~${encodeURIComponent(id)}` : '';
+        }
+
+        window.openLineChat = function(lineId) {
+            const url = getLineChatUrl(lineId);
+            if (!url) {
+                showToast('ยังไม่มี Line ID ของลูกค้ารายนี้', 'info');
+                return;
+            }
+            window.open(url, '_blank', 'noopener,noreferrer');
+        };
+
+        window.openLineChatFromInput = function() {
+            const input = document.getElementById('line-id');
+            openLineChat(input ? input.value : '');
+        };
+
+        document.getElementById('edit-customer-line-link-btn')?.addEventListener('click', () => {
+            openLineChat(editCustomerLineId ? editCustomerLineId.value : '');
+        });
+
         function closeEditCustomerModal() {
             activeEditCustomerClosing = true;
             activeEditCustomerDocId = null;
@@ -4465,7 +4474,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
             const newCustomerName = editCustomerInput.value.trim();
             const newCompanyName = editCustomerCompany.value.trim();
             const newPhone = editCustomerPhone.value.trim();
-            const newLineId = editCustomerLineId.value.trim();
+            const newLineId = normalizeLineId(editCustomerLineId.value);
             const newAddress = editCustomerAddress.value.trim();
 
             if (!newCustomerName) {
