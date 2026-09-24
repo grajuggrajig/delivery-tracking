@@ -896,7 +896,17 @@ main button:not([disabled]):hover,
                     <span class="text-[9px] text-slate-400 font-normal tracking-tight scale-95 origin-left">Company / Store Name</span>
                 </span>
             </label>
-            <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
+            <div class="flex items-center gap-2">
+                <div class="w-[72px] flex-shrink-0">
+                    <label for="company-district" class="block text-[10px] font-semibold text-slate-500 mb-1">เขต</label>
+                    <input type="number" id="company-district" min="0" step="1" inputmode="numeric" placeholder="เลข"
+                        class="w-full px-2.5 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition text-center">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <label for="company-name" class="block text-[10px] font-semibold text-slate-500 mb-1">ชื่อบริษัท</label>
+                    <input type="text" id="company-name" placeholder="บริษัท เอ็กซ์วายซี จำกัด" class="w-full px-3 py-2 text-sm border border-sky-200 bg-sky-50/30 rounded-xl focus:outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400 focus:bg-white transition">
+                </div>
+            </div>
         </div>
         
         <div>
@@ -1424,6 +1434,11 @@ main button:not([disabled]):hover,
             <div class="text-2xl mb-3">🏢</div>
             <h3 class="text-base font-bold text-slate-800 mb-2">แก้ไขชื่อบริษัท</h3>
             <div class="space-y-3 mb-5">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">เขต</label>
+                    <input type="number" id="edit-company-district" min="0" step="1" inputmode="numeric" placeholder="เลขเขต"
+                        class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition mb-2">
+                </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อบริษัทใหม่</label>
                     <input type="text" id="edit-company-text" class="w-full px-3 py-2 text-sm border border-sky-100 bg-sky-50/30 rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 focus:bg-white transition">
@@ -2102,7 +2117,7 @@ function getCompanyPriceHistory(companyName, productName) {
 		
 		
 // ฟังก์ชันดึงประวัติสินค้าทั้งหมดที่บริษัทนั้นเคยซื้อตั้งแต่ชิ้นแรก
-function showCompanyAllHistory(companyName) {
+function showCompanyAllHistory(companyName, stableCompanyKey = '') {
     if (!companyName) {
         showToast('ไม่พบชื่อบริษัทสำหรับค้นหาประวัติ', 'error');
         return;
@@ -2113,7 +2128,10 @@ function showCompanyAllHistory(companyName) {
 
     // ประวัติการซื้อ = รายการปัจจุบัน + รายการที่เคยส่งแล้วและถูกล้างออกจากหน้าติดตาม
     allDeliveries.forEach(item => {
-        if (item.companyName && item.companyName.trim().toLowerCase() === companyName.trim().toLowerCase()) {
+        const matchesCompany = stableCompanyKey
+            ? normalizeCompanyProductKey(item.companyKey || item.companyName) === normalizeCompanyProductKey(stableCompanyKey)
+            : (item.companyName && item.companyName.trim().toLowerCase() === companyName.trim().toLowerCase());
+        if (matchesCompany) {
             customerInfo = item.customerName;
             const currentItems = Array.isArray(item.subItems) ? item.subItems : [];
             const archivedItems = Array.isArray(item.purchaseHistory) ? item.purchaseHistory : [];
@@ -2122,7 +2140,7 @@ function showCompanyAllHistory(companyName) {
         }
     });
 
-    showCompanyHistoryModal(companyName, customerInfo, allPurchasedItems);
+    showCompanyHistoryModal(companyName, customerInfo, allPurchasedItems, stableCompanyKey);
 }
 
 function normalizeCompanyProductKey(value) {
@@ -2173,7 +2191,7 @@ async function ensureCompanyProductFromStock(companyName, stockProduct) {
     const existing = getCompanySpecificProduct(cleanCompany, stockProduct.name);
     if (existing) return existing;
 
-    const companyKey = normalizeCompanyProductKey(cleanCompany);
+    const companyKey = normalizeCompanyProductKey(stableCompanyKey || cleanCompany);
     const payload = {
         companyKey,
         companyName: cleanCompany,
@@ -2217,7 +2235,7 @@ async function ensureProductInStandardStock(name, cost, price) {
     };
 }
 
-async function saveCompanyProduct(companyName, name, cost, price, editId = '') {
+async function saveCompanyProduct(companyName, name, cost, price, editId = '', stableCompanyKey = '') {
     const cleanCompany = String(companyName || '').trim();
     const cleanName = String(name || '').trim();
     const numericCost = Number(cost) || 0;
@@ -2376,20 +2394,20 @@ async function deleteCompanyProduct(id, name, companyName) {
     );
 }
 
-function getCompanySpecificProductCount(companyName) {
-    const companyKey = normalizeCompanyProductKey(companyName);
+function getCompanySpecificProductCount(companyName, stableCompanyKey = '') {
+    const companyKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
     if (!companyKey) return 0;
     return allCompanyProducts.filter(p =>
         normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey
     ).length;
 }
 
-function renderCompanyProductCatalog(companyName, filterText = '') {
+function renderCompanyProductCatalog(companyName, filterText = '', stableCompanyKey = '') {
     const container = document.getElementById('company-specific-products-container');
     const count = document.getElementById('company-specific-product-count');
     if (!container) return;
 
-    const companyKey = normalizeCompanyProductKey(companyName);
+    const companyKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
     const keyword = String(filterText || '').trim().toLowerCase();
 
     // นับสินค้าทั้งหมดของบริษัท ไม่เปลี่ยนตามช่องค้นหา
@@ -2439,7 +2457,7 @@ function renderCompanyProductCatalog(companyName, filterText = '') {
     `).join('');
 }
 
-function showCompanyHistoryModal(companyName, customerName, items) {
+function showCompanyHistoryModal(companyName, customerName, items, stableCompanyKey = '') {
     let oldModal = document.getElementById('company-all-history-modal');
     if (oldModal) oldModal.remove();
 
@@ -2447,7 +2465,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
     const safeCustomer = customerName ? `(ผู้ติดต่อ: ${escapeHTML(customerName)})` : '';
 
     const modalHtml = `
-        <div id="company-all-history-modal" class="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-[200] flex items-center justify-center p-4">
+        <div id="company-all-history-modal" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}" class="fixed inset-0 bg-slate-950/50 backdrop-blur-xs z-[200] flex items-center justify-center p-4">
             <div class="bg-white rounded-3xl shadow-2xl w-[96vw] max-w-[1100px] p-5 md:p-6 border border-slate-100 flex flex-col max-h-[92vh]">
                 <div class="flex justify-between items-center pb-3 mb-3 border-b border-slate-100 flex-shrink-0">
                     <div class="min-w-0">
@@ -2698,13 +2716,13 @@ function showCompanyHistoryModal(companyName, customerName, items) {
         saveCompanyProductBtn.disabled = true;
         saveCompanyProductBtn.textContent = 'กำลังบันทึก...';
 
-        const ok = await saveCompanyProduct(companyName, name, cost, price, editId);
+        const ok = await saveCompanyProduct(companyName, name, cost, price, editId, stableCompanyKey);
 
         saveCompanyProductBtn.disabled = false;
 
         if (ok) {
             cancelCompanyProductEdit();
-            renderCompanyProductCatalog(companyName, companyProductSearch.value);
+            renderCompanyProductCatalog(companyName, companyProductSearch.value, stableCompanyKey);
             companyProductName.focus();
         } else {
             saveCompanyProductBtn.textContent = editId ? '💾 บันทึกการแก้ไข' : '＋ เพิ่ม / บันทึกราคา';
@@ -2748,7 +2766,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
 
     function renderCompanyImportSources() {
         if (!companyImportSourceSelect) return;
-        const targetKey = normalizeCompanyProductKey(companyName);
+        const targetKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
         const sourceMap = new Map();
 
         allCompanyProducts.forEach(p => {
@@ -2775,7 +2793,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
             cb.checked = companyImportSelectedIds.has(cb.dataset.importProductId);
         });
         const selectable = companyImportSourceProducts.filter(p => !allCompanyProducts.some(target =>
-            normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(companyName) &&
+            normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(stableCompanyKey || companyName) &&
             normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
         ));
         const allVisibleSelected = selectable.length > 0 && selectable.every(p => companyImportSelectedIds.has(p.id));
@@ -2799,7 +2817,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
         companyImportProductsContainer.innerHTML = filtered.map(p => {
             const checked = companyImportSelectedIds.has(p.id);
             const alreadyExists = allCompanyProducts.some(target =>
-                normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(companyName) &&
+                normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(stableCompanyKey || companyName) &&
                 normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
             );
             return `
@@ -2889,7 +2907,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
             if (batchCount > 0) await batch.commit();
 
             companyImportSelectedIds.clear();
-            renderCompanyProductCatalog(companyName, companyProductSearch?.value || '');
+            renderCompanyProductCatalog(companyName, companyProductSearch?.value || '', stableCompanyKey);
             renderCompanyImportProducts(companyImportSearch?.value || '');
             showToast(`นำเข้าสินค้าจาก "${sourceName}" สำเร็จ ${importedCount} รายการ โดยใช้ราคาเริ่มต้นจากบริษัทต้นทาง`, 'success');
         } catch (err) {
@@ -2932,7 +2950,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
         const keyword = String(companyImportSearch?.value || '').trim().toLowerCase();
         const visible = companyImportSourceProducts.filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
         const selectable = visible.filter(p => !allCompanyProducts.some(target =>
-            normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(companyName) &&
+            normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(stableCompanyKey || companyName) &&
             normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
         ));
         const allSelected = selectable.length > 0 && selectable.every(p => companyImportSelectedIds.has(p.id));
@@ -2943,7 +2961,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
     companyImportConfirmBtn?.addEventListener('click', importSelectedCompanyProducts);
 
     companyProductSearch.addEventListener('input', e => {
-        renderCompanyProductCatalog(companyName, e.target.value);
+        renderCompanyProductCatalog(companyName, e.target.value, stableCompanyKey);
     });
 
     companyProductPrice.addEventListener('keypress', e => {
@@ -2953,7 +2971,7 @@ function showCompanyHistoryModal(companyName, customerName, items) {
         }
     });
 
-    renderCompanyProductCatalog(companyName);
+    renderCompanyProductCatalog(companyName, '', stableCompanyKey);
     renderItems('');
 
     const closePurchaseHistory = () => {
@@ -3098,7 +3116,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 const rowBg = index % 2 === 0 ? 'bg-white hover:bg-sky-50/70 border-slate-100' : 'bg-slate-50/70 hover:bg-sky-50/90 border-slate-200/60';
                 
                 return `
-                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}', '${encodeURIComponent(JSON.stringify(getCustomerLineIds(item)))}')" 
+                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.district || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}', '${encodeURIComponent(JSON.stringify(getCustomerLineIds(item)))}')" 
                          class="flex items-center justify-between p-3 rounded-2xl border ${rowBg} shadow-2xs transition cursor-pointer group mb-1.5">
                         <div class="flex items-center gap-3 truncate">
                             <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
@@ -3107,7 +3125,7 @@ function getCompanyPriceHistory(companyName, productName) {
                             <div class="truncate">
                                 <div class="text-xs font-bold text-slate-800 group-hover:text-sky-700 transition truncate">${escapeHTML(item.customerName)}</div>
                                 <div class="text-[11px] text-slate-500 truncate flex items-center gap-2">
-                                    <span>🏢 ${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
+                                    <span>🏢 ${item.district !== undefined && item.district !== null && String(item.district).trim() !== '' ? `เขต ${escapeHTML(item.district)} • ` : ''}${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
                                     ${item.phone ? `<span>📞 ${escapeHTML(item.phone)}</span>` : ''}
                                 </div>
                             </div>
@@ -3120,9 +3138,10 @@ function getCompanyPriceHistory(companyName, productName) {
             customerListContainer.innerHTML = htmlContent;
         }
 
-        window.selectCustomerItem = function(name, company, phone, address, encodedLineIds) {
+        window.selectCustomerItem = function(name, company, district, phone, address, encodedLineIds) {
             customerNameInput.value = name;
             companyNameInput.value = company;
+            if (companyDistrictInput) companyDistrictInput.value = district || '';
             phoneInput.value = phone;
             addressInput.value = address;
             let parsedLineIds = [];
@@ -3136,6 +3155,7 @@ function getCompanyPriceHistory(companyName, productName) {
         window.addNewCustomerFromModal = function(name) {
             customerNameInput.value = name;
             companyNameInput.value = '';
+            if (companyDistrictInput) companyDistrictInput.value = '';
             phoneInput.value = '';
             addressInput.value = '';
             pendingLineIds = [];
@@ -3387,7 +3407,7 @@ function getCompanyPriceHistory(companyName, productName) {
                         const companyText = historyModal.querySelector('.text-sky-600.font-bold');
                         if (companyText) {
                             const raw = companyText.textContent.replace(/^🏢\s*/, '').replace(/\s*\(ผู้ติดต่อ:.*\)$/, '').trim();
-                            renderCompanyProductCatalog(raw, document.getElementById('company-specific-product-search')?.value || '');
+                            renderCompanyProductCatalog(raw, document.getElementById('company-specific-product-search')?.value || '', historyModal.dataset.companyKey || '');
                         }
                     }
 
@@ -4022,6 +4042,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
         });
 
         const companyNameInput = document.getElementById('company-name');
+        const companyDistrictInput = document.getElementById('company-district');
         const phoneInput = document.getElementById('phone');
         const addressInput = document.getElementById('address');
 
@@ -4140,6 +4161,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
             const found = allDeliveries.find(item => item.customerName === enteredName);
             if (found) {
                 companyNameInput.value = found.companyName || '';
+                if (companyDistrictInput) companyDistrictInput.value = found.district || '';
                 phoneInput.value = found.phone || '';
                 addressInput.value = found.address || '';
                 pendingLineIds = getCustomerLineIds(found);
@@ -4203,6 +4225,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
                 // เก็บ Line ID ปัจจุบันของลูกค้าไว้ใน Firestore เป็น array
                 const companyName = companyNameInput.value.trim();
+                const companyDistrict = companyDistrictInput ? companyDistrictInput.value.trim() : '';
                 const phone = phoneInput.value.trim();
                 const address = addressInput.value.trim();
                 const lineIds = [...new Set(pendingLineIds.map(normalizeLineId).filter(Boolean))];
@@ -4211,12 +4234,15 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     const docRef = snapshot.docs[0].ref;
                     const docData = snapshot.docs[0].data();
                     let existingItems = docData.subItems || [];
+                    const stableCompanyKey = docData.companyKey || normalizeCompanyProductKey(docData.companyName || companyName);
                     
                     existingItems.push(...newSubItemsObjs);
 
                     await docRef.update({
                         subItems: existingItems,
                         companyName: companyName || docData.companyName || '',
+                        companyKey: stableCompanyKey,
+                        district: companyDistrict || docData.district || '',
                         phone: phone || docData.phone || '',
                         address: address || docData.address || '',
                         lineIds,
@@ -4229,6 +4255,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     const data = {
                         customerName,
                         companyName,
+                        companyKey: normalizeCompanyProductKey(companyName),
+                        district: companyDistrict,
                         phone,
                         address,
                         lineIds,
@@ -4371,7 +4399,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 const totalCount = item.subItems.length;
                 const pendingCount = item.subItems.filter(s => s.status === 'pending').length;
                 const completedCount = item.subItems.filter(s => s.status === 'completed').length;
-                const companyProductCount = getCompanySpecificProductCount(item.companyName);
+                const companyProductCount = getCompanySpecificProductCount(item.companyName, item.companyKey);
                 
                 return `
                     <div class="bg-white rounded-2xl shadow-sm border border-indigo-100 overflow-hidden transition hover:shadow-md hover:border-indigo-200">
@@ -4382,8 +4410,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                     <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขข้อมูลลูกค้า (ชื่อ บริษัท เบอร์โทร ที่อยู่)" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
                                 </div>
                                 <div class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100 text-[11px]">
-                                    <span>${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
-                                    <button onclick="openEditCompanyModal('${item.id}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" title="แก้ไขชื่อบริษัท" class="text-purple-400 hover:text-purple-700 transition">✏️</button>
+                                    <span>${item.district !== undefined && item.district !== null && String(item.district).trim() !== '' ? `เขต ${escapeHTML(item.district)} • ` : ''}${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
+                                    <button onclick="openEditCompanyModal('${item.id}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.district || '').replace(/'/g, "\\'")}')" title="แก้ไขชื่อบริษัท" class="text-purple-400 hover:text-purple-700 transition">✏️</button>
                                 </div>
                                 <button type="button" onclick="toggleCustomerDetails('${item.id}')" class="text-[10px] font-bold text-slate-500 hover:text-indigo-700 bg-white/80 px-2 py-1 rounded-md border border-slate-200 hover:border-indigo-200 transition" title="แสดง/ซ่อนรายละเอียดลูกค้า">▾ รายละเอียด</button>
                             </div>
@@ -4394,7 +4422,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                     title="ดูและบันทึกประวัติการติดต่อกับลูกค้า">
                                     📝 CRM <span class="text-[10px] opacity-70">(${Array.isArray(item.customerNotes) ? item.customerNotes.length : 0})</span>
                                 </button>
-                                <button onclick="showCompanyAllHistory('${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}')" 
+                                <button onclick="showCompanyAllHistory('${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.companyKey || '').replace(/'/g, "\\'")}')" 
                                     class="text-[11px] font-medium text-sky-600 hover:text-sky-800 transition px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200/60 flex items-center gap-1"
                                     title="ดูประวัติสินค้าทั้งหมดที่บริษัทนี้เคยซื้อ">
                                     📦 ดูสินค้าทั้งหมด <span class="ml-0.5 px-1.5 py-0.5 rounded-full bg-white text-sky-700 border border-sky-200 font-bold">${companyProductCount}</span>
@@ -5146,14 +5174,16 @@ document.getElementById('item-input').addEventListener('blur', function() {
             if (e.target === editCustomerModal) closeEditCustomerModal();
         });
 
-        window.openEditCompanyModal = function(docId, currentCompany) {
+        window.openEditCompanyModal = function(docId, currentCompany, currentDistrict = '') {
             const modal = document.getElementById('edit-company-modal');
             const modalContent = document.getElementById('edit-company-modal-content');
             const inputField = document.getElementById('edit-company-text');
+            const districtField = document.getElementById('edit-company-district');
             const btnConfirm = document.getElementById('edit-company-confirm');
             const btnCancel = document.getElementById('edit-company-cancel');
 
             inputField.value = currentCompany || '';
+            if (districtField) districtField.value = currentDistrict || '';
 
             modal.classList.remove('hidden');
             setTimeout(() => {
@@ -5173,13 +5203,57 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
             btnConfirm.addEventListener('click', async () => {
                 const newCompany = inputField.value.trim();
+                const newDistrict = districtField ? districtField.value.trim() : '';
+
+                if (!newCompany) {
+                    showToast('กรุณากรอกชื่อบริษัท', 'error');
+                    return;
+                }
+
                 try {
-                    await db.collection('deliveries').doc(docId).update({ companyName: newCompany });
-                    showToast('แก้ไขชื่อบริษัทสำเร็จ', 'success');
+                    const targetRef = db.collection('deliveries').doc(docId);
+                    const targetSnap = await targetRef.get();
+                    if (!targetSnap.exists) {
+                        showToast('ไม่พบข้อมูลบริษัทที่ต้องการแก้ไข', 'error');
+                        return;
+                    }
+
+                    const targetData = targetSnap.data() || {};
+                    // companyKey เป็นตัวระบุบริษัทแบบคงที่ ไม่เปลี่ยนตามชื่อที่แสดง
+                    const stableCompanyKey = targetData.companyKey || normalizeCompanyProductKey(targetData.companyName || currentCompany);
+
+                    await targetRef.update({
+                        companyName: newCompany,
+                        companyKey: stableCompanyKey,
+                        district: newDistrict
+                    });
+
+                    // รองรับข้อมูลเก่าที่ companyProducts ยังผูกด้วยชื่อบริษัทเดิม
+                    const oldCompanyKey = normalizeCompanyProductKey(targetData.companyKey || targetData.companyName || currentCompany);
+                    if (oldCompanyKey && oldCompanyKey !== stableCompanyKey) {
+                        const productSnapshot = await db.collection('companyProducts').get();
+                        const batch = db.batch();
+                        let productUpdates = 0;
+                        productSnapshot.forEach(productDoc => {
+                            const productData = productDoc.data() || {};
+                            const productKey = normalizeCompanyProductKey(productData.companyKey || productData.companyName);
+                            if (productKey === oldCompanyKey) {
+                                batch.update(productDoc.ref, {
+                                    companyKey: stableCompanyKey,
+                                    companyName: newCompany,
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                                productUpdates++;
+                            }
+                        });
+                        if (productUpdates > 0) await batch.commit();
+                    }
+
+                    showToast('แก้ไขชื่อบริษัทสำเร็จ และรักษารายการสินค้าเดิมไว้แล้ว', 'success');
                     closeModal();
                 } catch (err) {
-                    console.error(err);
-                    showToast('ไม่สามารถแก้ไขชื่อบริษัทได้', 'error');
+                    console.error('แก้ไขชื่อบริษัทไม่สำเร็จ:', err);
+                    showToast('ไม่สามารถแก้ไขข้อมูลบริษัทได้', 'error');
                 }
             }, { once: true });
 
