@@ -1111,9 +1111,13 @@ main button:not([disabled]):hover,
                     <button type="button" id="stock-cancel-edit" class="hidden px-2 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs transition">ยกเลิก</button>
                 </div>
             </form>
-            <div class="mb-3 flex items-center justify-between">
+            <div class="mb-3 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] gap-2">
                 <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                <select id="stock-company-filter" class="w-full px-3.5 py-2 text-xs border border-indigo-200 bg-indigo-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
+                    <option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>
+                </select>
             </div>
+            <div id="stock-company-source" class="hidden mb-3 px-3 py-2 rounded-xl border border-indigo-100 bg-indigo-50 text-[10px] text-indigo-700"></div>
             <div id="stock-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1">
                 <div class="text-center py-8 text-xs text-slate-400 italic">กำลังโหลดรายการสต็อกสินค้า...</div>
             </div>
@@ -2184,7 +2188,7 @@ function getEffectiveProductPrice(companyName, product) {
 
 // ผูกสินค้าในสต็อกกลางเข้ากับบริษัทโดยอัตโนมัติครั้งแรกที่บริษัทเลือกสินค้านั้น
 // ครั้งต่อไปจะใช้รายการ companyProducts เดิมทันที ไม่ต้องเพิ่มซ้ำ แม้จะเพิ่มผู้ติดต่อ/รายการจัดส่งใหม่
-async function ensureCompanyProductFromStock(companyName, stockProduct) {
+async function ensureCompanyProductFromStock(companyName, stockProduct, stableCompanyKey = '') {
     const cleanCompany = String(companyName || '').trim();
     if (!cleanCompany || !stockProduct || !currentAuthUser?.uid) return null;
 
@@ -2250,7 +2254,7 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '', s
         return false;
     }
 
-    const companyKey = normalizeCompanyProductKey(cleanCompany);
+    const companyKey = normalizeCompanyProductKey(stableCompanyKey || cleanCompany);
     const normalizedName = normalizeCompanyProductName(cleanName);
 
     // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน = รายการเดิม
@@ -3177,6 +3181,8 @@ function getCompanyPriceHistory(companyName, productName) {
         const stockSubmitBtn = document.getElementById('stock-submit-btn');
         const stockCancelEditBtn = document.getElementById('stock-cancel-edit');
         const stockSearchBox = document.getElementById('stock-search-box');
+        const stockCompanyFilter = document.getElementById('stock-company-filter');
+        const stockCompanySource = document.getElementById('stock-company-source');
         const stockTableContainer = document.getElementById('stock-table-container');
 
         openStockModalBtn.addEventListener('click', () => {
@@ -3185,6 +3191,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 stockModal.classList.remove('opacity-0');
                 stockModalBox.classList.remove('scale-95');
             }, 10);
+            refreshStockCompanyFilter();
             renderStockTable(stockSearchBox.value);
         });
 
@@ -3262,17 +3269,160 @@ function getCompanyPriceHistory(companyName, productName) {
             renderStockTable(e.target.value);
         });
 
-        function renderStockTable(filterText = '') {
-            const keyword = filterText.toLowerCase().trim();
-            const filtered = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
+        stockCompanyFilter.addEventListener('change', () => {
+            renderStockTable(stockSearchBox.value);
+        });
 
-            const badge = document.getElementById('stock-count-badge');
-            if (badge) {
-                if (keyword) {
-                    badge.textContent = `พบ ${filtered.length} จาก ${allProducts.length} รายการ`;
-                } else {
-                    badge.textContent = `${allProducts.length} รายการ`;
+        function getTimestampMillis(value) {
+            if (!value) return 0;
+            if (typeof value.toMillis === 'function') return value.toMillis();
+            if (value instanceof Date) return value.getTime();
+            if (typeof value.seconds === 'number') return value.seconds * 1000 + Math.floor((value.nanoseconds || 0) / 1000000);
+            const parsed = Date.parse(value);
+            return Number.isFinite(parsed) ? parsed : 0;
+        }
+
+        // รายชื่อบริษัทต้องมาจากข้อมูลบริษัทที่มีอยู่จริงใน deliveries ไม่ใช่ชื่อที่ค้างอยู่ในสินค้ากลาง
+        // และจัดลำดับจากบริษัทที่มีการบันทึกล่าสุดก่อน
+        function getActualCompaniesForStock() {
+            const companyMap = new Map();
+
+            allDeliveries.forEach(item => {
+                const name = String(item.companyName || '').trim();
+                const key = normalizeCompanyProductKey(item.companyKey || name);
+                if (!key || !name) return;
+
+                const timestamp = Math.max(
+                    getTimestampMillis(item.updatedAt),
+                    getTimestampMillis(item.createdAt),
+                    getTimestampMillis(item.savedAt),
+                    getTimestampMillis(item.timestamp)
+                );
+                const existing = companyMap.get(key);
+                if (!existing || timestamp >= existing.timestamp) {
+                    companyMap.set(key, {
+                        key,
+                        name,
+                        district: String(item.district || '').trim(),
+                        timestamp
+                    });
                 }
+            });
+
+            return Array.from(companyMap.values()).sort((a, b) => {
+                if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
+                return a.name.localeCompare(b.name, 'th');
+            });
+        }
+
+        function refreshStockCompanyFilter() {
+            if (!stockCompanyFilter) return;
+
+            const companies = getActualCompaniesForStock();
+            const currentValue = stockCompanyFilter.value;
+            const options = ['<option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>'];
+
+            companies.forEach(company => {
+                const districtText = company.district ? `เขต ${company.district} • ` : '';
+                options.push(`<option value="${escapeHTML(company.key)}">${escapeHTML(districtText + company.name)}</option>`);
+            });
+
+            stockCompanyFilter.innerHTML = options.join('');
+            if (companies.some(company => company.key === currentValue)) {
+                stockCompanyFilter.value = currentValue;
+            } else {
+                stockCompanyFilter.value = '';
+            }
+        }
+
+        function getSelectedCompanyStockProducts(companyKey) {
+            const key = normalizeCompanyProductKey(companyKey);
+            if (!key) return [];
+
+            return allCompanyProducts
+                .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === key)
+                .map(p => ({
+                    id: p.id,
+                    name: String(p.name || '').trim(),
+                    cost: Number(p.cost) || 0,
+                    price: Number(p.price) || 0,
+                    companyName: String(p.companyName || '').trim(),
+                    companyKey: key,
+                    stockProductId: p.stockProductId || ''
+                }));
+        }
+
+        function renderCompanySpecificStockRows(products) {
+            return products.map((p, index) => {
+                const cost = Number(p.cost) || 0;
+                const price = Number(p.price) || 0;
+                const profit = price - cost;
+                const profitMargin = price > 0 ? ((profit / price) * 100).toFixed(1) : '0.0';
+                const profitClass = profit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700';
+                const profitPrefix = profit >= 0 ? '+' : '';
+
+                return `
+                    <div class="flex items-center justify-between p-3 bg-white border border-indigo-100 hover:border-indigo-300 rounded-2xl shadow-2xs transition gap-2">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-start gap-2">
+                                <span class="text-[11px] text-indigo-600 font-bold flex-shrink-0">#${index + 1}</span>
+                                <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div>
+                            </div>
+                            <div class="text-[10px] text-slate-400 mt-1 ml-5">🏢 ${escapeHTML(p.companyName || 'บริษัทที่เลือก')} · ราคาจากรายการของบริษัทนี้</div>
+                            <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-1.5 flex-wrap ml-5">
+                                <span>ต้นทุนบริษัท: <strong class="text-slate-700">${cost.toLocaleString()} ฿</strong></span>
+                                <span>ราคาขายบริษัท: <strong class="text-sky-600">${price.toLocaleString()} ฿</strong></span>
+                                <span class="${profitClass} px-2 py-0.5 rounded-md font-semibold">กำไร: ${profitPrefix}${profit.toLocaleString()} ฿ (${profitMargin}%)</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function renderStockTable(filterText = '') {
+            refreshStockCompanyFilter();
+            const keyword = String(filterText || '').toLowerCase().trim();
+            const selectedCompanyKey = normalizeCompanyProductKey(stockCompanyFilter?.value || '');
+            const badge = document.getElementById('stock-count-badge');
+
+            if (selectedCompanyKey) {
+                const company = getActualCompaniesForStock().find(c => c.key === selectedCompanyKey);
+                const companyProducts = getSelectedCompanyStockProducts(selectedCompanyKey)
+                    .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword))
+                    .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+
+                if (stockCompanySource) {
+                    stockCompanySource.classList.remove('hidden');
+                    stockCompanySource.innerHTML = `🏢 <b>กำลังแสดงสินค้าจากบริษัท:</b> ${escapeHTML(company?.district ? `เขต ${company.district} • ` : '')}${escapeHTML(company?.name || 'บริษัทที่เลือก')} <span class="ml-1 text-indigo-500">(ดึงจากรายการราคาประจำบริษัทโดยตรง)</span>`;
+                }
+
+                if (badge) {
+                    badge.textContent = keyword
+                        ? `พบ ${companyProducts.length} จาก ${getSelectedCompanyStockProducts(selectedCompanyKey).length} รายการ`
+                        : `${companyProducts.length} รายการ`;
+                }
+
+                if (!companyProducts.length) {
+                    stockTableContainer.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 italic bg-slate-50 rounded-2xl">ไม่พบรายการสินค้าของบริษัทนี้</div>`;
+                    return;
+                }
+
+                stockTableContainer.innerHTML = renderCompanySpecificStockRows(companyProducts);
+                return;
+            }
+
+            if (stockCompanySource) {
+                stockCompanySource.classList.add('hidden');
+                stockCompanySource.textContent = '';
+            }
+
+            const filtered = allProducts.filter(p => String(p.name || '').toLowerCase().includes(keyword));
+
+            if (badge) {
+                badge.textContent = keyword
+                    ? `พบ ${filtered.length} จาก ${allProducts.length} รายการ`
+                    : `${allProducts.length} รายการ`;
             }
 
             if (filtered.length === 0) {
@@ -3281,11 +3431,13 @@ function getCompanyPriceHistory(companyName, productName) {
             }
 
             stockTableContainer.innerHTML = filtered.map(p => {
-                const cost = p.cost || 0;
-                const profit = p.price - cost;
-                const profitMargin = p.price > 0 ? ((profit / p.price) * 100).toFixed(1) : 0;
+                const cost = Number(p.cost) || 0;
+                const price = Number(p.price) || 0;
+                const profit = price - cost;
+                const profitMargin = price > 0 ? ((profit / price) * 100).toFixed(1) : '0.0';
+                const profitClass = profit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700';
+                const profitPrefix = profit >= 0 ? '+' : '';
 
-                // แสดงว่ารายการสินค้านี้ถูกผูก/เพิ่มมาจากบริษัทใดบ้าง
                 const linkedCompanies = [...new Map(
                     allCompanyProducts
                         .filter(cp => {
@@ -3312,14 +3464,14 @@ function getCompanyPriceHistory(companyName, productName) {
                         <div class="truncate min-w-0">
                             <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}</div>
                             <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5 flex-wrap">
-                                <span>ต้นทุน: <strong class="text-slate-700">${Number(cost).toLocaleString()} ฿</strong></span>
-                                <span>ราคาขาย: <strong class="text-sky-600">${Number(p.price).toLocaleString()} ฿</strong></span>
-                                <span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md font-semibold">กำไร: +${Number(profit).toLocaleString()} ฿ (${profitMargin}%)</span>
+                                <span>ต้นทุน: <strong class="text-slate-700">${cost.toLocaleString()} ฿</strong></span>
+                                <span>ราคาขาย: <strong class="text-sky-600">${price.toLocaleString()} ฿</strong></span>
+                                <span class="${profitClass} px-2 py-0.5 rounded-md font-semibold">กำไร: ${profitPrefix}${profit.toLocaleString()} ฿ (${profitMargin}%)</span>
                             </div>
                             ${companySourceHtml}
                         </div>
                         <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${p.price})" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
+                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${price})" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
                             <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
                         </div>
                     </div>
@@ -3359,6 +3511,7 @@ function getCompanyPriceHistory(companyName, productName) {
             snapshot.forEach(doc => {
                 allProducts.push({ id: doc.id, ...doc.data() });
             });
+            refreshStockCompanyFilter();
             if (!stockModal.classList.contains('hidden')) {
                 renderStockTable(stockSearchBox.value);
             }
@@ -3411,6 +3564,10 @@ function getCompanyPriceHistory(companyName, productName) {
                         }
                     }
 
+                    refreshStockCompanyFilter();
+                    if (!stockModal.classList.contains('hidden')) {
+                        renderStockTable(stockSearchBox.value);
+                    }
                     if (typeof applyFilterAndSearch === 'function') {
                         applyFilterAndSearch();
                     }
@@ -4247,7 +4404,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         address: address || docData.address || '',
                         lineIds,
                         customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : [],
-                        purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : []
+                        purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : [],
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
                     showToast(`เพิ่ม ${pendingItems.length} รายการให้ "${customerName}" เรียบร้อย`, 'success');
@@ -5225,7 +5383,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     await targetRef.update({
                         companyName: newCompany,
                         companyKey: stableCompanyKey,
-                        district: newDistrict
+                        district: newDistrict,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
                     // รองรับข้อมูลเก่าที่ companyProducts ยังผูกด้วยชื่อบริษัทเดิม
