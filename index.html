@@ -2747,19 +2747,30 @@ function getCompanyPriceHistory(companyName, productName) {
                 const profitMargin = p.price > 0 ? ((profit / p.price) * 100).toFixed(1) : 0;
 
                 // แสดงว่ารายการสินค้านี้ถูกผูก/เพิ่มมาจากบริษัทใดบ้าง
-                const linkedCompanies = [...new Map(
-                    allCompanyProducts
-                        .filter(cp => {
-                            const sameStockId = cp.stockProductId && cp.stockProductId === p.id;
-                            const sameName = normalizeCompanyProductName(cp.name) === normalizeCompanyProductName(p.name);
-                            return sameStockId || sameName;
-                        })
-                        .map(cp => {
-                            const name = String(cp.companyName || '').trim();
-                            return [normalizeCompanyProductKey(name), name];
-                        })
-                        .filter(([key, name]) => key && name)
-                ).values()];
+                const linkedCompanies = [...allCompanyProducts
+                    .filter(cp => {
+                        const sameStockId = cp.stockProductId && cp.stockProductId === p.id;
+                        const sameName = normalizeCompanyProductName(cp.name) === normalizeCompanyProductName(p.name);
+                        return sameStockId || sameName;
+                    })
+                    .map(cp => String(cp.companyName || '').trim())
+                    .filter(Boolean)
+                    .reduce((map, name) => {
+                        // รวมชื่อบริษัทเดิมกับชื่อที่แก้ไขแล้วให้เป็นบริษัทเดียว
+                        // เช่น "บริษัท ..." และ "7 -บริษัท ..." ให้แสดงเฉพาะชื่อปัจจุบัน
+                        const key = normalizeCompanyProductKey(
+                            name.replace(/^\s*\d+\s*[-–—]\s*/u, '').trim()
+                        );
+                        if (!key) return map;
+                        const current = map.get(key);
+                        const hasPrefix = /^\s*\d+\s*[-–—]\s*/u.test(name);
+                        const currentHasPrefix = current && /^\s*\d+\s*[-–—]\s*/u.test(current);
+                        if (!current || (hasPrefix && !currentHasPrefix) || name.length > current.length) {
+                            map.set(key, name);
+                        }
+                        return map;
+                    }, new Map())
+                    .values()];
 
                 const companySourceHtml = linkedCompanies.length
                     ? `<div class="text-[10px] text-indigo-600 mt-1.5 flex items-start gap-1.5 flex-wrap">
