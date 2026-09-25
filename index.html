@@ -1113,9 +1113,16 @@ main button:not([disabled]):hover,
             </form>
             <div class="mb-3 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] gap-2">
                 <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
-                <select id="stock-company-filter" class="w-full px-3.5 py-2 text-xs border border-indigo-200 bg-indigo-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
-                    <option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>
-                </select>
+                <div class="flex items-center gap-2 min-w-0">
+                    <select id="stock-company-filter" class="flex-1 min-w-0 w-full px-3.5 py-2 text-xs border border-indigo-200 bg-indigo-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
+                        <option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>
+                    </select>
+                    <button type="button" id="delete-unused-company-btn"
+                        class="flex-shrink-0 w-8 h-8 p-0 text-base flex items-center justify-center text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-xl transition"
+                        title="ลบชื่อบริษัทที่ไม่มีการใช้งานแล้ว" aria-label="ลบชื่อบริษัทที่ไม่มีการใช้งานแล้ว">
+                        🗑️
+                    </button>
+                </div>
             </div>
             <div id="stock-company-source" class="hidden mb-3 px-3 py-2 rounded-xl border border-indigo-100 bg-indigo-50 text-[10px] text-indigo-700"></div>
             <div id="stock-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1">
@@ -3184,6 +3191,7 @@ function getCompanyPriceHistory(companyName, productName) {
         const stockCompanyFilter = document.getElementById('stock-company-filter');
         const stockCompanySource = document.getElementById('stock-company-source');
         const stockTableContainer = document.getElementById('stock-table-container');
+        const deleteUnusedCompanyBtn = document.getElementById('delete-unused-company-btn');
 
         openStockModalBtn.addEventListener('click', () => {
             stockModal.classList.remove('hidden');
@@ -3314,6 +3322,79 @@ function getCompanyPriceHistory(companyName, productName) {
                 return a.name.localeCompare(b.name, 'th');
             });
         }
+
+        // ลบเฉพาะข้อมูลราคาประจำบริษัทที่ไม่มีบริษัทนั้นใช้งานอยู่ใน deliveries แล้ว
+        // ไม่ลบสินค้าใน products (สต็อกมาตรฐาน) และไม่แตะข้อมูลบริษัทที่ยังใช้งานอยู่
+        async function deleteUnusedStockCompanyNames() {
+            const actualCompanies = getActualCompaniesForStock();
+            const activeKeys = new Set(actualCompanies.map(company => company.key));
+
+            const unusedGroups = new Map();
+
+            allCompanyProducts.forEach(product => {
+                const companyName = String(product.companyName || '').trim();
+                const companyKey = normalizeCompanyProductKey(product.companyKey || companyName);
+                if (!companyKey || !companyName || activeKeys.has(companyKey)) return;
+
+                if (!unusedGroups.has(companyKey)) {
+                    unusedGroups.set(companyKey, {
+                        key: companyKey,
+                        name: companyName,
+                        count: 0,
+                        ids: []
+                    });
+                }
+
+                const group = unusedGroups.get(companyKey);
+                group.count += 1;
+                group.ids.push(product.id);
+            });
+
+            const unused = Array.from(unusedGroups.values()).sort((a, b) =>
+                a.name.localeCompare(b.name, 'th')
+            );
+
+            if (!unused.length) {
+                showToast('ไม่พบชื่อบริษัทที่ไม่ได้ใช้งานแล้ว', 'info');
+                return;
+            }
+
+            const companyList = unused
+                .map(company => `• ${company.name} (${company.count} รายการ)`)
+                .join('\n');
+
+            showConfirmModal(
+                'ลบชื่อบริษัทที่ไม่ได้ใช้งาน',
+                `พบข้อมูลราคาของบริษัทที่ไม่มีอยู่ในรายการบริษัทปัจจุบัน ${unused.length} บริษัท\n\n${companyList}\n\nระบบจะลบเฉพาะรายการราคาประจำบริษัทเหล่านี้ออกจาก companyProducts เท่านั้น\nสินค้าในสต็อกมาตรฐานและข้อมูลบริษัทที่ยังใช้งานอยู่จะไม่ถูกลบ`,
+                async () => {
+                    if (deleteUnusedCompanyBtn) deleteUnusedCompanyBtn.disabled = true;
+
+                    try {
+                        // Firestore batch รองรับสูงสุด 500 operations ต่อครั้ง จึงแบ่งเป็นชุด
+                        const ids = unused.flatMap(company => company.ids);
+                        for (let i = 0; i < ids.length; i += 450) {
+                            const batch = db.batch();
+                            ids.slice(i, i + 450).forEach(id => {
+                                batch.delete(db.collection('companyProducts').doc(id));
+                            });
+                            await batch.commit();
+                        }
+
+                        if (stockCompanyFilter) stockCompanyFilter.value = '';
+                        refreshStockCompanyFilter();
+                        renderStockTable(stockSearchBox.value);
+                        showToast(`ลบข้อมูลบริษัทที่ไม่ได้ใช้งานแล้ว ${unused.length} บริษัท สำเร็จ`, 'success');
+                    } catch (err) {
+                        console.error('Delete unused company products error:', err);
+                        showToast('ไม่สามารถลบชื่อบริษัทที่ไม่ได้ใช้งานได้', 'error');
+                    } finally {
+                        if (deleteUnusedCompanyBtn) deleteUnusedCompanyBtn.disabled = false;
+                    }
+                }
+            );
+        }
+
+        deleteUnusedCompanyBtn?.addEventListener('click', deleteUnusedStockCompanyNames);
 
         function refreshStockCompanyFilter() {
             if (!stockCompanyFilter) return;
