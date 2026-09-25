@@ -1118,8 +1118,9 @@ main button:not([disabled]):hover,
                         <option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>
                     </select>
                     <button type="button" id="delete-unused-company-btn"
-                        class="flex-shrink-0 w-8 h-8 p-0 text-base flex items-center justify-center text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-xl transition"
-                        title="ลบชื่อบริษัทที่ไม่มีการใช้งานแล้ว" aria-label="ลบชื่อบริษัทที่ไม่มีการใช้งานแล้ว">
+                        class="flex-shrink-0 w-9 h-9 p-0 flex items-center justify-center text-sm text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-xl transition"
+                        title="ลบบริษัทที่ไม่ใช้"
+                        aria-label="ลบบริษัทที่ไม่ใช้">
                         🗑️
                     </button>
                 </div>
@@ -5800,6 +5801,12 @@ async function saveCrmNote() {
         const notes = [...getCustomerNotes(customer)];
         notes.push({ id: 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7), note: noteText, contactDate, createdAt: new Date().toISOString() });
         await db.collection('deliveries').doc(currentCrmCustomerId).update({ customerNotes: notes });
+
+        // อัปเดตข้อมูลในหน่วยความจำและหน้าจอทันที ไม่ต้องรอ F5 หรือรอ snapshot รอบถัดไป
+        customer.customerNotes = notes;
+        renderCrmNotes(notes);
+        applyFilterAndSearch();
+
         crmNoteInput.value = '';
         crmContactDate.value = getTodayISODate();
         showToast('บันทึกประวัติการติดต่อเรียบร้อย', 'success');
@@ -5821,6 +5828,15 @@ window.deleteCrmNote = function(noteId) {
             if (!docSnap.exists) return;
             const notes = getCustomerNotes(docSnap.data()).filter(note => note.id !== noteId);
             await docRef.update({ customerNotes: notes });
+
+            // อัปเดตข้อมูลในหน่วยความจำและหน้าจอทันที ไม่ต้องรอ F5
+            const customer = allDeliveries.find(item => item.id === currentCrmCustomerId);
+            if (customer) {
+                customer.customerNotes = notes;
+                renderCrmNotes(notes);
+                applyFilterAndSearch();
+            }
+
             showToast('ลบประวัติการติดต่อแล้ว', 'success');
         } catch (err) {
             console.error('ลบ CRM ไม่สำเร็จ:', err);
