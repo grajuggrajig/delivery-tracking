@@ -3718,10 +3718,6 @@ function getCompanyPriceHistory(companyName, productName) {
         const deleteUnusedCompanyBtn = document.getElementById('delete-unused-company-btn');
 
         openStockModalBtn.addEventListener('click', () => {
-            /* รีเซ็ตเฉพาะตัวกรองบริษัทของ Stock Management
-               เพื่อให้เปิดหน้าต่างใหม่ทุกครั้งเริ่มที่ "ทุกบริษัท / สินค้ามาตรฐาน" */
-            if (stockCompanyFilter) stockCompanyFilter.value = '';
-
             /* เปิดกรอบ Stock ให้ผู้ใช้เห็นทันที ก่อนทำงาน render/กรองข้อมูลที่อาจหนัก
                เพื่อไม่ให้ปุ่ม 📦สต็อก & ราคา ดูเหมือนค้างหรือกดไม่ติดเมื่อข้อมูลมีจำนวนมาก */
             stockModal.classList.remove('hidden');
@@ -3733,21 +3729,26 @@ function getCompanyPriceHistory(companyName, productName) {
                 setTimeout(() => {
                     if (stockModal.classList.contains('hidden')) return;
                     refreshStockCompanyFilter();
-                    /* refreshStockCompanyFilter() จะพยายามคงค่าที่เลือกเดิมไว้
-                       จึงกำหนดค่าเริ่มต้นกลับเป็น "ทุกบริษัท / สินค้ามาตรฐาน" อีกครั้ง */
-                    if (stockCompanyFilter) stockCompanyFilter.value = '';
                     renderStockTable(stockSearchBox.value);
                 }, 0);
             });
         });
 
         function closeStockModalFunc() {
+            /* เมื่อปิดหน้าสต็อก ให้คืนตัวกรองบริษัทเป็นค่าเริ่มต้นทุกครั้ง
+               เพื่อให้เปิดครั้งถัดไปเริ่มที่ “ทุกบริษัท / สินค้ามาตรฐาน” */
+            if (stockCompanyFilter) {
+                stockCompanyFilter.value = '';
+            }
+            if (stockCompanySource) {
+                stockCompanySource.classList.add('hidden');
+                stockCompanySource.textContent = '';
+            }
+
             stockModal.classList.add('opacity-0');
             stockModalBox.classList.add('scale-95');
             setTimeout(() => {
                 stockModal.classList.add('hidden');
-                /* เมื่อปิด Stock แล้ว ล้างตัวกรองบริษัทไว้สำหรับการเปิดครั้งถัดไป */
-                if (stockCompanyFilter) stockCompanyFilter.value = '';
             }, 200);
             resetStockForm();
         }
