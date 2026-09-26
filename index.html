@@ -771,6 +771,352 @@ main button:not([disabled]):hover,
     }
 }
 </style>
+
+<style id="gemini-style-overhaul">
+/* =========================================================
+   GEMINI-STYLE VISUAL OVERHAUL
+   PURPOSE: visual shell/layout only
+   IMPORTANT: existing IDs, onclick handlers, JS, Firebase,
+   Firestore, Auth, CRUD, document generation and modals remain.
+   ========================================================= */
+:root{
+  --gx-bg:#f6f7fb;
+  --gx-paper:#ffffff;
+  --gx-ink:#172033;
+  --gx-muted:#718096;
+  --gx-line:#e6e9f0;
+  --gx-navy:#18243d;
+  --gx-blue:#3158a6;
+  --gx-indigo:#5b4bb7;
+  --gx-gold:#b88a3b;
+  --gx-shadow:0 14px 38px rgba(28,36,56,.08);
+  --gx-shadow-lg:0 24px 70px rgba(22,30,50,.16);
+}
+
+html,body{
+  background:
+    radial-gradient(circle at 78% 0%,rgba(91,75,183,.08),transparent 27%),
+    radial-gradient(circle at 15% 0%,rgba(49,88,166,.06),transparent 25%),
+    linear-gradient(135deg,#f7f8fb 0%,#f3f4f8 55%,#f8f9fb 100%) !important;
+  color:var(--gx-ink) !important;
+}
+
+/* ---------- Sidebar ---------- */
+#gemini-sidebar{
+  position:fixed;
+  inset:0 auto 0 0;
+  width:258px;
+  z-index:1000;
+  display:flex;
+  flex-direction:column;
+  padding:18px 14px;
+  background:
+    radial-gradient(circle at 20% 0%,rgba(91,75,183,.18),transparent 30%),
+    linear-gradient(180deg,#18243d 0%,#172137 55%,#121a2c 100%);
+  color:#dbe4f6;
+  border-right:1px solid rgba(255,255,255,.09);
+  box-shadow:12px 0 38px rgba(15,23,42,.13);
+  overflow-y:auto;
+}
+
+.gemini-brand{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:8px 8px 18px;
+  margin-bottom:8px;
+  border-bottom:1px solid rgba(255,255,255,.09);
+}
+.gemini-brand-icon{
+  width:42px;height:42px;flex:0 0 42px;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:13px;
+  background:linear-gradient(135deg,#3158a6,#5b4bb7);
+  box-shadow:0 8px 22px rgba(49,88,166,.28),inset 0 1px rgba(255,255,255,.25);
+  font-size:21px;
+}
+.gemini-brand-text{min-width:0;display:flex;flex-direction:column}
+.gemini-brand-text strong{font-size:15px;color:#fff;letter-spacing:-.02em}
+.gemini-brand-text span{font-size:10px;color:#9eafd0;margin-top:2px}
+
+.gemini-sidebar-section{padding:13px 0}
+.gemini-sidebar-label{
+  padding:0 10px 8px;
+  font-size:9px;font-weight:800;letter-spacing:.16em;
+  color:#7183a8;
+}
+.gemini-nav,.gemini-quick{
+  width:100%;
+  display:flex;align-items:center;gap:10px;
+  border:1px solid transparent;
+  color:#b9c5db;
+  background:transparent;
+  text-align:left;
+  border-radius:12px;
+  padding:10px 11px;
+  margin:3px 0;
+  font-size:12px;font-weight:600;
+  cursor:pointer;
+  transition:.18s ease;
+}
+.gemini-nav:hover,.gemini-quick:hover{
+  background:rgba(255,255,255,.07);
+  color:#fff;
+  transform:translateX(2px);
+}
+.gemini-nav.active{
+  color:#fff;
+  background:linear-gradient(135deg,rgba(49,88,166,.65),rgba(91,75,183,.62));
+  border-color:rgba(255,255,255,.12);
+  box-shadow:0 7px 18px rgba(0,0,0,.12);
+}
+.gemini-nav-icon{
+  width:24px;height:24px;display:flex;align-items:center;justify-content:center;
+  border-radius:8px;font-size:14px;flex:0 0 24px;
+}
+.gemini-nav.active .gemini-nav-icon{background:rgba(255,255,255,.13)}
+.gemini-quick{
+  background:rgba(255,255,255,.045);
+  border-color:rgba(255,255,255,.07);
+  color:#c8d3e7;
+}
+.gemini-quick span:first-child{width:20px;text-align:center}
+.gemini-sidebar-spacer{flex:1;min-height:18px}
+.gemini-sidebar-footer{
+  display:flex;align-items:center;gap:8px;
+  padding:10px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  background:rgba(255,255,255,.045);
+}
+.gemini-status-row{display:flex;align-items:center;gap:8px;min-width:0;flex:1}
+.gemini-status-dot{
+  width:8px;height:8px;border-radius:50%;
+  background:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.12);
+  flex:0 0 8px;
+}
+.gemini-status-row div{display:flex;flex-direction:column;min-width:0}
+.gemini-status-row strong{font-size:10px;color:#e9eef9}
+.gemini-status-row span:not(.gemini-status-dot){font-size:8px;color:#8091b3;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gemini-logout{
+  width:31px;height:31px;border-radius:9px;
+  border:1px solid rgba(255,255,255,.1);
+  background:rgba(255,255,255,.05);color:#9fb0cc;
+  cursor:pointer;
+}
+.gemini-logout:hover{background:rgba(244,63,94,.18);color:#fff}
+
+/* ---------- Existing top header becomes Gemini-like app bar ---------- */
+body > header,
+header{
+  margin-left:258px !important;
+  width:calc(100% - 258px) !important;
+  min-height:68px;
+  background:linear-gradient(110deg,#17233e 0%,#263d78 44%,#4d3f96 72%,#263a69 100%) !important;
+  border-bottom:1px solid rgba(255,255,255,.15) !important;
+  box-shadow:0 10px 30px rgba(20,30,55,.17) !important;
+  position:relative;
+  z-index:900;
+}
+body > header > div{
+  max-width:none !important;
+  padding-left:22px !important;
+  padding-right:22px !important;
+}
+header h1{font-size:17px !important}
+header h1 span:first-child{
+  width:38px !important;height:38px !important;
+  border-radius:12px !important;
+}
+
+/* ---------- Workspace ---------- */
+body > main,
+main{
+  margin-left:258px !important;
+  width:calc(100% - 258px) !important;
+  max-width:none !important;
+  box-sizing:border-box;
+  padding:16px 18px 14px !important;
+  margin-top:0 !important;
+  height:calc(100vh - 70px) !important;
+  min-height:0 !important;
+  gap:16px !important;
+  align-items:stretch;
+}
+
+/* Keep original form/list functionality but present them as premium panels */
+#form-section,
+main > section.flex.flex-col.h-full{
+  background:rgba(255,255,255,.92) !important;
+  border:1px solid var(--gx-line) !important;
+  border-radius:20px !important;
+  box-shadow:var(--gx-shadow) !important;
+  overflow:hidden;
+}
+#form-section{
+  width:390px !important;
+  padding:16px !important;
+}
+main > section.flex.flex-col.h-full{padding:0 !important}
+
+/* panel accent */
+#form-section::before,
+main > section.flex.flex-col.h-full::before{
+  content:"";
+  position:absolute;
+  top:0;left:20px;right:20px;height:2px;
+  border-radius:99px;
+  background:linear-gradient(90deg,transparent,#b88a3b,#5b4bb7,#3158a6,transparent);
+  opacity:.75;
+}
+#form-section{position:relative}
+main > section.flex.flex-col.h-full{position:relative}
+
+/* Toolbar */
+main > section.flex.flex-col.h-full > div:first-child{
+  margin:0 !important;
+  padding:11px 12px !important;
+  border:0 !important;
+  border-bottom:1px solid var(--gx-line) !important;
+  border-radius:20px 20px 0 0 !important;
+  background:rgba(255,255,255,.96) !important;
+  box-shadow:none !important;
+}
+#search-input{
+  background:#f7f8fb !important;
+  color:#25314a !important;
+}
+main > section.flex.flex-col.h-full > div:first-child > div:first-child{
+  border-color:#e1e5ed !important;
+  background:#f7f8fb !important;
+}
+main > section.flex.flex-col.h-full > div:first-child > div:first-child:focus-within{
+  background:#fff !important;
+  border-color:#8b79c9 !important;
+  box-shadow:0 0 0 3px rgba(91,75,183,.08) !important;
+}
+#company-count-badge{
+  background:#f7f3e9 !important;color:#73582a !important;border-color:#eadfc8 !important;
+}
+
+/* Delivery list */
+#delivery-list{
+  padding:12px !important;
+  padding-right:12px !important;
+}
+#delivery-list > div{
+  border:1px solid #e4e7ee !important;
+  background:#fff !important;
+  border-radius:16px !important;
+  box-shadow:0 5px 18px rgba(31,42,63,.045) !important;
+  transition:.18s ease !important;
+}
+#delivery-list > div:hover{
+  transform:translateY(-2px);
+  border-color:#c9c2dc !important;
+  box-shadow:0 12px 28px rgba(31,42,63,.09) !important;
+}
+
+/* Form */
+#form-section input,#form-section textarea,#form-section select{
+  background:#f8f9fc !important;
+  border-color:#e0e4ec !important;
+  color:#25314a !important;
+}
+#form-section input:focus,#form-section textarea:focus,#form-section select:focus{
+  background:#fff !important;
+  border-color:#8172c5 !important;
+  box-shadow:0 0 0 3px rgba(91,75,183,.08) !important;
+}
+#form-section .border-sky-300{
+  border-color:#d9d4e8 !important;
+  background:linear-gradient(145deg,#f7f5fb,#f6f8fc) !important;
+}
+#submit-btn{
+  background:linear-gradient(135deg,#253d72,#5a4baa) !important;
+  box-shadow:0 10px 22px rgba(58,69,145,.18) !important;
+}
+#add-item-btn{
+  background:linear-gradient(135deg,#3158a6,#5b4bb7) !important;
+}
+
+/* Buttons in existing header */
+header .glow-border-btn{
+  background:rgba(255,255,255,.075) !important;
+  border:1px solid rgba(255,255,255,.22) !important;
+}
+header .glow-border-btn:hover{background:rgba(255,255,255,.14) !important}
+
+/* Existing modals retain their exact IDs and behavior, only get the new visual language */
+#customer-modal,#company-picker-modal,#stock-modal,#custom-item-suggestions,
+#confirm-modal,#reminder-modal,#edit-modal,#edit-customer-modal,#edit-company-modal,
+#crm-modal,#admin-user-modal,#company-all-history-modal,#company-purchase-history-modal{
+  backdrop-filter:blur(10px) saturate(115%) !important;
+  background:rgba(11,18,32,.62) !important;
+}
+#customer-modal > div,#company-picker-box,#stock-modal-box,#suggestion-modal-box,
+#modal-content,#reminder-modal > div,#edit-modal-content,#edit-customer-modal-content,
+#edit-company-modal-content,#crm-modal-box,#admin-user-modal > div,
+#company-all-history-modal > div,#company-purchase-history-modal > div{
+  border-color:#dedfe7 !important;
+  box-shadow:var(--gx-shadow-lg) !important;
+  border-radius:20px !important;
+}
+
+/* ---------- Deterministic UI layers: prevent panels/modals from stacking behind each other ---------- */
+#gemini-sidebar{z-index:1200 !important}
+body > header{z-index:900 !important}
+#gemini-mobile-overlay{z-index:1100 !important}
+#customer-modal,#company-picker-modal,#stock-modal,#custom-item-suggestions,
+#reminder-modal,#edit-modal,#edit-customer-modal,#edit-company-modal,
+#crm-modal,#document-modal,#company-all-history-modal,#company-purchase-history-modal{
+  z-index:2000 !important;
+}
+#confirm-modal{z-index:50000 !important}
+#admin-user-modal{z-index:40000 !important}
+#toast-container{z-index:60000 !important}
+
+/* Navigation must switch instantly; avoid a leftover transition feeling like a second page. */
+.gemini-nav{will-change:background,transform}
+.gemini-nav:active{transform:translateX(1px) scale(.985)}
+.gemini-ui-switching{pointer-events:none !important}
+
+/* Mobile: keep the original application usable and switch the sidebar into a drawer */
+#gemini-mobile-overlay{display:none}
+@media(max-width:900px){
+  #gemini-sidebar{
+    width:258px;
+    transform:translateX(-102%);
+    transition:transform .22s ease;
+  }
+  #gemini-sidebar.mobile-open{transform:translateX(0)}
+  #gemini-mobile-overlay{
+    position:fixed;inset:0;z-index:1100;
+    background:rgba(15,23,42,.42);
+    backdrop-filter:blur(2px);
+  }
+  #gemini-mobile-overlay.mobile-open{display:block}
+  body > header,header{
+    margin-left:0 !important;
+    width:100% !important;
+  }
+  body > main,main{
+    margin-left:0 !important;
+    width:100% !important;
+    padding:10px !important;
+    height:calc(100vh - 68px) !important;
+  }
+  #form-section{width:360px !important}
+}
+@media(max-width:700px){
+  #form-section{width:100% !important}
+  main{flex-direction:column !important;overflow-y:auto !important}
+  #form-section{height:auto !important;max-height:70vh}
+  main > section.flex.flex-col.h-full{min-height:420px}
+  header .glow-border-btn span{display:none}
+}
+</style>
+
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -808,6 +1154,81 @@ main button:not([disabled]):hover,
         </div>
     </div>
 
+
+<!-- =========================================================
+     GEMINI-STYLE APP SHELL — VISUAL NAVIGATION ONLY
+     ไม่เปลี่ยน ID / event / Firebase / CRUD / business logic
+     ========================================================= -->
+<aside id="gemini-sidebar" aria-label="เมนูหลัก">
+  <div class="gemini-brand">
+    <div class="gemini-brand-icon">📦</div>
+    <div class="gemini-brand-text">
+      <strong>Delivery CRM</strong>
+      <span>Management System</span>
+    </div>
+  </div>
+
+  <div class="gemini-sidebar-section">
+    <div class="gemini-sidebar-label">WORKSPACE</div>
+
+    <button type="button" class="gemini-nav active" data-target="workspace" onclick="geminiNav('workspace')">
+      <span class="gemini-nav-icon">⌂</span><span>ภาพรวมระบบ</span>
+    </button>
+
+    <button type="button" class="gemini-nav" data-target="delivery" onclick="geminiNav('delivery')">
+      <span class="gemini-nav-icon">🚚</span><span>การจัดส่ง & ติดตาม</span>
+    </button>
+
+    <button type="button" class="gemini-nav" data-target="customer" onclick="geminiNav('customer')">
+      <span class="gemini-nav-icon">👥</span><span>ลูกค้า & บริษัท</span>
+    </button>
+
+    <button type="button" class="gemini-nav" data-target="stock" onclick="geminiNav('stock')">
+      <span class="gemini-nav-icon">📦</span><span>สต็อก & ราคา</span>
+    </button>
+
+    <button type="button" class="gemini-nav" data-target="reminder" onclick="geminiNav('reminder')">
+      <span class="gemini-nav-icon">🔔</span><span>แจ้งเตือน & งาน</span>
+    </button>
+
+    <button type="button" class="gemini-nav" data-target="document" onclick="geminiNav('document')">
+      <span class="gemini-nav-icon">📄</span><span>เอกสาร & PDF</span>
+    </button>
+  </div>
+
+  <div class="gemini-sidebar-section">
+    <div class="gemini-sidebar-label">QUICK ACTIONS</div>
+
+    <button type="button" class="gemini-quick" onclick="document.getElementById('customer-name')?.focus();">
+      <span>＋</span> เพิ่มรายการจัดส่ง
+    </button>
+
+    <button type="button" class="gemini-quick" onclick="geminiNav('stock')">
+      <span>🏷️</span> จัดการสินค้า
+    </button>
+
+    <button type="button" class="gemini-quick" onclick="geminiNav('reminder')">
+      <span>🔔</span> ตั้งแจ้งเตือน
+    </button>
+  </div>
+
+  <div class="gemini-sidebar-spacer"></div>
+
+  <div class="gemini-sidebar-footer">
+    <div class="gemini-status-row">
+      <span class="gemini-status-dot"></span>
+      <div>
+        <strong>ระบบพร้อมใช้งาน</strong>
+        <span>Delivery Tracking & CRM</span>
+      </div>
+    </div>
+    <button type="button" class="gemini-logout" onclick="document.getElementById('logout-btn')?.click();" title="ออกจากระบบ">
+      ↪
+    </button>
+  </div>
+</aside>
+
+<div id="gemini-mobile-overlay" onclick="geminiNavClose()"></div>
    <header class="bg-gradient-to-r from-violet-600 via-indigo-600 to-sky-600 backdrop-blur-md border-b border-indigo-400/30 sticky top-0 z-35 shadow-md flex-shrink-0 transition-all duration-300 text-white">
     <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
         <!-- ฝั่งซ้าย: ปุ่มซ่อน/แสดง Sidebar และ โลโก้/ชื่อระบบ -->
@@ -6268,5 +6689,129 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
 });
         document.getElementById('search-input').addEventListener('input', applyFilterAndSearch);
     </script>
+<script id="gemini-navigation-visual">
+(function(){
+  const modalIds = [
+    'customer-modal','company-picker-modal','stock-modal','custom-item-suggestions',
+    'reminder-modal','edit-modal','edit-customer-modal','edit-company-modal',
+    'crm-modal','document-modal','company-all-history-modal','company-purchase-history-modal'
+  ];
+
+  function hardCloseLayer(id){
+    const el=document.getElementById(id);
+    if(!el) return;
+    /* Hide immediately. Do NOT leave opacity-0 behind: several original modals
+       only remove .hidden when opening, so opacity-0 would make them invisible. */
+    el.classList.add('hidden');
+    el.classList.remove('opacity-0','mobile-open');
+    const box=el.querySelector('[id$="-box"], [id$="-content"]');
+    if(box) box.classList.remove('scale-95');
+  }
+
+  function closeAllWorkspaceLayers(){
+    modalIds.forEach(hardCloseLayer);
+    document.getElementById('gemini-mobile-overlay')?.classList.remove('mobile-open');
+  }
+
+  function openSidebarMobile(){
+    document.getElementById('gemini-sidebar')?.classList.add('mobile-open');
+    document.getElementById('gemini-mobile-overlay')?.classList.add('mobile-open');
+  }
+
+  window.geminiNavClose=function(){
+    document.getElementById('gemini-sidebar')?.classList.remove('mobile-open');
+    document.getElementById('gemini-mobile-overlay')?.classList.remove('mobile-open');
+  };
+
+  function markActive(target){
+    document.querySelectorAll('.gemini-nav').forEach(btn=>{
+      btn.classList.toggle('active',btn.dataset.target===target);
+    });
+  }
+
+  function revealOpenedModal(id){
+    requestAnimationFrame(()=>{
+      const el=document.getElementById(id);
+      if(!el || el.classList.contains('hidden')) return;
+      el.classList.remove('opacity-0');
+      const box=el.querySelector('[id$="-box"], [id$="-content"]');
+      if(box) box.classList.remove('scale-95');
+    });
+  }
+
+  function openNative(id){
+    const btn=document.getElementById(id);
+    if(!btn) return false;
+    btn.click();
+    revealOpenedModal(id==='open-stock-modal-btn'?'stock-modal':id==='open-reminder-modal-btn'?'reminder-modal':null);
+    return true;
+  }
+
+  function openLatestDocument(){
+    if(typeof window.openDocumentModal!=='function') return false;
+    const list=Array.isArray(window.allDeliveries) ? window.allDeliveries :
+               (typeof allDeliveries!=='undefined' && Array.isArray(allDeliveries) ? allDeliveries : []);
+    const candidate=list.find(x=>x && x.id);
+    if(candidate){
+      window.openDocumentModal(candidate.id);
+      revealOpenedModal('document-modal');
+      return true;
+    }
+    return false;
+  }
+
+  window.geminiNav=function(target){
+    markActive(target);
+    closeAllWorkspaceLayers();
+
+    /* Switch/open immediately. No delayed navigation and no hidden modal layers. */
+    if(target==='workspace' || target==='delivery'){
+      const list=document.getElementById('delivery-list');
+      if(list) list.scrollIntoView({behavior:'auto',block:'start'});
+      window.scrollTo({top:0,left:0,behavior:'auto'});
+    }else if(target==='customer'){
+      if(typeof window.openCustomerModal==='function'){
+        window.openCustomerModal();
+      }else{
+        const input=document.getElementById('customer-name');
+        input?.click();
+      }
+    }else if(target==='stock'){
+      openNative('open-stock-modal-btn');
+    }else if(target==='reminder'){
+      openNative('open-reminder-modal-btn');
+    }else if(target==='document'){
+      if(!openLatestDocument()){
+        /* If there is no saved delivery yet, keep the user on the live workspace
+           instead of making the menu appear unresponsive. */
+        markActive('delivery');
+        const list=document.getElementById('delivery-list');
+        list?.scrollIntoView({behavior:'auto',block:'start'});
+      }
+    }
+
+    if(window.innerWidth<=900) geminiNavClose();
+  };
+
+  function setup(){
+    const header=document.querySelector('body > header');
+    if(!header) return;
+    const left=header.querySelector('div > div:first-child');
+    if(left && !document.getElementById('gemini-mobile-menu')){
+      const b=document.createElement('button');
+      b.id='gemini-mobile-menu';
+      b.type='button';
+      b.className='md:hidden mr-1 w-9 h-9 rounded-xl border border-white/20 bg-white/10 text-white';
+      b.innerHTML='☰';
+      b.title='เมนูหลัก';
+      b.onclick=openSidebarMobile;
+      left.insertBefore(b,left.firstChild);
+    }
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup);
+  else setup();
+})();
+</script>
 </body>
 </html>
