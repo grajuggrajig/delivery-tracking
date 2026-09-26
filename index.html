@@ -3718,6 +3718,10 @@ function getCompanyPriceHistory(companyName, productName) {
         const deleteUnusedCompanyBtn = document.getElementById('delete-unused-company-btn');
 
         openStockModalBtn.addEventListener('click', () => {
+            /* รีเซ็ตเฉพาะตัวกรองบริษัทของ Stock Management
+               เพื่อให้เปิดหน้าต่างใหม่ทุกครั้งเริ่มที่ "ทุกบริษัท / สินค้ามาตรฐาน" */
+            if (stockCompanyFilter) stockCompanyFilter.value = '';
+
             /* เปิดกรอบ Stock ให้ผู้ใช้เห็นทันที ก่อนทำงาน render/กรองข้อมูลที่อาจหนัก
                เพื่อไม่ให้ปุ่ม 📦สต็อก & ราคา ดูเหมือนค้างหรือกดไม่ติดเมื่อข้อมูลมีจำนวนมาก */
             stockModal.classList.remove('hidden');
@@ -3729,6 +3733,9 @@ function getCompanyPriceHistory(companyName, productName) {
                 setTimeout(() => {
                     if (stockModal.classList.contains('hidden')) return;
                     refreshStockCompanyFilter();
+                    /* refreshStockCompanyFilter() จะพยายามคงค่าที่เลือกเดิมไว้
+                       จึงกำหนดค่าเริ่มต้นกลับเป็น "ทุกบริษัท / สินค้ามาตรฐาน" อีกครั้ง */
+                    if (stockCompanyFilter) stockCompanyFilter.value = '';
                     renderStockTable(stockSearchBox.value);
                 }, 0);
             });
@@ -3739,6 +3746,8 @@ function getCompanyPriceHistory(companyName, productName) {
             stockModalBox.classList.add('scale-95');
             setTimeout(() => {
                 stockModal.classList.add('hidden');
+                /* เมื่อปิด Stock แล้ว ล้างตัวกรองบริษัทไว้สำหรับการเปิดครั้งถัดไป */
+                if (stockCompanyFilter) stockCompanyFilter.value = '';
             }, 200);
             resetStockForm();
         }
@@ -6653,39 +6662,237 @@ window.deleteReminder = function(id) {
     });
 };
 
+/* ============================================================
+   🔔 Reminder Engine
+   - ตรวจวัน + เวลาแจ้งเตือนจริง
+   - รองรับแจ้งล่วงหน้า X วัน
+   - รองรับ 1 / 2 รอบต่อเดือน
+   - รีเฟรช/F5 แล้วตรวจต่อได้
+   - ป้องกันแจ้งซ้ำด้วย localStorage ต่อรอบ/ต่อวัน
+   - ตรวจซ้ำทุก 30 วินาที และตรวจทันทีเมื่อกลับมาเปิดแท็บ
+   ============================================================ */
+const REMINDER_SENT_STORAGE_KEY = 'crm_reminder_sent_v2';
+
+function getReminderSentMap() {
+    try {
+        const raw = localStorage.getItem(REMINDER_SENT_STORAGE_KEY);
+        const parsed = raw ? JSON.parse(raw) : {};
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+        console.warn('โหลดสถานะแจ้งเตือนไม่สำเร็จ:', error);
+        return {};
+    }
+}
+
+function saveReminderSentMap(map) {
+    try {
+        localStorage.setItem(REMINDER_SENT_STORAGE_KEY, JSON.stringify(map));
+    } catch (error) {
+        console.warn('บันทึกสถานะแจ้งเตือนไม่สำเร็จ:', error);
+    }
+}
+
+function getReminderDateKey(date) {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function getReminderRoundKey(reminder, round, roundNumber, notifyDate) {
+    const ownerKey = currentAuthUser?.uid || reminder.ownerUid || 'local';
+    return [
+        ownerKey,
+        reminder.id || 'new',
+        roundNumber,
+        getReminderDateKey(notifyDate),
+        String(round.notifyTime || '08:00'),
+        Number(round.beforeDays || 0)
+    ].join('|');
+}
+
+function getMonthDate(year, monthIndex, dayOfMonth) {
+    const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+    const safeDay = Math.min(Math.max(Number(dayOfMonth) || 1, 1), lastDay);
+    return new Date(year, monthIndex, safeDay);
+}
+
+function getReminderCandidates(reminder, round, roundNumber, now) {
+    const candidates = [];
+    const baseMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // ตรวจเดือนปัจจุบันและเดือนถัดไป เพื่อรองรับกรณีแจ้งล่วงหน้า
+    // เช่น กำหนดวันที่ 1 แต่แจ้งล่วงหน้า 3 วัน จะต้องแจ้งในเดือนก่อนหน้า
+    for (let monthOffset = 0; monthOffset <= 1; monthOffset++) {
+        const monthDate = new Date(baseMonth.getFullYear(), baseMonth.getMonth() + monthOffset, 1);
+        const dueDate = getMonthDate(monthDate.getFullYear(), monthDate.getMonth(), round.dayOfMonth);
+        const notifyDate = new Date(dueDate);
+        notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
+
+        candidates.push({ reminder, round, roundNumber, dueDate, notifyDate });
+    }
+
+    return candidates;
+}
+
+function isReminderTimeReached(now, notifyDate, notifyTime) {
+    if (getReminderDateKey(now) !== getReminderDateKey(notifyDate)) return false;
+
+    const match = String(notifyTime || '08:00').match(/^([01]\d|2[0-3]):([0-5]\d)$/);
+    if (!match) return false;
+
+    const notifyAt = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+        Number(match[1]),
+        Number(match[2]),
+        0,
+        0
+    );
+
+    return now.getTime() >= notifyAt.getTime();
+}
+
+function showReminderAlert(reminder, round, roundNumber, dueDate) {
+    const before = Number(round.beforeDays || 0);
+    const company = String(reminder.companyName || '-');
+    const title = String(reminder.title || 'แจ้งเตือน');
+    const dueText = getReminderDateKey(dueDate);
+    const message = before > 0
+        ? `🔔 ${company} — ${title} | แจ้งล่วงหน้า ${before} วัน | กำหนด ${dueText} | รอบ ${roundNumber}`
+        : `🔔 ${company} — ${title} | ถึงกำหนดวันนี้ | รอบ ${roundNumber}`;
+
+    // Toast เป็นกลไกหลัก จึงไม่ต้องพึ่ง permission ของ Browser Notification
+    if (typeof showToast === 'function') {
+        showToast(message, 'warning');
+    }
+
+    // ถ้าผู้ใช้เคยอนุญาต Browser Notification ไว้แล้ว ให้แสดงเพิ่มในระดับระบบ
+    // จะไม่เรียก requestPermission อัตโนมัติ เพื่อไม่รบกวนผู้ใช้ด้วย popup permission
+    try {
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('🔔 CRM Reminder', {
+                body: `${company}\n${title}\n${before > 0 ? `แจ้งล่วงหน้า ${before} วัน • ` : ''}กำหนด ${dueText}`,
+                tag: `crm-reminder-${reminder.id || 'new'}-${roundNumber}-${getReminderDateKey(dueDate)}`,
+                renotify: false
+            });
+        }
+    } catch (error) {
+        console.warn('Browser Notification error:', error);
+    }
+}
+
+function cleanupOldReminderSentMap(sentMap, now) {
+    const cutoff = new Date(now);
+    cutoff.setDate(cutoff.getDate() - 370);
+    const cutoffKey = getReminderDateKey(cutoff);
+    let changed = false;
+
+    Object.keys(sentMap).forEach(key => {
+        const parts = key.split('|');
+        const datePart = parts[3];
+        if (datePart && datePart < cutoffKey) {
+            delete sentMap[key];
+            changed = true;
+        }
+    });
+
+    if (changed) saveReminderSentMap(sentMap);
+}
+
 function checkTodayReminders() {
     const box = document.getElementById('today-reminder-box');
     const list = document.getElementById('today-reminder-list');
     if (!box || !list) return;
+
     const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const dueReminders = [];
+    const sentMap = getReminderSentMap();
+    let sentMapChanged = false;
+
+    cleanupOldReminderSentMap(sentMap, now);
 
     allReminders.forEach(reminder => {
         if (reminder.active === false) return;
-        if (reminder.repeat !== 'monthly') return;
-        getReminderRounds(reminder).forEach((round, index) => {
+
+        // รายการแบบครั้งเดียว: ใช้รอบแรกตามโครงสร้างเดิม
+        // รายการรายเดือน: รองรับ 1 หรือ 2 รอบตาม billingRounds
+        const rounds = getReminderRounds(reminder);
+        rounds.forEach((round, index) => {
+            const roundNumber = index + 1;
+            if (!round.dayOfMonth || !round.notifyTime) return;
+
+            // สำหรับ monthly ตรวจเดือนปัจจุบัน/ถัดไป
+            // สำหรับ once ตรวจวันที่ในเดือนปัจจุบันเป็นหลัก
+            const candidates = reminder.repeat === 'monthly'
+                ? getReminderCandidates(reminder, round, roundNumber, now)
+                : [(() => {
+                    const dueDate = getMonthDate(now.getFullYear(), now.getMonth(), round.dayOfMonth);
+                    const notifyDate = new Date(dueDate);
+                    notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
+                    return { reminder, round, roundNumber, dueDate, notifyDate };
+                })()];
+
+            candidates.forEach(candidate => {
+                const { dueDate, notifyDate } = candidate;
+                if (!isReminderTimeReached(now, notifyDate, round.notifyTime)) return;
+
+                const sentKey = getReminderRoundKey(reminder, round, roundNumber, notifyDate);
+                if (sentMap[sentKey]) return;
+
+                // แจ้งทันทีเมื่อถึงเวลา และบันทึกสถานะเพื่อไม่ให้แจ้งซ้ำทุก interval/F5
+                showReminderAlert(reminder, round, roundNumber, dueDate);
+                sentMap[sentKey] = new Date().toISOString();
+                sentMapChanged = true;
+            });
+        });
+
+        // แสดงรายการที่ต้องดำเนินการในวันนี้ โดยไม่จำเป็นต้องรอถึงเวลาของ toast
+        // เพื่อให้ผู้ใช้ยังเห็นรายการของวันนี้ตาม UI เดิม
+        rounds.forEach((round, index) => {
+            const roundNumber = index + 1;
             if (!round.dayOfMonth) return;
-            const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-            const targetDay = Math.min(Number(round.dayOfMonth), lastDay);
-            const dueDate = new Date(now.getFullYear(), now.getMonth(), targetDay);
-            const notifyDate = new Date(dueDate);
-            notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
-            if (today.getTime() === notifyDate.getTime()) {
-                dueReminders.push({ reminder, round, roundNumber: index + 1 });
-            }
+
+            const candidates = reminder.repeat === 'monthly'
+                ? getReminderCandidates(reminder, round, roundNumber, now)
+                : [(() => {
+                    const dueDate = getMonthDate(now.getFullYear(), now.getMonth(), round.dayOfMonth);
+                    const notifyDate = new Date(dueDate);
+                    notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
+                    return { reminder, round, roundNumber, dueDate, notifyDate };
+                })()];
+
+            candidates.forEach(candidate => {
+                if (getReminderDateKey(candidate.notifyDate) === getReminderDateKey(now)) {
+                    dueReminders.push(candidate);
+                }
+            });
         });
     });
 
-    if (!dueReminders.length) {
+    if (sentMapChanged) saveReminderSentMap(sentMap);
+
+    // กันรายการซ้ำกรณีรอบ/ข้อมูลเก่าซ้ำกัน
+    const uniqueDue = [];
+    const dueKeys = new Set();
+    dueReminders.forEach(item => {
+        const key = `${item.reminder.id}|${item.roundNumber}|${getReminderDateKey(item.notifyDate)}`;
+        if (!dueKeys.has(key)) {
+            dueKeys.add(key);
+            uniqueDue.push(item);
+        }
+    });
+
+    if (!uniqueDue.length) {
         box.classList.add('hidden');
         list.innerHTML = '';
         return;
     }
+
     box.classList.remove('hidden');
-    list.innerHTML = dueReminders.map(({ reminder, round, roundNumber }) => {
+    list.innerHTML = uniqueDue.map(({ reminder, round, roundNumber }) => {
         const before = Number(round.beforeDays || 0);
-        const message = before > 0 ? `แจ้งเตือนล่วงหน้า ${before} วัน (กำหนดจริงวันที่ ${round.dayOfMonth})` : 'ถึงกำหนดดำเนินการวันนี้';
+        const message = before > 0
+            ? `แจ้งล่วงหน้า ${before} วัน (กำหนดจริงวันที่ ${round.dayOfMonth})`
+            : 'ถึงกำหนดดำเนินการวันนี้';
         return `<div class="bg-white p-3 rounded-xl border border-red-200 shadow-2xs flex items-center justify-between gap-3">
             <div><div class="text-xs font-bold text-red-700">🏢 ${escapeHTML(reminder.companyName)} - ${escapeHTML(reminder.title)} <span class="ml-1 text-[10px] bg-red-100 px-2 py-0.5 rounded">รอบ ${roundNumber}</span></div>
             <div class="text-[11px] text-slate-500 mt-0.5">${message} ⏰ เวลา ${escapeHTML(round.notifyTime || '--:--')}</div></div>
@@ -6694,10 +6901,17 @@ function checkTodayReminders() {
     }).join('');
 }
 
-// Reminder listener จะเริ่มจาก startUserScopedDataListeners() หลังยืนยัน user profile แล้ว
-
+// ตรวจทันทีหลังโหลดข้อมูล และตรวจซ้ำทุก 30 วินาทีขณะเปิด CRM ค้างไว้
 setTimeout(() => checkTodayReminders(), 1000);
-setInterval(() => checkTodayReminders(), 60000);
+setInterval(() => checkTodayReminders(), 30000);
+
+// เมื่อกลับเข้าหน้า/สลับกลับแท็บ ให้ตรวจทันที เพราะ Browser อาจ throttle timer ตอนแท็บอยู่เบื้องหลัง
+window.addEventListener('focus', () => checkTodayReminders());
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') checkTodayReminders();
+});
+
+// Reminder listener จะเริ่มจาก startUserScopedDataListeners() หลังยืนยัน user profile แล้ว
 
 // ------------------------------------------------------------
 // Company picker สำหรับ Reminder
