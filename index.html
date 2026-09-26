@@ -1117,6 +1117,58 @@ body > header{z-index:900 !important}
 }
 </style>
 
+
+<style id="crm-targeted-fixes">
+/* =========================================================
+   TARGETED FIXES
+   1) Form Hide/Show ต้องยุบพื้นที่จริง ไม่ใช่แค่ opacity
+   2) เลือกลูกค้าเดิม -> กรองรายการหลักตามลูกค้านั้น
+   3) Company Picker ต้องอยู่เหนือ Reminder Modal เสมอ
+   ========================================================= */
+#form-section.form-collapsed{
+    width:0 !important;
+    min-width:0 !important;
+    max-width:0 !important;
+    flex:0 0 0 !important;
+    flex-basis:0 !important;
+    padding:0 !important;
+    margin:0 !important;
+    border-width:0 !important;
+    opacity:0 !important;
+    transform:translateX(-12px) !important;
+    pointer-events:none !important;
+    overflow:hidden !important;
+    box-shadow:none !important;
+}
+#form-section.form-expanded{
+    width:390px !important;
+    min-width:390px !important;
+    max-width:420px !important;
+    flex:0 0 390px !important;
+    opacity:1 !important;
+    transform:translateX(0) !important;
+    pointer-events:auto !important;
+}
+@media (max-width:900px){
+    #form-section.form-expanded{
+        width:360px !important;
+        min-width:360px !important;
+        flex-basis:360px !important;
+    }
+}
+@media (max-width:700px){
+    #form-section.form-expanded{
+        width:100% !important;
+        min-width:0 !important;
+        flex-basis:auto !important;
+    }
+}
+/* Company picker เปิดจาก Reminder ต้องเป็นชั้นบนสุดของ Reminder */
+#reminder-modal{ z-index:2000 !important; }
+#company-picker-modal{ z-index:3200 !important; }
+#company-picker-box{ position:relative; z-index:3201 !important; }
+</style>
+
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -1199,7 +1251,7 @@ body > header{z-index:900 !important}
   <div class="gemini-sidebar-section">
     <div class="gemini-sidebar-label">QUICK ACTIONS</div>
 
-    <button type="button" class="gemini-quick" onclick="document.getElementById('customer-name')?.focus();">
+    <button type="button" class="gemini-quick" onclick="showDeliveryFormAndFocus();">
       <span>＋</span> เพิ่มรายการจัดส่ง
     </button>
 
@@ -2398,7 +2450,9 @@ body > header{z-index:900 !important}
         let allCompanyProducts = [];
         let currentFilter = 'all';
         let suggestionQuantities = {};
-        let isFormVisible = true;
+        let isFormVisible = false;
+        // กรองรายการหลักตามลูกค้าที่เลือกจากหน้าต่าง "เลือกลูกค้าเดิม"
+        let selectedCustomerFilter = '';
         let currentCrmCustomerId = null;
 
 
@@ -2453,21 +2507,40 @@ function getCompanyPriceHistory(companyName, productName) {
 
 
 
-        function toggleSidebarForm() {
+        function applyDeliveryFormVisibility(visible) {
             const formSection = document.getElementById('form-section');
             const toggleIcon = document.getElementById('toggle-icon');
-            isFormVisible = !isFormVisible;
+            if (!formSection) return;
 
-            if (isFormVisible) {
-                formSection.classList.remove('w-0', 'p-0', 'opacity-0', 'border-transparent', 'pointer-events-none');
-                formSection.classList.add('w-full', 'md:w-[380px]', 'lg:w-[420px]', 'p-4', 'opacity-100', 'border-sky-100');
-                toggleIcon.style.transform = 'rotate(0deg)';
-            } else {
-                formSection.classList.remove('w-full', 'md:w-[380px]', 'lg:w-[420px]', 'p-4', 'opacity-100', 'border-sky-100');
-                formSection.classList.add('w-0', 'p-0', 'opacity-0', 'border-transparent', 'pointer-events-none');
-                toggleIcon.style.transform = 'rotate(90deg)';
+            isFormVisible = !!visible;
+            formSection.classList.toggle('form-expanded', isFormVisible);
+            formSection.classList.toggle('form-collapsed', !isFormVisible);
+
+            // ลบ class ชุดเก่าที่เคยทำให้ width ชนกับ CSS ของ Gemini UI
+            formSection.classList.remove(
+                'w-0','w-full','md:w-[380px]','lg:w-[420px]',
+                'p-0','opacity-0','opacity-100',
+                'border-transparent','pointer-events-none','border-sky-100'
+            );
+
+            if (toggleIcon) {
+                toggleIcon.style.transform = isFormVisible ? 'rotate(0deg)' : 'rotate(90deg)';
             }
         }
+
+        function toggleSidebarForm() {
+            applyDeliveryFormVisibility(!isFormVisible);
+        }
+
+        function showDeliveryFormAndFocus() {
+            applyDeliveryFormVisibility(true);
+            requestAnimationFrame(() => {
+                document.getElementById('customer-name')?.focus();
+            });
+        }
+
+        // ค่าเริ่มต้นตามที่ต้องการ: ซ่อนฟอร์มเพิ่มรายการจัดส่ง
+        applyDeliveryFormVisibility(false);
 
         function showToast(message, type = 'success') {
             const container = document.getElementById('toast-container');
@@ -3595,13 +3668,23 @@ function getCompanyPriceHistory(companyName, productName) {
             try { parsedLineIds = encodedLineIds ? JSON.parse(decodeURIComponent(encodedLineIds)) : []; } catch (_) { parsedLineIds = []; }
             pendingLineIds = Array.isArray(parsedLineIds) ? [...new Set(parsedLineIds.map(normalizeLineId).filter(Boolean))] : [];
             renderLineIdTags();
+
+            // เลือกลูกค้าแล้วกรองรายการหลักให้เหลือเฉพาะลูกค้ารายนี้
+            selectedCustomerFilter = String(name || '').trim();
+            const mainSearch = document.getElementById('search-input');
+            if (mainSearch) mainSearch.value = selectedCustomerFilter;
+
             closeCustomerModal();
-            showToast(`เลือกข้อมูลของ "${name}" เรียบร้อย`, 'info');
+            applyFilterAndSearch();
+            showToast(`เลือกข้อมูลของ "${name}" และกรองรายการหลักแล้ว`, 'info');
         };
 
         window.addNewCustomerFromModal = function(name) {
             customerNameInput.value = name;
             companyNameInput.value = '';
+            selectedCustomerFilter = String(name || '').trim();
+            const mainSearch = document.getElementById('search-input');
+            if (mainSearch) mainSearch.value = selectedCustomerFilter;
             if (companyDistrictInput) companyDistrictInput.value = '';
             phoneInput.value = '';
             addressInput.value = '';
@@ -4985,7 +5068,15 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
         function applyFilterAndSearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase().trim();
+            const selectedCustomer = String(selectedCustomerFilter || '').trim().toLowerCase();
+
             const matchedDeliveries = allDeliveries.filter(item => {
+                // ถ้ามีการเลือกลูกค้าจาก modal ให้กรองด้วย "ชื่อลูกค้าแบบตรงกัน"
+                if (selectedCustomer &&
+                    String(item.customerName || '').trim().toLowerCase() !== selectedCustomer) {
+                    return false;
+                }
+
                 return (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
                     (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
                     (item.phone && item.phone.toLowerCase().includes(keyword)) ||
@@ -6675,6 +6766,9 @@ function renderCompanyPicker(filterText = '') {
 }
 
 function openCompanyPicker() {
+     // เปิดชั้นเลือกบริษัทเหนือ Reminder Modal เสมอ
+     companyPickerModal.style.zIndex = '3200';
+     companyPickerBox.style.zIndex = '3201';
     companyPickerModal.classList.remove('hidden');
     companyPickerSearch.value = '';
     renderCompanyPicker('');
@@ -6756,7 +6850,14 @@ document.getElementById('reminder-modal').addEventListener('click', (e) => {
 document.getElementById('save-reminder-btn').addEventListener('click', () => {
     saveReminder();
 });
-        document.getElementById('search-input').addEventListener('input', applyFilterAndSearch);
+        document.getElementById('search-input').addEventListener('input', (e) => {
+            const value = String(e.target.value || '').trim();
+            if (selectedCustomerFilter &&
+                value.toLowerCase() !== selectedCustomerFilter.toLowerCase()) {
+                selectedCustomerFilter = '';
+            }
+            applyFilterAndSearch();
+        });
     </script>
 <script id="gemini-navigation-visual">
 (function(){
