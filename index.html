@@ -2533,10 +2533,15 @@ function getCompanyPriceHistory(companyName, productName) {
         }
 
         function showDeliveryFormAndFocus() {
-            applyDeliveryFormVisibility(true);
-            requestAnimationFrame(() => {
-                document.getElementById('customer-name')?.focus();
-            });
+            /* ปุ่ม ＋ เพิ่มรายการจัดส่ง ทำงานแบบเดียวกับ Hide/Show Form:
+               กดครั้งแรก = แสดง, กดอีกครั้ง = ซ่อน */
+            const nextVisible = !isFormVisible;
+            applyDeliveryFormVisibility(nextVisible);
+            if (nextVisible) {
+                requestAnimationFrame(() => {
+                    document.getElementById('customer-name')?.focus();
+                });
+            }
         }
 
         // ค่าเริ่มต้นตามที่ต้องการ: ซ่อนฟอร์มเพิ่มรายการจัดส่ง
@@ -3713,13 +3718,20 @@ function getCompanyPriceHistory(companyName, productName) {
         const deleteUnusedCompanyBtn = document.getElementById('delete-unused-company-btn');
 
         openStockModalBtn.addEventListener('click', () => {
+            /* เปิดกรอบ Stock ให้ผู้ใช้เห็นทันที ก่อนทำงาน render/กรองข้อมูลที่อาจหนัก
+               เพื่อไม่ให้ปุ่ม 📦สต็อก & ราคา ดูเหมือนค้างหรือกดไม่ติดเมื่อข้อมูลมีจำนวนมาก */
             stockModal.classList.remove('hidden');
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 stockModal.classList.remove('opacity-0');
                 stockModalBox.classList.remove('scale-95');
-            }, 10);
-            refreshStockCompanyFilter();
-            renderStockTable(stockSearchBox.value);
+
+                /* ปล่อยให้ browser วาด modal ก่อน แล้วค่อยประมวลผลข้อมูล */
+                setTimeout(() => {
+                    if (stockModal.classList.contains('hidden')) return;
+                    refreshStockCompanyFilter();
+                    renderStockTable(stockSearchBox.value);
+                }, 0);
+            });
         });
 
         function closeStockModalFunc() {
