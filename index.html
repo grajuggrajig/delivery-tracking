@@ -215,12 +215,12 @@
     position: absolute;
     inset: -1px;
     border-radius: inherit;
-    background: linear-gradient(90deg, #ffffff, #9333ea, #38bdf8, #ffffff);
+    /* ปรับโทนสีตรงนี้ให้เป็นฟ้า-ม่วง-น้ำเงินตามต้องการ */
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc, #38bdf8);
     background-size: 300% 300%;
     z-index: -1;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    animation: borderGlow 4s linear infinite;
+    opacity: 1; /* ตั้งค่าเป็น 1 เพื่อให้วิ่งวิ้งๆ ตลอดเวลา */
+    animation: borderGlow 3s linear infinite;
 }
 
 /* สถานะ Online/Offline แบบสากล */
@@ -1169,6 +1169,364 @@ body > header{z-index:900 !important}
 #company-picker-box{ position:relative; z-index:3201 !important; }
 </style>
 
+
+<style id="overview-company-dashboard">
+/* =========================================================
+   COMPANY OVERVIEW — เพิ่มเฉพาะหน้าภาพรวมระบบ
+   ไม่เปลี่ยน Firebase / CRUD / Delivery / CRM / Document logic
+   ========================================================= */
+#overview-section{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    position:relative;
+    margin-left:258px;
+    width:calc(100% - 258px);
+    height:calc(100vh - 68px);
+    min-height:0;
+    box-sizing:border-box;
+    padding:16px 18px 14px;
+    overflow:hidden;
+}
+#overview-section .overview-header{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    min-width:0;
+}
+#overview-section .overview-title-wrap{min-width:0}
+#overview-section .overview-title{
+    margin:0;
+    font-size:20px;
+    line-height:1.2;
+    font-weight:800;
+    letter-spacing:-.025em;
+    color:#172033;
+}
+#overview-section .overview-subtitle{
+    margin-top:4px;
+    font-size:11px;
+    color:#7b879b;
+}
+#overview-section .overview-stats{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+}
+#overview-section .overview-stat{
+    min-width:92px;
+    padding:8px 11px;
+    border:1px solid #e3e7ef;
+    border-radius:13px;
+    background:rgba(255,255,255,.82);
+    box-shadow:0 5px 16px rgba(31,42,63,.045);
+    text-align:center;
+}
+#overview-section .overview-stat strong{
+    display:block;
+    font-size:15px;
+    line-height:1.1;
+    color:#25356b;
+}
+#overview-section .overview-stat span{
+    display:block;
+    margin-top:3px;
+    font-size:9px;
+    font-weight:700;
+    color:#8a94a7;
+}
+#overview-section .overview-toolbar{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:0;
+    padding:10px 12px;
+    border:1px solid #e3e7ef;
+    border-radius:16px;
+    background:rgba(255,255,255,.94);
+    box-shadow:0 7px 20px rgba(31,42,63,.05);
+}
+#overview-search-input{
+    width:100%;
+    min-width:0;
+    border:0;
+    outline:none;
+    background:transparent;
+    color:#25314a;
+    font-size:12px;
+}
+#overview-search-input::placeholder{color:#9aa4b5}
+#overview-search-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:1 1 auto;
+    min-width:0;
+    padding:8px 10px;
+    border:1px solid #e1e5ed;
+    border-radius:12px;
+    background:#f7f8fb;
+    transition:.18s ease;
+}
+#overview-search-wrap:focus-within{
+    background:#fff;
+    border-color:#8b79c9;
+    box-shadow:0 0 0 3px rgba(124,58,237,.08);
+}
+#overview-clear-search{
+    flex:0 0 auto;
+    border:0;
+    background:#f1f3f7;
+    color:#7a8497;
+    border-radius:10px;
+    padding:7px 10px;
+    font-size:10px;
+    font-weight:700;
+    cursor:pointer;
+}
+#overview-clear-search:hover{background:#e8ebf2;color:#374151}
+#overview-company-grid{
+    flex:1 1 auto;
+    min-height:0;
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+    align-content:start;
+    overflow-y:auto;
+    overflow-x:hidden;
+    padding:2px 2px 8px;
+    scrollbar-width:none;
+    -ms-overflow-style:none;
+}
+#overview-company-grid::-webkit-scrollbar{display:none}
+.overview-company-card{
+    min-width:0;
+    min-height:142px;
+    padding:14px;
+    border:1px solid #e5e8ef;
+    border-radius:18px;
+    background: linear-gradient(145deg, #ffffff 0%, #faf8f5 100%);
+    box-shadow:0 7px 22px rgba(31,42,63,.055);
+    cursor:pointer;
+    transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+}
+.overview-company-card:hover{
+    transform:translateY(-2px);
+    border-color:#c9c2dc;
+    box-shadow:0 13px 30px rgba(31,42,63,.10);
+}
+.overview-company-badge{
+    display:inline-flex;
+    align-items:center;
+    align-self:flex-start;
+    max-width:100%;
+    gap:5px;
+    padding:4px 9px;
+    border-radius:999px;
+    background:#eefbf3;
+    color:#15803d;
+    border:1px solid #d7f1df;
+    font-size:9px;
+    line-height:1.2;
+    font-weight:800;
+}
+.overview-company-name{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.overview-contact-name{
+    margin-top:11px;
+    min-width:0;
+    color:#172033;
+    font-size:14px;
+    font-weight:800;
+    line-height:1.25;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.overview-contact-line{
+    display:flex;
+    align-items:flex-start;
+    gap:6px;
+    margin-top:6px;
+    min-width:0;
+    color:#60708a;
+    font-size:10px;
+    line-height:1.35;
+}
+.overview-contact-line .icon{flex:0 0 auto;font-size:11px}
+.overview-contact-line .value{
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+}
+.overview-card-footer{
+    margin-top:auto;
+    padding-top:10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    border-top:1px solid #eef0f4;
+    color:#8a94a7;
+    font-size:9px;
+    font-weight:700;
+}
+.overview-empty{
+    grid-column:1/-1;
+    min-height:180px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    text-align:center;
+    border:1px dashed #dce1ea;
+    border-radius:18px;
+    background:rgba(255,255,255,.72);
+    color:#8a94a7;
+    font-size:12px;
+}
+.overview-empty strong{color:#4b5870;font-size:13px;margin-bottom:4px}
+
+/* เวลาเปิดหน้าภาพรวม ให้ซ่อน workspace เดิมเท่านั้น */
+body.overview-active > main{display:none !important}
+body.delivery-active > #overview-section{display:none !important}
+body.overview-active > #overview-section{display:flex !important}
+
+@media(max-width:1100px){
+    #overview-company-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+    #overview-section{
+        margin-left:0;
+        width:100%;
+        padding:12px 10px 10px;
+        height:calc(100vh - 68px);
+    }
+    #overview-section .overview-header{gap:8px}
+    #overview-section .overview-title{font-size:18px}
+    #overview-section .overview-subtitle{font-size:10px}
+    #overview-section .overview-stat{min-width:72px;padding:7px 8px}
+    #overview-section .overview-stat strong{font-size:13px}
+    #overview-section .overview-stat span{font-size:8px}
+}
+@media(max-width:700px){
+    #overview-section{gap:9px;padding:10px 8px 8px}
+    #overview-section .overview-header{align-items:flex-start}
+    #overview-section .overview-stats{gap:5px}
+    #overview-section .overview-stat{min-width:62px;padding:6px 6px}
+    #overview-section .overview-stat strong{font-size:12px}
+    #overview-company-grid{gap:9px;padding-bottom:4px}
+    .overview-company-card{min-height:132px;padding:11px;border-radius:15px}
+    .overview-contact-name{font-size:12px;margin-top:8px}
+    .overview-contact-line{font-size:9px;margin-top:5px}
+    .overview-card-footer{padding-top:7px;font-size:8px}
+}
+@media(max-width:430px){
+    #overview-section .overview-title{font-size:16px}
+    #overview-section .overview-subtitle{display:none}
+    #overview-section .overview-stat{min-width:54px;padding:5px}
+    #overview-section .overview-stat span{font-size:7px}
+    #overview-company-grid{grid-template-columns:1fr;gap:8px}
+    .overview-company-card{min-height:116px}
+}
+
+.overview-company-card {
+    border: 1px solid rgba(220, 215, 205, 0.9);
+    background: linear-gradient(145deg, #ffffff 0%, #faf8f5 100%);
+    box-shadow: 0 8px 24px rgba(28, 36, 56, 0.06);
+    border-radius: 20px; /* เพิ่มความโค้งมนให้ดูทันสมัยขึ้น */
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.overview-company-card:hover {
+    transform: translateY(-3px);
+    border-color: #b88a3b; /* ขอบทอง/คลาสสิกเวลา hover */
+    box-shadow: 0 14px 35px rgba(28, 36, 56, 0.12);
+}
+
+.overview-company-badge {
+    background: rgba(16, 185, 129, 0.1);
+    color: #047857;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.overview-card-footer {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid #f0ede6; /* เส้นคั่นสไตล์คลาสสิกอบอุ่น */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 10px;
+    color: #718096;
+}
+
+@keyframes borderGlow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.glow-border-btn {
+    position: relative;
+    background: transparent !important;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    transition: all 0.3s ease;
+}
+
+.glow-border-btn::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    /* ปรับโทนสีตรงนี้ให้เป็นฟ้า-ม่วง-น้ำเงินตามต้องการ */
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #c084fc, #38bdf8);
+    background-size: 300% 300%;
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    animation: borderGlow 4s linear infinite;
+}
+
+.glow-border-btn:hover::after {
+    opacity: 1;
+}
+
+.glow-border-btn:hover {
+    border-color: transparent;
+    box-shadow: 0 0 15px rgba(129, 140, 248, 0.5); /* ปรับแสงเรืองรอง (Glow) ให้เป็นโทนฟ้าม่วง */
+}
+
+.glow-border-btn::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #ffffff, #9333ea, #38bdf8, #ffffff);
+    background-size: 300% 300%;
+    z-index: -1;
+    opacity: 1; /* เปลี่ยนจาก 0 เป็น 1 เพื่อให้วิ่งตลอดเวลา */
+    animation: borderGlow 4s linear infinite;
+}
+
+
+</style>
+
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -1332,7 +1690,41 @@ body > header{z-index:900 !important}
     </div>
 </header>
 
-    <main class="max-w-7xl mx-auto px-4 mt-3 flex gap-4 w-full flex-grow h-[calc(100vh-100px)] overflow-hidden">
+    
+<!-- =========================================================
+     COMPANY OVERVIEW / DASHBOARD
+     แสดงข้อมูลสรุปลูกค้าแยกตามบริษัท โดยใช้ข้อมูล deliveries เดิม
+     ========================================================= -->
+<section id="overview-section" aria-label="ภาพรวมระบบ">
+    <div class="overview-header">
+        <div class="overview-title-wrap">
+            <h2 class="overview-title">ภาพรวมระบบ</h2>
+            <div class="overview-subtitle">ข้อมูลลูกค้าและบริษัทจากฐานข้อมูลปัจจุบัน</div>
+        </div>
+        <div class="overview-stats">
+            <div class="overview-stat"><strong id="overview-company-count">0</strong><span>บริษัท</span></div>
+            <div class="overview-stat"><strong id="overview-contact-count">0</strong><span>ลูกค้า</span></div>
+        </div>
+    </div>
+
+    <div class="overview-toolbar">
+        <div id="overview-search-wrap">
+            <span aria-hidden="true">🔍</span>
+            <input id="overview-search-input" type="text" autocomplete="off"
+                   placeholder="ค้นหาชื่อลูกค้า, บริษัท, เบอร์โทร, ที่อยู่ หรือ Line ID...">
+        </div>
+        <button type="button" id="overview-clear-search" title="ล้างการค้นหา">ล้าง</button>
+    </div>
+
+    <div id="overview-company-grid">
+        <div class="overview-empty">
+            <strong>กำลังโหลดข้อมูลลูกค้า...</strong>
+            <span>ระบบกำลังเชื่อมต่อฐานข้อมูล</span>
+        </div>
+    </div>
+</section>
+
+<main class="max-w-7xl mx-auto px-4 mt-3 flex gap-4 w-full flex-grow h-[calc(100vh-100px)] overflow-hidden">
         
         <!-- ส่วนฟอร์มเพิ่มรายการ (ปรับให้ปุ่มบันทึกอยู่ด้านล่างสุดและมองเห็นเสมอ) -->
         <section id="form-section" class="w-full md:w-[380px] lg:w-[420px] flex-shrink-0 bg-white p-4 rounded-2xl shadow-sm border border-sky-100 h-full flex flex-col opacity-100 translate-x-0 transition-all duration-300">
@@ -5088,6 +5480,157 @@ document.getElementById('item-input').addEventListener('blur', function() {
             applyFilterAndSearch();
         }
 
+
+        // ==================== COMPANY OVERVIEW ====================
+        function getOverviewCompanies(keyword = '') {
+            const groups = new Map();
+            const search = String(keyword || '').trim().toLowerCase();
+
+            (Array.isArray(allDeliveries) ? allDeliveries : []).forEach(item => {
+                const companyName = String(item.companyName || '').trim();
+                if (!companyName) return;
+
+                const companyKey = String(item.companyKey || (typeof normalizeCompanyProductKey === 'function'
+                    ? normalizeCompanyProductKey(companyName)
+                    : companyName.toLowerCase().replace(/\\s+/g, '-'))).trim();
+
+                if (!groups.has(companyKey)) {
+                    groups.set(companyKey, {
+                        key: companyKey,
+                        companyName,
+                        customers: [],
+                        phones: [],
+                        addresses: [],
+                        lineIds: [],
+                        pendingCount: 0,
+                        itemCount: 0
+                    });
+                }
+
+                const group = groups.get(companyKey);
+                // ใช้ชื่อบริษัทล่าสุดที่มีอยู่ เพื่อรองรับการแก้ชื่อบริษัทโดยไม่ดึงชื่อเก่ามาแสดง
+                group.companyName = companyName;
+
+                const customerId = String(item.id || '');
+                if (!group.customers.some(c => c.id === customerId)) {
+                    group.customers.push({
+                        id: customerId,
+                        name: String(item.customerName || '').trim(),
+                        phone: String(item.phone || '').trim(),
+                        address: String(item.address || '').trim(),
+                        lineIds: getCustomerLineIds(item)
+                    });
+                }
+
+                const phone = String(item.phone || '').trim();
+                if (phone && !group.phones.includes(phone)) group.phones.push(phone);
+
+                const address = String(item.address || '').trim();
+                if (address && !group.addresses.includes(address)) group.addresses.push(address);
+
+                getCustomerLineIds(item).forEach(lineId => {
+                    if (lineId && !group.lineIds.includes(lineId)) group.lineIds.push(lineId);
+                });
+
+                const subs = Array.isArray(item.subItems) ? item.subItems : [];
+                group.itemCount += subs.length;
+                group.pendingCount += subs.filter(sub => sub && sub.status !== 'completed').length;
+            });
+
+            let companies = Array.from(groups.values());
+
+            if (search) {
+                companies = companies.filter(group => {
+                    const haystack = [
+                        group.companyName,
+                        ...group.customers.map(c => c.name),
+                        ...group.phones,
+                        ...group.addresses,
+                        ...group.lineIds
+                    ].join(' ').toLowerCase();
+                    return haystack.includes(search);
+                });
+            }
+
+            return companies.sort((a,b) => String(a.companyName).localeCompare(String(b.companyName), 'th'));
+        }
+
+        function renderCompanyOverview(keyword = '') {
+            const grid = document.getElementById('overview-company-grid');
+            if (!grid) return;
+
+            const allCompanies = getOverviewCompanies('');
+            const companies = getOverviewCompanies(keyword);
+            const companyCount = document.getElementById('overview-company-count');
+            const contactCount = document.getElementById('overview-contact-count');
+
+            if (companyCount) companyCount.textContent = companies.length.toLocaleString('th-TH');
+            if (contactCount) {
+                const totalContacts = companies.reduce((sum, group) => sum + group.customers.length, 0);
+                contactCount.textContent = totalContacts.toLocaleString('th-TH');
+            }
+
+            if (!companies.length) {
+                grid.innerHTML = `
+                    <div class="overview-empty">
+                        <strong>${allCompanies.length ? 'ไม่พบข้อมูลที่ตรงกับการค้นหา' : 'ยังไม่มีข้อมูลบริษัท'}</strong>
+                        <span>${allCompanies.length ? 'ลองค้นหาด้วยชื่อลูกค้า ชื่อบริษัท เบอร์โทร หรือที่อยู่' : 'เมื่อมีการบันทึกลูกค้า ระบบจะแสดงข้อมูลสรุปไว้ที่หน้านี้'}</span>
+                    </div>`;
+                return;
+            }
+
+            grid.innerHTML = companies.map(group => {
+                const primary = group.customers.find(c => c.name) || group.customers[0] || {};
+                const customerName = primary.name || 'ไม่ระบุชื่อลูกค้า';
+                const phone = primary.phone || group.phones[0] || '';
+                const address = primary.address || group.addresses[0] || '';
+                const customerExtra = Math.max(0, group.customers.length - 1);
+                const contactText = customerExtra > 0
+                    ? `ผู้ติดต่อ ${group.customers.length} คน`
+                    : 'ข้อมูลลูกค้า';
+                const statusText = group.pendingCount > 0
+                    ? `ค้างส่ง ${group.pendingCount.toLocaleString('th-TH')} รายการ`
+                    : 'จัดส่งครบแล้ว';
+
+                return `
+                    <article class="overview-company-card"
+                             role="button" tabindex="0"
+                             onclick="openOverviewCompany('${encodeURIComponent(group.key)}','${encodeURIComponent(group.companyName)}')"
+                             onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}">
+                        <div class="overview-company-badge">
+                            <span>🏢</span>
+                            <span class="overview-company-name" title="${escapeHTML(group.companyName)}">${escapeHTML(group.companyName)}</span>
+                        </div>
+
+                        <div class="overview-contact-name" title="${escapeHTML(customerName)}">${escapeHTML(customerName)}</div>
+
+                        ${phone ? `<div class="overview-contact-line"><span class="icon">📞</span><span class="value" title="${escapeHTML(phone)}">${escapeHTML(phone)}</span></div>` : ''}
+                        ${address ? `<div class="overview-contact-line"><span class="icon">📍</span><span class="value" title="${escapeHTML(address)}">${escapeHTML(address)}</span></div>` : ''}
+                        ${group.lineIds.length ? `<div class="overview-contact-line"><span class="icon">💬</span><span class="value">Line ${group.lineIds.length > 1 ? `${group.lineIds.length} IDs` : escapeHTML(group.lineIds[0])}</span></div>` : ''}
+
+                        <div class="overview-card-footer">
+                            <span>${contactText}</span>
+                            <span>${statusText}</span>
+                        </div>
+                    </article>`;
+            }).join('');
+        }
+
+        window.openOverviewCompany = function(encodedKey, encodedName) {
+            const companyName = decodeURIComponent(encodedName || '');
+            const searchInput = document.getElementById('search-input');
+            if (searchInput) searchInput.value = companyName;
+            selectedCustomerFilter = '';
+            currentFilter = 'all';
+            if (typeof setFilter === 'function') setFilter('all');
+            else if (typeof applyFilterAndSearch === 'function') applyFilterAndSearch();
+            if (typeof window.geminiNav === 'function') window.geminiNav('delivery');
+        };
+
+        function applyOverviewSearch() {
+            renderCompanyOverview(document.getElementById('overview-search-input')?.value || '');
+        }
+
         function applyFilterAndSearch() {
             const keyword = document.getElementById('search-input').value.toLowerCase().trim();
             const selectedCustomer = String(selectedCustomerFilter || '').trim().toLowerCase();
@@ -7086,6 +7629,37 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
             applyFilterAndSearch();
         });
     </script>
+
+<script id="overview-company-events">
+(function(){
+    function setupOverviewSearch(){
+        const input=document.getElementById('overview-search-input');
+        const clear=document.getElementById('overview-clear-search');
+        if(input && !input.dataset.bound){
+            input.dataset.bound='1';
+            input.addEventListener('input', applyOverviewSearch);
+            input.addEventListener('keydown', e=>{
+                if(e.key==='Escape'){
+                    input.value='';
+                    applyOverviewSearch();
+                    input.blur();
+                }
+            });
+        }
+        if(clear && !clear.dataset.bound){
+            clear.dataset.bound='1';
+            clear.addEventListener('click',()=>{
+                if(input) input.value='';
+                applyOverviewSearch();
+                input?.focus();
+            });
+        }
+        if(typeof renderCompanyOverview==='function') renderCompanyOverview(input?.value || '');
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setupOverviewSearch);
+    else setupOverviewSearch();
+})();
+</script>
 <script id="gemini-navigation-visual">
 (function(){
   const modalIds = [
@@ -7161,8 +7735,21 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
     markActive(target);
     closeAllWorkspaceLayers();
 
-    /* Switch/open immediately. No delayed navigation and no hidden modal layers. */
-    if(target==='workspace' || target==='delivery'){
+    const overview=document.getElementById('overview-section');
+    const main=document.querySelector('body > main');
+    if(target==='workspace'){
+      document.body.classList.add('overview-active');
+      document.body.classList.remove('delivery-active');
+      if(overview) overview.style.display='flex';
+      if(main) main.style.display='none';
+      if(typeof renderCompanyOverview==='function'){
+        renderCompanyOverview(document.getElementById('overview-search-input')?.value || '');
+      }
+    }else if(target==='delivery'){
+      document.body.classList.remove('overview-active');
+      document.body.classList.add('delivery-active');
+      if(overview) overview.style.display='none';
+      if(main) main.style.display='flex';
       const list=document.getElementById('delivery-list');
       if(list) list.scrollIntoView({behavior:'auto',block:'start'});
       window.scrollTo({top:0,left:0,behavior:'auto'});
@@ -7204,6 +7791,8 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
       b.onclick=openSidebarMobile;
       left.insertBefore(b,left.firstChild);
     }
+    // หน้าภาพรวมเป็นหน้าเริ่มต้น โดยไม่แตะการทำงานของข้อมูลเดิม
+    window.geminiNav('workspace');
   }
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup);
