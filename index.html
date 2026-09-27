@@ -3998,7 +3998,15 @@ function getCompanyPriceHistory(companyName, productName) {
             if (mainSearch) mainSearch.value = selectedCustomerFilter;
 
             closeCustomerModal();
-            applyFilterAndSearch();
+
+            // เมื่อกดเลือกจากหน้าต่างลูกค้า ให้เปิดหน้าหลักและค้นหาให้ทันที
+            // เพื่อให้ผลการค้นหาแสดงทันทีแม้ผู้ใช้กำลังอยู่หน้าอื่น
+            if(typeof window.geminiNav === 'function'){
+                window.geminiNav('delivery');
+            }else if(typeof applyFilterAndSearch === 'function'){
+                applyFilterAndSearch();
+            }
+            if(typeof applyFilterAndSearch === 'function') applyFilterAndSearch();
             showToast(`เลือกข้อมูลของ "${name}" และกรองรายการหลักแล้ว`, 'info');
         };
 
@@ -4014,6 +4022,14 @@ function getCompanyPriceHistory(companyName, productName) {
             pendingLineIds = [];
             renderLineIdTags();
             closeCustomerModal();
+
+            // ลูกค้าใหม่: กลับหน้าหลักและประมวลผลคำค้นทันทีเช่นเดียวกับการเลือกลูกค้าเดิม
+            if(typeof window.geminiNav === 'function'){
+                window.geminiNav('delivery');
+            }else if(typeof applyFilterAndSearch === 'function'){
+                applyFilterAndSearch();
+            }
+            if(typeof applyFilterAndSearch === 'function') applyFilterAndSearch();
             showToast(`ตั้งชื่อลูกค้าใหม่เป็น "${name}" แล้ว`, 'info');
             document.getElementById('company-name').focus();
         };
@@ -7477,8 +7493,8 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
       const customerCount=new Set(companyRows.map(x=>normalizeText(x.customerName)).filter(Boolean)).size;
       return `
         <article class="customer-overview-card" tabindex="0" role="button"
-          onclick="openOverviewCustomer('${encodeURIComponent(customer)}')"
-          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOverviewCustomer('${encodeURIComponent(customer)}')}" title="เปิดรายการของ ${escapeHTML(customer)}">
+          onclick="openOverviewCompany('${encodeURIComponent(company)}')"
+          onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openOverviewCompany('${encodeURIComponent(company)}')}" title="เปิดรายการของบริษัท ${escapeHTML(company)}">
           <div class="customer-overview-card-top">
             <div class="customer-overview-company"><span>🏢 ${escapeHTML(company)}</span></div>
             <div class="customer-overview-actions">
@@ -7493,6 +7509,29 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
     }).join('')}</div>`;
   };
 
+  window.openOverviewCompany=function(encodedCompany){
+    let company=encodedCompany;
+    try{company=decodeURIComponent(String(encodedCompany||''));}catch(_){ }
+    company=String(company||'').trim();
+    if(!company) return;
+
+    const mainSearch=document.getElementById('search-input');
+    const overviewSearch=document.getElementById('overview-search-input');
+
+    /* คลิกการ์ดบริษัท = ค้นหาบริษัทนั้นบนหน้าหลักทันที
+       ไม่ล็อก selectedCustomerFilter เพื่อให้เห็นข้อมูลของทุกลูกค้าในบริษัทเดียวกัน */
+    if(typeof selectedCustomerFilter!=='undefined') selectedCustomerFilter='';
+    if(mainSearch) mainSearch.value=company;
+    if(overviewSearch) overviewSearch.value=company;
+
+    if(typeof window.geminiNav==='function'){
+      window.geminiNav('delivery');
+    }else if(typeof applyFilterAndSearch==='function'){
+      applyFilterAndSearch();
+    }
+  };
+
+  /* คงฟังก์ชันเดิมไว้สำหรับกรณีที่มีโค้ดส่วนอื่นเรียกดูเฉพาะลูกค้า */
   window.openOverviewCustomer=function(encodedName){
     let name=encodedName;
     try{name=decodeURIComponent(String(encodedName||''));}catch(_){ }
@@ -7632,6 +7671,9 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
       window.scrollTo({top:0,left:0,behavior:'auto'});
     }else if(target==='delivery'){
       if(typeof window.setOverviewMode==='function') window.setOverviewMode('delivery');
+      /* หลังจากเปลี่ยนจากภาพรวมมาหน้าหลัก ต้องประมวลผลคำค้นอีกครั้ง
+         เพราะ openOverviewCompany ใส่ชื่อบริษัทลง search-input ไว้ก่อนแล้ว */
+      if(typeof applyFilterAndSearch==='function') applyFilterAndSearch();
       const list=document.getElementById('delivery-list');
       if(list) list.scrollTop=0;
       window.scrollTo({top:0,left:0,behavior:'auto'});
