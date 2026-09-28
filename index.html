@@ -1481,6 +1481,98 @@ body > header{z-index:900 !important}
     #form-section{overflow-y:auto;scrollbar-width:none}
     #form-section::-webkit-scrollbar{display:none}
 }
+
+
+
+/* ==================== RUNNING ตัวการ์ตูนวิ่ง CHARACTER ANIMATION ==================== */
+
+.running-char-container {
+    position: fixed;
+    bottom: 14px;
+    right: 20px;
+    z-index: 65000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    /* ควบคุมการเดินไปซ้ายและกลับขวา (ย้ายตำแหน่งทั้งตัว) */
+    animation: charWalkX 6s ease-in-out infinite alternate;
+}
+
+.char-sprite {
+    font-size: 30px;
+    filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
+    /* ควบคุมการกระเด้งขึ้นลง + การหันหน้าซ้ายขวา (Flip) โดยไม่หมุนรอบตัวเอง */
+    animation: charBounceRun 0.4s ease-in-out infinite alternate, charFlipFacing 6s steps(1, end) infinite alternate;
+}
+
+.char-shadow {
+    width: 22px;
+    height: 4px;
+    background: rgba(0, 0, 0, 0.25);
+    border-radius: 50%;
+    animation: shadowScale 0.4s ease-in-out infinite alternate;
+}
+
+/* 1. ควบคุมการเคลื่อนที่ซ้าย-ขวา (Desktop) */
+@keyframes charWalkX {
+    0% {
+        transform: translateX(0);
+    }
+    100% {
+        transform: translateX(-240px); /* ระยะทางที่น้องเสือจะวิ่งไปทางซ้าย */
+    }
+}
+
+/* 2. ควบคุมการวิ่งกระเด้งขึ้นลงอย่างเดียว (ไม่มี rotate หมุนติ้ว) */
+@keyframes charBounceRun {
+    0% {
+        transform: translateY(0);
+    }
+    100% {
+        transform: translateY(-8px);
+    }
+}
+
+/* 3. ควบคุมการหันหน้าซ้าย-ขวาให้ตรงกับจังหวะเดินไปและกลับ */
+@keyframes charFlipFacing {
+    0% {
+        transform: scaleX(1); /* ตอนเริ่มต้น หันหน้ามองขวา */
+    }
+    100% {
+        transform: scaleX(-1); /* ตอนวิ่งกลับ หันหน้ามองซ้าย */
+    }
+}
+
+/* เงาขยับตามตัว */
+@keyframes shadowScale {
+    0% { transform: scale(1); opacity: 0.35; }
+    100% { transform: scale(0.75); opacity: 0.15; }
+}
+
+/* มือถือจอเล็ก: ปรับระยะวิ่งให้สั้นลงเพื่อไม่ให้ตกจอ */
+@media (max-width: 640px) {
+    .running-char-container {
+        right: 15px;
+        bottom: 10px;
+        animation: charWalkXMobile 4s ease-in-out infinite alternate;
+    }
+    .char-sprite {
+        font-size: 26px;
+        animation: charBounceRun 0.4s ease-in-out infinite alternate, charFlipFacingMobile 4s steps(1, end) infinite alternate;
+    }
+}
+
+@keyframes charWalkXMobile {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-140px); }
+}
+
+@keyframes charFlipFacingMobile {
+    0% { transform: scaleX(1); }
+    100% { transform: scaleX(-1); }
+}
 </style>
 
 </head>
@@ -7804,6 +7896,26 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup);
   else setup();
 })();
+
+
+document.getElementById('running-character')?.addEventListener('click', () => {
+    const messages = [
+        "บี๊บๆ! รถขนส่งพร้อมให้บริการครับ 🚚💨",
+        "ออเดอร์กำลังไปส่งแล้วนะ! 📦✨",
+        "ระบบขนส่งออนไลน์ กำลังทำงานอยู่! 💻",
+        "พักดื่มกาแฟสักนิดก่อนนะ ☕"
+    ];
+    const randomMsg = messages[Math.floor(Math.random() * messages.length)];
+    if (typeof showToast === 'function') {
+        showToast(randomMsg, 'info');
+    }
+});
 </script>
+
+<!-- ตัวการ์ตูนวิ่งเดินไปมามุมขวาล่าง -->
+<div id="running-character" class="running-char-container" title="น้องเสือจอมซน 🐾 (คลิกเพื่อทักทาย)">
+    <div class="char-sprite">🚚</div>
+    <div class="char-shadow"></div>
+</div>
 </body>
 </html>
