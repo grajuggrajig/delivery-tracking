@@ -156,8 +156,24 @@
 
         /* คลาสสำหรับควบคุมการซ่อน/แสดงแบบสไลด์ออกข้างอย่างนุ่มนวล */
         #form-section {
-            transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            /* ล็อกจุดหมุนไว้ที่ขอบขวา และใช้ระยะเลื่อนแบบคงที่
+               เพื่อไม่ให้ตำแหน่งกระโดดไปด้านขวาระหว่างที่ width กำลังยุบ/ขยาย */
+            --form-slide-distance: 420px;
+            transform-origin: right center;
+            transition:
+                width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                min-width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                max-width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                flex-basis 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                padding 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                margin 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                border-color 0.28s ease,
+                opacity 0.24s ease,
+                transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+                box-shadow 0.28s ease;
+            will-change: width, min-width, max-width, flex-basis, transform, opacity;
             overflow: hidden;
+            backface-visibility: hidden;
         }
 		/* บังคับซ่อน Scrollbar ทั้งหน้าจอ */
         html, body {
@@ -1135,12 +1151,13 @@ body > header{z-index:900 !important}
     margin:0 !important;
     border-width:0 !important;
     opacity:0 !important;
-    transform:translateX(-12px) !important;
+    transform:translate3d(var(--form-slide-distance),0,0) !important;
     pointer-events:none !important;
     overflow:hidden !important;
     box-shadow:none !important;
 }
 #form-section.form-expanded{
+    overflow:hidden !important;
     width:390px !important;
     min-width:390px !important;
     max-width:420px !important;
@@ -1150,6 +1167,9 @@ body > header{z-index:900 !important}
     pointer-events:auto !important;
 }
 @media (max-width:900px){
+    #form-section{
+        --form-slide-distance:360px;
+    }
     #form-section.form-expanded{
         width:360px !important;
         min-width:360px !important;
@@ -1157,6 +1177,9 @@ body > header{z-index:900 !important}
     }
 }
 @media (max-width:700px){
+    #form-section{
+        --form-slide-distance:100vw;
+    }
     #form-section.form-expanded{
         width:100% !important;
         min-width:0 !important;
@@ -2845,14 +2868,38 @@ function getCompanyPriceHistory(companyName, productName) {
         }
 
         function toggleSidebarForm() {
-            applyDeliveryFormVisibility(!isFormVisible);
+            const nextVisible = !isFormVisible;
+
+            /* หากกำลังจะเปิดจากหน้าอื่น เช่น ภาพรวมลูกค้า
+               ให้กลับมาหน้า Delivery ก่อน แล้วใช้สถานะเดียวกัน */
+            if (nextVisible && typeof window.geminiNav === 'function') {
+                window.geminiNav('delivery');
+                requestAnimationFrame(() => applyDeliveryFormVisibility(nextVisible));
+                return;
+            }
+
+            applyDeliveryFormVisibility(nextVisible);
         }
 
         function showDeliveryFormAndFocus() {
-            /* ปุ่ม ＋ เพิ่มรายการจัดส่ง ทำงานแบบเดียวกับ Hide/Show Form:
-               กดครั้งแรก = แสดง, กดอีกครั้ง = ซ่อน */
+            /* ＋ เพิ่มรายชื่อลูกค้า/บริษัท ใช้สถานะเดียวกับ Hide/Show Form
+               กดครั้งแรก = เปิด, กดซ้ำ = ปิด, กดต่อเนื่องใช้สถานะเดียวกัน */
             const nextVisible = !isFormVisible;
+
+            /* ถ้ากำลังเปิดจากหน้าอื่น ให้กลับหน้า Delivery ก่อน */
+            if (nextVisible && typeof window.geminiNav === 'function') {
+                window.geminiNav('delivery');
+                requestAnimationFrame(() => {
+                    applyDeliveryFormVisibility(nextVisible);
+                    requestAnimationFrame(() => {
+                        document.getElementById('customer-name')?.focus();
+                    });
+                });
+                return;
+            }
+
             applyDeliveryFormVisibility(nextVisible);
+
             if (nextVisible) {
                 requestAnimationFrame(() => {
                     document.getElementById('customer-name')?.focus();
