@@ -604,6 +604,15 @@ input:focus,textarea:focus,select:focus{
     border-color:#ded7c9 !important;
     background:linear-gradient(145deg,#f8f5ed,#f5f7fc) !important;
 }
+#sent-reminder-box{
+    background:linear-gradient(145deg,#ecfdf5,#f0fdf4) !important;
+    border-color:#bbf7d0 !important;
+}
+#sent-reminder-list > div{
+    background:rgba(255,255,255,.86);
+    border:1px solid #d1fae5;
+    border-radius:14px;
+}
 #save-reminder-btn{
     background:linear-gradient(135deg,#2563eb,#7c3aed) !important;
     box-shadow:0 10px 20px rgba(68,66,151,.18) !important;
@@ -2168,6 +2177,18 @@ body > header{z-index:900 !important}
 
             </div>
 
+
+            <!-- Background notification history -->
+            <div id="sent-reminder-box" class="hidden bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-5">
+                <div class="flex items-center justify-between gap-3 mb-3">
+                    <div>
+                        <h3 class="font-bold text-emerald-700">✅ แจ้งเตือนไปแล้ว</h3>
+                        <p class="text-[11px] text-emerald-700/80 mt-0.5">รายการนี้บันทึกจากระบบแจ้งเตือนเบื้องหลัง จึงยังแสดงได้แม้ปิด CRM ไปแล้ว</p>
+                    </div>
+                    <span id="sent-reminder-count" class="bg-white text-emerald-700 px-3 py-1 rounded-full text-xs font-bold border border-emerald-200">0 บริษัท</span>
+                </div>
+                <div id="sent-reminder-list" class="space-y-2"></div>
+            </div>
 
             <!-- Reminder List -->
             <div>
@@ -6918,9 +6939,16 @@ async function saveReminder() {
         dayOfMonth: rounds[0].dayOfMonth,
         notifyTime: rounds[0].notifyTime,
         beforeDays: rounds[0].beforeDays,
-        active: true,
+        active: editingReminderId
+            ? (allReminders.find(r => r.id === editingReminderId)?.active !== false)
+            : true,
+        backgroundWorker: 'google-apps-script',
+        notificationHistory: editingReminderId
+            ? undefined
+            : [],
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     };
+    if (editingReminderId) delete reminderData.notificationHistory;
 
     try {
         if (editingReminderId) {
@@ -6939,11 +6967,107 @@ async function saveReminder() {
     }
 }
 
+function formatReminderSentAt(value) {
+    if (!value) return '-';
+    try {
+        const d = value?.toDate ? value.toDate() : new Date(value);
+        if (Number.isNaN(d.getTime())) return '-';
+        return d.toLocaleString('th-TH', {
+            year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit'
+        });
+    } catch (e) { return '-'; }
+}
+
+function getReminderHistory(reminder) {
+    const history = Array.isArray(reminder.notificationHistory)
+        ? reminder.notificationHistory.filter(x => x && typeof x === 'object').map(x => ({ ...x }))
+        : [];
+
+    // รองรับประวัติจาก Google Apps Script รุ่นเดิม
+    // ที่บันทึกเป็น lastSentDate_round_1 / lastSentDate_round_2
+    const rounds = getReminderRounds(reminder);
+    rounds.forEach((round, index) => {
+        const roundNumber = index + 1;
+        const legacyDate = String(reminder[`lastSentDate_round_${roundNumber}`] || '').trim();
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(legacyDate)) return;
+
+        const alreadyRepresented = history.some(item =>
+            String(item.roundNumber || '') === String(roundNumber) &&
+            String(item.sentAt || '').slice(0, 10) === legacyDate
+        );
+        if (alreadyRepresented) return;
+
+        history.push({
+            cycleKey: `legacy|${reminder.id || 'new'}|${roundNumber}|${legacyDate}`,
+            sentAt: `${legacyDate}T${String(round.notifyTime || '08:00')}:00+07:00`,
+            companyName: reminder.companyName || '-',
+            title: reminder.title || 'แจ้งเตือน',
+            roundNumber,
+            beforeDays: Number(round.beforeDays || 0),
+            dueDate: legacyDate,
+            notifyDate: legacyDate,
+            notifyTime: round.notifyTime || '08:00',
+            channel: 'LINE',
+            legacy: true
+        });
+    });
+
+    return history;
+}
+
+function getLastReminderNotification(reminder) {
+    const history = getReminderHistory(reminder);
+    if (!history.length) return null;
+    return history.slice().sort((a, b) => new Date(b.sentAt || 0) - new Date(a.sentAt || 0))[0];
+}
+
+function renderSentReminderHistory() {
+    const box = document.getElementById('sent-reminder-box');
+    const list = document.getElementById('sent-reminder-list');
+    const count = document.getElementById('sent-reminder-count');
+    if (!box || !list || !count) return;
+
+    const entries = [];
+    const companyKeys = new Set();
+    allReminders.forEach(reminder => {
+        getReminderHistory(reminder).forEach(item => {
+            entries.push({ ...item, reminderId: reminder.id, companyName: item.companyName || reminder.companyName || '-', title: item.title || reminder.title || 'แจ้งเตือน' });
+            companyKeys.add(String(item.companyName || reminder.companyName || '-'));
+        });
+    });
+    entries.sort((a, b) => new Date(b.sentAt || 0) - new Date(a.sentAt || 0));
+    const latest = entries.slice(0, 20);
+
+    count.textContent = `${companyKeys.size} บริษัท`;
+    if (!latest.length) {
+        box.classList.add('hidden');
+        list.innerHTML = '';
+        return;
+    }
+
+    box.classList.remove('hidden');
+    list.innerHTML = latest.map(item => {
+        const before = Number(item.beforeDays || 0);
+        const due = item.dueDate ? `กำหนด ${escapeHTML(item.dueDate)}` : '';
+        const timing = before > 0 ? `แจ้งล่วงหน้า ${before} วัน` : 'ถึงกำหนด';
+        const channel = item.channel ? ` • ${escapeHTML(item.channel)}` : '';
+        return `<div class="p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div class="min-w-0">
+                <div class="text-sm font-bold text-emerald-800 truncate">🏢 ${escapeHTML(item.companyName)}</div>
+                <div class="text-[11px] text-slate-600 mt-0.5">📄 ${escapeHTML(item.title)} • รอบ ${Number(item.roundNumber) || 1} • ${timing}${due ? ` • ${due}` : ''}</div>
+            </div>
+            <div class="text-[10px] text-emerald-700 font-semibold whitespace-nowrap">แจ้งแล้ว ${formatReminderSentAt(item.sentAt)}${channel}</div>
+        </div>`;
+    }).join('');
+}
+
 function renderReminders() {
     const container = document.getElementById('reminder-list');
     const count = document.getElementById('reminder-count');
     if (!container) return;
     count.textContent = `${allReminders.length} รายการ`;
+    renderSentReminderHistory();
     if (!allReminders.length) {
         container.innerHTML = '<div class="text-center text-gray-400 py-8">ยังไม่มีรายการแจ้งเตือน</div>';
         return;
@@ -6958,6 +7082,10 @@ function renderReminders() {
         const roundBadge = reminder.repeat === 'monthly' && rounds.length === 2
             ? '<span class="text-[11px] bg-indigo-100 text-indigo-700 px-2.5 py-1 rounded-lg font-bold">2 รอบ/เดือน</span>'
             : '<span class="text-[11px] bg-blue-100 text-blue-700 px-2.5 py-1 rounded-lg font-bold">1 รอบ</span>';
+        const lastSent = getLastReminderNotification(reminder);
+        const sentBadge = lastSent
+            ? `<div class="mt-2 inline-flex items-center gap-1.5 text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 rounded-lg font-bold">✅ แจ้งแล้ว ${formatReminderSentAt(lastSent.sentAt)}</div>`
+            : `<div class="mt-2 inline-flex items-center gap-1.5 text-[10px] bg-slate-50 text-slate-500 border border-slate-200 px-2.5 py-1 rounded-lg font-semibold">⏳ รอการแจ้งเตือน</div>`;
 
         return `
             <div class="border border-slate-200 rounded-2xl p-4 bg-white shadow-sm ${active ? '' : 'opacity-50'}">
@@ -6969,6 +7097,7 @@ function renderReminders() {
                         </div>
                         <div class="text-blue-600 font-semibold mt-1">📄 ${escapeHTML(reminder.title || 'แจ้งเตือน')}</div>
                         <div class="text-sm text-gray-500 mt-2 leading-6">📅 ${roundText}</div>
+                        ${sentBadge}
                     </div>
                     <div class="flex items-center gap-2 flex-shrink-0">
                         <button onclick="toggleReminder('${reminder.id}', ${active})" class="${active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'} px-3 py-2 rounded-xl text-sm font-bold">${active ? '🟢 เปิด' : '⚪ ปิด'}</button>
@@ -7048,49 +7177,14 @@ window.deleteReminder = function(id) {
 };
 
 /* ============================================================
-   🔔 Reminder Engine
-   - ตรวจวัน + เวลาแจ้งเตือนจริง
-   - รองรับแจ้งล่วงหน้า X วัน
-   - รองรับ 1 / 2 รอบต่อเดือน
-   - รีเฟรช/F5 แล้วตรวจต่อได้
-   - ป้องกันแจ้งซ้ำด้วย localStorage ต่อรอบ/ต่อวัน
-   - ตรวจซ้ำทุก 30 วินาที และตรวจทันทีเมื่อกลับมาเปิดแท็บ
+   🔔 Reminder Engine — SERVER CONTROLLED
+   - Firestore เป็นแหล่งสถานะกลาง
+   - Google Apps Script เป็นตัวตรวจเวลา/ส่ง LINE เบื้องหลัง
+   - ไม่ใช้ localStorage เป็นตัวตัดสินว่าแจ้งแล้ว
+   - CRM ที่เปิดอยู่ยังตรวจ UI ทุก 30 วินาที
    ============================================================ */
-const REMINDER_SENT_STORAGE_KEY = 'crm_reminder_sent_v2';
-
-function getReminderSentMap() {
-    try {
-        const raw = localStorage.getItem(REMINDER_SENT_STORAGE_KEY);
-        const parsed = raw ? JSON.parse(raw) : {};
-        return parsed && typeof parsed === 'object' ? parsed : {};
-    } catch (error) {
-        console.warn('โหลดสถานะแจ้งเตือนไม่สำเร็จ:', error);
-        return {};
-    }
-}
-
-function saveReminderSentMap(map) {
-    try {
-        localStorage.setItem(REMINDER_SENT_STORAGE_KEY, JSON.stringify(map));
-    } catch (error) {
-        console.warn('บันทึกสถานะแจ้งเตือนไม่สำเร็จ:', error);
-    }
-}
-
 function getReminderDateKey(date) {
     return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
-
-function getReminderRoundKey(reminder, round, roundNumber, notifyDate) {
-    const ownerKey = currentAuthUser?.uid || reminder.ownerUid || 'local';
-    return [
-        ownerKey,
-        reminder.id || 'new',
-        roundNumber,
-        getReminderDateKey(notifyDate),
-        String(round.notifyTime || '08:00'),
-        Number(round.beforeDays || 0)
-    ].join('|');
 }
 
 function getMonthDate(year, monthIndex, dayOfMonth) {
@@ -7102,85 +7196,68 @@ function getMonthDate(year, monthIndex, dayOfMonth) {
 function getReminderCandidates(reminder, round, roundNumber, now) {
     const candidates = [];
     const baseMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-    // ตรวจเดือนปัจจุบันและเดือนถัดไป เพื่อรองรับกรณีแจ้งล่วงหน้า
-    // เช่น กำหนดวันที่ 1 แต่แจ้งล่วงหน้า 3 วัน จะต้องแจ้งในเดือนก่อนหน้า
     for (let monthOffset = 0; monthOffset <= 1; monthOffset++) {
         const monthDate = new Date(baseMonth.getFullYear(), baseMonth.getMonth() + monthOffset, 1);
         const dueDate = getMonthDate(monthDate.getFullYear(), monthDate.getMonth(), round.dayOfMonth);
         const notifyDate = new Date(dueDate);
         notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
-
         candidates.push({ reminder, round, roundNumber, dueDate, notifyDate });
     }
-
     return candidates;
+}
+
+function getReminderCandidateForNow(reminder, round, roundNumber, now) {
+    if (reminder.repeat === 'monthly') return getReminderCandidates(reminder, round, roundNumber, now);
+    const dueDate = getMonthDate(now.getFullYear(), now.getMonth(), round.dayOfMonth);
+    const notifyDate = new Date(dueDate);
+    notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
+    return [{ reminder, round, roundNumber, dueDate, notifyDate }];
 }
 
 function isReminderTimeReached(now, notifyDate, notifyTime) {
     if (getReminderDateKey(now) !== getReminderDateKey(notifyDate)) return false;
-
     const match = String(notifyTime || '08:00').match(/^([01]\d|2[0-3]):([0-5]\d)$/);
     if (!match) return false;
-
-    const notifyAt = new Date(
-        now.getFullYear(),
-        now.getMonth(),
-        now.getDate(),
-        Number(match[1]),
-        Number(match[2]),
-        0,
-        0
-    );
-
+    const notifyAt = new Date(now.getFullYear(), now.getMonth(), now.getDate(), Number(match[1]), Number(match[2]), 0, 0);
     return now.getTime() >= notifyAt.getTime();
 }
 
-function showReminderAlert(reminder, round, roundNumber, dueDate) {
-    const before = Number(round.beforeDays || 0);
-    const company = String(reminder.companyName || '-');
-    const title = String(reminder.title || 'แจ้งเตือน');
-    const dueText = getReminderDateKey(dueDate);
-    const message = before > 0
-        ? `🔔 ${company} — ${title} | แจ้งล่วงหน้า ${before} วัน | กำหนด ${dueText} | รอบ ${roundNumber}`
-        : `🔔 ${company} — ${title} | ถึงกำหนดวันนี้ | รอบ ${roundNumber}`;
-
-    // Toast เป็นกลไกหลัก จึงไม่ต้องพึ่ง permission ของ Browser Notification
-    if (typeof showToast === 'function') {
-        showToast(message, 'warning');
-    }
-
-    // ถ้าผู้ใช้เคยอนุญาต Browser Notification ไว้แล้ว ให้แสดงเพิ่มในระดับระบบ
-    // จะไม่เรียก requestPermission อัตโนมัติ เพื่อไม่รบกวนผู้ใช้ด้วย popup permission
-    try {
-        if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('🔔 CRM Reminder', {
-                body: `${company}\n${title}\n${before > 0 ? `แจ้งล่วงหน้า ${before} วัน • ` : ''}กำหนด ${dueText}`,
-                tag: `crm-reminder-${reminder.id || 'new'}-${roundNumber}-${getReminderDateKey(dueDate)}`,
-                renotify: false
-            });
-        }
-    } catch (error) {
-        console.warn('Browser Notification error:', error);
-    }
+function getReminderCycleKey(reminder, round, roundNumber, dueDate, notifyDate) {
+    return [
+        reminder.id || 'new',
+        roundNumber,
+        getReminderDateKey(dueDate),
+        getReminderDateKey(notifyDate),
+        String(round.notifyTime || '08:00'),
+        Number(round.beforeDays || 0)
+    ].join('|');
 }
 
-function cleanupOldReminderSentMap(sentMap, now) {
-    const cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - 370);
-    const cutoffKey = getReminderDateKey(cutoff);
-    let changed = false;
+function getReminderHistoryForCycle(reminder, cycleKey) {
+    const direct = getReminderHistory(reminder).find(x => String(x.cycleKey || '') === cycleKey);
+    if (direct) return direct;
 
-    Object.keys(sentMap).forEach(key => {
-        const parts = key.split('|');
-        const datePart = parts[3];
-        if (datePart && datePart < cutoffKey) {
-            delete sentMap[key];
-            changed = true;
-        }
-    });
-
-    if (changed) saveReminderSentMap(sentMap);
+    // ตรวจข้อมูลสถานะจาก Apps Script รุ่นเดิมด้วย
+    const parts = String(cycleKey || '').split('|');
+    if (parts.length < 5) return null;
+    const roundNumber = Number(parts[1]);
+    const cycleDate = String(parts[3] || '');
+    const legacyDate = String(reminder[`lastSentDate_round_${roundNumber}`] || '').trim();
+    if (legacyDate && legacyDate === cycleDate) {
+        return getReminderHistory(reminder).find(x =>
+            x.legacy &&
+            Number(x.roundNumber) === roundNumber &&
+            String(x.sentAt || '').slice(0, 10) === legacyDate
+        ) || {
+            cycleKey,
+            sentAt: `${legacyDate}T00:00:00+07:00`,
+            companyName: reminder.companyName || '-',
+            title: reminder.title || 'แจ้งเตือน',
+            roundNumber,
+            legacy: true
+        };
+    }
+    return null;
 }
 
 function checkTodayReminders() {
@@ -7190,78 +7267,33 @@ function checkTodayReminders() {
 
     const now = new Date();
     const dueReminders = [];
-    const sentMap = getReminderSentMap();
-    let sentMapChanged = false;
-
-    cleanupOldReminderSentMap(sentMap, now);
+    const sentHistory = [];
 
     allReminders.forEach(reminder => {
         if (reminder.active === false) return;
-
-        // รายการแบบครั้งเดียว: ใช้รอบแรกตามโครงสร้างเดิม
-        // รายการรายเดือน: รองรับ 1 หรือ 2 รอบตาม billingRounds
         const rounds = getReminderRounds(reminder);
         rounds.forEach((round, index) => {
             const roundNumber = index + 1;
-            if (!round.dayOfMonth || !round.notifyTime) return;
-
-            // สำหรับ monthly ตรวจเดือนปัจจุบัน/ถัดไป
-            // สำหรับ once ตรวจวันที่ในเดือนปัจจุบันเป็นหลัก
-            const candidates = reminder.repeat === 'monthly'
-                ? getReminderCandidates(reminder, round, roundNumber, now)
-                : [(() => {
-                    const dueDate = getMonthDate(now.getFullYear(), now.getMonth(), round.dayOfMonth);
-                    const notifyDate = new Date(dueDate);
-                    notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
-                    return { reminder, round, roundNumber, dueDate, notifyDate };
-                })()];
-
+            if (!round.dayOfMonth) return;
+            const candidates = getReminderCandidateForNow(reminder, round, roundNumber, now);
             candidates.forEach(candidate => {
                 const { dueDate, notifyDate } = candidate;
-                if (!isReminderTimeReached(now, notifyDate, round.notifyTime)) return;
-
-                const sentKey = getReminderRoundKey(reminder, round, roundNumber, notifyDate);
-                if (sentMap[sentKey]) return;
-
-                // แจ้งทันทีเมื่อถึงเวลา และบันทึกสถานะเพื่อไม่ให้แจ้งซ้ำทุก interval/F5
-                showReminderAlert(reminder, round, roundNumber, dueDate);
-                sentMap[sentKey] = new Date().toISOString();
-                sentMapChanged = true;
-            });
-        });
-
-        // แสดงรายการที่ต้องดำเนินการในวันนี้ โดยไม่จำเป็นต้องรอถึงเวลาของ toast
-        // เพื่อให้ผู้ใช้ยังเห็นรายการของวันนี้ตาม UI เดิม
-        rounds.forEach((round, index) => {
-            const roundNumber = index + 1;
-            if (!round.dayOfMonth) return;
-
-            const candidates = reminder.repeat === 'monthly'
-                ? getReminderCandidates(reminder, round, roundNumber, now)
-                : [(() => {
-                    const dueDate = getMonthDate(now.getFullYear(), now.getMonth(), round.dayOfMonth);
-                    const notifyDate = new Date(dueDate);
-                    notifyDate.setDate(notifyDate.getDate() - Number(round.beforeDays || 0));
-                    return { reminder, round, roundNumber, dueDate, notifyDate };
-                })()];
-
-            candidates.forEach(candidate => {
-                if (getReminderDateKey(candidate.notifyDate) === getReminderDateKey(now)) {
-                    dueReminders.push(candidate);
+                if (getReminderDateKey(notifyDate) === getReminderDateKey(now)) {
+                    const cycleKey = getReminderCycleKey(reminder, round, roundNumber, dueDate, notifyDate);
+                    const sent = getReminderHistoryForCycle(reminder, cycleKey);
+                    const item = { ...candidate, cycleKey, sent };
+                    dueReminders.push(item);
+                    if (sent) sentHistory.push(item);
                 }
             });
         });
     });
 
-    if (sentMapChanged) saveReminderSentMap(sentMap);
-
-    // กันรายการซ้ำกรณีรอบ/ข้อมูลเก่าซ้ำกัน
     const uniqueDue = [];
     const dueKeys = new Set();
     dueReminders.forEach(item => {
-        const key = `${item.reminder.id}|${item.roundNumber}|${getReminderDateKey(item.notifyDate)}`;
-        if (!dueKeys.has(key)) {
-            dueKeys.add(key);
+        if (!dueKeys.has(item.cycleKey)) {
+            dueKeys.add(item.cycleKey);
             uniqueDue.push(item);
         }
     });
@@ -7273,24 +7305,25 @@ function checkTodayReminders() {
     }
 
     box.classList.remove('hidden');
-    list.innerHTML = uniqueDue.map(({ reminder, round, roundNumber }) => {
+    list.innerHTML = uniqueDue.map(({ reminder, round, roundNumber, dueDate, sent }) => {
         const before = Number(round.beforeDays || 0);
         const message = before > 0
-            ? `แจ้งล่วงหน้า ${before} วัน (กำหนดจริงวันที่ ${round.dayOfMonth})`
-            : 'ถึงกำหนดดำเนินการวันนี้';
-        return `<div class="bg-white p-3 rounded-xl border border-red-200 shadow-2xs flex items-center justify-between gap-3">
-            <div><div class="text-xs font-bold text-red-700">🏢 ${escapeHTML(reminder.companyName)} - ${escapeHTML(reminder.title)} <span class="ml-1 text-[10px] bg-red-100 px-2 py-0.5 rounded">รอบ ${roundNumber}</span></div>
+            ? `แจ้งล่วงหน้า ${before} วัน (กำหนดจริงวันที่ ${getReminderDateKey(dueDate)})`
+            : `ถึงกำหนดดำเนินการวันนี้`;
+        const status = sent
+            ? `<span class="text-[11px] bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-lg font-bold">✅ แจ้งแล้ว ${formatReminderSentAt(sent.sentAt)}</span>`
+            : `<span class="text-[11px] bg-amber-100 text-amber-700 px-2.5 py-1 rounded-lg font-bold">⏳ รอระบบเบื้องหลัง</span>`;
+        return `<div class="bg-white p-3 rounded-xl border ${sent ? 'border-emerald-200' : 'border-red-200'} shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div><div class="text-xs font-bold ${sent ? 'text-emerald-700' : 'text-red-700'}">🏢 ${escapeHTML(reminder.companyName)} - ${escapeHTML(reminder.title)} <span class="ml-1 text-[10px] bg-red-100 px-2 py-0.5 rounded">รอบ ${roundNumber}</span></div>
             <div class="text-[11px] text-slate-500 mt-0.5">${message} ⏰ เวลา ${escapeHTML(round.notifyTime || '--:--')}</div></div>
-            <span class="text-[11px] bg-red-100 text-red-700 px-2.5 py-1 rounded-lg font-bold">ต้องทำวันนี้</span>
+            ${status}
         </div>`;
     }).join('');
 }
 
-// ตรวจทันทีหลังโหลดข้อมูล และตรวจซ้ำทุก 30 วินาทีขณะเปิด CRM ค้างไว้
+// ตรวจ UI ทันทีและทุก 30 วินาทีเมื่อเปิด CRM อยู่ แต่การส่งจริงไม่พึ่ง browser
 setTimeout(() => checkTodayReminders(), 1000);
 setInterval(() => checkTodayReminders(), 30000);
-
-// เมื่อกลับเข้าหน้า/สลับกลับแท็บ ให้ตรวจทันที เพราะ Browser อาจ throttle timer ตอนแท็บอยู่เบื้องหลัง
 window.addEventListener('focus', () => checkTodayReminders());
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible') checkTodayReminders();
