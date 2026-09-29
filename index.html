@@ -4396,6 +4396,49 @@ function getCompanyPriceHistory(companyName, productName) {
         const stockTableContainer = document.getElementById('stock-table-container');
         const deleteUnusedCompanyBtn = document.getElementById('delete-unused-company-btn');
 
+        // Cache สำหรับการค้นหาสต็อกโดยเฉพาะ: ป้องกันการวน allCompanyProducts ซ้ำทุกครั้งที่พิมพ์ 1 ตัวอักษร
+        let stockLinkedCompaniesById = new Map();
+        let stockLinkedCompaniesByName = new Map();
+        let stockSearchFrame = 0;
+
+        function rebuildStockLinkedCompanyCache() {
+            stockLinkedCompaniesById = new Map();
+            stockLinkedCompaniesByName = new Map();
+
+            allCompanyProducts.forEach(cp => {
+                const name = String(cp.companyName || '').trim();
+                const companyKey = normalizeCompanyProductKey(name);
+                if (!companyKey || !name) return;
+
+                const company = [companyKey, name];
+                if (cp.stockProductId) {
+                    if (!stockLinkedCompaniesById.has(cp.stockProductId)) {
+                        stockLinkedCompaniesById.set(cp.stockProductId, new Map());
+                    }
+                    stockLinkedCompaniesById.get(cp.stockProductId).set(companyKey, company);
+                }
+
+                const normalizedName = normalizeCompanyProductName(cp.name);
+                if (normalizedName) {
+                    if (!stockLinkedCompaniesByName.has(normalizedName)) {
+                        stockLinkedCompaniesByName.set(normalizedName, new Map());
+                    }
+                    stockLinkedCompaniesByName.get(normalizedName).set(companyKey, company);
+                }
+            });
+        }
+
+        function getCachedLinkedCompaniesForStockProduct(product) {
+            const result = new Map();
+            const byId = product?.id ? stockLinkedCompaniesById.get(product.id) : null;
+            const byName = stockLinkedCompaniesByName.get(normalizeCompanyProductName(product?.name));
+
+            byId?.forEach((value, key) => result.set(key, value));
+            byName?.forEach((value, key) => result.set(key, value));
+
+            return Array.from(result.values()).map(([, name]) => name);
+        }
+
         openStockModalBtn.addEventListener('click', () => {
             /* เปิดกรอบ Stock ให้ผู้ใช้เห็นทันที ก่อนทำงาน render/กรองข้อมูลที่อาจหนัก
                เพื่อไม่ให้ปุ่ม 📦สต็อก & ราคา ดูเหมือนค้างหรือกดไม่ติดเมื่อข้อมูลมีจำนวนมาก */
@@ -4494,7 +4537,13 @@ function getCompanyPriceHistory(companyName, productName) {
         });
 
         stockSearchBox.addEventListener('input', (e) => {
-            renderStockTable(e.target.value);
+            // รวมการพิมพ์/ลบที่เกิดติดกันไว้ใน frame เดียว ลดการ render ซ้ำและไม่บล็อกคีย์บอร์ด
+            const value = e.target.value;
+            if (stockSearchFrame) cancelAnimationFrame(stockSearchFrame);
+            stockSearchFrame = requestAnimationFrame(() => {
+                stockSearchFrame = 0;
+                renderStockTable(value);
+            });
         });
 
         stockCompanyFilter.addEventListener('change', () => {
@@ -4682,7 +4731,7 @@ function getCompanyPriceHistory(companyName, productName) {
         }
 
         function renderStockTable(filterText = '') {
-            refreshStockCompanyFilter();
+            // ไม่ refresh dropdown ทุกครั้งที่พิมพ์ เพราะข้อมูลบริษัทไม่ได้เปลี่ยนตามคำค้น
             const keyword = String(filterText || '').toLowerCase().trim();
             const selectedCompanyKey = normalizeCompanyProductKey(stockCompanyFilter?.value || '');
             const badge = document.getElementById('stock-count-badge');
@@ -4739,19 +4788,8 @@ function getCompanyPriceHistory(companyName, productName) {
                 const profitClass = profit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700';
                 const profitPrefix = profit >= 0 ? '+' : '';
 
-                const linkedCompanies = [...new Map(
-                    allCompanyProducts
-                        .filter(cp => {
-                            const sameStockId = cp.stockProductId && cp.stockProductId === p.id;
-                            const sameName = normalizeCompanyProductName(cp.name) === normalizeCompanyProductName(p.name);
-                            return sameStockId || sameName;
-                        })
-                        .map(cp => {
-                            const name = String(cp.companyName || '').trim();
-                            return [normalizeCompanyProductKey(name), name];
-                        })
-                        .filter(([key, name]) => key && name)
-                ).values()];
+                // ใช้ cache แทนการ filter allCompanyProducts ซ้ำสำหรับสินค้าทุกตัว
+                const linkedCompanies = getCachedLinkedCompaniesForStockProduct(p);
 
                 const companySourceHtml = linkedCompanies.length
                     ? `<div class="text-[10px] text-indigo-600 mt-1.5 flex items-start gap-1.5 flex-wrap">
@@ -4855,6 +4893,7 @@ function getCompanyPriceHistory(companyName, productName) {
                     snapshot.forEach(doc => {
                         allCompanyProducts.push({ id: doc.id, ...doc.data() });
                     });
+                    rebuildStockLinkedCompanyCache();
 
                     const historyModal = document.getElementById('company-all-history-modal');
                     if (historyModal) {
