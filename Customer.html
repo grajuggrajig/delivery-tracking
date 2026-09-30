@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Yellow Pages • สมุดหน้าเหลืองลูกค้า & บริษัท</title>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+<style>
+:root{
+  --navy:#172554;
+  --blue:#2563eb;
+  --indigo:#6d28d9;
+  --paper:#fff;
+  --bg:#f4f6fb;
+  --line:#e4e8f0;
+  --text:#172033;
+  --muted:#718096;
+  --green:#059669;
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:"Segoe UI","Noto Sans Thai",Tahoma,sans-serif;color:var(--text);background:
+  radial-gradient(circle at 10% 0%,rgba(37,99,235,.10),transparent 28%),
+  radial-gradient(circle at 95% 5%,rgba(109,40,217,.10),transparent 28%),var(--bg)}
+body{min-height:100vh}
+button,input{font:inherit}
+button{cursor:pointer}
+
+#app{min-height:100vh}
+.topbar{
+  position:sticky;top:0;z-index:20;
+  min-height:72px;padding:12px 20px;
+  display:flex;align-items:center;gap:14px;
+  color:#fff;background:linear-gradient(110deg,#172554,#2563eb 52%,#6d28d9);
+  box-shadow:0 8px 28px rgba(23,37,84,.20)
+}
+.brand-icon{
+  width:44px;height:44px;border-radius:13px;display:grid;place-items:center;
+  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);font-size:22px
+}
+.brand{min-width:0;flex:1}
+.brand strong{display:block;font-size:17px}
+.brand span{display:block;font-size:11px;color:#dbeafe;margin-top:2px}
+.status{
+  display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;
+  border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.10);font-size:11px;white-space:nowrap
+}
+.dot{width:8px;height:8px;border-radius:50%;background:#fbbf24}
+.dot.online{background:#34d399}.dot.error{background:#fb7185}
+.logout{
+  border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.10);
+  color:#fff;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700
+}
+
+.page{width:min(1400px,calc(100% - 28px));margin:18px auto 30px}
+.hero{
+  background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:22px;
+  padding:20px;box-shadow:0 15px 45px rgba(31,42,63,.08)
+}
+.hero-top{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}
+.kicker{font-size:10px;letter-spacing:.18em;color:#6d28d9;font-weight:900}
+h1{font-size:23px;margin:5px 0 4px}
+.sub{font-size:12px;color:var(--muted);margin:0}
+.actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.btn{
+  border:1px solid #dbe2ee;background:#fff;color:#334155;border-radius:11px;
+  padding:10px 13px;font-size:12px;font-weight:800
+}
+.btn.primary{background:linear-gradient(135deg,#2563eb,#6d28d9);color:#fff;border-color:transparent}
+.btn.green{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:17px}
+.stat{padding:13px 14px;border:1px solid var(--line);border-radius:15px;background:#fafbff}
+.stat b{font-size:20px}.stat span{font-size:11px;color:var(--muted);margin-left:6px}
+
+.toolbar{
+  display:grid;grid-template-columns:minmax(240px,1fr) auto auto;gap:9px;
+  margin-top:16px
+}
+.search{
+  min-width:0;border:1px solid #dbe2ee;background:#f8fafc;border-radius:12px;
+  padding:11px 13px;outline:none;font-size:13px
+}
+.search:focus{border-color:#7c6ac2;background:#fff;box-shadow:0 0 0 3px rgba(124,58,237,.08)}
+.select{border:1px solid #dbe2ee;background:#fff;border-radius:12px;padding:10px 12px;font-size:12px}
+
+.table-wrap{
+  margin-top:15px;border:1px solid var(--line);border-radius:17px;overflow:auto;
+  background:#fff;box-shadow:0 10px 30px rgba(31,42,63,.05)
+}
+table{width:100%;border-collapse:collapse;min-width:900px}
+thead th{
+  position:sticky;top:0;z-index:2;background:#f7f8fc;color:#53617a;
+  text-align:left;font-size:11px;padding:12px;border-bottom:1px solid var(--line);white-space:nowrap
+}
+tbody td{padding:12px;border-bottom:1px solid #eef1f5;font-size:12px;vertical-align:top}
+tbody tr:hover{background:#fafbff}
+.company{font-weight:900;color:#1d4ed8}
+.contact{font-weight:700}
+.muted{color:#94a3b8}
+.line-pill{
+  display:inline-block;padding:4px 7px;margin:2px 3px 2px 0;border-radius:8px;
+  background:#ecfdf5;border:1px solid #bbf7d0;color:#047857;font-size:10px;white-space:nowrap
+}
+.email-pill{
+  display:inline-block;padding:4px 7px;border-radius:8px;background:#eff6ff;
+  border:1px solid #bfdbfe;color:#1d4ed8;font-size:10px
+}
+.empty{text-align:center;padding:45px 20px;color:#94a3b8;font-size:13px}
+.footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
+
+@media(max-width:760px){
+  .topbar{padding:10px 12px}
+  .brand strong{font-size:14px}.brand span{font-size:9px}
+  .status{display:none}.logout{font-size:11px;padding:7px 9px}
+  .page{width:calc(100% - 16px);margin:9px auto 20px}
+  .hero{padding:14px;border-radius:18px}
+  .hero-top{display:block}
+  h1{font-size:19px}
+  .actions{margin-top:12px;justify-content:flex-start}
+  .btn{padding:9px 10px;font-size:11px}
+  .stats{gap:6px}.stat{padding:10px 8px}.stat b{font-size:16px}.stat span{font-size:9px;margin-left:2px}
+  .toolbar{grid-template-columns:1fr 1fr;margin-top:11px}
+  .toolbar .search{grid-column:1/-1}
+  .select{min-width:0}
+}
+</style>
+</head>
+<body>
+
+<div id="app" style="display:none">
+  <header class="topbar">
+    <div class="brand-icon">📒</div>
+    <div class="brand">
+      <strong>Yellow Pages</strong>
+      <span>สมุดหน้าเหลือง • ลูกค้า & บริษัท</span>
+    </div>
+    <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">กำลังเชื่อมต่อ...</span></div>
+    <button class="logout" id="logoutBtn">↩ กลับหน้าหลัก</button>
+  </header>
+
+  <main class="page">
+    <section class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="kicker">CUSTOMER DIRECTORY</div>
+          <h1>📒 สมุดหน้าเหลืองลูกค้า & บริษัท</h1>
+          <p class="sub">ข้อมูลถูกอ่านจาก Firestore collection <b>deliveries</b> ของระบบ Delivery Tracking & CRM</p>
+        </div>
+        <div class="actions">
+          <button class="btn" id="refreshBtn">↻ รีเฟรช</button>
+          <button class="btn green" id="exportFilteredBtn">⬇ Export CSV ที่ค้นหา</button>
+          <button class="btn primary" id="exportAllBtn">⬇ Export CSV ทั้งหมด</button>
+        </div>
+      </div>
+
+      <div class="stats">
+        <div class="stat">🏢 <b id="companyCount">0</b><span>บริษัท</span></div>
+        <div class="stat">👤 <b id="contactCount">0</b><span>ผู้ติดต่อ</span></div>
+        <div class="stat">📞 <b id="phoneCount">0</b><span>มีเบอร์โทร</span></div>
+      </div>
+
+      <div class="toolbar">
+        <input class="search" id="search" placeholder="🔎 ค้นหาบริษัท, ผู้ติดต่อ, เบอร์โทร, LINE หรืออีเมล...">
+        <select class="select" id="companyFilter"><option value="">ทุกบริษัท</option></select>
+        <select class="select" id="sort"><option value="company">เรียงตามบริษัท</option><option value="contact">เรียงตามผู้ติดต่อ</option><option value="phone">เรียงตามเบอร์โทร</option></select>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:23%">ชื่อบริษัท</th>
+              <th style="width:18%">ชื่อผู้ติดต่อ</th>
+              <th style="width:14%">เบอร์โทร</th>
+              <th style="width:18%">LINE</th>
+              <th style="width:18%">อีเมล</th>
+              <th style="width:9%">แหล่งข้อมูล</th>
+            </tr>
+          </thead>
+          <tbody id="rows">
+            <tr><td colspan="6" class="empty">กำลังโหลดข้อมูล...</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="footer" id="resultInfo">กำลังโหลด...</div>
+    </section>
+  </main>
+</div>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+  authDomain: "delivery-tracking-2313a.firebaseapp.com",
+  projectId: "delivery-tracking-2313a",
+  storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+  messagingSenderId: "631670801383",
+  appId: "1:631670801383:web:e720570af97bad7011f342",
+  measurementId: "G-BB2D5DJH3F"
+};
+
+if(!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(()=>{});
+
+const USER_EMAIL_DOMAIN = 'delivery-tracking-2313a.firebaseapp.com';
+let currentUser = null;
+let profile = null;
+let unsubscribe = null;
+let rawRows = [];
+let visibleRows = [];
+
+function usernameToAuthEmail(username){
+  const value = String(username||'').trim().toLowerCase();
+  if(value.includes('@')) return value;
+  return value.replace(/[^a-z0-9._-]/g,'_') + '@' + USER_EMAIL_DOMAIN;
+}
+function esc(v){
+  return String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+function lineIds(data){
+  const src = Array.isArray(data.lineIds) ? data.lineIds : (data.lineId ? [data.lineId] : []);
+  return [...new Set(src.map(x=>String(x||'').trim()).filter(Boolean))];
+}
+function emailValue(data){
+  // รองรับข้อมูลเก่าหรือข้อมูลภายนอกที่อาจมี email อยู่แล้ว
+  return String(data.email ?? data.emailAddress ?? data.customerEmail ?? data.contactEmail ?? '').trim();
+}
+function normalize(v){return String(v||'').trim().toLowerCase();}
+function setStatus(text, state=''){
+  document.getElementById('statusText').textContent=text;
+  document.getElementById('statusDot').className='dot '+state;
+}
+function uniqueKey(d){
+  return [
+    normalize(d.companyName || 'ไม่ระบุบริษัท'),
+    normalize(d.customerName || 'ไม่ระบุชื่อผู้ติดต่อ'),
+    normalize(d.phone),
+    lineIds(d).map(normalize).sort().join('|'),
+    normalize(emailValue(d))
+  ].join('¦');
+}
+function buildRows(docs){
+  const map = new Map();
+  docs.forEach(d=>{
+    const data=d.data ? d.data() : d;
+    const row={
+      companyName:String(data.companyName||'ไม่ระบุบริษัท').trim() || 'ไม่ระบุบริษัท',
+      customerName:String(data.customerName||'ไม่ระบุชื่อผู้ติดต่อ').trim() || 'ไม่ระบุชื่อผู้ติดต่อ',
+      phone:String(data.phone||'').trim(),
+      lineIds:lineIds(data),
+      email:emailValue(data)
+    };
+    const key=uniqueKey(data);
+    if(!map.has(key)) map.set(key,row);
+    else{
+      const old=map.get(key);
+      old.lineIds=[...new Set([...old.lineIds,...row.lineIds])];
+      if(!old.phone) old.phone=row.phone;
+      if(!old.email) old.email=row.email;
+    }
+  });
+  return [...map.values()];
+}
+function applyView(){
+  const q=normalize(document.getElementById('search').value);
+  const company=normalize(document.getElementById('companyFilter').value);
+  const sort=document.getElementById('sort').value;
+
+  visibleRows=rawRows.filter(r=>{
+    if(company && normalize(r.companyName)!==company) return false;
+    if(!q) return true;
+    const hay=[r.companyName,r.customerName,r.phone,r.email,...r.lineIds].map(normalize).join(' ');
+    return hay.includes(q);
+  }).sort((a,b)=>{
+    const aa=normalize(a[sort==='company'?'companyName':sort==='contact'?'customerName':'phone']);
+    const bb=normalize(b[sort==='company'?'companyName':sort==='contact'?'customerName':'phone']);
+    return aa.localeCompare(bb,'th');
+  });
+
+  render();
+}
+function render(){
+  const body=document.getElementById('rows');
+  if(!visibleRows.length){
+    body.innerHTML='<tr><td colspan="6" class="empty">ไม่พบข้อมูลที่ตรงกับคำค้นหา</td></tr>';
+  }else{
+    body.innerHTML=visibleRows.map(r=>`
+      <tr>
+        <td><div class="company">🏢 ${esc(r.companyName)}</div></td>
+        <td><div class="contact">👤 ${esc(r.customerName)}</div></td>
+        <td>${r.phone ? `<a href="tel:${esc(r.phone)}">${esc(r.phone)}</a>` : '<span class="muted">—</span>'}</td>
+        <td>${r.lineIds.length ? r.lineIds.map(x=>`<span class="line-pill">💬 ${esc(x)}</span>`).join('') : '<span class="muted">—</span>'}</td>
+        <td>${r.email ? `<span class="email-pill">✉ ${esc(r.email)}</span>` : '<span class="muted">—</span>'}</td>
+        <td><span class="muted">Firestore</span></td>
+      </tr>`).join('');
+  }
+  const companies=new Set(rawRows.map(r=>normalize(r.companyName)).filter(Boolean));
+  document.getElementById('companyCount').textContent=companies.size.toLocaleString('th-TH');
+  document.getElementById('contactCount').textContent=rawRows.length.toLocaleString('th-TH');
+  document.getElementById('phoneCount').textContent=rawRows.filter(r=>r.phone).length.toLocaleString('th-TH');
+  document.getElementById('resultInfo').textContent=`แสดง ${visibleRows.length.toLocaleString('th-TH')} รายการ จากทั้งหมด ${rawRows.length.toLocaleString('th-TH')} รายการ`;
+}
+function fillCompanies(){
+  const sel=document.getElementById('companyFilter');
+  const old=sel.value;
+  const companies=[...new Map(rawRows.map(r=>[normalize(r.companyName),r.companyName])).entries()]
+    .sort((a,b)=>a[1].localeCompare(b[1],'th'));
+  sel.innerHTML='<option value="">ทุกบริษัท</option>'+companies.map(([key,name])=>`<option value="${esc(key)}">${esc(name)}</option>`).join('');
+  sel.value=old;
+}
+function csvCell(v){
+  // CSV มาตรฐาน: ครอบทุกช่องด้วย " และ escape " เป็น ""
+  return '"' + String(v??'').replace(/"/g,'""').replace(/\r?\n/g,' ') + '"';
+}
+function exportCSV(rows, suffix){
+  if(!rows.length){ alert('ไม่มีข้อมูลสำหรับ Export CSV'); return; }
+  const headers=['ชื่อบริษัท','ชื่อผู้ติดต่อ','เบอร์โทร','LINE','อีเมล'];
+  const lines=[headers.map(csvCell).join(',')];
+  rows.forEach(r=>{
+    lines.push([
+      r.companyName,
+      r.customerName,
+      r.phone,
+      r.lineIds.join(' | '),
+      r.email
+    ].map(csvCell).join(','));
+  });
+  // UTF-8 BOM + CRLF เพื่อให้ Excel/Windows อ่านภาษาไทยได้ถูกต้อง
+  const csv='\uFEFF'+lines.join('\r\n')+'\r\n';
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  const stamp=new Date();
+  const pad=n=>String(n).padStart(2,'0');
+  const filename=`yellow_pages_${stamp.getFullYear()}${pad(stamp.getMonth()+1)}${pad(stamp.getDate())}_${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}_${suffix}.csv`;
+  a.href=url;a.download=filename;
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+async function loadData(){
+  if(!currentUser || !profile) return;
+  if(unsubscribe) unsubscribe();
+  setStatus('กำลังโหลดข้อมูล...','');
+  const isAdmin=profile.role==='admin';
+  const uid=currentUser.uid;
+  let ref=db.collection('deliveries');
+  if(!isAdmin) ref=ref.where('ownerUid','==',uid);
+
+  unsubscribe=ref.onSnapshot(snapshot=>{
+    rawRows=buildRows(snapshot.docs);
+    fillCompanies();
+    applyView();
+    setStatus('ONLINE · Synced','online');
+  },err=>{
+    console.error(err);
+    rawRows=[];visibleRows=[];render();
+    setStatus('เชื่อมต่อไม่ได้','error');
+    alert('ไม่สามารถโหลดข้อมูลจาก Firestore ได้\\n'+(err.message||'กรุณาตรวจสอบสิทธิ์ Firebase'));
+  });
+}
+
+function showApp(){
+  document.getElementById('app').style.display='block';
+}
+
+// Customer.html ไม่ทำ Login เอง
+// login.html เป็นจุด Login เพียงจุดเดียวของระบบ
+function showLogin(){
+  window.location.replace('login.html');
+}
+
+document.getElementById('logoutBtn').addEventListener('click',()=>{
+  if(unsubscribe) unsubscribe();
+  window.location.href='index.html';
+});
+document.getElementById('refreshBtn').addEventListener('click',()=>{applyView()});
+document.getElementById('search').addEventListener('input',applyView);
+document.getElementById('companyFilter').addEventListener('change',applyView);
+document.getElementById('sort').addEventListener('change',applyView);
+document.getElementById('exportAllBtn').addEventListener('click',()=>exportCSV(rawRows,'all'));
+document.getElementById('exportFilteredBtn').addEventListener('click',()=>exportCSV(visibleRows,'filtered'));
+
+auth.onAuthStateChanged(async user=>{
+  currentUser=user||null;
+  if(!user){profile=null;showLogin();return}
+  try{
+    const snap=await db.collection('users').doc(user.uid).get();
+    if(!snap.exists) throw new Error('บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
+    profile=snap.data();
+    if(profile.active===false) throw new Error('บัญชีนี้ถูกปิดการใช้งาน');
+    showApp();
+    await loadData();
+  }catch(e){
+    console.error('ตรวจสอบสิทธิ์ Customer.html ไม่สำเร็จ:', e);
+    showLogin();
+  }
+});
+</script>
+</body>
+</html>
