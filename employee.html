@@ -216,8 +216,8 @@
                     </div>
                 </template>
             </div>
-            <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ วันทำงานบริษัทนับ <b>จันทร์–เสาร์</b> โดยไม่นับวันอาทิตย์ (วันเสาร์เป็นวันทำงานปกติ) • <b>มาปกติ ✓</b> นับเป็นวันที่มาปฏิบัติงาน • <b>มาสาย S</b> ยังนับเป็นการมาปฏิบัติงาน • <b>ปฏิบัติงานจริง = ✓ + S</b> • <b>ลากิจ P / ลาป่วย Sick</b> เป็นวันลาที่ได้รับอนุมัติ • เดือนที่ปิดแล้วจะคำนวณ <b>ขาดงาน = วันทำงาน − (✓ + S + P + Sick)</b> และยังคงนับสถานะ A ที่บันทึกไว้ด้วย ส่วนเดือนปัจจุบัน/อนาคตจะใช้สถานะ A ที่บันทึกจริง เพื่อไม่ให้วันในอนาคตถูกนับเป็นขาดงาน
+            <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700">
+                ℹ️ วันทำงานบริษัทนับ <b>จันทร์–เสาร์</b> โดยไม่นับวันอาทิตย์ • “ปฏิบัติงานจริง” นับเฉพาะ ✓ และ S • สรุปย้อนหลังอ่านจากข้อมูลที่บันทึกใน Firestore จริง
             </div>
 
             <!-- Summary Table Cards / Grid -->
@@ -234,7 +234,7 @@
                                 <th class="p-3 border-b text-center text-blue-700 bg-blue-50/50">ลากิจ (วัน)</th>
                                 <th class="p-3 border-b text-center text-purple-700 bg-purple-50/50">ลาป่วย (วัน)</th>
                                 <th class="p-3 border-b text-center text-rose-700 bg-rose-50/50">ขาดงาน (วัน)</th>
-                                <th class="p-3 border-b text-center bg-slate-50 font-bold">ปฏิบัติงานจริง</th>
+                                <th class="p-3 border-b text-center bg-slate-50 font-bold">รวมปฏิบัติงานจริง</th>
                             </tr>
                         </thead>
                         <tbody class="text-sm divide-y divide-slate-100">
@@ -249,8 +249,8 @@
                                     <td class="p-3 text-center font-bold text-amber-600 bg-amber-50/20" x-text="getSummaryCount(emp.id, 'S')"></td>
                                     <td class="p-3 text-center font-bold text-blue-600 bg-blue-50/20" x-text="getSummaryCount(emp.id, 'P')"></td>
                                     <td class="p-3 text-center font-bold text-purple-600 bg-purple-50/20" x-text="getSummaryCount(emp.id, 'Sick')"></td>
-                                    <td class="p-3 text-center font-bold text-rose-600 bg-rose-50/20" x-text="getEmployeePeriodStats(emp.id).absent"></td>
-                                    <td class="p-3 text-center font-bold text-slate-700 bg-slate-50" x-text="getEmployeePeriodStats(emp.id).actual"></td>
+                                    <td class="p-3 text-center font-bold text-rose-600 bg-rose-50/20" x-text="getSummaryCount(emp.id, 'A')"></td>
+                                    <td class="p-3 text-center font-bold text-slate-700 bg-slate-50" x-text="getSummaryCount(emp.id, '✓') + getSummaryCount(emp.id, 'S')"></td>
                                 </tr>
                             </template>
                         </tbody>
@@ -293,10 +293,6 @@
                 </div>
             </div>
 
-            <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ ประวัติถูกเก็บระยะยาวใน Firestore • ค้นได้ตาม <b>ปี / เดือน / พนักงาน / สถานะ</b> • วันเสาร์นับเป็นวันทำงาน • ปฏิบัติงานจริง = <b>✓ + S</b> • ลากิจและลาป่วยถือเป็นวันลาที่ได้รับอนุมัติ • เดือนที่ปิดแล้วใช้สูตรขาดงานจากวันทำงานจริง และเดือนปัจจุบันใช้ A ที่บันทึกไว้
-            </div>
-
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
                 <template x-for="card in historySummaryCards" :key="card.key">
                     <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
@@ -337,7 +333,7 @@
                                     <td class="p-3 text-center font-bold text-purple-600" x-text="row.sick"></td>
                                     <td class="p-3 text-center font-bold text-rose-600" x-text="row.absent"></td>
                                     <td class="p-3 text-center font-bold text-slate-600" x-text="row.holiday"></td>
-                                    <td class="p-3 text-center font-bold text-indigo-600" x-text="row.actual"></td>
+                                    <td class="p-3 text-center font-bold text-indigo-600" x-text="row.normal + row.late"></td>
                                 </tr>
                             </template>
                             <tr x-show="!historyEmployeeSummary.length"><td colspan="9" class="p-8 text-center text-sm text-slate-400">ยังไม่มีข้อมูลที่บันทึกตามตัวกรองนี้</td></tr>
@@ -698,86 +694,36 @@
                     return rows;
                 },
 
-                getWorkdaysForRange(year, month, startDay=1, endDay=null) {
-                    const totalDays = new Date(year, month, 0).getDate();
-                    const end = Math.min(endDay || totalDays, totalDays);
+                getCompanyWorkdays() {
                     let count = 0;
-                    for (let day = Math.max(1, startDay); day <= end; day++) {
-                        if (new Date(year, month - 1, day).getDay() !== 0) count++; // จันทร์–เสาร์เป็นวันทำงาน
+                    let start = 1, end = this.daysInCurrentMonth;
+                    if (this.selectedPeriod === 'first_half') end = Math.min(15, this.daysInCurrentMonth);
+                    if (this.selectedPeriod === 'second_half') start = 16;
+                    for (let day = start; day <= end; day++) {
+                        const dow = new Date(this.selectedYear, this.selectedMonth - 1, day).getDay();
+                        if (dow !== 0) count++; // จันทร์–เสาร์เป็นวันทำงาน, อาทิตย์เป็นวันหยุด
                     }
                     return count;
                 },
 
-                isPeriodComplete(year, month, startDay=1, endDay=null) {
-                    const totalDays = new Date(year, month, 0).getDate();
-                    const end = Math.min(endDay || totalDays, totalDays);
-                    const endDate = new Date(year, month - 1, end, 23, 59, 59, 999);
-                    return endDate < new Date();
-                },
-
-                getEmployeeStatsForRange(empId, year, month, startDay=1, endDay=null) {
-                    const totalDays = new Date(year, month, 0).getDate();
-                    const end = Math.min(endDay || totalDays, totalDays);
-                    let normal = 0, late = 0, personal = 0, sick = 0, explicitAbsent = 0, holiday = 0;
-
-                    for (let day = Math.max(1, startDay); day <= end; day++) {
-                        const status = this.getRecordedStatus(empId, year, month, day);
-                        if (status === '✓') normal++;
-                        else if (status === 'S') late++;
-                        else if (status === 'P') personal++;
-                        else if (status === 'Sick') sick++;
-                        else if (status === 'A') explicitAbsent++;
-                        else if (status === 'H') holiday++;
-                    }
-
-                    const workdays = this.getWorkdaysForRange(year, month, startDay, end);
-                    const actual = normal + late;
-                    const approvedLeave = personal + sick;
-                    const balanceAbsent = Math.max(0, workdays - actual - approvedLeave);
-                    const absent = this.isPeriodComplete(year, month, startDay, end)
-                        ? Math.max(explicitAbsent, balanceAbsent)
-                        : explicitAbsent;
-
-                    return { workdays, normal, late, actual, personal, sick, approvedLeave, explicitAbsent, absent, holiday };
-                },
-
-                getEmployeePeriodStats(empId) {
-                    let start = 1, end = this.daysInCurrentMonth;
-                    if (this.selectedPeriod === 'first_half') end = Math.min(15, this.daysInCurrentMonth);
-                    if (this.selectedPeriod === 'second_half') start = 16;
-                    return this.getEmployeeStatsForRange(empId, this.selectedYear, this.selectedMonth, start, end);
-                },
-
-                getCompanyWorkdays() {
-                    let start = 1, end = this.daysInCurrentMonth;
-                    if (this.selectedPeriod === 'first_half') end = Math.min(15, this.daysInCurrentMonth);
-                    if (this.selectedPeriod === 'second_half') start = 16;
-                    return this.getWorkdaysForRange(this.selectedYear, this.selectedMonth, start, end);
-                },
-
-                buildSummaryCards(rows, includeHoliday=true, workdays=null, absentOverride=null, actualOverride=null) {
+                buildSummaryCards(rows, includeHoliday=true, workdays=null) {
                     const count = s => rows.filter(r => r.status === s).length;
                     const cards = [];
                     if (workdays !== null) cards.push({key:'companyWorkdays',label:'วันทำงานบริษัท',value:workdays,class:'text-indigo-700'});
                     cards.push(
-                        {key:'work',label:'มาปกติ ✓',value:count('✓'),class:'text-emerald-600'},
-                        {key:'late',label:'มาสาย S',value:count('S'),class:'text-amber-600'},
-                        {key:'actual',label:'ปฏิบัติงานจริง',value:actualOverride !== null ? actualOverride : count('✓') + count('S'),class:'text-slate-700'},
-                        {key:'personal',label:'ลากิจ P',value:count('P'),class:'text-blue-600'},
-                        {key:'sick',label:'ลาป่วย Sick',value:count('Sick'),class:'text-purple-600'},
-                        {key:'absent',label:'ขาดงาน A',value:absentOverride !== null ? absentOverride : count('A'),class:'text-rose-600'}
+                        {key:'work',label:'มาปกติ',value:count('✓'),class:'text-emerald-600'},
+                        {key:'late',label:'มาสาย',value:count('S'),class:'text-amber-600'},
+                        {key:'personal',label:'ลากิจ',value:count('P'),class:'text-blue-600'},
+                        {key:'sick',label:'ลาป่วย',value:count('Sick'),class:'text-purple-600'},
+                        {key:'absent',label:'ขาดงาน',value:count('A'),class:'text-rose-600'}
                     );
-                    if (includeHoliday) cards.push({key:'holiday',label:'วันหยุดอาทิตย์',value:count('H'),class:'text-slate-500'});
+                    if (includeHoliday) cards.push({key:'holiday',label:'วันหยุด',value:count('H'),class:'text-slate-500'});
                     return cards;
                 },
 
                 preparePeriodSummary() {
                     const rows = this.getPeriodSummaryRows();
-                    const stats = this.employees.map(emp => this.getEmployeePeriodStats(emp.id));
-                    const absent = stats.reduce((n, s) => n + s.absent, 0);
-                    const actual = stats.reduce((n, s) => n + s.actual, 0);
-                    const workdays = this.getCompanyWorkdays() * this.employees.length;
-                    this.periodSummaryCards = this.buildSummaryCards(rows, true, workdays, absent, actual);
+                    this.periodSummaryCards = this.buildSummaryCards(rows, true, this.getCompanyWorkdays());
                 },
 
                 getHistoryWorkdays() {
@@ -785,7 +731,12 @@
                     const year = Number(this.historyYear);
                     const month = Number(this.historyMonth);
                     if (!year || !month) return null;
-                    return this.getWorkdaysForRange(year, month);
+                    const totalDays = new Date(year, month, 0).getDate();
+                    let count = 0;
+                    for (let day = 1; day <= totalDays; day++) {
+                        if (new Date(year, month - 1, day).getDay() !== 0) count++;
+                    }
+                    return count;
                 },
 
                 prepareHistory() {
@@ -815,44 +766,21 @@
 
                     rows.sort((a,b) => b.year-a.year || b.month-a.month || b.day-a.day || String(a.name).localeCompare(String(b.name),'th'));
                     this.filteredHistory = rows;
-
-                    // ประวัติแบบรายเดือนจะใช้สูตรเดียวกับรายงานปัจจุบัน เพื่อให้ข้อมูลย้อนหลังตรงกัน
-                    const monthStats = [];
-                    if (yearFilter && monthFilter && statusFilter === null) {
-                        this.employees.filter(emp => !empFilter || String(emp.id) === empFilter).forEach(emp => {
-                            monthStats.push(this.getEmployeeStatsForRange(emp.id, yearFilter, monthFilter));
-                        });
-                    }
-                    const historyWorkdays = this.getHistoryWorkdays();
-                    const historyAbsent = monthStats.length ? monthStats.reduce((n, s) => n + s.absent, 0) : null;
-                    const historyActual = monthStats.length ? monthStats.reduce((n, s) => n + s.actual, 0) : null;
-                    this.historySummaryCards = this.buildSummaryCards(rows, true, historyWorkdays, historyAbsent, historyActual);
+                    this.historySummaryCards = this.buildSummaryCards(rows, true, this.getHistoryWorkdays());
 
                     const byEmployee = new Map();
-                    if (monthStats.length) {
-                        this.employees.filter(emp => !empFilter || String(emp.id) === empFilter).forEach((emp, idx) => {
-                            const st = monthStats[idx];
-                            byEmployee.set(String(emp.id), {
-                                empId:String(emp.id), employeeNo:emp.employeeNo, name:emp.name,
-                                normal:st.normal, late:st.late, personal:st.personal, sick:st.sick,
-                                absent:st.absent, holiday:st.holiday, actual:st.actual, workdays:st.workdays
-                            });
+                    rows.forEach(r => {
+                        if (!byEmployee.has(r.empId)) byEmployee.set(r.empId, {
+                            empId:r.empId, employeeNo:r.employeeNo, name:r.name, normal:0, late:0, personal:0, sick:0, absent:0, holiday:0
                         });
-                    } else {
-                        rows.forEach(r => {
-                            if (!byEmployee.has(r.empId)) byEmployee.set(r.empId, {
-                                empId:r.empId, employeeNo:r.employeeNo, name:r.name, normal:0, late:0, personal:0, sick:0, absent:0, holiday:0, actual:0, workdays:null
-                            });
-                            const item = byEmployee.get(r.empId);
-                            if (r.status === '✓') item.normal++;
-                            else if (r.status === 'S') item.late++;
-                            else if (r.status === 'P') item.personal++;
-                            else if (r.status === 'Sick') item.sick++;
-                            else if (r.status === 'A') item.absent++;
-                            else if (r.status === 'H') item.holiday++;
-                            item.actual = item.normal + item.late;
-                        });
-                    }
+                        const item = byEmployee.get(r.empId);
+                        if (r.status === '✓') item.normal++;
+                        else if (r.status === 'S') item.late++;
+                        else if (r.status === 'P') item.personal++;
+                        else if (r.status === 'Sick') item.sick++;
+                        else if (r.status === 'A') item.absent++;
+                        else if (r.status === 'H') item.holiday++;
+                    });
                     this.historyEmployeeSummary = [...byEmployee.values()].sort((a,b) => String(a.name).localeCompare(String(b.name),'th'));
                 },
 
@@ -1018,10 +946,10 @@
                 exportToCSV() {
                     let csv = '\uFEFF';
                     csv += `รายงานสรุปเวลาทำงาน ${this.getPeriodLabel()} ประจำเดือน ${this.months[this.selectedMonth-1]} พ.ศ. ${this.selectedYear+543}\n`;
-                    csv += 'รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,วันทำงาน,มาปกติ(วัน),มาสาย(วัน),ปฏิบัติงานจริง(วัน),ลากิจ(วัน),ลาป่วย(วัน),ขาดงาน(วัน)\n';
+                    csv += 'รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,มาปกติ(วัน),มาสาย(ครั้ง),ลากิจ(วัน),ลาป่วย(วัน),ขาดงาน(วัน),รวมปฏิบัติงานจริง\n';
                     this.employees.forEach(emp => {
-                        const st = this.getEmployeePeriodStats(emp.id);
-                        csv += [escapeCSV('EMP'+String(emp.employeeNo || '').padStart(3,'0')),escapeCSV(emp.name),escapeCSV(emp.position),st.workdays,st.normal,st.late,st.actual,st.personal,st.sick,st.absent].join(',')+'\n';
+                        const normal=this.getSummaryCount(emp.id,'✓'), late=this.getSummaryCount(emp.id,'S'), personal=this.getSummaryCount(emp.id,'P'), sick=this.getSummaryCount(emp.id,'Sick'), absent=this.getSummaryCount(emp.id,'A');
+                        csv += [escapeCSV('EMP'+String(emp.employeeNo || '').padStart(3,'0')),escapeCSV(emp.name),escapeCSV(emp.position),normal,late,personal,sick,absent,normal+late].join(',')+'\n';
                     });
                     const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
                     const url = URL.createObjectURL(blob);
