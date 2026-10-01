@@ -8,6 +8,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Font -->
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Firebase: ใช้ Project / Authentication เดียวกับ index.html -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <!-- Alpine.js -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
@@ -16,6 +20,16 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 antialiased min-h-screen" x-data="attendanceApp()">
+
+    <div id="auth-startup-screen" class="fixed inset-0 z-[60000] flex items-center justify-center bg-slate-50">
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-xl p-8 text-center w-[min(380px,90vw)]">
+            <div class="w-10 h-10 mx-auto mb-4 rounded-full border-4 border-indigo-100 border-t-indigo-600 animate-spin"></div>
+            <div class="font-bold text-slate-800">กำลังตรวจสอบการเข้าสู่ระบบ</div>
+            <div class="text-xs text-slate-500 mt-1">กำลังเชื่อมต่อบัญชีเดียวกับระบบหลัก...</div>
+        </div>
+    </div>
+
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[70000] flex flex-col gap-2 pointer-events-none"></div>
 
     <!-- Header Navigation -->
     <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
@@ -65,6 +79,15 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     Export CSV
                 </button>
+                <div class="flex items-center gap-2">
+                    <span id="login-user-badge" class="hidden text-xs px-3 py-2 rounded-lg bg-white/10 border border-white/20 font-semibold">👤 กำลังตรวจสอบ...</span>
+                    <span id="connection-status" class="text-xs px-3 py-2 rounded-lg bg-white/10 border border-white/20 font-semibold flex items-center gap-2">
+                        <span id="connection-status-dot" class="w-2 h-2 rounded-full bg-amber-300 animate-pulse"></span>
+                        <span id="connection-status-text">กำลังเชื่อมต่อ...</span>
+                    </span>
+                    <button id="back-index-btn" type="button" class="hidden sm:inline-flex bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold px-3 py-2 rounded-lg transition">← ระบบหลัก</button>
+                    <button id="logout-btn" type="button" aria-label="Logout" title="ออกจากระบบ" class="hidden w-9 h-9 rounded-lg bg-white/10 hover:bg-white/20 border border-white/20 text-white items-center justify-center transition">↪</button>
+                </div>
             </div>
         </div>
     </header>
@@ -286,102 +309,272 @@
         </div>
     </div>
 
-    <!-- App Logic Script -->
+    <!-- App Logic Script: Firebase Online / Shared Login / Shared Data -->
     <script>
+        /* =========================================================
+           EMPLOYEE / ATTENDANCE ONLINE SYSTEM
+           ใช้ Firebase Project + Authentication เดียวกับ index.html
+           ข้อมูลแยกตาม ownerUid เช่นเดียวกับระบบหลัก
+           Collections:
+             employees  = รายชื่อพนักงาน
+             attendance = บันทึกเวลาแต่ละวัน
+           ========================================================= */
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+            authDomain: "delivery-tracking-2313a.firebaseapp.com",
+            projectId: "delivery-tracking-2313a",
+            storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+            messagingSenderId: "631670801383",
+            appId: "1:631670801383:web:e720570af97bad7011f342",
+            measurementId: "G-BB2D5DJH3F"
+        };
+
+        if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(err => console.warn('Auth persistence:', err));
+
+        let currentAuthUser = null;
+        let currentUserProfile = null;
+        let employeeUnsubscribe = null;
+        let attendanceUnsubscribe = null;
+        let authRedirecting = false;
+
+        const USER_EMAIL_DOMAIN = 'delivery-tracking-2313a.firebaseapp.com';
+
+        function usernameToAuthEmail(username) {
+            const value = String(username || '').trim().toLowerCase();
+            if (value.includes('@')) return value;
+            return value.replace(/[^a-z0-9._-]/g, '_') + '@' + USER_EMAIL_DOMAIN;
+        }
+
+        function escapeCSV(value) {
+            return '"' + String(value ?? '').replace(/"/g, '""') + '"';
+        }
+
+        function showToast(message, type='success') {
+            const box = document.getElementById('toast-container');
+            if (!box) return;
+            const el = document.createElement('div');
+            const color = type === 'error' ? 'bg-rose-600' : type === 'info' ? 'bg-slate-700' : 'bg-emerald-600';
+            el.className = `${color} text-white px-4 py-3 rounded-xl shadow-lg text-sm font-semibold transition-all duration-200`;
+            el.textContent = message;
+            box.appendChild(el);
+            setTimeout(() => el.remove(), 3200);
+        }
+
+        function setConnection(state, text) {
+            const status = document.getElementById('connection-status');
+            const dot = document.getElementById('connection-status-dot');
+            const label = document.getElementById('connection-status-text');
+            if (!status || !dot || !label) return;
+            label.textContent = text;
+            status.classList.remove('bg-white/10','bg-emerald-500/20','bg-amber-500/20','bg-rose-500/20');
+            dot.classList.remove('bg-amber-300','bg-emerald-300','bg-rose-300','animate-pulse');
+            if (state === 'online') { status.classList.add('bg-emerald-500/20'); dot.classList.add('bg-emerald-300'); }
+            else if (state === 'offline') { status.classList.add('bg-rose-500/20'); dot.classList.add('bg-rose-300'); }
+            else { status.classList.add('bg-amber-500/20'); dot.classList.add('bg-amber-300','animate-pulse'); }
+        }
+
+        async function ensureUserProfile(user) {
+            const ref = db.collection('users').doc(user.uid);
+            const snap = await ref.get();
+            if (!snap.exists) throw new Error('บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
+            return { id: snap.id, ...snap.data() };
+        }
+
+        function finishAuthStartup() {
+            document.getElementById('auth-startup-screen')?.classList.add('hidden');
+        }
+
+        function stopDataListeners() {
+            if (employeeUnsubscribe) { employeeUnsubscribe(); employeeUnsubscribe = null; }
+            if (attendanceUnsubscribe) { attendanceUnsubscribe(); attendanceUnsubscribe = null; }
+        }
+
+        function startDataListeners() {
+            stopDataListeners();
+            if (!currentAuthUser) return;
+
+            const app = Alpine.$data(document.body);
+            const isAdmin = currentUserProfile?.role === 'admin';
+            const uid = currentAuthUser.uid;
+            const scoped = collection => {
+                const ref = db.collection(collection);
+                return isAdmin ? ref : ref.where('ownerUid', '==', uid);
+            };
+
+            setConnection('syncing', 'กำลังซิงค์ข้อมูล...');
+
+            employeeUnsubscribe = scoped('employees').onSnapshot(snapshot => {
+                const rows = [];
+                snapshot.forEach(doc => rows.push({ id: doc.id, ...doc.data() }));
+                rows.sort((a,b) => Number(a.employeeNo || 999999) - Number(b.employeeNo || 999999) || String(a.name || '').localeCompare(String(b.name || ''), 'th'));
+                app.employees = rows;
+                app.loadingEmployees = false;
+                setConnection('online', 'เชื่อมต่อ Server แล้ว');
+            }, err => {
+                console.error('employees snapshot:', err);
+                app.loadingEmployees = false;
+                setConnection('offline', 'เชื่อมต่อไม่ได้');
+                showToast('ไม่สามารถโหลดข้อมูลพนักงานจาก Firebase ได้', 'error');
+            });
+
+            attendanceUnsubscribe = scoped('attendance').onSnapshot(snapshot => {
+                const records = {};
+                snapshot.forEach(doc => {
+                    const d = doc.data() || {};
+                    if (d.empId != null && d.year && d.month && d.day) {
+                        records[`${d.empId}_${d.year}_${d.month}_${d.day}`] = d.status || '✓';
+                    }
+                });
+                app.attendanceRecords = records;
+                app.loadingAttendance = false;
+                setConnection('online', 'เชื่อมต่อ Server แล้ว');
+            }, err => {
+                console.error('attendance snapshot:', err);
+                app.loadingAttendance = false;
+                setConnection('offline', 'เชื่อมต่อไม่ได้');
+                showToast('ไม่สามารถโหลดข้อมูลเวลาเข้างานได้', 'error');
+            });
+        }
+
+        async function handleAuthState(user) {
+            currentAuthUser = user || null;
+            stopDataListeners();
+
+            if (!user) {
+                currentUserProfile = null;
+                finishAuthStartup();
+                if (!authRedirecting) {
+                    authRedirecting = true;
+                    window.location.replace('login.html');
+                }
+                return;
+            }
+
+            try {
+                currentUserProfile = await ensureUserProfile(user);
+                if (currentUserProfile.active === false) {
+                    await auth.signOut();
+                    finishAuthStartup();
+                    return;
+                }
+
+                const badge = document.getElementById('login-user-badge');
+                if (badge) {
+                    badge.textContent = `👤 ${currentUserProfile.displayName || currentUserProfile.username || user.email}`;
+                    badge.classList.remove('hidden');
+                }
+                document.getElementById('logout-btn')?.classList.remove('hidden');
+                document.getElementById('logout-btn')?.classList.add('flex');
+                document.getElementById('back-index-btn')?.classList.remove('hidden');
+
+                startDataListeners();
+                finishAuthStartup();
+            } catch (err) {
+                console.error('Auth profile:', err);
+                finishAuthStartup();
+                try { await auth.signOut(); } catch (_) {}
+                if (!authRedirecting) {
+                    authRedirecting = true;
+                    window.location.replace('login.html');
+                }
+            }
+        }
+
+        document.getElementById('logout-btn')?.addEventListener('click', async () => {
+            try { await auth.signOut(); } catch (err) { console.error(err); showToast('ออกจากระบบไม่สำเร็จ', 'error'); }
+        });
+        document.getElementById('back-index-btn')?.addEventListener('click', () => window.location.href = 'index.html');
+
+        window.addEventListener('online', () => setConnection('syncing', 'กำลังเชื่อมต่อ...'));
+        window.addEventListener('offline', () => setConnection('offline', 'ออฟไลน์'));
+        auth.onAuthStateChanged(handleAuthState);
+
         function attendanceApp() {
             return {
                 currentTab: 'table',
                 selectedMonth: new Date().getMonth() + 1,
                 selectedYear: new Date().getFullYear(),
-                selectedPeriod: 'full', // 'full' | 'first_half' | 'second_half'
-                months: ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'],
-                availableYears: [2024, 2025, 2026, 2027],
-                
+                selectedPeriod: 'full',
+                months: ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],
+                availableYears: [2024,2025,2026,2027,2028,2029],
                 daysInCurrentMonth: 31,
                 activeDaysArray: [],
-                
-                // Initial Default Employees
-                employees: [
-                    { id: 1, name: 'นายสมชาย ใจดี', position: 'ผู้จัดการทั่วไป' },
-                    { id: 2, name: 'นางสาววิไล รักงาน', position: 'เจ้าหน้าที่บัญชี' },
-                    { id: 3, name: 'นายกิตติ มุ่งมั่น', position: 'ฝ่ายขายและการตลาด' },
-                    { id: 4, name: 'นางสาวศิริพร สุขสบาย', position: 'ฝ่ายบุคคล (HR)' },
-                    { id: 5, name: 'นายอานนท์ ช่างคิด', position: 'โปรแกรมเมอร์' }
-                ],
-
-                // Attendance Data Structure: { "empId_year_month_day": "status" }
+                employees: [],
                 attendanceRecords: {},
-
-                // Modal state
+                loadingEmployees: true,
+                loadingAttendance: true,
+                savingAttendance: {},
                 showEmpModal: false,
                 isEditingEmp: false,
                 empForm: { id: null, name: '', position: '' },
 
-                init() {
-                    this.updateDateRange();
-                    this.loadInitialRecords();
-                },
+                init() { this.updateDateRange(); },
 
                 updateDateRange() {
-                    // Total days in selected month/year
                     const totalDays = new Date(this.selectedYear, this.selectedMonth, 0).getDate();
                     this.daysInCurrentMonth = totalDays;
-
-                    let start = 1;
-                    let end = totalDays;
-
-                    if (this.selectedPeriod === 'first_half') {
-                        start = 1;
-                        end = Math.min(15, totalDays);
-                    } else if (this.selectedPeriod === 'second_half') {
-                        start = 16;
-                        end = totalDays;
-                    }
-
-                    let arr = [];
-                    for (let i = start; i <= end; i++) {
-                        arr.push(i);
-                    }
-                    this.activeDaysArray = arr;
+                    let start = 1, end = totalDays;
+                    if (this.selectedPeriod === 'first_half') end = Math.min(15, totalDays);
+                    if (this.selectedPeriod === 'second_half') start = 16;
+                    this.activeDaysArray = [];
+                    for (let i = start; i <= end; i++) this.activeDaysArray.push(i);
                 },
 
                 getPeriodLabel() {
                     if (this.selectedPeriod === 'first_half') return 'ครึ่งเดือนแรก (วันที่ 1-15)';
-                    if (this.selectedPeriod === 'second_half') return 'ครึ่งเดือนหลัง (วันที่ 16-' + this.daysInCurrentMonth + ')';
+                    if (this.selectedPeriod === 'second_half') return `ครึ่งเดือนหลัง (วันที่ 16-${this.daysInCurrentMonth})`;
                     return 'เต็มเดือน';
                 },
 
                 isWeekend(day) {
-                    const date = new Date(this.selectedYear, this.selectedMonth - 1, day);
-                    const dayOfWeek = date.getDay();
-                    return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+                    const d = new Date(this.selectedYear, this.selectedMonth - 1, day).getDay();
+                    return d === 0 || d === 6;
                 },
 
                 getShortDayName(day) {
-                    const daysName = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
-                    const date = new Date(this.selectedYear, this.selectedMonth - 1, day);
-                    return daysName[date.getDay()];
+                    const names = ['อา','จ','อ','พ','พฤ','ศ','ส'];
+                    return names[new Date(this.selectedYear, this.selectedMonth - 1, day).getDay()];
                 },
 
-                getRecordKey(empId, day) {
-                    return `${empId}_${this.selectedYear}_${this.selectedMonth}_${day}`;
-                },
+                getRecordKey(empId, day) { return `${empId}_${this.selectedYear}_${this.selectedMonth}_${day}`; },
 
                 getAttendance(empId, day) {
                     const key = this.getRecordKey(empId, day);
-                    if (this.attendanceRecords[key] !== undefined) {
-                        return this.attendanceRecords[key];
-                    }
-                    return this.isWeekend(day) ? 'H' : '✓';
+                    return this.attendanceRecords[key] !== undefined
+                        ? this.attendanceRecords[key]
+                        : (this.isWeekend(day) ? 'H' : '✓');
                 },
 
-                setAttendance(empId, day, value) {
+                async setAttendance(empId, day, value) {
+                    if (!currentAuthUser) return;
                     const key = this.getRecordKey(empId, day);
                     this.attendanceRecords[key] = value;
+                    this.savingAttendance[key] = true;
+                    try {
+                        const ref = db.collection('attendance').doc(key);
+                        await ref.set({
+                            empId: String(empId),
+                            year: Number(this.selectedYear),
+                            month: Number(this.selectedMonth),
+                            day: Number(day),
+                            status: value,
+                            ownerUid: currentAuthUser.uid,
+                            updatedBy: currentAuthUser.uid,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
+                    } catch (err) {
+                        console.error('save attendance:', err);
+                        showToast('บันทึกเวลาไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ', 'error');
+                    } finally {
+                        delete this.savingAttendance[key];
+                    }
                 },
 
                 getStatusBadgeClass(status) {
-                    switch (status) {
+                    switch(status) {
                         case '✓': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
                         case 'S': return 'bg-amber-50 text-amber-700 border-amber-200';
                         case 'P': return 'bg-blue-50 text-blue-700 border-blue-200';
@@ -393,31 +586,7 @@
                 },
 
                 getSummaryCount(empId, status) {
-                    let count = 0;
-                    // Loop only through active days array based on period selection
-                    this.activeDaysArray.forEach(day => {
-                        const currentStatus = this.getAttendance(empId, day);
-                        if (currentStatus === status) {
-                            count++;
-                        }
-                    });
-                    return count;
-                },
-
-                loadInitialRecords() {
-                    this.employees.forEach(emp => {
-                        for (let day = 1; day <= 31; day++) {
-                            const key = this.getRecordKey(emp.id, day);
-                            if (this.isWeekend(day)) {
-                                this.attendanceRecords[key] = 'H';
-                            } else {
-                                if (emp.id === 2 && day === 5) this.attendanceRecords[key] = 'Sick';
-                                else if (emp.id === 3 && day === 12) this.attendanceRecords[key] = 'S';
-                                else if (emp.id === 4 && day === 18) this.attendanceRecords[key] = 'P';
-                                else this.attendanceRecords[key] = '✓';
-                            }
-                        }
-                    });
+                    return this.activeDaysArray.reduce((n, day) => n + (this.getAttendance(empId, day) === status ? 1 : 0), 0);
                 },
 
                 openAddEmployeeModal() {
@@ -428,61 +597,84 @@
 
                 openEditEmployeeModal(emp) {
                     this.isEditingEmp = true;
-                    this.empForm = { ...emp };
+                    this.empForm = { id: emp.id, name: emp.name || '', position: emp.position || '' };
                     this.showEmpModal = true;
                 },
 
-                closeEmployeeModal() {
-                    this.showEmpModal = false;
-                },
+                closeEmployeeModal() { this.showEmpModal = false; },
 
-                saveEmployee() {
-                    if (!this.empForm.name.trim()) {
-                        alert('กรุณากรอกชื่อ-นามสกุลพนักงาน');
-                        return;
-                    }
-                    if (this.isEditingEmp) {
-                        const index = this.employees.findIndex(e => e.id === this.empForm.id);
-                        if (index !== -1) {
-                            this.employees[index] = { ...this.empForm };
+                async saveEmployee() {
+                    if (!currentAuthUser) { showToast('กรุณาเข้าสู่ระบบก่อนบันทึกข้อมูล', 'error'); return; }
+                    const name = String(this.empForm.name || '').trim();
+                    const position = String(this.empForm.position || '').trim();
+                    if (!name) { showToast('กรุณากรอกชื่อ-นามสกุลพนักงาน', 'error'); return; }
+
+                    const button = document.querySelector('[x-on\\:click="saveEmployee()"], [\\@click="saveEmployee()"]');
+                    try {
+                        if (this.isEditingEmp && this.empForm.id) {
+                            await db.collection('employees').doc(this.empForm.id).update({
+                                name, position,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                updatedBy: currentAuthUser.uid
+                            });
+                            showToast('แก้ไขข้อมูลพนักงานและบันทึกออนไลน์แล้ว', 'success');
+                        } else {
+                            const maxNo = this.employees.reduce((max, e) => Math.max(max, Number(e.employeeNo) || 0), 0);
+                            await db.collection('employees').add({
+                                employeeNo: maxNo + 1,
+                                name, position,
+                                ownerUid: currentAuthUser.uid,
+                                createdBy: currentAuthUser.uid,
+                                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            showToast('เพิ่มพนักงานและบันทึกออนไลน์แล้ว', 'success');
                         }
-                    } else {
-                        const newId = this.employees.length > 0 ? Math.max(...this.employees.map(e => e.id)) + 1 : 1;
-                        this.employees.push({ id: newId, name: this.empForm.name, position: this.empForm.position });
+                        this.closeEmployeeModal();
+                    } catch (err) {
+                        console.error('saveEmployee:', err);
+                        showToast('ไม่สามารถบันทึกข้อมูลพนักงานได้ กรุณาตรวจสอบ Firestore Rules', 'error');
                     }
-                    this.closeEmployeeModal();
                 },
 
-                deleteEmployee(id) {
-                    if (confirm('คุณต้องการลบพนักงานรายนี้ออกจากระบบใช่หรือไม่?')) {
-                        this.employees = this.employees.filter(e => e.id !== id);
+                async deleteEmployee(id) {
+                    const emp = this.employees.find(e => e.id === id);
+                    if (!emp) return;
+                    if (!confirm(`ต้องการลบ “${emp.name}” ออกจากระบบหรือไม่?\nข้อมูลเวลาเข้างานของพนักงานคนนี้จะถูกลบด้วย`)) return;
+                    try {
+                        const isAdmin = currentUserProfile?.role === 'admin';
+                        let q = db.collection('attendance');
+                        if (!isAdmin) q = q.where('ownerUid','==',currentAuthUser.uid);
+                        const snap = await q.get();
+                        const related = snap.docs.filter(d => String(d.data()?.empId) === String(id));
+                        let batch = db.batch();
+                        let count = 0;
+                        for (const d of related) {
+                            batch.delete(d.ref); count++;
+                            if (count === 450) { await batch.commit(); batch = db.batch(); count = 0; }
+                        }
+                        if (count) await batch.commit();
+                        await db.collection('employees').doc(id).delete();
+                        showToast('ลบพนักงานและข้อมูลเวลาออนไลน์แล้ว', 'success');
+                    } catch (err) {
+                        console.error('deleteEmployee:', err);
+                        showToast('ลบข้อมูลไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Firebase', 'error');
                     }
                 },
 
                 exportToCSV() {
-                    let csvContent = "\uFEFF"; // UTF-8 BOM for Thai language support in Excel
-                    
-                    csvContent += `รายงานสรุปเวลาทำงาน ช่วง${this.getPeriodLabel()} ประจำเดือน ${this.months[this.selectedMonth-1]} พ.ศ. ${this.selectedYear+543}\n`;
-                    csvContent += `รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,มาปกติ(วัน),มาสาย(ครั้ง),ลากิจ(วัน),ลาป่วย(วัน),ขาดงาน(วัน)\n`;
-
+                    let csv = '\uFEFF';
+                    csv += `รายงานสรุปเวลาทำงาน ${this.getPeriodLabel()} ประจำเดือน ${this.months[this.selectedMonth-1]} พ.ศ. ${this.selectedYear+543}\n`;
+                    csv += 'รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,มาปกติ(วัน),มาสาย(ครั้ง),ลากิจ(วัน),ลาป่วย(วัน),ขาดงาน(วัน),รวมปฏิบัติงานจริง\n';
                     this.employees.forEach(emp => {
-                        const normal = this.getSummaryCount(emp.id, '✓');
-                        const late = this.getSummaryCount(emp.id, 'S');
-                        const personal = this.getSummaryCount(emp.id, 'P');
-                        const sick = this.getSummaryCount(emp.id, 'Sick');
-                        const absent = this.getSummaryCount(emp.id, 'A');
-
-                        const row = [`EMP${String(emp.id).padStart(3, '0')}`, `"${emp.name}"`, `"${emp.position}"`, normal, late, personal, sick, absent];
-                        csvContent += row.join(",") + "\n";
+                        const normal=this.getSummaryCount(emp.id,'✓'), late=this.getSummaryCount(emp.id,'S'), personal=this.getSummaryCount(emp.id,'P'), sick=this.getSummaryCount(emp.id,'Sick'), absent=this.getSummaryCount(emp.id,'A');
+                        csv += [escapeCSV('EMP'+String(emp.employeeNo || '').padStart(3,'0')),escapeCSV(emp.name),escapeCSV(emp.position),normal,late,personal,sick,absent,normal+late].join(',')+'\n';
                     });
-
-                    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
-                    const link = document.createElement("a");
-                    link.setAttribute("href", encodedUri);
-                    link.setAttribute("download", `Attendance_Report_${this.selectedPeriod}_${this.selectedMonth}_${this.selectedYear}.csv`);
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
+                    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href=url; a.download=`Attendance_Report_${this.selectedYear}_${this.selectedMonth}_${this.selectedPeriod}.csv`;
+                    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
                 }
             }
         }
