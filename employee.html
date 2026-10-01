@@ -217,7 +217,7 @@
                 </template>
             </div>
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ วันทำงานบริษัทนับ <b>จันทร์–เสาร์</b> โดยไม่นับวันอาทิตย์ (วันเสาร์เป็นวันทำงานปกติ) • <b>มาปกติ ✓</b> นับเป็นวันที่มาปฏิบัติงาน • <b>มาสาย S</b> ยังนับเป็นการมาปฏิบัติงาน • <b>ปฏิบัติงานจริง = ✓ + S</b> • <b>ลากิจ P / ลาป่วย Sick</b> เป็นวันลาที่ได้รับอนุมัติ • เดือนที่ปิดแล้วจะคำนวณ <b>ขาดงาน = วันทำงาน − (✓ + S + P + Sick)</b> และยังคงนับสถานะ A ที่บันทึกไว้ด้วย ส่วนเดือนปัจจุบัน/อนาคตจะใช้สถานะ A ที่บันทึกจริง เพื่อไม่ให้วันในอนาคตถูกนับเป็นขาดงาน
+                ℹ️ วันทำงานบริษัทนับ <b>จันทร์–เสาร์</b> โดยไม่นับวันอาทิตย์ (วันเสาร์เป็นวันทำงานปกติ) • <b>มาปกติ ✓</b> นับเป็นวันที่มาปฏิบัติงาน • <b>มาสาย S</b> ยังนับเป็นการมาปฏิบัติงาน • <b>ปฏิบัติงานจริง = ✓ + S</b> • <b>ลากิจ P / ลาป่วย Sick</b> เป็นวันลาที่ได้รับอนุมัติ • สูตรคือ <b>วันทำงานสุทธิที่ต้องมาทำงาน = วันทำงาน − (P + Sick)</b> และ <b>ขาดงาน = วันทำงานสุทธิ − (✓ + S)</b> โดย S (สาย) ยังนับเป็นวันทำงาน ส่วนเดือนปัจจุบัน/อนาคตจะนับ A เฉพาะที่บันทึกจริง
             </div>
 
             <!-- Summary Table Cards / Grid -->
@@ -265,7 +265,7 @@
                 <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
                     <div>
                         <h2 class="text-lg font-bold text-slate-800">🕘 ประวัติการลงเวลาย้อนหลัง</h2>
-                        <p class="text-xs text-slate-500 mt-1">ค้นย้อนหลังตามปี เดือน พนักงาน และสถานะ ข้อมูลถูกอ่านจาก Firestore โดยตรง</p>
+                        <p class="text-xs text-slate-500 mt-1">เก็บประวัติระยะยาวใน Firestore • ค้นย้อนหลังตามปี / เดือน / พนักงาน / สถานะได้</p>
                     </div>
                     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 w-full xl:w-auto">
                         <select x-model="historyYear" @change="prepareHistory()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:border-indigo-500">
@@ -294,7 +294,7 @@
             </div>
 
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ ประวัติถูกเก็บระยะยาวใน Firestore • ค้นได้ตาม <b>ปี / เดือน / พนักงาน / สถานะ</b> • วันเสาร์นับเป็นวันทำงาน • ปฏิบัติงานจริง = <b>✓ + S</b> • ลากิจและลาป่วยถือเป็นวันลาที่ได้รับอนุมัติ • เดือนที่ปิดแล้วใช้สูตรขาดงานจากวันทำงานจริง และเดือนปัจจุบันใช้ A ที่บันทึกไว้
+                ℹ️ ประวัติถูกเก็บระยะยาวใน Firestore และไม่ถูกลบเมื่อเอาพนักงานออกจากรายชื่อ • ค้นได้ตาม <b>ปี / เดือน / พนักงาน / สถานะ</b> • วันจันทร์–เสาร์เป็นวันทำงานปกติ • วันอาทิตย์เป็นวันหยุด • ปฏิบัติงานจริง = <b>✓ + S</b> • ลากิจและลาป่วยเป็นวันลา • สูตรสรุปคือ วันทำงานสุทธิ = วันทำงาน − (P + Sick) และขาดงาน = วันทำงานสุทธิ − (✓ + S) เมื่อช่วงเวลาจบแล้ว; เดือนปัจจุบัน/อนาคตนับ A เฉพาะที่บันทึกจริง
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -561,13 +561,22 @@
 
             attendanceUnsubscribe = scoped('attendance').onSnapshot(snapshot => {
                 const records = {};
+                const historyMeta = {};
                 snapshot.forEach(doc => {
                     const d = doc.data() || {};
                     if (d.empId != null && d.year && d.month && d.day) {
-                        records[`${d.empId}_${d.year}_${d.month}_${d.day}`] = d.status || '✓';
+                        const key = `${d.empId}_${d.year}_${d.month}_${d.day}`;
+                        records[key] = d.status || '✓';
+                        historyMeta[key] = {
+                            employeeName: d.employeeName || '',
+                            employeePosition: d.employeePosition || '',
+                            employeeNo: d.employeeNo || '',
+                            recordedAt: d.updatedAt || d.createdAt || null
+                        };
                     }
                 });
                 app.attendanceRecords = records;
+                app.attendanceHistoryMeta = historyMeta;
                 app.refreshAvailableYears();
                 app.preparePeriodSummary();
                 app.prepareHistory();
@@ -646,6 +655,7 @@
                 activeDaysArray: [],
                 employees: [],
                 attendanceRecords: {},
+                attendanceHistoryMeta: {},
                 loadingEmployees: true,
                 loadingAttendance: true,
                 savingAttendance: {},
@@ -730,15 +740,42 @@
                         else if (status === 'H') holiday++;
                     }
 
+                    // สูตรสรุปที่ใช้ทั้งระบบ:
+                    // 1) วันทำงาน = จันทร์–เสาร์ (ไม่รวมวันอาทิตย์)
+                    // 2) P / Sick = วันลา จึงหักออกจากวันที่ต้องมาทำงาน
+                    // 3) ✓ / S = มาปฏิบัติงานจริง โดย S (สาย) ยังนับเป็นวันทำงาน
+                    // 4) A = ขาดงาน และเป็นส่วนหนึ่งของวันทำงานที่เหลือ
+                    // ดังนั้น: วันทำงาน = ✓ + S + P + Sick + A
+                    // และวันทำงานที่ต้องมาหลังหักลา = วันทำงาน - P - Sick
                     const workdays = this.getWorkdaysForRange(year, month, startDay, end);
-                    const actual = normal + late;
                     const approvedLeave = personal + sick;
-                    const balanceAbsent = Math.max(0, workdays - actual - approvedLeave);
+                    // หัก P / Sick ออกจากวันทำงานก่อน
+                    // เช่น วันทำงาน 15 - P/Sick 3 = 12 วันที่ต้องมาทำงาน
+                    const requiredAttendanceDays = Math.max(0, workdays - approvedLeave);
+
+                    // A คือวันที่ไม่มาทำงานจริง จึงต้องหักออกจาก 12 วันที่ต้องมาทำงาน
+                    // เช่น 12 - A 1 = มาทำงานจริง 11 วัน
+                    // เมื่อช่วงเวลาจบแล้ว หากมีวันที่ยังไม่ถูกระบุสถานะ จะถือเป็น A เพิ่มให้ครบ
+                    const recordedActual = normal + late;
+                    const balanceAbsent = Math.max(0, requiredAttendanceDays - recordedActual);
                     const absent = this.isPeriodComplete(year, month, startDay, end)
                         ? Math.max(explicitAbsent, balanceAbsent)
                         : explicitAbsent;
+                    const actual = Math.max(0, requiredAttendanceDays - absent);
 
-                    return { workdays, normal, late, actual, personal, sick, approvedLeave, explicitAbsent, absent, holiday };
+                    return {
+                        workdays,
+                        normal,
+                        late,
+                        actual,
+                        personal,
+                        sick,
+                        approvedLeave,
+                        requiredAttendanceDays,
+                        explicitAbsent,
+                        absent,
+                        holiday
+                    };
                 },
 
                 getEmployeePeriodStats(empId) {
@@ -758,7 +795,7 @@
                 buildSummaryCards(rows, includeHoliday=true, workdays=null, absentOverride=null, actualOverride=null) {
                     const count = s => rows.filter(r => r.status === s).length;
                     const cards = [];
-                    if (workdays !== null) cards.push({key:'companyWorkdays',label:'วันทำงานบริษัท',value:workdays,class:'text-indigo-700'});
+                    if (workdays !== null) cards.push({key:'companyWorkdays',label:'วันทำงานบริษัท (จ.-ส.)',value:workdays,class:'text-indigo-700'});
                     cards.push(
                         {key:'work',label:'มาปกติ ✓',value:count('✓'),class:'text-emerald-600'},
                         {key:'late',label:'มาสาย S',value:count('S'),class:'text-amber-600'},
@@ -808,9 +845,18 @@
                         if (monthFilter && month !== monthFilter) return;
                         if (empFilter && empId !== empFilter) return;
                         if (statusFilter && status !== statusFilter) return;
+
                         const emp = this.employees.find(e => String(e.id) === empId);
-                        if (!emp) return;
-                        rows.push({ key, empId, employeeNo: emp.employeeNo, name: emp.name, position: emp.position, year, month, day, status });
+                        const meta = this.attendanceHistoryMeta?.[key] || {};
+                        const name = emp?.name || meta.employeeName || 'พนักงานที่เก็บในประวัติ';
+                        const position = emp?.position || meta.employeePosition || '-';
+                        const employeeNo = emp?.employeeNo || meta.employeeNo || '';
+
+                        // ประวัติย้อนหลังต้องอ่านได้แม้พนักงานปัจจุบันถูกแก้ไข/นำออกจากรายชื่อ
+                        rows.push({
+                            key, empId, employeeNo, name, position,
+                            year, month, day, status
+                        });
                     });
 
                     rows.sort((a,b) => b.year-a.year || b.month-a.month || b.day-a.day || String(a.name).localeCompare(String(b.name),'th'));
@@ -904,19 +950,30 @@
                 async setAttendance(empId, day, value) {
                     if (!currentAuthUser) return;
                     const key = this.getRecordKey(empId, day);
+                    const emp = this.employees.find(e => String(e.id) === String(empId));
                     this.attendanceRecords[key] = value;
+                    this.attendanceHistoryMeta[key] = {
+                        employeeName: emp?.name || '',
+                        employeePosition: emp?.position || '',
+                        employeeNo: emp?.employeeNo || '',
+                        recordedAt: new Date()
+                    };
                     this.savingAttendance[key] = true;
                     try {
                         const ref = db.collection('attendance').doc(key);
                         await ref.set({
                             empId: String(empId),
+                            employeeName: emp?.name || '',
+                            employeePosition: emp?.position || '',
+                            employeeNo: Number(emp?.employeeNo || 0),
                             year: Number(this.selectedYear),
                             month: Number(this.selectedMonth),
                             day: Number(day),
                             status: value,
                             ownerUid: currentAuthUser.uid,
                             updatedBy: currentAuthUser.uid,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            historyVersion: 2
                         }, { merge: true });
                     } catch (err) {
                         console.error('save attendance:', err);
@@ -993,22 +1050,12 @@
                 async deleteEmployee(id) {
                     const emp = this.employees.find(e => e.id === id);
                     if (!emp) return;
-                    if (!confirm(`ต้องการลบ “${emp.name}” ออกจากระบบหรือไม่?\nข้อมูลเวลาเข้างานของพนักงานคนนี้จะถูกลบด้วย`)) return;
+                    if (!confirm(`ต้องการลบ “${emp.name}” ออกจากระบบหรือไม่?\nประวัติการลงเวลาจะยังคงเก็บไว้และค้นย้อนหลังได้`)) return;
                     try {
-                        const isAdmin = currentUserProfile?.role === 'admin';
-                        let q = db.collection('attendance');
-                        if (!isAdmin) q = q.where('ownerUid','==',currentAuthUser.uid);
-                        const snap = await q.get();
-                        const related = snap.docs.filter(d => String(d.data()?.empId) === String(id));
-                        let batch = db.batch();
-                        let count = 0;
-                        for (const d of related) {
-                            batch.delete(d.ref); count++;
-                            if (count === 450) { await batch.commit(); batch = db.batch(); count = 0; }
-                        }
-                        if (count) await batch.commit();
+                        // ห้ามลบ attendance เมื่อเอาพนักงานออกจากรายชื่อ
+                        // เพื่อให้ประวัติระยะยาวยังค้นย้อนหลังได้ตามปี/เดือน
                         await db.collection('employees').doc(id).delete();
-                        showToast('ลบพนักงานและข้อมูลเวลาออนไลน์แล้ว', 'success');
+                        showToast('นำพนักงานออกจากรายชื่อแล้ว — ประวัติการลงเวลายังคงเก็บไว้', 'success');
                     } catch (err) {
                         console.error('deleteEmployee:', err);
                         showToast('ลบข้อมูลไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Firebase', 'error');
