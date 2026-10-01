@@ -105,6 +105,9 @@
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
                 รายงานสรุปประจำช่วงเวลา (ขาด / ลา / มาสาย)
             </button>
+            <button @click="currentTab = 'history'; prepareHistory()" :class="currentTab === 'history' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="pb-3 border-b-2 text-sm transition flex items-center gap-2">
+                <span>🕘</span> ประวัติย้อนหลัง
+            </button>
             <button @click="currentTab = 'employees'" :class="currentTab === 'employees' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="pb-3 border-b-2 text-sm transition flex items-center gap-2">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                 จัดการรายชื่อพนักงาน
@@ -120,7 +123,7 @@
                         <span x-text="months[selectedMonth-1] + ' ' + (selectedYear+543)" class="text-indigo-600"></span>
                         <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200 ml-2" x-text="getPeriodLabel()"></span>
                     </h2>
-                    <p class="text-xs text-slate-500 mt-1">วันจันทร์–เสาร์เป็นวันทำงานปกติ และวันอาทิตย์เป็นวันหยุดอัตโนมัติ • เลือกสถานะ: มาปกติ (✓), มาสาย (S), ลากิจ (P), ลาป่วย (Sick), ขาดงาน (A)</p>
+                    <p class="text-xs text-slate-500 mt-1">วันทำงานบริษัท: จันทร์–เสาร์ • วันอาทิตย์เป็นวันหยุด • คลิกช่องเพื่อเปลี่ยนสถานะ: ✓ ปกติ, S สาย, P ลากิจ, Sick ลาป่วย, A ขาด, H หยุด</p>
                 </div>
                 
                 <!-- Status Legend Guide -->
@@ -130,7 +133,7 @@
                     <span class="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded font-medium">P = ลากิจ</span>
                     <span class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded font-medium">Sick = ลาป่วย</span>
                     <span class="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded font-medium">A = ขาดงาน</span>
-                    <span class="px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded font-medium">อา = วันหยุด</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded font-medium">H = วันอาทิตย์/วันหยุด</span><span class="px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded font-medium">เสาร์ = วันทำงานปกติ</span>
                 </div>
             </div>
 
@@ -167,7 +170,6 @@
                                                 class="w-11 text-center text-xs py-1 rounded font-bold border transition focus:ring-1 focus:ring-indigo-500 outline-none"
                                                 :class="getStatusBadgeClass(getAttendance(emp.id, day))"
                                             >
-                                                <option value="" class="bg-white text-slate-400">—</option>
                                                 <option value="✓" class="bg-white text-emerald-700">✓</option>
                                                 <option value="S" class="bg-white text-amber-700">S (สาย)</option>
                                                 <option value="P" class="bg-white text-blue-700">P (ลากิจ)</option>
@@ -194,7 +196,7 @@
                         <span x-text="months[selectedMonth-1] + ' ' + (selectedYear+543)" class="text-indigo-600"></span>
                         <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200 ml-2" x-text="getPeriodLabel()"></span>
                     </h2>
-                    <p class="text-xs text-slate-500 mt-1">สรุปยอดรวมวันมาปกติ, มาสาย, ลากิจ, ลาป่วย และขาดงานของพนักงานตามช่วงเวลาที่เลือก</p>
+                    <p class="text-xs text-slate-500 mt-1">สรุปวันทำงาน (จันทร์–เสาร์), วันมาปกติ, มาสาย, ลากิจ, ลาป่วย และขาดงานของพนักงานตามช่วงเวลาที่เลือก</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <button @click="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
@@ -202,6 +204,20 @@
                         ดาวน์โหลดรายงาน CSV
                     </button>
                 </div>
+            </div>
+
+            <!-- Overall summary for selected period -->
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <template x-for="card in periodSummaryCards" :key="'period-' + card.key">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                        <div class="text-[11px] text-slate-500" x-text="card.label"></div>
+                        <div class="text-2xl font-bold mt-1" :class="card.class" x-text="card.value"></div>
+                        <div class="text-[10px] text-slate-400 mt-1">รวมทุกคน</div>
+                    </div>
+                </template>
+            </div>
+            <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
+                ℹ️ วันทำงานบริษัทนับ <b>จันทร์–เสาร์</b> โดยไม่นับวันอาทิตย์ (วันเสาร์เป็นวันทำงานปกติ) • <b>มาปกติ ✓</b> นับเป็นวันที่มาปฏิบัติงาน • <b>มาสาย S</b> ยังนับเป็นการมาปฏิบัติงาน • <b>ปฏิบัติงานจริง = ✓ + S</b> • <b>ลากิจ P / ลาป่วย Sick</b> เป็นวันลาที่ได้รับอนุมัติ • เดือนที่ปิดแล้วจะคำนวณ <b>ขาดงาน = วันทำงาน − (✓ + S + P + Sick)</b> และยังคงนับสถานะ A ที่บันทึกไว้ด้วย ส่วนเดือนปัจจุบัน/อนาคตจะใช้สถานะ A ที่บันทึกจริง เพื่อไม่ให้วันในอนาคตถูกนับเป็นขาดงาน
             </div>
 
             <!-- Summary Table Cards / Grid -->
@@ -213,12 +229,10 @@
                                 <th class="p-3 border-b text-center w-12">#</th>
                                 <th class="p-3 border-b">ชื่อ - นามสกุล</th>
                                 <th class="p-3 border-b">ตำแหน่ง</th>
-                                <th class="p-3 border-b text-center bg-slate-50">วันทำงาน</th>
                                 <th class="p-3 border-b text-center text-emerald-700 bg-emerald-50/50">มาปกติ (วัน)</th>
-                                <th class="p-3 border-b text-center text-amber-700 bg-amber-50/50">มาสาย (วัน)</th>
+                                <th class="p-3 border-b text-center text-amber-700 bg-amber-50/50">มาสาย (ครั้ง)</th>
                                 <th class="p-3 border-b text-center text-blue-700 bg-blue-50/50">ลากิจ (วัน)</th>
                                 <th class="p-3 border-b text-center text-purple-700 bg-purple-50/50">ลาป่วย (วัน)</th>
-                                <th class="p-3 border-b text-center text-cyan-700 bg-cyan-50/50">รวมวันลา</th>
                                 <th class="p-3 border-b text-center text-rose-700 bg-rose-50/50">ขาดงาน (วัน)</th>
                                 <th class="p-3 border-b text-center bg-slate-50 font-bold">ปฏิบัติงานจริง</th>
                             </tr>
@@ -231,14 +245,12 @@
                                     <td class="p-3 text-slate-600 text-xs" x-text="emp.position"></td>
                                     
                                     <!-- Stats Calculation based on Period -->
-                                    <td class="p-3 text-center font-bold text-slate-700 bg-slate-50" x-text="getSummary(emp.id).workingDays"></td>
-                                    <td class="p-3 text-center font-bold text-emerald-600 bg-emerald-50/20" x-text="getSummary(emp.id).normal"></td>
-                                    <td class="p-3 text-center font-bold text-amber-600 bg-amber-50/20" x-text="getSummary(emp.id).late"></td>
-                                    <td class="p-3 text-center font-bold text-blue-600 bg-blue-50/20" x-text="getSummary(emp.id).personal"></td>
-                                    <td class="p-3 text-center font-bold text-purple-600 bg-purple-50/20" x-text="getSummary(emp.id).sick"></td>
-                                    <td class="p-3 text-center font-bold text-cyan-600 bg-cyan-50/20" x-text="getSummary(emp.id).approvedLeave"></td>
-                                    <td class="p-3 text-center font-bold text-rose-600 bg-rose-50/20" x-text="getSummary(emp.id).absent"></td>
-                                    <td class="p-3 text-center font-bold text-slate-700 bg-slate-50" x-text="getSummary(emp.id).actualWork"></td>
+                                    <td class="p-3 text-center font-bold text-emerald-600 bg-emerald-50/20" x-text="getSummaryCount(emp.id, '✓')"></td>
+                                    <td class="p-3 text-center font-bold text-amber-600 bg-amber-50/20" x-text="getSummaryCount(emp.id, 'S')"></td>
+                                    <td class="p-3 text-center font-bold text-blue-600 bg-blue-50/20" x-text="getSummaryCount(emp.id, 'P')"></td>
+                                    <td class="p-3 text-center font-bold text-purple-600 bg-purple-50/20" x-text="getSummaryCount(emp.id, 'Sick')"></td>
+                                    <td class="p-3 text-center font-bold text-rose-600 bg-rose-50/20" x-text="getEmployeePeriodStats(emp.id).absent"></td>
+                                    <td class="p-3 text-center font-bold text-slate-700 bg-slate-50" x-text="getEmployeePeriodStats(emp.id).actual"></td>
                                 </tr>
                             </template>
                         </tbody>
@@ -247,7 +259,127 @@
             </div>
         </div>
 
-        <!-- TAB 3: EMPLOYEE MANAGEMENT -->
+        <!-- TAB 3: LONG-TERM HISTORY -->
+        <div x-show="currentTab === 'history'" class="space-y-6" x-cloak>
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <div class="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+                    <div>
+                        <h2 class="text-lg font-bold text-slate-800">🕘 ประวัติการลงเวลาย้อนหลัง</h2>
+                        <p class="text-xs text-slate-500 mt-1">ค้นย้อนหลังตามปี เดือน พนักงาน และสถานะ ข้อมูลถูกอ่านจาก Firestore โดยตรง</p>
+                    </div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 w-full xl:w-auto">
+                        <select x-model="historyYear" @change="prepareHistory()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:border-indigo-500">
+                            <option value="all">ทุกปี</option>
+                            <template x-for="y in availableYears" :key="'hy'+y"><option :value="String(y)" x-text="'พ.ศ. ' + (y+543)"></option></template>
+                        </select>
+                        <select x-model="historyMonth" @change="prepareHistory()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:border-indigo-500">
+                            <option value="all">ทุกเดือน</option>
+                            <template x-for="(m,i) in months" :key="'hm'+i"><option :value="String(i+1)" x-text="m"></option></template>
+                        </select>
+                        <select x-model="historyEmployee" @change="prepareHistory()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:border-indigo-500">
+                            <option value="all">พนักงานทั้งหมด</option>
+                            <template x-for="emp in employees" :key="'he'+emp.id"><option :value="String(emp.id)" x-text="emp.name"></option></template>
+                        </select>
+                        <select x-model="historyStatus" @change="prepareHistory()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:border-indigo-500">
+                            <option value="all">ทุกสถานะ</option>
+                            <option value="✓">✓ มาปกติ</option>
+                            <option value="S">S มาสาย</option>
+                            <option value="P">P ลากิจ</option>
+                            <option value="Sick">Sick ลาป่วย</option>
+                            <option value="A">A ขาดงาน</option>
+                            <option value="H">H วันหยุด</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
+                ℹ️ ประวัติถูกเก็บระยะยาวใน Firestore • ค้นได้ตาม <b>ปี / เดือน / พนักงาน / สถานะ</b> • วันเสาร์นับเป็นวันทำงาน • ปฏิบัติงานจริง = <b>✓ + S</b> • ลากิจและลาป่วยถือเป็นวันลาที่ได้รับอนุมัติ • เดือนที่ปิดแล้วใช้สูตรขาดงานจากวันทำงานจริง และเดือนปัจจุบันใช้ A ที่บันทึกไว้
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
+                <template x-for="card in historySummaryCards" :key="card.key">
+                    <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-4">
+                        <div class="text-[11px] text-slate-500" x-text="card.label"></div>
+                        <div class="text-2xl font-bold mt-1" :class="card.class" x-text="card.value"></div>
+                    </div>
+                </template>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200">
+                    <div class="text-sm font-bold text-slate-800">📊 สรุปแยกรายบุคคลตามตัวกรอง</div>
+                    <div class="text-[11px] text-slate-500 mt-1">แสดงจำนวน มาปกติ / มาสาย / ลากิจ / ลาป่วย / ขาดงาน / วันหยุด และวันทำงานจริงของแต่ละคน</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead class="bg-slate-100 text-slate-700 text-xs">
+                            <tr>
+                                <th class="p-3 border-b">รหัส</th>
+                                <th class="p-3 border-b">ชื่อ - นามสกุล</th>
+                                <th class="p-3 border-b text-center text-emerald-700">ปกติ</th>
+                                <th class="p-3 border-b text-center text-amber-700">สาย</th>
+                                <th class="p-3 border-b text-center text-blue-700">ลากิจ</th>
+                                <th class="p-3 border-b text-center text-purple-700">ลาป่วย</th>
+                                <th class="p-3 border-b text-center text-rose-700">ขาด</th>
+                                <th class="p-3 border-b text-center text-slate-600">หยุด</th>
+                                <th class="p-3 border-b text-center text-indigo-700">ทำงานจริง</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm divide-y divide-slate-100">
+                            <template x-for="row in historyEmployeeSummary" :key="'hs-' + row.empId">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 font-mono text-xs text-slate-500" x-text="'EMP' + String(row.employeeNo || '').padStart(3,'0')"></td>
+                                    <td class="p-3 font-semibold" x-text="row.name"></td>
+                                    <td class="p-3 text-center font-bold text-emerald-600" x-text="row.normal"></td>
+                                    <td class="p-3 text-center font-bold text-amber-600" x-text="row.late"></td>
+                                    <td class="p-3 text-center font-bold text-blue-600" x-text="row.personal"></td>
+                                    <td class="p-3 text-center font-bold text-purple-600" x-text="row.sick"></td>
+                                    <td class="p-3 text-center font-bold text-rose-600" x-text="row.absent"></td>
+                                    <td class="p-3 text-center font-bold text-slate-600" x-text="row.holiday"></td>
+                                    <td class="p-3 text-center font-bold text-indigo-600" x-text="row.actual"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="!historyEmployeeSummary.length"><td colspan="9" class="p-8 text-center text-sm text-slate-400">ยังไม่มีข้อมูลที่บันทึกตามตัวกรองนี้</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div class="text-sm font-bold text-slate-800">รายการประวัติ <span class="text-indigo-600" x-text="filteredHistory.length"></span> รายการ</div>
+                    <button @click="exportHistoryCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3.5 py-2 rounded-lg shadow transition">⬇ Export ประวัติ CSV</button>
+                </div>
+                <div class="overflow-auto max-h-[620px]">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead class="bg-slate-100 text-slate-700 text-xs sticky top-0 z-10">
+                            <tr>
+                                <th class="p-3 border-b">วันที่</th>
+                                <th class="p-3 border-b">รหัส</th>
+                                <th class="p-3 border-b">ชื่อ - นามสกุล</th>
+                                <th class="p-3 border-b">ตำแหน่ง</th>
+                                <th class="p-3 border-b text-center">สถานะ</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm divide-y divide-slate-100">
+                            <template x-for="row in filteredHistory" :key="row.key">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3" x-text="row.day + '/' + row.month + '/' + (row.year+543)"></td>
+                                    <td class="p-3 font-mono text-xs text-slate-500" x-text="'EMP' + String(row.employeeNo || '').padStart(3,'0')"></td>
+                                    <td class="p-3 font-semibold" x-text="row.name"></td>
+                                    <td class="p-3 text-xs text-slate-600" x-text="row.position || '-'"></td>
+                                    <td class="p-3 text-center"><span class="inline-flex px-2.5 py-1 rounded-full border text-xs font-bold" :class="getStatusBadgeClass(row.status)" x-text="statusLabel(row.status)"></span></td>
+                                </tr>
+                            </template>
+                            <tr x-show="!filteredHistory.length"><td colspan="5" class="p-10 text-center text-sm text-slate-400">ไม่พบข้อมูลตามเงื่อนไขที่เลือก</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: EMPLOYEE MANAGEMENT -->
         <div x-show="currentTab === 'employees'" class="space-y-6" x-cloak>
             <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
@@ -417,6 +549,8 @@
                 rows.sort((a,b) => Number(a.employeeNo || 999999) - Number(b.employeeNo || 999999) || String(a.name || '').localeCompare(String(b.name || ''), 'th'));
                 app.employees = rows;
                 app.loadingEmployees = false;
+                app.preparePeriodSummary();
+                app.prepareHistory();
                 setConnection('online', 'เชื่อมต่อ Server แล้ว');
             }, err => {
                 console.error('employees snapshot:', err);
@@ -434,6 +568,9 @@
                     }
                 });
                 app.attendanceRecords = records;
+                app.refreshAvailableYears();
+                app.preparePeriodSummary();
+                app.prepareHistory();
                 app.loadingAttendance = false;
                 setConnection('online', 'เชื่อมต่อ Server แล้ว');
             }, err => {
@@ -504,7 +641,7 @@
                 selectedYear: new Date().getFullYear(),
                 selectedPeriod: 'full',
                 months: ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'],
-                availableYears: [],
+                availableYears: [new Date().getFullYear()],
                 daysInCurrentMonth: 31,
                 activeDaysArray: [],
                 employees: [],
@@ -515,13 +652,16 @@
                 showEmpModal: false,
                 isEditingEmp: false,
                 empForm: { id: null, name: '', position: '' },
+                historyYear: String(new Date().getFullYear()),
+                historyMonth: String(new Date().getMonth() + 1),
+                historyEmployee: 'all',
+                historyStatus: 'all',
+                filteredHistory: [],
+                historySummaryCards: [],
+                historyEmployeeSummary: [],
+                periodSummaryCards: [],
 
-                init() {
-                    const currentYear = new Date().getFullYear();
-                    this.availableYears = [];
-                    for (let y = 2000; y <= currentYear + 10; y++) this.availableYears.push(y);
-                    this.updateDateRange();
-                },
+                init() { this.updateDateRange(); this.refreshAvailableYears(); this.preparePeriodSummary(); this.prepareHistory(); },
 
                 updateDateRange() {
                     const totalDays = new Date(this.selectedYear, this.selectedMonth, 0).getDate();
@@ -531,6 +671,209 @@
                     if (this.selectedPeriod === 'second_half') start = 16;
                     this.activeDaysArray = [];
                     for (let i = start; i <= end; i++) this.activeDaysArray.push(i);
+                    this.preparePeriodSummary();
+                },
+
+                refreshAvailableYears() {
+                    const years = new Set([new Date().getFullYear()]);
+                    Object.keys(this.attendanceRecords || {}).forEach(key => {
+                        const parts = String(key).split('_');
+                        if (parts.length >= 4 && /^\d{4}$/.test(parts[1])) years.add(Number(parts[1]));
+                    });
+                    this.availableYears = [...years].filter(Number.isFinite).sort((a,b) => b-a);
+                },
+
+                getRecordedStatus(empId, year, month, day) {
+                    return this.attendanceRecords[`${empId}_${year}_${month}_${day}`] ?? null;
+                },
+
+                getPeriodSummaryRows() {
+                    const rows = [];
+                    this.employees.forEach(emp => {
+                        this.activeDaysArray.forEach(day => {
+                            const status = this.getRecordedStatus(emp.id, this.selectedYear, this.selectedMonth, day);
+                            if (status) rows.push({ empId: emp.id, status });
+                        });
+                    });
+                    return rows;
+                },
+
+                getWorkdaysForRange(year, month, startDay=1, endDay=null) {
+                    const totalDays = new Date(year, month, 0).getDate();
+                    const end = Math.min(endDay || totalDays, totalDays);
+                    let count = 0;
+                    for (let day = Math.max(1, startDay); day <= end; day++) {
+                        if (new Date(year, month - 1, day).getDay() !== 0) count++; // จันทร์–เสาร์เป็นวันทำงาน
+                    }
+                    return count;
+                },
+
+                isPeriodComplete(year, month, startDay=1, endDay=null) {
+                    const totalDays = new Date(year, month, 0).getDate();
+                    const end = Math.min(endDay || totalDays, totalDays);
+                    const endDate = new Date(year, month - 1, end, 23, 59, 59, 999);
+                    return endDate < new Date();
+                },
+
+                getEmployeeStatsForRange(empId, year, month, startDay=1, endDay=null) {
+                    const totalDays = new Date(year, month, 0).getDate();
+                    const end = Math.min(endDay || totalDays, totalDays);
+                    let normal = 0, late = 0, personal = 0, sick = 0, explicitAbsent = 0, holiday = 0;
+
+                    for (let day = Math.max(1, startDay); day <= end; day++) {
+                        const status = this.getRecordedStatus(empId, year, month, day);
+                        if (status === '✓') normal++;
+                        else if (status === 'S') late++;
+                        else if (status === 'P') personal++;
+                        else if (status === 'Sick') sick++;
+                        else if (status === 'A') explicitAbsent++;
+                        else if (status === 'H') holiday++;
+                    }
+
+                    const workdays = this.getWorkdaysForRange(year, month, startDay, end);
+                    const actual = normal + late;
+                    const approvedLeave = personal + sick;
+                    const balanceAbsent = Math.max(0, workdays - actual - approvedLeave);
+                    const absent = this.isPeriodComplete(year, month, startDay, end)
+                        ? Math.max(explicitAbsent, balanceAbsent)
+                        : explicitAbsent;
+
+                    return { workdays, normal, late, actual, personal, sick, approvedLeave, explicitAbsent, absent, holiday };
+                },
+
+                getEmployeePeriodStats(empId) {
+                    let start = 1, end = this.daysInCurrentMonth;
+                    if (this.selectedPeriod === 'first_half') end = Math.min(15, this.daysInCurrentMonth);
+                    if (this.selectedPeriod === 'second_half') start = 16;
+                    return this.getEmployeeStatsForRange(empId, this.selectedYear, this.selectedMonth, start, end);
+                },
+
+                getCompanyWorkdays() {
+                    let start = 1, end = this.daysInCurrentMonth;
+                    if (this.selectedPeriod === 'first_half') end = Math.min(15, this.daysInCurrentMonth);
+                    if (this.selectedPeriod === 'second_half') start = 16;
+                    return this.getWorkdaysForRange(this.selectedYear, this.selectedMonth, start, end);
+                },
+
+                buildSummaryCards(rows, includeHoliday=true, workdays=null, absentOverride=null, actualOverride=null) {
+                    const count = s => rows.filter(r => r.status === s).length;
+                    const cards = [];
+                    if (workdays !== null) cards.push({key:'companyWorkdays',label:'วันทำงานบริษัท',value:workdays,class:'text-indigo-700'});
+                    cards.push(
+                        {key:'work',label:'มาปกติ ✓',value:count('✓'),class:'text-emerald-600'},
+                        {key:'late',label:'มาสาย S',value:count('S'),class:'text-amber-600'},
+                        {key:'actual',label:'ปฏิบัติงานจริง',value:actualOverride !== null ? actualOverride : count('✓') + count('S'),class:'text-slate-700'},
+                        {key:'personal',label:'ลากิจ P',value:count('P'),class:'text-blue-600'},
+                        {key:'sick',label:'ลาป่วย Sick',value:count('Sick'),class:'text-purple-600'},
+                        {key:'absent',label:'ขาดงาน A',value:absentOverride !== null ? absentOverride : count('A'),class:'text-rose-600'}
+                    );
+                    if (includeHoliday) cards.push({key:'holiday',label:'วันหยุดอาทิตย์',value:count('H'),class:'text-slate-500'});
+                    return cards;
+                },
+
+                preparePeriodSummary() {
+                    const rows = this.getPeriodSummaryRows();
+                    const stats = this.employees.map(emp => this.getEmployeePeriodStats(emp.id));
+                    const absent = stats.reduce((n, s) => n + s.absent, 0);
+                    const actual = stats.reduce((n, s) => n + s.actual, 0);
+                    const workdays = this.getCompanyWorkdays() * this.employees.length;
+                    this.periodSummaryCards = this.buildSummaryCards(rows, true, workdays, absent, actual);
+                },
+
+                getHistoryWorkdays() {
+                    if (this.historyYear === 'all' || this.historyMonth === 'all') return null;
+                    const year = Number(this.historyYear);
+                    const month = Number(this.historyMonth);
+                    if (!year || !month) return null;
+                    return this.getWorkdaysForRange(year, month);
+                },
+
+                prepareHistory() {
+                    const rows = [];
+                    const yearFilter = this.historyYear === 'all' ? null : Number(this.historyYear);
+                    const monthFilter = this.historyMonth === 'all' ? null : Number(this.historyMonth);
+                    const empFilter = this.historyEmployee === 'all' ? null : String(this.historyEmployee);
+                    const statusFilter = this.historyStatus === 'all' ? null : this.historyStatus;
+
+                    Object.keys(this.attendanceRecords || {}).forEach(key => {
+                        const parts = String(key).split('_');
+                        if (parts.length < 4) return;
+                        const empId = String(parts[0]);
+                        const year = Number(parts[1]);
+                        const month = Number(parts[2]);
+                        const day = Number(parts[3]);
+                        const status = this.attendanceRecords[key];
+                        if (!year || !month || !day || !status) return;
+                        if (yearFilter && year !== yearFilter) return;
+                        if (monthFilter && month !== monthFilter) return;
+                        if (empFilter && empId !== empFilter) return;
+                        if (statusFilter && status !== statusFilter) return;
+                        const emp = this.employees.find(e => String(e.id) === empId);
+                        if (!emp) return;
+                        rows.push({ key, empId, employeeNo: emp.employeeNo, name: emp.name, position: emp.position, year, month, day, status });
+                    });
+
+                    rows.sort((a,b) => b.year-a.year || b.month-a.month || b.day-a.day || String(a.name).localeCompare(String(b.name),'th'));
+                    this.filteredHistory = rows;
+
+                    // ประวัติแบบรายเดือนจะใช้สูตรเดียวกับรายงานปัจจุบัน เพื่อให้ข้อมูลย้อนหลังตรงกัน
+                    const monthStats = [];
+                    if (yearFilter && monthFilter && statusFilter === null) {
+                        this.employees.filter(emp => !empFilter || String(emp.id) === empFilter).forEach(emp => {
+                            monthStats.push(this.getEmployeeStatsForRange(emp.id, yearFilter, monthFilter));
+                        });
+                    }
+                    const historyWorkdays = this.getHistoryWorkdays();
+                    const historyAbsent = monthStats.length ? monthStats.reduce((n, s) => n + s.absent, 0) : null;
+                    const historyActual = monthStats.length ? monthStats.reduce((n, s) => n + s.actual, 0) : null;
+                    this.historySummaryCards = this.buildSummaryCards(rows, true, historyWorkdays, historyAbsent, historyActual);
+
+                    const byEmployee = new Map();
+                    if (monthStats.length) {
+                        this.employees.filter(emp => !empFilter || String(emp.id) === empFilter).forEach((emp, idx) => {
+                            const st = monthStats[idx];
+                            byEmployee.set(String(emp.id), {
+                                empId:String(emp.id), employeeNo:emp.employeeNo, name:emp.name,
+                                normal:st.normal, late:st.late, personal:st.personal, sick:st.sick,
+                                absent:st.absent, holiday:st.holiday, actual:st.actual, workdays:st.workdays
+                            });
+                        });
+                    } else {
+                        rows.forEach(r => {
+                            if (!byEmployee.has(r.empId)) byEmployee.set(r.empId, {
+                                empId:r.empId, employeeNo:r.employeeNo, name:r.name, normal:0, late:0, personal:0, sick:0, absent:0, holiday:0, actual:0, workdays:null
+                            });
+                            const item = byEmployee.get(r.empId);
+                            if (r.status === '✓') item.normal++;
+                            else if (r.status === 'S') item.late++;
+                            else if (r.status === 'P') item.personal++;
+                            else if (r.status === 'Sick') item.sick++;
+                            else if (r.status === 'A') item.absent++;
+                            else if (r.status === 'H') item.holiday++;
+                            item.actual = item.normal + item.late;
+                        });
+                    }
+                    this.historyEmployeeSummary = [...byEmployee.values()].sort((a,b) => String(a.name).localeCompare(String(b.name),'th'));
+                },
+
+                statusLabel(status) {
+                    return ({'✓':'✓ มาปกติ','S':'S มาสาย','P':'P ลากิจ','Sick':'Sick ลาป่วย','A':'A ขาดงาน','H':'H วันหยุด'})[status] || status;
+                },
+
+                exportHistoryCSV() {
+                    if (!this.filteredHistory.length) { showToast('ไม่มีข้อมูลสำหรับส่งออก', 'info'); return; }
+                    let csv = '\uFEFFวันที่,รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,สถานะ\n';
+                    this.filteredHistory.forEach(r => {
+                        csv += [
+                            `${r.day}/${r.month}/${r.year+543}`,
+                            'EMP'+String(r.employeeNo || '').padStart(3,'0'),
+                            r.name, r.position || '-', this.statusLabel(r.status)
+                        ].map(escapeCSV).join(',') + '\n';
+                    });
+                    const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href=url; a.download=`Attendance_History_${this.historyYear}_${this.historyMonth}_${this.historyEmployee}.csv`;
+                    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
                 },
 
                 getPeriodLabel() {
@@ -540,25 +883,8 @@
                 },
 
                 isWeekend(day) {
-                    // วันอาทิตย์เท่านั้นที่เป็นวันหยุดประจำสัปดาห์
-                    // วันจันทร์-เสาร์ถือเป็นวันทำงานปกติ
                     const d = new Date(this.selectedYear, this.selectedMonth - 1, day).getDay();
                     return d === 0;
-                },
-
-                isWorkday(day) {
-                    return !this.isWeekend(day);
-                },
-
-                isCountableDate(day) {
-                    // เดือนที่ผ่านมา: นับทุกวันในช่วงที่เลือก
-                    // เดือนปัจจุบัน: ยังไม่นับวันในอนาคตเป็นขาดงาน
-                    // เดือนอนาคต: ยังไม่เริ่มนับ
-                    const selected = new Date(this.selectedYear, this.selectedMonth - 1, day);
-                    selected.setHours(0,0,0,0);
-                    const today = new Date();
-                    today.setHours(0,0,0,0);
-                    return selected <= today;
                 },
 
                 getShortDayName(day) {
@@ -570,38 +896,30 @@
 
                 getAttendance(empId, day) {
                     const key = this.getRecordKey(empId, day);
-                    if (this.attendanceRecords[key] !== undefined) return this.attendanceRecords[key];
-                    return this.isWeekend(day) ? 'H' : '';
+                    return this.attendanceRecords[key] !== undefined
+                        ? this.attendanceRecords[key]
+                        : (this.isWeekend(day) ? 'H' : '✓');
                 },
 
                 async setAttendance(empId, day, value) {
                     if (!currentAuthUser) return;
-                    if (this.isWeekend(day)) return;
                     const key = this.getRecordKey(empId, day);
-                    const oldValue = this.attendanceRecords[key];
-                    if (value) this.attendanceRecords[key] = value;
-                    else delete this.attendanceRecords[key];
+                    this.attendanceRecords[key] = value;
                     this.savingAttendance[key] = true;
                     try {
                         const ref = db.collection('attendance').doc(key);
-                        if (!value) {
-                            await ref.delete();
-                        } else {
-                            await ref.set({
-                                empId: String(empId),
-                                year: Number(this.selectedYear),
-                                month: Number(this.selectedMonth),
-                                day: Number(day),
-                                status: value,
-                                ownerUid: currentAuthUser.uid,
-                                updatedBy: currentAuthUser.uid,
-                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            }, { merge: true });
-                        }
+                        await ref.set({
+                            empId: String(empId),
+                            year: Number(this.selectedYear),
+                            month: Number(this.selectedMonth),
+                            day: Number(day),
+                            status: value,
+                            ownerUid: currentAuthUser.uid,
+                            updatedBy: currentAuthUser.uid,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        }, { merge: true });
                     } catch (err) {
                         console.error('save attendance:', err);
-                        if (oldValue !== undefined) this.attendanceRecords[key] = oldValue;
-                        else delete this.attendanceRecords[key];
                         showToast('บันทึกเวลาไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ', 'error');
                     } finally {
                         delete this.savingAttendance[key];
@@ -621,40 +939,7 @@
                 },
 
                 getSummaryCount(empId, status) {
-                    return this.getSummary(empId)[{
-                        '✓': 'normal',
-                        'S': 'late',
-                        'P': 'personal',
-                        'Sick': 'sick',
-                        'A': 'absent'
-                    }[status]] || 0;
-                },
-
-                getSummary(empId) {
-                    const workingDays = this.activeDaysArray.filter(day => this.isWorkday(day) && this.isCountableDate(day)).length;
-                    let normal = 0, late = 0, personal = 0, sick = 0, explicitAbsent = 0;
-
-                    this.activeDaysArray.forEach(day => {
-                        if (!this.isWorkday(day) || !this.isCountableDate(day)) return;
-                        const status = this.attendanceRecords[this.getRecordKey(empId, day)] || '';
-                        if (status === '✓') normal++;
-                        else if (status === 'S') late++;
-                        else if (status === 'P') personal++;
-                        else if (status === 'Sick') sick++;
-                        else if (status === 'A') explicitAbsent++;
-                    });
-
-                    const approvedLeave = personal + sick;
-                    const actualWork = normal + late;
-                    // ขาดงาน = วันทำงานทั้งหมด - วันที่มาทำงาน - วันที่ลาได้รับอนุมัติ
-                    // สถานะ A ที่บันทึกไว้จะถูกนับรวมอยู่ในสูตรนี้โดยอัตโนมัติ
-                    const calculatedAbsent = Math.max(0, workingDays - actualWork - approvedLeave);
-                    const absent = calculatedAbsent;
-
-                    return {
-                        workingDays, normal, late, personal, sick, approvedLeave,
-                        explicitAbsent, calculatedAbsent, absent, actualWork
-                    };
+                    return this.activeDaysArray.reduce((n, day) => n + (this.getRecordedStatus(empId, this.selectedYear, this.selectedMonth, day) === status ? 1 : 0), 0);
                 },
 
                 openAddEmployeeModal() {
@@ -733,10 +1018,10 @@
                 exportToCSV() {
                     let csv = '\uFEFF';
                     csv += `รายงานสรุปเวลาทำงาน ${this.getPeriodLabel()} ประจำเดือน ${this.months[this.selectedMonth-1]} พ.ศ. ${this.selectedYear+543}\n`;
-                    csv += 'รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,วันทำงาน,มาปกติ(วัน),มาสาย(วัน),ลากิจ(วัน),ลาป่วย(วัน),รวมวันลา,ขาดงาน(วัน),ปฏิบัติงานจริง\n';
+                    csv += 'รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,วันทำงาน,มาปกติ(วัน),มาสาย(วัน),ปฏิบัติงานจริง(วัน),ลากิจ(วัน),ลาป่วย(วัน),ขาดงาน(วัน)\n';
                     this.employees.forEach(emp => {
-                        const summary = this.getSummary(emp.id);
-                        csv += [escapeCSV('EMP'+String(emp.employeeNo || '').padStart(3,'0')),escapeCSV(emp.name),escapeCSV(emp.position),summary.workingDays,summary.normal,summary.late,summary.personal,summary.sick,summary.approvedLeave,summary.absent,summary.actualWork].join(',')+'\n';
+                        const st = this.getEmployeePeriodStats(emp.id);
+                        csv += [escapeCSV('EMP'+String(emp.employeeNo || '').padStart(3,'0')),escapeCSV(emp.name),escapeCSV(emp.position),st.workdays,st.normal,st.late,st.actual,st.personal,st.sick,st.absent].join(',')+'\n';
                     });
                     const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
                     const url = URL.createObjectURL(blob);
