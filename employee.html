@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบบันทึกเวลาเข้า-ออกงานประจำเดือน</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; }
+        [x-cloak] { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen" x-data="attendanceApp()">
+
+    <!-- Header Navigation -->
+    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 p-2.5 rounded-xl border border-indigo-500 shadow-inner">
+                    <svg class="w-7 h-7 text-indigo-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">ระบบบันทึกเวลา เข้า-ออกงาน ประจำเดือน</h1>
+                    <p class="text-xs text-indigo-200">จัดการข้อมูลพนักงาน บันทึกเวลา และรายงานสรุปประจำเดือน</p>
+                </div>
+            </div>
+
+            <!-- Month, Year & Period Selector + Controls -->
+            <div class="flex items-center gap-3 flex-wrap justify-center">
+                <div class="bg-indigo-800/80 px-3 py-1.5 rounded-lg border border-indigo-600 flex items-center gap-2">
+                    <label class="text-xs text-indigo-200 font-medium">ช่วงเวลา:</label>
+                    <select x-model="selectedPeriod" @change="updateDateRange()" class="bg-indigo-900 text-white text-sm font-semibold rounded px-2 py-1 outline-none border border-indigo-700">
+                        <option value="full">เต็มเดือน</option>
+                        <option value="first_half">ครึ่งเดือนแรก (1-15)</option>
+                        <option value="second_half">ครึ่งเดือนหลัง (16-31)</option>
+                    </select>
+                </div>
+
+                <div class="bg-indigo-800/80 px-3 py-1.5 rounded-lg border border-indigo-600 flex items-center gap-2">
+                    <label class="text-xs text-indigo-200 font-medium">เดือน:</label>
+                    <select x-model.number="selectedMonth" @change="updateDateRange()" class="bg-indigo-900 text-white text-sm font-semibold rounded px-2 py-1 outline-none border border-indigo-700">
+                        <template x-for="(m, index) in months" :key="index">
+                            <option :value="index + 1" x-text="m"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <div class="bg-indigo-800/80 px-3 py-1.5 rounded-lg border border-indigo-600 flex items-center gap-2">
+                    <label class="text-xs text-indigo-200 font-medium">ปี พ.ศ.:</label>
+                    <select x-model.number="selectedYear" @change="updateDateRange()" class="bg-indigo-900 text-white text-sm font-semibold rounded px-2 py-1 outline-none border border-indigo-700">
+                        <template x-for="y in availableYears" :key="y">
+                            <option :value="y" x-text="y + 543"></option>
+                        </template>
+                    </select>
+                </div>
+
+                <button @click="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-medium px-4 py-2 rounded-lg shadow transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                    Export CSV
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+        <!-- Tabs Navigation -->
+        <div class="flex border-b border-slate-200 space-x-6">
+            <button @click="currentTab = 'table'" :class="currentTab === 'table' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="pb-3 border-b-2 text-sm transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                ตารางบันทึกเวลาประจำวัน
+            </button>
+            <button @click="currentTab = 'summary'" :class="currentTab === 'summary' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="pb-3 border-b-2 text-sm transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                รายงานสรุปประจำช่วงเวลา (ขาด / ลา / มาสาย)
+            </button>
+            <button @click="currentTab = 'employees'" :class="currentTab === 'employees' ? 'border-indigo-600 text-indigo-600 font-semibold' : 'border-transparent text-slate-500 hover:text-slate-700'" class="pb-3 border-b-2 text-sm transition flex items-center gap-2">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                จัดการรายชื่อพนักงาน
+            </button>
+        </div>
+
+        <!-- TAB 1: DAILY ATTENDANCE TABLE -->
+        <div x-show="currentTab === 'table'" class="space-y-4" x-cloak>
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+                <div>
+                    <h2 class="text-base font-bold text-slate-800">
+                        ตารางบันทึกเวลา 
+                        <span x-text="months[selectedMonth-1] + ' ' + (selectedYear+543)" class="text-indigo-600"></span>
+                        <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200 ml-2" x-text="getPeriodLabel()"></span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">คลิกที่ช่องสถานะเพื่อเปลี่ยนสถานะ: มาปกติ (✓), มาสาย (S), ลากิจ (P), ลาป่วย (Sick), ขาดงาน (A), วันหยุด (H)</p>
+                </div>
+                
+                <!-- Status Legend Guide -->
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="px-2 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded font-medium">✓ = มาปกติ</span>
+                    <span class="px-2 py-1 bg-amber-50 text-amber-700 border border-amber-200 rounded font-medium">S = มาสาย</span>
+                    <span class="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded font-medium">P = ลากิจ</span>
+                    <span class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded font-medium">Sick = ลาป่วย</span>
+                    <span class="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded font-medium">A = ขาดงาน</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded font-medium">H = วันหยุด</span>
+                </div>
+            </div>
+
+            <!-- Scrollable Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto max-h-[650px]">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead class="bg-slate-100 text-slate-700 text-xs uppercase sticky top-0 z-20">
+                            <tr>
+                                <th class="p-3 border-b border-r bg-slate-100 sticky left-0 z-30 w-12 text-center">#</th>
+                                <th class="p-3 border-b border-r bg-slate-100 sticky left-12 z-30 min-w-[180px]">ชื่อ - นามสกุล</th>
+                                <th class="p-3 border-b border-r bg-slate-100 sticky left-[228px] z-30 min-w-[110px]">ตำแหน่ง</th>
+                                <template x-for="day in activeDaysArray" :key="day">
+                                    <th class="p-2 border-b border-r text-center min-w-[42px]" :class="isWeekend(day) ? 'bg-slate-200 text-slate-500' : ''">
+                                        <div class="text-[10px] text-slate-400" x-text="getShortDayName(day)"></div>
+                                        <div class="text-xs font-bold" x-text="day"></div>
+                                    </th>
+                                </template>
+                            </tr>
+                        </thead>
+                        <tbody class="text-xs divide-y divide-slate-100">
+                            <template x-for="(emp, index) in employees" :key="emp.id">
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-3 border-r bg-white sticky left-0 z-10 text-center font-medium text-slate-500" x-text="index + 1"></td>
+                                    <td class="p-3 border-r bg-white sticky left-12 z-10 font-semibold text-slate-800 truncate max-w-[180px]" x-text="emp.name"></td>
+                                    <td class="p-3 border-r bg-white sticky left-[228px] z-10 text-slate-600 truncate max-w-[110px]" x-text="emp.position"></td>
+                                    
+                                    <!-- Days Loop based on Selected Period -->
+                                    <template x-for="day in activeDaysArray" :key="day">
+                                        <td class="p-1 border-r text-center">
+                                            <select 
+                                                x-model="getAttendance(emp.id, day)" 
+                                                @change="setAttendance(emp.id, day, $event.target.value)"
+                                                class="w-11 text-center text-xs py-1 rounded font-bold border transition focus:ring-1 focus:ring-indigo-500 outline-none"
+                                                :class="getStatusBadgeClass(getAttendance(emp.id, day))"
+                                            >
+                                                <option value="✓" class="bg-white text-emerald-700">✓</option>
+                                                <option value="S" class="bg-white text-amber-700">S (สาย)</option>
+                                                <option value="P" class="bg-white text-blue-700">P (ลากิจ)</option>
+                                                <option value="Sick" class="bg-white text-purple-700">Sick (ป่วย)</option>
+                                                <option value="A" class="bg-white text-rose-700">A (ขาด)</option>
+                                                <option value="H" class="bg-white text-slate-500">H (หยุด)</option>
+                                            </select>
+                                        </td>
+                                    </template>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: MONTHLY/PERIOD SUMMARY REPORT -->
+        <div x-show="currentTab === 'summary'" class="space-y-6" x-cloak>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">
+                        รายงานสรุปสถิติ 
+                        <span x-text="months[selectedMonth-1] + ' ' + (selectedYear+543)" class="text-indigo-600"></span>
+                        <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200 ml-2" x-text="getPeriodLabel()"></span>
+                    </h2>
+                    <p class="text-xs text-slate-500 mt-1">สรุปยอดรวมวันมาปกติ, มาสาย, ลากิจ, ลาป่วย และขาดงานของพนักงานตามช่วงเวลาที่เลือก</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button @click="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        ดาวน์โหลดรายงาน CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Table Cards / Grid -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-100 text-slate-700 text-xs uppercase">
+                            <tr>
+                                <th class="p-3 border-b text-center w-12">#</th>
+                                <th class="p-3 border-b">ชื่อ - นามสกุล</th>
+                                <th class="p-3 border-b">ตำแหน่ง</th>
+                                <th class="p-3 border-b text-center text-emerald-700 bg-emerald-50/50">มาปกติ (วัน)</th>
+                                <th class="p-3 border-b text-center text-amber-700 bg-amber-50/50">มาสาย (ครั้ง)</th>
+                                <th class="p-3 border-b text-center text-blue-700 bg-blue-50/50">ลากิจ (วัน)</th>
+                                <th class="p-3 border-b text-center text-purple-700 bg-purple-50/50">ลาป่วย (วัน)</th>
+                                <th class="p-3 border-b text-center text-rose-700 bg-rose-50/50">ขาดงาน (วัน)</th>
+                                <th class="p-3 border-b text-center bg-slate-50 font-bold">รวมปฏิบัติงานจริง</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm divide-y divide-slate-100">
+                            <template x-for="(emp, index) in employees" :key="emp.id">
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-3 text-center text-slate-500 font-medium" x-text="index + 1"></td>
+                                    <td class="p-3 font-semibold text-slate-800" x-text="emp.name"></td>
+                                    <td class="p-3 text-slate-600 text-xs" x-text="emp.position"></td>
+                                    
+                                    <!-- Stats Calculation based on Period -->
+                                    <td class="p-3 text-center font-bold text-emerald-600 bg-emerald-50/20" x-text="getSummaryCount(emp.id, '✓')"></td>
+                                    <td class="p-3 text-center font-bold text-amber-600 bg-amber-50/20" x-text="getSummaryCount(emp.id, 'S')"></td>
+                                    <td class="p-3 text-center font-bold text-blue-600 bg-blue-50/20" x-text="getSummaryCount(emp.id, 'P')"></td>
+                                    <td class="p-3 text-center font-bold text-purple-600 bg-purple-50/20" x-text="getSummaryCount(emp.id, 'Sick')"></td>
+                                    <td class="p-3 text-center font-bold text-rose-600 bg-rose-50/20" x-text="getSummaryCount(emp.id, 'A')"></td>
+                                    <td class="p-3 text-center font-bold text-slate-700 bg-slate-50" x-text="getSummaryCount(emp.id, '✓') + getSummaryCount(emp.id, 'S')"></td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: EMPLOYEE MANAGEMENT -->
+        <div x-show="currentTab === 'employees'" class="space-y-6" x-cloak>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">จัดการข้อมูลพนักงาน</h2>
+                    <p class="text-xs text-slate-500 mt-1">สามารถเพิ่ม แก้ไขรายชื่อ ตำแหน่ง หรือลบพนักงานออกจากระบบได้ตลอดเวลา</p>
+                </div>
+                <button @click="openAddEmployeeModal()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-4 py-2.5 rounded-lg shadow transition flex items-center gap-1.5">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                    เพิ่มพนักงานใหม่
+                </button>
+            </div>
+
+            <!-- Employee List Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <table class="w-full text-left border-collapse">
+                    <thead class="bg-slate-100 text-slate-700 text-xs uppercase">
+                        <tr>
+                            <th class="p-3 border-b text-center w-16">รหัส</th>
+                            <th class="p-3 border-b">ชื่อ - นามสกุล</th>
+                            <th class="p-3 border-b">แผนก / ตำแหน่ง</th>
+                            <th class="p-3 border-b text-center w-36">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm divide-y divide-slate-100">
+                        <template x-for="(emp, index) in employees" :key="emp.id">
+                            <tr class="hover:bg-slate-50 transition">
+                                <td class="p-3 text-center text-slate-500 font-mono text-xs" x-text="'EMP' + String(emp.id).padStart(3, '0')"></td>
+                                <td class="p-3 font-semibold text-slate-800" x-text="emp.name"></td>
+                                <td class="p-3 text-slate-600 text-xs" x-text="emp.position"></td>
+                                <td class="p-3 text-center space-x-2">
+                                    <button @click="openEditEmployeeModal(emp)" class="text-indigo-600 hover:text-indigo-800 text-xs font-medium bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1.5 rounded transition">แก้ไข</button>
+                                    <button @click="deleteEmployee(emp.id)" class="text-rose-600 hover:text-rose-800 text-xs font-medium bg-rose-50 hover:bg-rose-100 px-2.5 py-1.5 rounded transition">ลบ</button>
+                                </td>
+                            </tr>
+                        </template>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal: Add / Edit Employee -->
+    <div x-show="showEmpModal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4" x-cloak>
+        <div @click.outside="closeEmployeeModal()" class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden border border-slate-200">
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-base" x-text="isEditingEmp ? 'แก้ไขข้อมูลพนักงาน' : 'เพิ่มพนักงานใหม่'"></h3>
+                <button @click="closeEmployeeModal()" class="text-indigo-200 hover:text-white">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อ - นามสกุล</label>
+                    <input type="text" x-model="empForm.name" placeholder="เช่น นายสมชาย ใจดี" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-indigo-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ตำแหน่ง / แผนก</label>
+                    <input type="text" x-model="empForm.position" placeholder="เช่น พนักงานบัญชี / ฝ่ายขาย" class="w-full text-sm border border-slate-300 rounded-lg px-3 py-2 outline-none focus:border-indigo-500">
+                </div>
+                <div class="flex justify-end gap-2 pt-4">
+                    <button @click="closeEmployeeModal()" class="px-4 py-2 text-xs font-medium text-slate-600 bg-slate-100 rounded-lg hover:bg-slate-200 transition">ยกเลิก</button>
+                    <button @click="saveEmployee()" class="px-4 py-2 text-xs font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-500 transition">บันทึกข้อมูล</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- App Logic Script -->
+    <script>
+        function attendanceApp() {
+            return {
+                currentTab: 'table',
+                selectedMonth: new Date().getMonth() + 1,
+                selectedYear: new Date().getFullYear(),
+                selectedPeriod: 'full', // 'full' | 'first_half' | 'second_half'
+                months: ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน', 'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'],
+                availableYears: [2024, 2025, 2026, 2027],
+                
+                daysInCurrentMonth: 31,
+                activeDaysArray: [],
+                
+                // Initial Default Employees
+                employees: [
+                    { id: 1, name: 'นายสมชาย ใจดี', position: 'ผู้จัดการทั่วไป' },
+                    { id: 2, name: 'นางสาววิไล รักงาน', position: 'เจ้าหน้าที่บัญชี' },
+                    { id: 3, name: 'นายกิตติ มุ่งมั่น', position: 'ฝ่ายขายและการตลาด' },
+                    { id: 4, name: 'นางสาวศิริพร สุขสบาย', position: 'ฝ่ายบุคคล (HR)' },
+                    { id: 5, name: 'นายอานนท์ ช่างคิด', position: 'โปรแกรมเมอร์' }
+                ],
+
+                // Attendance Data Structure: { "empId_year_month_day": "status" }
+                attendanceRecords: {},
+
+                // Modal state
+                showEmpModal: false,
+                isEditingEmp: false,
+                empForm: { id: null, name: '', position: '' },
+
+                init() {
+                    this.updateDateRange();
+                    this.loadInitialRecords();
+                },
+
+                updateDateRange() {
+                    // Total days in selected month/year
+                    const totalDays = new Date(this.selectedYear, this.selectedMonth, 0).getDate();
+                    this.daysInCurrentMonth = totalDays;
+
+                    let start = 1;
+                    let end = totalDays;
+
+                    if (this.selectedPeriod === 'first_half') {
+                        start = 1;
+                        end = Math.min(15, totalDays);
+                    } else if (this.selectedPeriod === 'second_half') {
+                        start = 16;
+                        end = totalDays;
+                    }
+
+                    let arr = [];
+                    for (let i = start; i <= end; i++) {
+                        arr.push(i);
+                    }
+                    this.activeDaysArray = arr;
+                },
+
+                getPeriodLabel() {
+                    if (this.selectedPeriod === 'first_half') return 'ครึ่งเดือนแรก (วันที่ 1-15)';
+                    if (this.selectedPeriod === 'second_half') return 'ครึ่งเดือนหลัง (วันที่ 16-' + this.daysInCurrentMonth + ')';
+                    return 'เต็มเดือน';
+                },
+
+                isWeekend(day) {
+                    const date = new Date(this.selectedYear, this.selectedMonth - 1, day);
+                    const dayOfWeek = date.getDay();
+                    return dayOfWeek === 0 || dayOfWeek === 6; // Sunday or Saturday
+                },
+
+                getShortDayName(day) {
+                    const daysName = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+                    const date = new Date(this.selectedYear, this.selectedMonth - 1, day);
+                    return daysName[date.getDay()];
+                },
+
+                getRecordKey(empId, day) {
+                    return `${empId}_${this.selectedYear}_${this.selectedMonth}_${day}`;
+                },
+
+                getAttendance(empId, day) {
+                    const key = this.getRecordKey(empId, day);
+                    if (this.attendanceRecords[key] !== undefined) {
+                        return this.attendanceRecords[key];
+                    }
+                    return this.isWeekend(day) ? 'H' : '✓';
+                },
+
+                setAttendance(empId, day, value) {
+                    const key = this.getRecordKey(empId, day);
+                    this.attendanceRecords[key] = value;
+                },
+
+                getStatusBadgeClass(status) {
+                    switch (status) {
+                        case '✓': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+                        case 'S': return 'bg-amber-50 text-amber-700 border-amber-200';
+                        case 'P': return 'bg-blue-50 text-blue-700 border-blue-200';
+                        case 'Sick': return 'bg-purple-50 text-purple-700 border-purple-200';
+                        case 'A': return 'bg-rose-50 text-rose-700 border-rose-200';
+                        case 'H': return 'bg-slate-100 text-slate-500 border-slate-200';
+                        default: return 'bg-white text-slate-700 border-slate-200';
+                    }
+                },
+
+                getSummaryCount(empId, status) {
+                    let count = 0;
+                    // Loop only through active days array based on period selection
+                    this.activeDaysArray.forEach(day => {
+                        const currentStatus = this.getAttendance(empId, day);
+                        if (currentStatus === status) {
+                            count++;
+                        }
+                    });
+                    return count;
+                },
+
+                loadInitialRecords() {
+                    this.employees.forEach(emp => {
+                        for (let day = 1; day <= 31; day++) {
+                            const key = this.getRecordKey(emp.id, day);
+                            if (this.isWeekend(day)) {
+                                this.attendanceRecords[key] = 'H';
+                            } else {
+                                if (emp.id === 2 && day === 5) this.attendanceRecords[key] = 'Sick';
+                                else if (emp.id === 3 && day === 12) this.attendanceRecords[key] = 'S';
+                                else if (emp.id === 4 && day === 18) this.attendanceRecords[key] = 'P';
+                                else this.attendanceRecords[key] = '✓';
+                            }
+                        }
+                    });
+                },
+
+                openAddEmployeeModal() {
+                    this.isEditingEmp = false;
+                    this.empForm = { id: null, name: '', position: '' };
+                    this.showEmpModal = true;
+                },
+
+                openEditEmployeeModal(emp) {
+                    this.isEditingEmp = true;
+                    this.empForm = { ...emp };
+                    this.showEmpModal = true;
+                },
+
+                closeEmployeeModal() {
+                    this.showEmpModal = false;
+                },
+
+                saveEmployee() {
+                    if (!this.empForm.name.trim()) {
+                        alert('กรุณากรอกชื่อ-นามสกุลพนักงาน');
+                        return;
+                    }
+                    if (this.isEditingEmp) {
+                        const index = this.employees.findIndex(e => e.id === this.empForm.id);
+                        if (index !== -1) {
+                            this.employees[index] = { ...this.empForm };
+                        }
+                    } else {
+                        const newId = this.employees.length > 0 ? Math.max(...this.employees.map(e => e.id)) + 1 : 1;
+                        this.employees.push({ id: newId, name: this.empForm.name, position: this.empForm.position });
+                    }
+                    this.closeEmployeeModal();
+                },
+
+                deleteEmployee(id) {
+                    if (confirm('คุณต้องการลบพนักงานรายนี้ออกจากระบบใช่หรือไม่?')) {
+                        this.employees = this.employees.filter(e => e.id !== id);
+                    }
+                },
+
+                exportToCSV() {
+                    let csvContent = "\uFEFF"; // UTF-8 BOM for Thai language support in Excel
+                    
+                    csvContent += `รายงานสรุปเวลาทำงาน ช่วง${this.getPeriodLabel()} ประจำเดือน ${this.months[this.selectedMonth-1]} พ.ศ. ${this.selectedYear+543}\n`;
+                    csvContent += `รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,มาปกติ(วัน),มาสาย(ครั้ง),ลากิจ(วัน),ลาป่วย(วัน),ขาดงาน(วัน)\n`;
+
+                    this.employees.forEach(emp => {
+                        const normal = this.getSummaryCount(emp.id, '✓');
+                        const late = this.getSummaryCount(emp.id, 'S');
+                        const personal = this.getSummaryCount(emp.id, 'P');
+                        const sick = this.getSummaryCount(emp.id, 'Sick');
+                        const absent = this.getSummaryCount(emp.id, 'A');
+
+                        const row = [`EMP${String(emp.id).padStart(3, '0')}`, `"${emp.name}"`, `"${emp.position}"`, normal, late, personal, sick, absent];
+                        csvContent += row.join(",") + "\n";
+                    });
+
+                    const encodedUri = encodeURI("data:text/csv;charset=utf-8," + csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", `Attendance_Report_${this.selectedPeriod}_${this.selectedMonth}_${this.selectedYear}.csv`);
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
