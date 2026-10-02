@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกเวลา เข้า-ออกงาน ประจำเดือน</title>
+    <title>ระบบบันทึกเวลาเข้า-ออกงานประจำเดือน</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Font -->
@@ -123,7 +123,7 @@
                         <span x-text="months[selectedMonth-1] + ' ' + (selectedYear+543)" class="text-indigo-600"></span>
                         <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200 ml-2" x-text="getPeriodLabel()"></span>
                     </h2>
-                    <p class="text-xs text-slate-500 mt-1">วันทำงานบริษัท: จันทร์–เสาร์ • วันอาทิตย์เป็นวันหยุด • เลือก <b>H (วันหยุด)</b> ในวันที่ต้องการให้ระบบหักออกจากวันทำงานอัตโนมัติ</p>
+                    <p class="text-xs text-slate-500 mt-1">วันทำงานบริษัท: จันทร์–เสาร์ • วันอาทิตย์เป็นวันหยุด • คลิกช่องเพื่อเปลี่ยนสถานะ: ✓ ปกติ, S สาย, P ลากิจ, Sick ลาป่วย, A ขาด, H หยุด</p>
                 </div>
                 
                 <!-- Status Legend Guide -->
@@ -133,7 +133,7 @@
                     <span class="px-2 py-1 bg-blue-50 text-blue-700 border border-blue-200 rounded font-medium">P = ลากิจ</span>
                     <span class="px-2 py-1 bg-purple-50 text-purple-700 border border-purple-200 rounded font-medium">Sick = ลาป่วย</span>
                     <span class="px-2 py-1 bg-rose-50 text-rose-700 border border-rose-200 rounded font-medium">A = ขาดงาน</span>
-                    <span class="px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded font-medium">H = วันหยุด</span>
+                    <span class="px-2 py-1 bg-slate-100 text-slate-600 border border-slate-200 rounded font-medium">H = วันอาทิตย์/วันหยุด</span><span class="px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded font-medium">เสาร์ = วันทำงานปกติ</span>
                 </div>
             </div>
 
@@ -196,7 +196,7 @@
                         <span x-text="months[selectedMonth-1] + ' ' + (selectedYear+543)" class="text-indigo-600"></span>
                         <span class="text-xs bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-full border border-indigo-200 ml-2" x-text="getPeriodLabel()"></span>
                     </h2>
-                    <p class="text-xs text-slate-500 mt-1">สรุปวันทำงานสุทธิ (หักวันหยุด H และวันลาออกอัตโนมัติ), มาปกติ, มาสาย, ลากิจ, ลาป่วย และขาดงานของพนักงานตามช่วงเวลาที่เลือก</p>
+                    <p class="text-xs text-slate-500 mt-1">สรุปวันทำงาน (จันทร์–เสาร์), วันมาปกติ, มาสาย, ลากิจ, ลาป่วย และขาดงานของพนักงานตามช่วงเวลาที่เลือก</p>
                 </div>
                 <div class="flex items-center gap-3">
                     <button @click="exportToCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3.5 py-2 rounded-lg shadow transition flex items-center gap-1.5">
@@ -217,7 +217,7 @@
                 </template>
             </div>
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ วันทำงานบริษัทหักวันอาทิตย์และวันที่ถูกตั้งเป็น <b>H (วันหยุด)</b> ออกอัตโนมัติ • <b>มาปกติ ✓ / มาสาย S</b> นับเป็นการปฏิบัติงาน • สูตร: <b>วันทำงานสุทธิ = วันทำงานปกติ - วันหยุด (H) - (P + Sick)</b>
+                ℹ️ วันทำงานบริษัทนับ <b>จันทร์–เสาร์</b> โดยไม่นับวันอาทิตย์ (วันเสาร์เป็นวันทำงานปกติ) • <b>มาปกติ ✓</b> นับเป็นวันที่มาปฏิบัติงาน • <b>มาสาย S</b> ยังนับเป็นการมาปฏิบัติงาน • <b>ปฏิบัติงานจริง = ✓ + S</b> • <b>ลากิจ P / ลาป่วย Sick</b> เป็นวันลาที่ได้รับอนุมัติ • สูตรคือ <b>วันทำงานสุทธิที่ต้องมาทำงาน = วันทำงาน − (P + Sick)</b> และ <b>ขาดงาน = วันทำงานสุทธิ − (✓ + S)</b> โดย S (สาย) ยังนับเป็นวันทำงาน ส่วนเดือนปัจจุบัน/อนาคตจะนับ A เฉพาะที่บันทึกจริง
             </div>
 
             <!-- Summary Table Cards / Grid -->
@@ -229,7 +229,6 @@
                                 <th class="p-3 border-b text-center w-12">#</th>
                                 <th class="p-3 border-b">ชื่อ - นามสกุล</th>
                                 <th class="p-3 border-b">ตำแหน่ง</th>
-                                <th class="p-3 border-b text-center text-indigo-700 bg-indigo-50/50">วันทำงานสุทธิ</th>
                                 <th class="p-3 border-b text-center text-emerald-700 bg-emerald-50/50">มาปกติ (วัน)</th>
                                 <th class="p-3 border-b text-center text-amber-700 bg-amber-50/50">มาสาย (ครั้ง)</th>
                                 <th class="p-3 border-b text-center text-blue-700 bg-blue-50/50">ลากิจ (วัน)</th>
@@ -246,7 +245,6 @@
                                     <td class="p-3 text-slate-600 text-xs" x-text="emp.position"></td>
                                     
                                     <!-- Stats Calculation based on Period -->
-                                    <td class="p-3 text-center font-bold text-indigo-600 bg-indigo-50/20" x-text="getEmployeePeriodStats(emp.id).requiredAttendanceDays"></td>
                                     <td class="p-3 text-center font-bold text-emerald-600 bg-emerald-50/20" x-text="getSummaryCount(emp.id, '✓')"></td>
                                     <td class="p-3 text-center font-bold text-amber-600 bg-amber-50/20" x-text="getSummaryCount(emp.id, 'S')"></td>
                                     <td class="p-3 text-center font-bold text-blue-600 bg-blue-50/20" x-text="getSummaryCount(emp.id, 'P')"></td>
@@ -296,7 +294,7 @@
             </div>
 
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ ประวัติถูกเก็บระยะยาวใน Firestore • ค้นได้ตาม <b>ปี / เดือน / พนักงาน / สถานะ</b>
+                ℹ️ ประวัติถูกเก็บระยะยาวใน Firestore และไม่ถูกลบเมื่อเอาพนักงานออกจากรายชื่อ • ค้นได้ตาม <b>ปี / เดือน / พนักงาน / สถานะ</b> • วันจันทร์–เสาร์เป็นวันทำงานปกติ • วันอาทิตย์เป็นวันหยุด • ปฏิบัติงานจริง = <b>✓ + S</b> • ลากิจและลาป่วยเป็นวันลา • สูตรสรุปคือ วันทำงานสุทธิ = วันทำงาน − (P + Sick) และขาดงาน = วันทำงานสุทธิ − (✓ + S) เมื่อช่วงเวลาจบแล้ว; เดือนปัจจุบัน/อนาคตนับ A เฉพาะที่บันทึกจริง
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -306,6 +304,46 @@
                         <div class="text-2xl font-bold mt-1" :class="card.class" x-text="card.value"></div>
                     </div>
                 </template>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="px-4 py-3 border-b border-slate-200">
+                    <div class="text-sm font-bold text-slate-800">📊 สรุปแยกรายบุคคลตามตัวกรอง</div>
+                    <div class="text-[11px] text-slate-500 mt-1">แสดงจำนวน มาปกติ / มาสาย / ลากิจ / ลาป่วย / ขาดงาน / วันหยุด และวันทำงานจริงของแต่ละคน</div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead class="bg-slate-100 text-slate-700 text-xs">
+                            <tr>
+                                <th class="p-3 border-b">รหัส</th>
+                                <th class="p-3 border-b">ชื่อ - นามสกุล</th>
+                                <th class="p-3 border-b text-center text-emerald-700">ปกติ</th>
+                                <th class="p-3 border-b text-center text-amber-700">สาย</th>
+                                <th class="p-3 border-b text-center text-blue-700">ลากิจ</th>
+                                <th class="p-3 border-b text-center text-purple-700">ลาป่วย</th>
+                                <th class="p-3 border-b text-center text-rose-700">ขาด</th>
+                                <th class="p-3 border-b text-center text-slate-600">หยุด</th>
+                                <th class="p-3 border-b text-center text-indigo-700">ทำงานจริง</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-sm divide-y divide-slate-100">
+                            <template x-for="row in historyEmployeeSummary" :key="'hs-' + row.empId">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 font-mono text-xs text-slate-500" x-text="'EMP' + String(row.employeeNo || '').padStart(3,'0')"></td>
+                                    <td class="p-3 font-semibold" x-text="row.name"></td>
+                                    <td class="p-3 text-center font-bold text-emerald-600" x-text="row.normal"></td>
+                                    <td class="p-3 text-center font-bold text-amber-600" x-text="row.late"></td>
+                                    <td class="p-3 text-center font-bold text-blue-600" x-text="row.personal"></td>
+                                    <td class="p-3 text-center font-bold text-purple-600" x-text="row.sick"></td>
+                                    <td class="p-3 text-center font-bold text-rose-600" x-text="row.absent"></td>
+                                    <td class="p-3 text-center font-bold text-slate-600" x-text="row.holiday"></td>
+                                    <td class="p-3 text-center font-bold text-indigo-600" x-text="row.actual"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="!historyEmployeeSummary.length"><td colspan="9" class="p-8 text-center text-sm text-slate-400">ยังไม่มีข้อมูลที่บันทึกตามตัวกรองนี้</td></tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
@@ -408,8 +446,16 @@
         </div>
     </div>
 
-    <!-- App Logic Script -->
+    <!-- App Logic Script: Firebase Online / Shared Login / Shared Data -->
     <script>
+        /* =========================================================
+           EMPLOYEE / ATTENDANCE ONLINE SYSTEM
+           ใช้ Firebase Project + Authentication เดียวกับ index.html
+           ข้อมูลแยกตาม ownerUid เช่นเดียวกับระบบหลัก
+           Collections:
+             employees  = รายชื่อพนักงาน
+             attendance = บันทึกเวลาแต่ละวัน
+           ========================================================= */
         const firebaseConfig = {
             apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
             authDomain: "delivery-tracking-2313a.firebaseapp.com",
@@ -432,6 +478,12 @@
         let authRedirecting = false;
 
         const USER_EMAIL_DOMAIN = 'delivery-tracking-2313a.firebaseapp.com';
+
+        function usernameToAuthEmail(username) {
+            const value = String(username || '').trim().toLowerCase();
+            if (value.includes('@')) return value;
+            return value.replace(/[^a-z0-9._-]/g, '_') + '@' + USER_EMAIL_DOMAIN;
+        }
 
         function escapeCSV(value) {
             return '"' + String(value ?? '').replace(/"/g, '""') + '"';
@@ -655,32 +707,32 @@
                     });
                     return rows;
                 },
+				
+				// เพิ่มตัวเลือกหรือฟังก์ชันสำหรับเก็บวันหยุดพิเศษรายเดือน
+customHolidays: {
+    // ตัวอย่างเช่น เดือน 10 (ตุลาคม) มีวันหยุดวันที่ 13 และ 23
+    // '2026-10-13': true, '2026-10-23': true
+},
 
-                // คำนวณวันทำงานโดยตรวจสอบวันอาทิตย์และวันที่เลือกเป็น H (วันหยุด) ของพนักงานคนแรกเพื่อใช้เป็นเกณฑ์กลางบริษัท
                 getWorkdaysForRange(year, month, startDay=1, endDay=null) {
-                    const totalDays = new Date(year, month, 0).getDate();
-                    const end = Math.min(endDay || totalDays, totalDays);
-                    let count = 0;
-                    
-                    // ใช้พนักงานคนแรกเป็นหลักในการเช็คสถานะ H (วันหยุด) ถ้ารายการไหนผู้ใช้กด H
-                    const sampleEmpId = this.employees[0]?.id;
+    const totalDays = new Date(year, month, 0).getDate();
+    const end = Math.min(endDay || totalDays, totalDays);
+    let count = 0;
+    for (let day = Math.max(1, startDay); day <= end; day++) {
+        const dateObj = new Date(year, month - 1, day);
+        const dayOfWeek = dateObj.getDay();
+        
+        // สมมติรูปแบบเก็บวันหยุดพิเศษเปรียบเทียบ (YYYY-MM-DD)
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isCustomHoliday = this.customHolidays?.[dateStr];
 
-                    for (let day = Math.max(1, startDay); day <= end; day++) {
-                        const dateObj = new Date(year, month - 1, day);
-                        const dayOfWeek = dateObj.getDay(); // 0 = วันอาทิตย์
-
-                        let isHoliday = (dayOfWeek === 0); // วันอาทิตย์เป็นวันหยุดโดยปริยาย
-                        if (sampleEmpId) {
-                            const status = this.getRecordedStatus(sampleEmpId, year, month, day);
-                            if (status === 'H') isHoliday = true;
-                        }
-
-                        if (!isHoliday) {
-                            count++;
-                        }
-                    }
-                    return count;
-                },
+        // ถ้าไม่ใช่ วันอาทิตย์ (0) และไม่ใช่ วันหยุดพิเศษ จึงจะนับเป็นวันทำงาน
+        if (dayOfWeek !== 0 && !isCustomHoliday) {
+            count++;
+        }
+    }
+    return count;
+},
 
                 isPeriodComplete(year, month, startDay=1, endDay=null) {
                     const totalDays = new Date(year, month, 0).getDate();
@@ -704,29 +756,31 @@
                         else if (status === 'H') holiday++;
                     }
 
+                    // 1. วันทำงานสุทธิ = วันที่บริษัทเปิดทำการทั้งหมดในช่วงเวลานั้น (ไม่หักวันลา)
                     const workdays = this.getWorkdaysForRange(year, month, startDay, end);
-                    const approvedLeave = personal + sick;
-                    const requiredAttendanceDays = Math.max(0, workdays - approvedLeave);
-
+                    const approvedLeave = personal + sick; // วันลา (ลากิจ + ลาป่วย)
+                    
+                    // คำนวณวันขาดงาน (Absent)
                     const recordedActual = normal + late;
-                    const balanceAbsent = Math.max(0, requiredAttendanceDays - recordedActual);
+                    const balanceAbsent = Math.max(0, (workdays - approvedLeave) - recordedActual);
                     const absent = this.isPeriodComplete(year, month, startDay, end)
                         ? Math.max(explicitAbsent, balanceAbsent)
                         : explicitAbsent;
-                    const actual = Math.max(0, requiredAttendanceDays - absent);
+
+                    // 2. ปฏิบัติงานจริง = วันทำงานสุทธิ - วันลา - ขาดงาน (หรือเทียบเท่ากับ normal + late)
+                    const actual = Math.max(0, workdays - approvedLeave - absent);
 
                     return {
-                        workdays,
-                        normal,
-                        late,
-                        actual,
-                        personal,
-                        sick,
-                        approvedLeave,
-                        requiredAttendanceDays,
+                        workdays,       // วันทำงานสุทธิ (วันที่บริษัทเปิด)
+                        normal,         // มาปกติ
+                        late,           // มาสาย
+                        actual,         // ปฏิบัติงานจริง
+                        personal,       // ลากิจ
+                        sick,           // ลาป่วย
+                        approvedLeave,  // รวมวันลา
                         explicitAbsent,
-                        absent,
-                        holiday
+                        absent,         // ขาดงาน
+                        holiday         // วันหยุด
                     };
                 },
 
@@ -756,7 +810,7 @@
                         {key:'sick',label:'ลาป่วย Sick',value:count('Sick'),class:'text-purple-600'},
                         {key:'absent',label:'ขาดงาน A',value:absentOverride !== null ? absentOverride : count('A'),class:'text-rose-600'}
                     );
-                    if (includeHoliday) cards.push({key:'holiday',label:'วันหยุด/นักขัตฤกษ์',value:count('H'),class:'text-slate-500'});
+                    if (includeHoliday) cards.push({key:'holiday',label:'วันหยุดอาทิตย์',value:count('H'),class:'text-slate-500'});
                     return cards;
                 },
 
@@ -804,6 +858,7 @@
                         const position = emp?.position || meta.employeePosition || '-';
                         const employeeNo = emp?.employeeNo || meta.employeeNo || '';
 
+                        // ประวัติย้อนหลังต้องอ่านได้แม้พนักงานปัจจุบันถูกแก้ไข/นำออกจากรายชื่อ
                         rows.push({
                             key, empId, employeeNo, name, position,
                             year, month, day, status
@@ -813,6 +868,7 @@
                     rows.sort((a,b) => b.year-a.year || b.month-a.month || b.day-a.day || String(a.name).localeCompare(String(b.name),'th'));
                     this.filteredHistory = rows;
 
+                    // ประวัติแบบรายเดือนจะใช้สูตรเดียวกับรายงานปัจจุบัน เพื่อให้ข้อมูลย้อนหลังตรงกัน
                     const monthStats = [];
                     if (yearFilter && monthFilter && statusFilter === null) {
                         this.employees.filter(emp => !empFilter || String(emp.id) === empFilter).forEach(emp => {
@@ -925,10 +981,6 @@
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
                             historyVersion: 2
                         }, { merge: true });
-
-                        // คำนวณอัปเดตหน้าจอทันที
-                        this.preparePeriodSummary();
-                        this.prepareHistory();
                     } catch (err) {
                         console.error('save attendance:', err);
                         showToast('บันทึกเวลาไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อ', 'error');
@@ -973,6 +1025,7 @@
                     const position = String(this.empForm.position || '').trim();
                     if (!name) { showToast('กรุณากรอกชื่อ-นามสกุลพนักงาน', 'error'); return; }
 
+                    const button = document.querySelector('[x-on\\:click="saveEmployee()"], [\\@click="saveEmployee()"]');
                     try {
                         if (this.isEditingEmp && this.empForm.id) {
                             await db.collection('employees').doc(this.empForm.id).update({
@@ -996,7 +1049,7 @@
                         this.closeEmployeeModal();
                     } catch (err) {
                         console.error('saveEmployee:', err);
-                        showToast('ไม่สามารถบันทึกข้อมูลพนักงานได้', 'error');
+                        showToast('ไม่สามารถบันทึกข้อมูลพนักงานได้ กรุณาตรวจสอบ Firestore Rules', 'error');
                     }
                 },
 
@@ -1005,21 +1058,23 @@
                     if (!emp) return;
                     if (!confirm(`ต้องการลบ “${emp.name}” ออกจากระบบหรือไม่?\nประวัติการลงเวลาจะยังคงเก็บไว้และค้นย้อนหลังได้`)) return;
                     try {
+                        // ห้ามลบ attendance เมื่อเอาพนักงานออกจากรายชื่อ
+                        // เพื่อให้ประวัติระยะยาวยังค้นย้อนหลังได้ตามปี/เดือน
                         await db.collection('employees').doc(id).delete();
-                        showToast('นำพนักงานออกจากรายชื่อแล้ว', 'success');
+                        showToast('นำพนักงานออกจากรายชื่อแล้ว — ประวัติการลงเวลายังคงเก็บไว้', 'success');
                     } catch (err) {
                         console.error('deleteEmployee:', err);
-                        showToast('ลบข้อมูลไม่สำเร็จ', 'error');
+                        showToast('ลบข้อมูลไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Firebase', 'error');
                     }
                 },
 
                 exportToCSV() {
                     let csv = '\uFEFF';
                     csv += `รายงานสรุปเวลาทำงาน ${this.getPeriodLabel()} ประจำเดือน ${this.months[this.selectedMonth-1]} พ.ศ. ${this.selectedYear+543}\n`;
-                    csv += 'รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,วันทำงานสุทธิ,มาปกติ(วัน),มาสาย(วัน),ปฏิบัติงานจริง(วัน),ลากิจ(วัน),ลาป่วย(วัน),ขาดงาน(วัน)\n';
+                    csv += 'รหัสพนักงาน,ชื่อ - นามสกุล,ตำแหน่ง,วันทำงาน,มาปกติ(วัน),มาสาย(วัน),ปฏิบัติงานจริง(วัน),ลากิจ(วัน),ลาป่วย(วัน),ขาดงาน(วัน)\n';
                     this.employees.forEach(emp => {
                         const st = this.getEmployeePeriodStats(emp.id);
-                        csv += [escapeCSV('EMP'+String(emp.employeeNo || '').padStart(3,'0')),escapeCSV(emp.name),escapeCSV(emp.position),st.requiredAttendanceDays,st.normal,st.late,st.actual,st.personal,st.sick,st.absent].join(',')+'\n';
+                        csv += [escapeCSV('EMP'+String(emp.employeeNo || '').padStart(3,'0')),escapeCSV(emp.name),escapeCSV(emp.position),st.workdays,st.normal,st.late,st.actual,st.personal,st.sick,st.absent].join(',')+'\n';
                     });
                     const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
                     const url = URL.createObjectURL(blob);
