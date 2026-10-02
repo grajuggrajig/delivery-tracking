@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบบันทึกเวลา เข้า-ออกงานประจำเดือน</title>
+    <title>ระบบบันทึกเวลาเข้า-ออกงานประจำเดือน</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <!-- Font -->
@@ -217,7 +217,7 @@
                 </template>
             </div>
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ วันทำงานสุทธิ = วันที่บริษัทเปิดทำการจริง (จันทร์–เสาร์ ไม่รวมวันอาทิตย์และวันหยุดพิเศษ) • <b>ปฏิบัติงานจริง</b> = วันปฏิบัติงานจริง (✓ + S) − วันหยุด − วันลา (P + Sick) − วันขาด (A)
+                ℹ️ วันทำงานบริษัทนับ <b>จันทร์–เสาร์</b> โดยไม่นับวันอาทิตย์ (วันเสาร์เป็นวันทำงานปกติ) • <b>มาปกติ ✓</b> นับเป็นวันที่มาปฏิบัติงาน • <b>มาสาย S</b> ยังนับเป็นการมาปฏิบัติงาน • <b>ปฏิบัติงานจริง = ✓ + S</b> • <b>ลากิจ P / ลาป่วย Sick</b> เป็นวันลาที่ได้รับอนุมัติ • สูตรคือ <b>วันทำงานสุทธิที่ต้องมาทำงาน = วันทำงาน − (P + Sick)</b> และ <b>ขาดงาน = วันทำงานสุทธิ − (✓ + S)</b> โดย S (สาย) ยังนับเป็นวันทำงาน ส่วนเดือนปัจจุบัน/อนาคตจะนับ A เฉพาะที่บันทึกจริง
             </div>
 
             <!-- Summary Table Cards / Grid -->
@@ -294,7 +294,7 @@
             </div>
 
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ ประวัติถูกเก็บระยะยาวใน Firestore และไม่ถูกลบเมื่อเอาพนักงานออกจากรายชื่อ • ค้นได้ตาม <b>ปี / เดือน / พนักงาน / สถานะ</b> • วันจันทร์–เสาร์เป็นวันทำงานปกติ • วันอาทิตย์เป็นวันหยุด • ปฏิบัติงานจริง = วันปฏิบัติงานจริง (✓ + S) − วันหยุด − วันลา − วันขาด
+                ℹ️ ประวัติถูกเก็บระยะยาวใน Firestore และไม่ถูกลบเมื่อเอาพนักงานออกจากรายชื่อ • ค้นได้ตาม <b>ปี / เดือน / พนักงาน / สถานะ</b> • วันจันทร์–เสาร์เป็นวันทำงานปกติ • วันอาทิตย์เป็นวันหยุด • ปฏิบัติงานจริง = <b>✓ + S</b> • ลากิจและลาป่วยเป็นวันลา • สูตรสรุปคือ วันทำงานสุทธิ = วันทำงาน − (P + Sick) และขาดงาน = วันทำงานสุทธิ − (✓ + S) เมื่อช่วงเวลาจบแล้ว; เดือนปัจจุบัน/อนาคตนับ A เฉพาะที่บันทึกจริง
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
@@ -448,6 +448,14 @@
 
     <!-- App Logic Script: Firebase Online / Shared Login / Shared Data -->
     <script>
+        /* =========================================================
+           EMPLOYEE / ATTENDANCE ONLINE SYSTEM
+           ใช้ Firebase Project + Authentication เดียวกับ index.html
+           ข้อมูลแยกตาม ownerUid เช่นเดียวกับระบบหลัก
+           Collections:
+             employees  = รายชื่อพนักงาน
+             attendance = บันทึกเวลาแต่ละวัน
+           ========================================================= */
         const firebaseConfig = {
             apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
             authDomain: "delivery-tracking-2313a.firebaseapp.com",
@@ -700,27 +708,31 @@
                     return rows;
                 },
 				
-                customHolidays: {
-                    // กำหนดวันหยุดพิเศษรายเดือนตามต้องการ เช่น '2026-10-13': true
-                },
+				// เพิ่มตัวเลือกหรือฟังก์ชันสำหรับเก็บวันหยุดพิเศษรายเดือน
+customHolidays: {
+    // ตัวอย่างเช่น เดือน 10 (ตุลาคม) มีวันหยุดวันที่ 13 และ 23
+    // '2026-10-13': true, '2026-10-23': true
+},
 
                 getWorkdaysForRange(year, month, startDay=1, endDay=null) {
-                    const totalDays = new Date(year, month, 0).getDate();
-                    const end = Math.min(endDay || totalDays, totalDays);
-                    let count = 0;
-                    for (let day = Math.max(1, startDay); day <= end; day++) {
-                        const dateObj = new Date(year, month - 1, day);
-                        const dayOfWeek = dateObj.getDay();
-                        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                        const isCustomHoliday = this.customHolidays?.[dateStr];
+    const totalDays = new Date(year, month, 0).getDate();
+    const end = Math.min(endDay || totalDays, totalDays);
+    let count = 0;
+    for (let day = Math.max(1, startDay); day <= end; day++) {
+        const dateObj = new Date(year, month - 1, day);
+        const dayOfWeek = dateObj.getDay();
+        
+        // สมมติรูปแบบเก็บวันหยุดพิเศษเปรียบเทียบ (YYYY-MM-DD)
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isCustomHoliday = this.customHolidays?.[dateStr];
 
-                        // นับเฉพาะวันจันทร์-เสาร์ และไม่ใช่หยุดพิเศษ (วันอาทิตย์ = 0)
-                        if (dayOfWeek !== 0 && !isCustomHoliday) {
-                            count++;
-                        }
-                    }
-                    return count;
-                },
+        // ถ้าไม่ใช่ วันอาทิตย์ (0) และไม่ใช่ วันหยุดพิเศษ จึงจะนับเป็นวันทำงาน
+        if (dayOfWeek !== 0 && !isCustomHoliday) {
+            count++;
+        }
+    }
+    return count;
+},
 
                 isPeriodComplete(year, month, startDay=1, endDay=null) {
                     const totalDays = new Date(year, month, 0).getDate();
@@ -744,31 +756,41 @@
                         else if (status === 'H') holiday++;
                     }
 
-                    // 1. วันทำงานสุทธิ = วันที่บริษัทเปิดทำงานจริงในช่วงเวลานั้น
+                    // สูตรสรุปที่ใช้ทั้งระบบ:
+                    // 1) วันทำงาน = จันทร์–เสาร์ (ไม่รวมวันอาทิตย์)
+                    // 2) P / Sick = วันลา จึงหักออกจากวันที่ต้องมาทำงาน
+                    // 3) ✓ / S = มาปฏิบัติงานจริง โดย S (สาย) ยังนับเป็นวันทำงาน
+                    // 4) A = ขาดงาน และเป็นส่วนหนึ่งของวันทำงานที่เหลือ
+                    // ดังนั้น: วันทำงาน = ✓ + S + P + Sick + A
+                    // และวันทำงานที่ต้องมาหลังหักลา = วันทำงาน - P - Sick
                     const workdays = this.getWorkdaysForRange(year, month, startDay, end);
-                    const approvedLeave = personal + sick; 
-                    
+                    const approvedLeave = personal + sick;
+                    // หัก P / Sick ออกจากวันทำงานก่อน
+                    // เช่น วันทำงาน 15 - P/Sick 3 = 12 วันที่ต้องมาทำงาน
+                    const requiredAttendanceDays = Math.max(0, workdays - approvedLeave);
+
+                    // A คือวันที่ไม่มาทำงานจริง จึงต้องหักออกจาก 12 วันที่ต้องมาทำงาน
+                    // เช่น 12 - A 1 = มาทำงานจริง 11 วัน
+                    // เมื่อช่วงเวลาจบแล้ว หากมีวันที่ยังไม่ถูกระบุสถานะ จะถือเป็น A เพิ่มให้ครบ
                     const recordedActual = normal + late;
-                    const balanceAbsent = Math.max(0, (workdays - approvedLeave) - recordedActual);
+                    const balanceAbsent = Math.max(0, requiredAttendanceDays - recordedActual);
                     const absent = this.isPeriodComplete(year, month, startDay, end)
                         ? Math.max(explicitAbsent, balanceAbsent)
                         : explicitAbsent;
-
-                    // 2. ปฏิบัติงานจริง = ปฏิบัติงานจริง - วันหยุด - วันลา - วันขาด
-                    // (โดยที่วันปฏิบัติงานจริงเบื้องต้นคือ normal + late)
-                    const actual = Math.max(0, recordedActual - holiday - approvedLeave - absent);
+                    const actual = Math.max(0, requiredAttendanceDays - absent);
 
                     return {
-                        workdays,       
-                        normal,         
-                        late,           
-                        actual,         
-                        personal,       
-                        sick,           
-                        approvedLeave,  
+                        workdays,
+                        normal,
+                        late,
+                        actual,
+                        personal,
+                        sick,
+                        approvedLeave,
+                        requiredAttendanceDays,
                         explicitAbsent,
-                        absent,         
-                        holiday         
+                        absent,
+                        holiday
                     };
                 },
 
@@ -846,6 +868,7 @@
                         const position = emp?.position || meta.employeePosition || '-';
                         const employeeNo = emp?.employeeNo || meta.employeeNo || '';
 
+                        // ประวัติย้อนหลังต้องอ่านได้แม้พนักงานปัจจุบันถูกแก้ไข/นำออกจากรายชื่อ
                         rows.push({
                             key, empId, employeeNo, name, position,
                             year, month, day, status
@@ -855,6 +878,7 @@
                     rows.sort((a,b) => b.year-a.year || b.month-a.month || b.day-a.day || String(a.name).localeCompare(String(b.name),'th'));
                     this.filteredHistory = rows;
 
+                    // ประวัติแบบรายเดือนจะใช้สูตรเดียวกับรายงานปัจจุบัน เพื่อให้ข้อมูลย้อนหลังตรงกัน
                     const monthStats = [];
                     if (yearFilter && monthFilter && statusFilter === null) {
                         this.employees.filter(emp => !empFilter || String(emp.id) === empFilter).forEach(emp => {
@@ -888,7 +912,7 @@
                             else if (r.status === 'Sick') item.sick++;
                             else if (r.status === 'A') item.absent++;
                             else if (r.status === 'H') item.holiday++;
-                            item.actual = Math.max(0, (item.normal + item.late) - item.holiday - (item.personal + item.sick) - item.absent);
+                            item.actual = item.normal + item.late;
                         });
                     }
                     this.historyEmployeeSummary = [...byEmployee.values()].sort((a,b) => String(a.name).localeCompare(String(b.name),'th'));
@@ -1011,6 +1035,7 @@
                     const position = String(this.empForm.position || '').trim();
                     if (!name) { showToast('กรุณากรอกชื่อ-นามสกุลพนักงาน', 'error'); return; }
 
+                    const button = document.querySelector('[x-on\\:click="saveEmployee()"], [\\@click="saveEmployee()"]');
                     try {
                         if (this.isEditingEmp && this.empForm.id) {
                             await db.collection('employees').doc(this.empForm.id).update({
@@ -1043,6 +1068,8 @@
                     if (!emp) return;
                     if (!confirm(`ต้องการลบ “${emp.name}” ออกจากระบบหรือไม่?\nประวัติการลงเวลาจะยังคงเก็บไว้และค้นย้อนหลังได้`)) return;
                     try {
+                        // ห้ามลบ attendance เมื่อเอาพนักงานออกจากรายชื่อ
+                        // เพื่อให้ประวัติระยะยาวยังค้นย้อนหลังได้ตามปี/เดือน
                         await db.collection('employees').doc(id).delete();
                         showToast('นำพนักงานออกจากรายชื่อแล้ว — ประวัติการลงเวลายังคงเก็บไว้', 'success');
                     } catch (err) {
