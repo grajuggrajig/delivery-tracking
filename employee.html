@@ -250,7 +250,7 @@
                                     <td class="p-3 text-center font-bold text-blue-600 bg-blue-50/20" x-text="getSummaryCount(emp.id, 'P')"></td>
                                     <td class="p-3 text-center font-bold text-purple-600 bg-purple-50/20" x-text="getSummaryCount(emp.id, 'Sick')"></td>
                                     <td class="p-3 text-center font-bold text-rose-600 bg-rose-50/20" x-text="getEmployeePeriodStats(emp.id).absent"></td>
-                                    <td class="p-3 text-center font-bold text-slate-700 bg-slate-50" x-text="getEmployeePeriodStats(emp.id).actual"></td>
+                                    <td class="p-3 text-center font-bold bg-slate-50" :class="getActualWorkClass(emp.id)" x-text="getEmployeePeriodStats(emp.id).actual"></td>
                                 </tr>
                             </template>
                         </tbody>
@@ -957,6 +957,20 @@
 
                 getSummaryCount(empId, status) {
                     return this.activeDaysArray.reduce((n, day) => n + (this.getRecordedStatus(empId, this.selectedYear, this.selectedMonth, day) === status ? 1 : 0), 0);
+                },
+
+                // สีเฉพาะค่า "ปฏิบัติงานจริง" เมื่อมีวันที่ถูกเปลี่ยนสถานะ
+                getActualWorkClass(empId) {
+                    const hasChange = this.activeDaysArray.some(day => {
+                        const status = this.getRecordedStatus(empId, this.selectedYear, this.selectedMonth, day);
+                        return status === 'P' || status === 'Sick' || status === 'A' || status === 'H';
+                    });
+
+                    if (!hasChange) return 'text-slate-700';
+
+                    const stats = this.getEmployeePeriodStats(empId);
+                    if (stats.actual < stats.workdays) return 'text-rose-600 bg-rose-50';
+                    return 'text-amber-600 bg-amber-50';
                 },
 
                 openAddEmployeeModal() {
