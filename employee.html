@@ -217,7 +217,7 @@
                 </template>
             </div>
             <div class="bg-indigo-50 border border-indigo-100 rounded-xl px-4 py-3 text-xs text-indigo-700 leading-6">
-                ℹ️ วันทำงานบริษัทหักวันอาทิตย์และวันที่ถูกตั้งเป็น <b>H (วันหยุด)</b> ออกอัตโนมัติ • <b>มาปกติ ✓ / มาสาย S</b> นับเป็นการปฏิบัติงาน • สูตร: <b>วันทำงานสุทธิ = วันทำงานปกติ - วันหยุด (H) - (P + Sick)</b>
+                ℹ️ วันทำงานบริษัทหักวันอาทิตย์และวันที่ถูกตั้งเป็น <b>H (วันหยุด)</b> ออกอัตโนมัติ • <b>มาสาย S</b> นับเป็นการปฏิบัติงาน • <b>ขาดงาน</b> คำนวณอัตโนมัติ • สูตร: <b>ปฏิบัติงานจริง = วันทำงานสุทธิ - ลากิจ - ลาป่วย - ขาดงาน</b>
             </div>
 
             <!-- Summary Table Cards / Grid -->
@@ -230,7 +230,6 @@
                                 <th class="p-3 border-b">ชื่อ - นามสกุล</th>
                                 <th class="p-3 border-b">ตำแหน่ง</th>
                                 <th class="p-3 border-b text-center text-indigo-700 bg-indigo-50/50">วันทำงานสุทธิ</th>
-                                <th class="p-3 border-b text-center text-emerald-700 bg-emerald-50/50">มาปกติ (วัน)</th>
                                 <th class="p-3 border-b text-center text-amber-700 bg-amber-50/50">มาสาย (ครั้ง)</th>
                                 <th class="p-3 border-b text-center text-blue-700 bg-blue-50/50">ลากิจ (วัน)</th>
                                 <th class="p-3 border-b text-center text-purple-700 bg-purple-50/50">ลาป่วย (วัน)</th>
@@ -247,7 +246,6 @@
                                     
                                     <!-- Stats Calculation based on Period -->
                                     <td class="p-3 text-center font-bold text-indigo-600 bg-indigo-50/20" x-text="getEmployeePeriodStats(emp.id).requiredAttendanceDays"></td>
-                                    <td class="p-3 text-center font-bold text-emerald-600 bg-emerald-50/20" x-text="getSummaryCount(emp.id, '✓')"></td>
                                     <td class="p-3 text-center font-bold text-amber-600 bg-amber-50/20" x-text="getSummaryCount(emp.id, 'S')"></td>
                                     <td class="p-3 text-center font-bold text-blue-600 bg-blue-50/20" x-text="getSummaryCount(emp.id, 'P')"></td>
                                     <td class="p-3 text-center font-bold text-purple-600 bg-purple-50/20" x-text="getSummaryCount(emp.id, 'Sick')"></td>
@@ -662,17 +660,17 @@
                     const end = Math.min(endDay || totalDays, totalDays);
                     let count = 0;
                     
-                    // ใช้พนักงานคนแรกเป็นหลักในการเช็คสถานะ H (วันหยุด) ถ้ารายการไหนผู้ใช้กด H
-                    const sampleEmpId = this.employees[0]?.id;
-
                     for (let day = Math.max(1, startDay); day <= end; day++) {
                         const dateObj = new Date(year, month - 1, day);
                         const dayOfWeek = dateObj.getDay(); // 0 = วันอาทิตย์
 
                         let isHoliday = (dayOfWeek === 0); // วันอาทิตย์เป็นวันหยุดโดยปริยาย
-                        if (sampleEmpId) {
-                            const status = this.getRecordedStatus(sampleEmpId, year, month, day);
-                            if (status === 'H') isHoliday = true;
+
+                        // หากมีการกำหนด H ในวันใดวันหนึ่ง ให้ถือเป็นวันหยุดบริษัท
+                        if (this.employees.some(emp =>
+                            this.getRecordedStatus(emp.id, year, month, day) === 'H'
+                        )) {
+                            isHoliday = true;
                         }
 
                         if (!isHoliday) {
@@ -705,15 +703,24 @@
                     }
 
                     const workdays = this.getWorkdaysForRange(year, month, startDay, end);
-                    const approvedLeave = personal + sick;
-                    const requiredAttendanceDays = Math.max(0, workdays - approvedLeave);
 
-                    const recordedActual = normal + late;
-                    const balanceAbsent = Math.max(0, requiredAttendanceDays - recordedActual);
+                    // ขาดงานคำนวณอัตโนมัติจากวันทำงานสุทธิ
+                    // โดยไม่นับวันหยุด H และไม่นับวันที่มีสถานะ ✓ / S / P / Sick ซ้ำ
+                    const recordedWorked = normal + late;
+                    const balanceAbsent = Math.max(
+                        0,
+                        workdays - personal - sick - recordedWorked
+                    );
+
                     const absent = this.isPeriodComplete(year, month, startDay, end)
                         ? Math.max(explicitAbsent, balanceAbsent)
                         : explicitAbsent;
-                    const actual = Math.max(0, requiredAttendanceDays - absent);
+
+                    // ปฏิบัติงานจริง = วันทำงานสุทธิ - ลากิจ - ลาป่วย - ขาดงาน
+                    const actual = Math.max(
+                        0,
+                        workdays - personal - sick - absent
+                    );
 
                     return {
                         workdays,
@@ -722,8 +729,8 @@
                         actual,
                         personal,
                         sick,
-                        approvedLeave,
-                        requiredAttendanceDays,
+                        approvedLeave: personal + sick,
+                        requiredAttendanceDays: workdays,
                         explicitAbsent,
                         absent,
                         holiday
