@@ -756,7 +756,6 @@
                     const cards = [];
                     if (workdays !== null) cards.push({key:'companyWorkdays',label:'วันทำงานบริษัท (จ.-ส.)',value:workdays,class:'text-indigo-700'});
                     cards.push(
-                        {key:'work',label:'มาปกติ ✓',value:count('✓'),class:'text-emerald-600'},
                         {key:'late',label:'มาสาย S',value:count('S'),class:'text-amber-600'},
                         {key:'actual',label:'ปฏิบัติงานจริง',value:actualOverride !== null ? actualOverride : count('✓') + count('S'),class:'text-slate-700'},
                         {key:'personal',label:'ลากิจ P',value:count('P'),class:'text-blue-600'},
