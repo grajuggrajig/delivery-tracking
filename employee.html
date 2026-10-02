@@ -707,16 +707,32 @@
                     });
                     return rows;
                 },
+				
+				// เพิ่มตัวเลือกหรือฟังก์ชันสำหรับเก็บวันหยุดพิเศษรายเดือน
+customHolidays: {
+    // ตัวอย่างเช่น เดือน 10 (ตุลาคม) มีวันหยุดวันที่ 13 และ 23
+    // '2026-10-13': true, '2026-10-23': true
+},
 
                 getWorkdaysForRange(year, month, startDay=1, endDay=null) {
-                    const totalDays = new Date(year, month, 0).getDate();
-                    const end = Math.min(endDay || totalDays, totalDays);
-                    let count = 0;
-                    for (let day = Math.max(1, startDay); day <= end; day++) {
-                        if (new Date(year, month - 1, day).getDay() !== 0) count++; // จันทร์–เสาร์เป็นวันทำงาน
-                    }
-                    return count;
-                },
+    const totalDays = new Date(year, month, 0).getDate();
+    const end = Math.min(endDay || totalDays, totalDays);
+    let count = 0;
+    for (let day = Math.max(1, startDay); day <= end; day++) {
+        const dateObj = new Date(year, month - 1, day);
+        const dayOfWeek = dateObj.getDay();
+        
+        // สมมติรูปแบบเก็บวันหยุดพิเศษเปรียบเทียบ (YYYY-MM-DD)
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const isCustomHoliday = this.customHolidays?.[dateStr];
+
+        // ถ้าไม่ใช่ วันอาทิตย์ (0) และไม่ใช่ วันหยุดพิเศษ จึงจะนับเป็นวันทำงาน
+        if (dayOfWeek !== 0 && !isCustomHoliday) {
+            count++;
+        }
+    }
+    return count;
+},
 
                 isPeriodComplete(year, month, startDay=1, endDay=null) {
                     const totalDays = new Date(year, month, 0).getDate();
