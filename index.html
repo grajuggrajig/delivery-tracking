@@ -7252,10 +7252,21 @@ async function saveReminder() {
         return;
     }
 
+    const reminderLineIds = [...new Set(
+        allDeliveries
+            .filter(item => String(item.companyName || '').trim().toLowerCase() === companyName.toLowerCase())
+            .flatMap(item => getCustomerLineIds(item))
+            .map(normalizeLineId)
+            .filter(Boolean)
+    )];
+
     const reminderData = {
         companyName,
         title,
         type: 'billing',
+        // เก็บผู้รับ LINE ที่พบล่าสุดไว้กับ Reminder เพื่อให้ Background Worker
+        // ส่งได้โดยไม่ต้องเปิดหน้าเว็บ
+        lineIds: reminderLineIds,
         repeat,
         billingRoundsCount: rounds.length,
         billingRounds: rounds,
