@@ -1227,6 +1227,8 @@ body > header{z-index:900 !important}
 }
 #customer-overview-section.overview-hidden{display:none !important}
 #delivery-workspace-section.delivery-hidden{display:none !important}
+#delivery-workspace-section.delivery-visible{display:flex !important}
+#customer-overview-section.overview-visible{display:flex !important}
 .customer-overview-head{
     display:flex;
     align-items:center;
@@ -7978,17 +7980,30 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
   window.setOverviewMode=function(mode){
     const overview=document.getElementById('customer-overview-section');
     const delivery=document.getElementById('delivery-workspace-section');
-    if(!overview || !delivery) return;
-    const isOverview=mode==='workspace';
-    overview.classList.toggle('overview-hidden',!isOverview);
-    delivery.classList.toggle('delivery-hidden',isOverview);
+    if(!overview || !delivery) return false;
+
+    const isOverview = String(mode || '').toLowerCase() === 'workspace';
+
+    /* ใช้ทั้ง class + display โดยตรง เพื่อกัน CSS/layout อื่นของหน้าไปชนกัน
+       และทำให้เมนู 🚚 การจัดส่ง & ติดตาม เปลี่ยนหน้าได้ทันทีทุกครั้ง */
+    overview.classList.toggle('overview-hidden', !isOverview);
+    delivery.classList.toggle('delivery-hidden', isOverview);
+
+    overview.style.display = isOverview ? 'flex' : 'none';
+    delivery.style.display = isOverview ? 'none' : 'flex';
+
     if(isOverview){
       initOverviewSearch();
-      window.renderCustomerOverview(document.getElementById('overview-search-input')?.value || '');
+      if(typeof window.renderCustomerOverview === 'function'){
+        window.renderCustomerOverview(document.getElementById('overview-search-input')?.value || '');
+      }
     }
+
+    return true;
   };
 
   initOverviewSearch();
+  /* หน้าเริ่มต้น = ภาพรวมลูกค้า */
   requestAnimationFrame(()=>window.setOverviewMode('workspace'));
 })();
 </script>
@@ -8085,10 +8100,38 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
       if(typeof applyFilterAndSearch==='function') applyFilterAndSearch();
       window.scrollTo({top:0,left:0,behavior:'auto'});
     }else if(target==='delivery'){
-      if(typeof window.setOverviewMode==='function') window.setOverviewMode('delivery');
+      /* 🚚 การจัดส่ง & ติดตาม
+         แสดง workspace โดยตรงก่อน แล้วค่อยทำงานเสริมทีหลัง
+         เพื่อไม่ให้ error จาก search/filter ทำให้เมนูดูเหมือนกดไม่ไป */
+      const overview=document.getElementById('customer-overview-section');
+      const delivery=document.getElementById('delivery-workspace-section');
+
+      if(overview && delivery){
+        overview.classList.add('overview-hidden');
+        overview.classList.remove('overview-visible');
+        delivery.classList.remove('delivery-hidden');
+        delivery.classList.add('delivery-visible');
+        overview.style.display='none';
+        delivery.style.display='flex';
+      }
+
+      if(typeof window.setOverviewMode==='function'){
+        try { window.setOverviewMode('delivery'); } catch(navErr) {
+          console.error('geminiNav(delivery) setOverviewMode error:', navErr);
+          /* ยืนยันสถานะหน้า Delivery แม้ฟังก์ชันเสริมจะมี error */
+          if(overview) overview.style.display='none';
+          if(delivery) delivery.style.display='flex';
+        }
+      }
+
       /* หลังจากเปลี่ยนจากภาพรวมมาหน้าหลัก ต้องประมวลผลคำค้นอีกครั้ง
          เพราะ openOverviewCompany ใส่ชื่อบริษัทลง search-input ไว้ก่อนแล้ว */
-      if(typeof applyFilterAndSearch==='function') applyFilterAndSearch();
+      if(typeof applyFilterAndSearch==='function'){
+        try { applyFilterAndSearch(); } catch(filterErr) {
+          console.error('geminiNav(delivery) filter error:', filterErr);
+        }
+      }
+
       const list=document.getElementById('delivery-list');
       if(list) list.scrollTop=0;
       window.scrollTo({top:0,left:0,behavior:'auto'});
