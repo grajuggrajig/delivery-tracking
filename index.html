@@ -19,9 +19,17 @@
         }
         .company-product-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 150px 150px 110px;
+            grid-template-columns: 92px minmax(0, 1fr) 150px 150px 150px;
             gap: 10px;
             align-items: end;
+        }
+        .company-product-image-preview {
+            width: 72px;
+            height: 72px;
+            object-fit: contain;
+            border-radius: 14px;
+            background: #f8fafc;
+            border: 1px solid #dbeafe;
         }
         #company-specific-products-container {
             min-height: 180px;
@@ -37,15 +45,17 @@
             .company-product-grid {
                 grid-template-columns: 1fr 1fr;
             }
+            .company-product-grid .company-product-image-field,
             .company-product-grid .company-product-name {
                 grid-column: 1 / -1;
             }
             #company-specific-products-container > div {
-                grid-template-columns: 28px minmax(0,1fr);
+                grid-template-columns: 28px 58px minmax(0,1fr);
             }
-            #company-specific-products-container > div > div:nth-of-type(2),
-            #company-specific-products-container > div > div:nth-of-type(3) {
+            #company-specific-products-container > div > div:nth-of-type(3),
+            #company-specific-products-container > div > div:nth-of-type(4) {
                 text-align: left;
+                grid-column: 1 / -1;
             }
             #company-specific-products-container > div > div:last-child {
                 grid-column: 1 / -1;
@@ -3429,7 +3439,118 @@ async function ensureProductInStandardStock(name, cost, price) {
     };
 }
 
-async function saveCompanyProduct(companyName, name, cost, price, editId = '', stableCompanyKey = '') {
+function openCompanyProductImagePreview(imageData, productName = 'รูปสินค้า') {
+    const src = decodeURIComponent(String(imageData || ''));
+    const name = decodeURIComponent(String(productName || 'รูปสินค้า'));
+    if (!src) return;
+
+    const old = document.getElementById('company-product-image-preview-modal');
+    if (old) old.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'company-product-image-preview-modal';
+    modal.className = 'fixed inset-0 bg-slate-950/75 backdrop-blur-sm z-[50000] flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="relative max-w-[92vw] max-h-[92vh] bg-white rounded-3xl shadow-2xl p-3 border border-white/20">
+            <button type="button" class="absolute -top-3 -right-3 w-9 h-9 rounded-full bg-slate-900 text-white text-lg shadow-lg hover:bg-slate-700" aria-label="ปิด">✕</button>
+            <img src="${src}" alt="${escapeHTML(name)}" class="max-w-[86vw] max-h-[82vh] object-contain rounded-2xl bg-slate-50">
+            <div class="text-center text-xs font-bold text-slate-700 pt-2 px-2 break-words">${escapeHTML(name)}</div>
+        </div>`;
+    document.body.appendChild(modal);
+    const close = () => modal.remove();
+    modal.querySelector('button')?.addEventListener('click', close);
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+}
+
+function resetCompanyProductImageUI() {
+    const input = document.getElementById('company-product-image-input');
+    const preview = document.getElementById('company-product-image-preview');
+    const placeholder = document.getElementById('company-product-image-placeholder');
+    const removeFlag = document.getElementById('company-product-image-remove');
+    if (input) input.value = '';
+    if (removeFlag) removeFlag.value = '0';
+    if (preview) {
+        preview.src = '';
+        preview.dataset.imageData = '';
+        preview.classList.add('hidden');
+    }
+    if (placeholder) placeholder.classList.remove('hidden');
+}
+
+async function compressCompanyProductImage(file) {
+    if (!file || !file.type.startsWith('image/')) throw new Error('ไฟล์ที่เลือกไม่ใช่รูปภาพ');
+    if (file.size > 10 * 1024 * 1024) throw new Error('รูปภาพมีขนาดเกิน 10 MB');
+
+    const dataUrl = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพได้'));
+        reader.readAsDataURL(file);
+    });
+
+    const image = await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = () => reject(new Error('ไม่สามารถเปิดรูปภาพได้'));
+        img.src = dataUrl;
+    });
+
+    const maxSide = 700;
+    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(image.width * scale));
+    canvas.height = Math.max(1, Math.round(image.height * scale));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    let quality = 0.78;
+    let output = canvas.toDataURL('image/jpeg', quality);
+    while (output.length > 650000 && quality > 0.45) {
+        quality -= 0.08;
+        output = canvas.toDataURL('image/jpeg', quality);
+    }
+    if (output.length > 900000) throw new Error('รูปภาพยังมีขนาดใหญ่เกินไป กรุณาเลือกรูปที่เล็กลง');
+    return output;
+}
+
+async function handleCompanyProductImageChange(file) {
+    const preview = document.getElementById('company-product-image-preview');
+    const placeholder = document.getElementById('company-product-image-placeholder');
+    const removeFlag = document.getElementById('company-product-image-remove');
+    if (!file || !preview) return;
+
+    try {
+        const dataUrl = await compressCompanyProductImage(file);
+        preview.src = dataUrl;
+        preview.classList.remove('hidden');
+        if (placeholder) placeholder.classList.add('hidden');
+        if (removeFlag) removeFlag.value = '0';
+        preview.dataset.imageData = dataUrl;
+    } catch (err) {
+        console.error('handleCompanyProductImageChange:', err);
+        showToast(err.message || 'ไม่สามารถเตรียมรูปภาพได้', 'error');
+        resetCompanyProductImageUI();
+    }
+}
+
+function removeCompanyProductImage() {
+    const preview = document.getElementById('company-product-image-preview');
+    const placeholder = document.getElementById('company-product-image-placeholder');
+    const removeFlag = document.getElementById('company-product-image-remove');
+    const input = document.getElementById('company-product-image-input');
+    if (input) input.value = '';
+    if (preview) {
+        preview.src = '';
+        preview.dataset.imageData = '';
+        preview.classList.add('hidden');
+    }
+    if (placeholder) placeholder.classList.remove('hidden');
+    if (removeFlag) removeFlag.value = '1';
+}
+
+async function saveCompanyProduct(companyName, name, cost, price, editId = '', stableCompanyKey = '', imageData = '', removeImage = false) {
     const cleanCompany = String(companyName || '').trim();
     const cleanName = String(name || '').trim();
     const numericCost = Number(cost) || 0;
@@ -3478,6 +3599,8 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '', s
                 stockProductId: (stockProduct && stockProduct.id) || oldProduct.stockProductId || '',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
+            if (removeImage) updatePayload.imageData = firebase.firestore.FieldValue.delete();
+            else if (imageData) updatePayload.imageData = imageData;
             if (!oldProduct.ownerUid && currentAuthUser?.uid) {
                 updatePayload.ownerUid = currentAuthUser.uid;
             }
@@ -3502,6 +3625,7 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '', s
             ownerUid: currentAuthUser.uid,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
+        if (imageData) payload.imageData = imageData;
 
         if (existing && existing.id) {
             await db.collection('companyProducts').doc(existing.id).update(payload);
@@ -3531,6 +3655,8 @@ window.editCompanyProduct = function(id) {
     const nameInput = document.getElementById('company-product-name-input');
     const costInput = document.getElementById('company-product-cost-input');
     const priceInput = document.getElementById('company-product-price-input');
+    const imagePreview = document.getElementById('company-product-image-preview');
+    const imageRemoveFlag = document.getElementById('company-product-image-remove');
     const editIdInput = document.getElementById('company-product-edit-id');
     const saveBtn = document.getElementById('save-company-product-btn');
     const cancelBtn = document.getElementById('cancel-company-product-edit');
@@ -3541,6 +3667,15 @@ window.editCompanyProduct = function(id) {
     nameInput.value = product.name || '';
     costInput.value = Number(product.cost) || 0;
     priceInput.value = Number(product.price) || 0;
+
+    if (imagePreview) {
+        imagePreview.dataset.imageData = product.imageData || '';
+        imagePreview.src = product.imageData || '';
+        imagePreview.classList.toggle('hidden', !product.imageData);
+    }
+    const imagePlaceholder = document.getElementById('company-product-image-placeholder');
+    if (imagePlaceholder) imagePlaceholder.classList.toggle('hidden', !!product.imageData);
+    if (imageRemoveFlag) imageRemoveFlag.value = '0';
 
     saveBtn.textContent = '💾 บันทึกการแก้ไข';
     saveBtn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
@@ -3563,6 +3698,7 @@ window.cancelCompanyProductEdit = function() {
     if (nameInput) nameInput.value = '';
     if (costInput) costInput.value = '';
     if (priceInput) priceInput.value = '';
+    resetCompanyProductImageUI();
 
     if (saveBtn) {
         saveBtn.textContent = '＋ เพิ่ม / บันทึกราคา';
@@ -3624,8 +3760,11 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
     }
 
     container.innerHTML = products.map((p, index) => `
-        <div class="grid grid-cols-[34px_minmax(0,1fr)_105px_120px_115px] items-center gap-2 px-3.5 py-2.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs">
+        <div class="grid grid-cols-[34px_58px_minmax(0,1fr)_105px_120px_115px] items-center gap-2 px-3.5 py-2.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs">
             <span class="text-[11px] text-sky-600 font-bold text-center">#${index + 1}</span>
+            <div class="flex justify-center">
+                ${p.imageData ? `<button type="button" onclick="openCompanyProductImagePreview('${encodeURIComponent(p.imageData)}','${encodeURIComponent(p.name || 'รูปสินค้า')}')" class="block rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400" title="คลิกเพื่อดูรูปใหญ่"><img src="${p.imageData}" alt="${escapeHTML(p.name)}" class="w-12 h-12 object-contain rounded-xl bg-slate-50 border border-sky-100 hover:scale-105 transition"></button>` : '<div class="w-12 h-12 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-lg" title="ยังไม่มีรูปสินค้า">🖼️</div>'}
+            </div>
             <div class="min-w-0">
                 <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div>
                 <div class="text-[10px] text-slate-400 mt-0.5">เชื่อมกับ Manage Stock${p.stockProductId ? ' ✓' : ''}</div>
@@ -3682,6 +3821,23 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     </div>
 
                     <div class="company-product-grid">
+                        <div class="company-product-image-field">
+                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">🖼️ รูปสินค้า</label>
+                            <div class="flex items-center gap-2">
+                                <label for="company-product-image-input" class="relative block cursor-pointer" title="เลือกรูปสินค้า">
+                                    <img id="company-product-image-preview" src="" alt="ตัวอย่างรูปสินค้า" class="company-product-image-preview hidden">
+                                    <div id="company-product-image-placeholder" class="w-[72px] h-[72px] rounded-[14px] bg-white border border-dashed border-sky-200 flex flex-col items-center justify-center text-slate-400 hover:border-sky-400 hover:text-sky-500 transition">
+                                        <span class="text-xl">🖼️</span><span class="text-[9px] mt-0.5">เลือกรูป</span>
+                                    </div>
+                                </label>
+                                <div class="flex flex-col gap-1">
+                                    <input id="company-product-image-input" type="file" accept="image/jpeg,image/png,image/webp" class="hidden">
+                                    <input type="hidden" id="company-product-image-remove" value="0">
+                                    <button type="button" onclick="removeCompanyProductImage()" class="px-2 py-1 text-[9px] font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-100">🗑️ ลบรูป</button>
+                                    <span class="text-[8px] text-slate-400">JPG / PNG / WEBP</span>
+                                </div>
+                            </div>
+                        </div>
                         <div class="company-product-name">
                             <label class="block text-[10px] font-semibold text-slate-600 mb-1">ชื่อสินค้า *</label>
                             <input id="company-product-name-input" type="text" placeholder="เช่น ดินสอ EE"
@@ -3906,11 +4062,14 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         const cost = Number(companyProductCost.value) || 0;
         const price = Number(companyProductPrice.value);
         const editId = companyProductEditId ? companyProductEditId.value.trim() : '';
+        const imagePreview = document.getElementById('company-product-image-preview');
+        const imageData = imagePreview?.dataset.imageData || '';
+        const removeImage = document.getElementById('company-product-image-remove')?.value === '1';
 
         saveCompanyProductBtn.disabled = true;
         saveCompanyProductBtn.textContent = 'กำลังบันทึก...';
 
-        const ok = await saveCompanyProduct(companyName, name, cost, price, editId, stableCompanyKey);
+        const ok = await saveCompanyProduct(companyName, name, cost, price, editId, stableCompanyKey, imageData, removeImage);
 
         saveCompanyProductBtn.disabled = false;
 
@@ -3924,6 +4083,10 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
     });
 
     cancelCompanyProductEditBtn?.addEventListener('click', cancelCompanyProductEdit);
+
+    document.getElementById('company-product-image-input')?.addEventListener('change', e => {
+        handleCompanyProductImageChange(e.target.files?.[0]);
+    });
 
     // ------------------------------------------------------------
     // รับสินค้าจากบริษัทอื่น
@@ -4017,6 +4180,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             return `
                 <label class="flex items-center gap-3 p-3 rounded-2xl border ${alreadyExists ? 'border-amber-200 bg-amber-50/50' : 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30'} transition cursor-pointer">
                     <input type="checkbox" data-import-product-id="${escapeHTML(p.id)}" class="w-4 h-4 accent-indigo-600 flex-shrink-0" ${checked ? 'checked' : ''} ${alreadyExists ? 'disabled' : ''}>
+                    ${p.imageData ? `<img src="${p.imageData}" alt="${escapeHTML(p.name)}" class="w-11 h-11 object-contain rounded-xl bg-white border border-slate-200 flex-shrink-0">` : '<div class="w-11 h-11 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center text-base flex-shrink-0">🖼️</div>'}
                     <div class="min-w-0 flex-1">
                         <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div>
                         <div class="text-[10px] text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-1">
@@ -4080,6 +4244,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     cost: Number(sourceProduct.cost) || 0,
                     price: Number(sourceProduct.price) || 0,
                     stockProductId,
+                    ...(sourceProduct.imageData ? { imageData: sourceProduct.imageData } : {}),
                     sourceCompanyKey: sourceKey || normalizeCompanyProductKey(sourceProduct.companyName),
                     sourceCompanyName: String(sourceProduct.companyName || sourceName || '').trim(),
                     sourceCompanyProductId: sourceProduct.id,
@@ -7252,10 +7417,21 @@ async function saveReminder() {
         return;
     }
 
+    const reminderLineIds = [...new Set(
+        allDeliveries
+            .filter(item => String(item.companyName || '').trim().toLowerCase() === companyName.toLowerCase())
+            .flatMap(item => getCustomerLineIds(item))
+            .map(normalizeLineId)
+            .filter(Boolean)
+    )];
+
     const reminderData = {
         companyName,
         title,
         type: 'billing',
+        // เก็บผู้รับ LINE ที่พบล่าสุดไว้กับ Reminder เพื่อให้ Background Worker
+        // ส่งได้โดยไม่ต้องเปิดหน้าเว็บ
+        lineIds: reminderLineIds,
         repeat,
         billingRoundsCount: rounds.length,
         billingRounds: rounds,
