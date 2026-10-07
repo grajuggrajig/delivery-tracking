@@ -3490,9 +3490,23 @@ async function ensureProductInStandardStock(name, cost, price, unit = '') {
     );
 
     // ถ้ามีสินค้าเดียวกันใน Manage Stock อยู่แล้ว จะไม่สร้าง products ซ้ำ
+    // แต่ต้องซิงก์ "หน่วย" จาก Company Directory มายัง Stock Management
+    // เพื่อให้เมื่อแก้ไขหน่วย เช่น "แพ็ค" แล้ว Stock Management แสดงตรงกัน
     // รวมกรณีชื่อถูกเว้นวรรค/คั่นเครื่องหมายต่างกัน เช่น
     // "ดินสอปากกา" กับ "ดินสอ ปากกา"
-    if (stockProduct) return stockProduct;
+    if (stockProduct) {
+        const cleanUnit = String(unit || '').trim();
+        const currentUnit = String(stockProduct.unit || '').trim();
+
+        if (currentUnit !== cleanUnit && stockProduct.id) {
+            await db.collection('products').doc(stockProduct.id).update({
+                unit: cleanUnit
+            });
+            stockProduct.unit = cleanUnit;
+        }
+
+        return stockProduct;
+    }
 
     const ref = await db.collection('products').add({
         name: name.trim(),
@@ -3721,7 +3735,7 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
         <div class="grid grid-cols-[34px_minmax(0,1fr)_105px_120px_115px] items-center gap-2 px-3.5 py-2.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs">
             <span class="text-[11px] text-sky-600 font-bold text-center">#${index + 1}</span>
             <div class="min-w-0">
-                <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div>
+                <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}${p.unit ? ` <span class="font-extrabold text-violet-600">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
                 <div class="text-[10px] text-slate-400 mt-0.5">เชื่อมกับ Manage Stock${p.stockProductId ? ' ✓' : ''}</div>
             </div>
             <div class="text-right">
@@ -3743,6 +3757,62 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
             </div>
         </div>
     `).join('');
+}
+
+function exportCompanyProductsCSV(companyName, stableCompanyKey = '') {
+    const companyKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
+    if (!companyKey) {
+        showToast('ไม่พบข้อมูลบริษัทสำหรับ Export', 'error');
+        return;
+    }
+
+    // Export จากสินค้าทั้งหมดของบริษัทโดยตรง ไม่ขึ้นกับคำค้นหาใน Company Directory
+    const companyProducts = allCompanyProducts
+        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey)
+        .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+
+    if (!companyProducts.length) {
+        showToast('บริษัทนี้ยังไม่มีรายการสินค้าที่บันทึกไว้สำหรับ Export', 'info');
+        return;
+    }
+
+    const csvEscape = value => {
+        const text = String(value ?? '');
+        return `"${text.replace(/"/g, '""')}"`;
+    };
+
+    const rows = [
+        ['ลำดับ', 'ชื่อบริษัท', 'ชื่อสินค้า', 'หน่วย', 'ต้นทุน (บาท)', 'ราคาขายบริษัทนี้ (บาท)'],
+        ...companyProducts.map((p, index) => [
+            index + 1,
+            companyName,
+            p.name || '',
+            p.unit || '',
+            Number.isFinite(Number(p.cost)) ? Number(p.cost) : (p.cost ?? ''),
+            Number.isFinite(Number(p.price)) ? Number(p.price) : (p.price ?? '')
+        ])
+    ];
+
+    // UTF-8 BOM ช่วยให้ Excel เปิดภาษาไทยได้ถูกต้อง
+    const csvContent = '\uFEFF' + rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+
+    const safeFileName = String(companyName || 'company')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, 100) || 'company';
+
+    link.href = url;
+    link.download = `Company_Products_${safeFileName}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+    showToast(`Export CSV สำเร็จ ${companyProducts.length} รายการ`, 'success');
 }
 
 function showCompanyHistoryModal(companyName, customerName, items, stableCompanyKey = '') {
@@ -3842,7 +3912,12 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     <input id="company-specific-product-search" type="text" placeholder="🔍 ค้นหาสินค้าเฉพาะบริษัทนี้..."
                         class="w-full px-3 py-2 text-xs border border-slate-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400 transition">
                 </div>
-                <div>
+                <div class="flex w-full sm:w-auto gap-1.5">
+                    <button type="button" id="export-company-products-csv-btn"
+                        class="w-full sm:w-auto px-3 py-2 text-emerald-700 hover:text-white hover:bg-emerald-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-emerald-200 bg-white shadow-2xs"
+                        title="ส่งออกรายการสินค้าทั้งหมดของบริษัทนี้เป็น CSV">
+                        📥 Export CSV
+                    </button>
                     <button type="button" id="open-company-import-btn"
                         class="w-full sm:w-auto px-3 py-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50/50 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-indigo-100 bg-white shadow-2xs"
                         title="นำเข้าสินค้าจากบริษัทอื่น">
@@ -4286,6 +4361,10 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         renderCompanyProductCatalog(companyName, e.target.value, stableCompanyKey);
     });
 
+    document.getElementById('export-company-products-csv-btn')?.addEventListener('click', () => {
+        exportCompanyProductsCSV(companyName, stableCompanyKey);
+    });
+
     companyProductPrice.addEventListener('keypress', e => {
         if (e.key === 'Enter') {
             e.preventDefault();
@@ -4594,6 +4673,12 @@ function getCompanyPriceHistory(companyName, productName) {
         });
 
         function closeStockModalFunc() {
+            /* เมื่อปิดหน้าสต็อก ให้เคลียร์คำค้นหาทุกครั้ง
+               เพื่อให้เปิดครั้งถัดไปเริ่มต้นด้วยรายการทั้งหมด */
+            if (stockSearchBox) {
+                stockSearchBox.value = '';
+            }
+
             /* เมื่อปิดหน้าสต็อก ให้คืนตัวกรองบริษัทเป็นค่าเริ่มต้นทุกครั้ง
                เพื่อให้เปิดครั้งถัดไปเริ่มที่ “ทุกบริษัท / สินค้ามาตรฐาน” */
             if (stockCompanyFilter) {
@@ -4872,7 +4957,7 @@ function getCompanyPriceHistory(companyName, productName) {
                         <div class="min-w-0 flex-1">
                             <div class="flex items-start gap-2">
                                 <span class="text-[11px] text-indigo-600 font-bold flex-shrink-0">#${index + 1}</span>
-                                <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}${p.unit ? ` <span class="text-slate-400 font-semibold">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
+                                <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}${p.unit ? ` <span class="font-extrabold text-emerald-600">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
                             </div>
                             <div class="text-[10px] text-slate-400 mt-1 ml-5">🏢 ${escapeHTML(p.companyName || 'บริษัทที่เลือก')} · ราคาจากรายการของบริษัทนี้</div>
                             <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-1.5 flex-wrap ml-5">
@@ -4957,7 +5042,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 return `
                     <div class="flex items-center justify-between p-3 bg-white border border-slate-100 hover:border-sky-200 rounded-2xl shadow-2xs transition gap-2">
                         <div class="truncate min-w-0">
-                            <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}${p.unit ? ` <span class="text-slate-400 font-semibold">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
+                            <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}${p.unit ? ` <span class="font-extrabold text-emerald-600">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
                             <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5 flex-wrap">
                                 <span>ต้นทุน: <strong class="text-slate-700">${cost.toLocaleString()} ฿</strong></span>
                                 <span>ราคาขาย: <strong class="text-sky-600">${price.toLocaleString()} ฿</strong></span>
