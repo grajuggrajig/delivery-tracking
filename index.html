@@ -19,15 +19,37 @@
         }
         .company-product-grid {
             display: grid;
-            grid-template-columns: minmax(0, 1fr) 150px 150px 110px;
+            grid-template-columns: minmax(280px, 1fr) 120px 155px 105px 190px;
             gap: 10px;
             align-items: end;
         }
+        .company-product-grid > div:not(.company-product-name) {
+            min-width: 0;
+        }
+        .company-product-grid input {
+            height: 42px;
+            box-sizing: border-box;
+        }
+        #save-company-product-btn {
+            min-height: 42px;
+            white-space: nowrap;
+            border-radius: 12px;
+            box-shadow: 0 5px 14px rgba(37, 99, 235, .16);
+        }
+        #cancel-company-product-edit {
+            min-height: 42px;
+        }
         #company-specific-products-container {
-            min-height: 180px;
+            min-height: 150px;
+            max-height: 26vh !important;
         }
         #company-history-items-container {
             min-height: 210px;
+        }
+        @media (max-width: 1000px) {
+            .company-product-grid {
+                grid-template-columns: minmax(220px, 1fr) 110px 135px 100px 180px;
+            }
         }
         @media (max-width: 760px) {
             #company-all-history-modal > div {
@@ -1810,8 +1832,14 @@ body > header{z-index:900 !important}
   <div class="gemini-sidebar-section">
     <div class="gemini-sidebar-label">WORKSPACE</div>
 
-    <button type="button" class="gemini-nav active" data-target="workspace" onclick="geminiNav('workspace')">
-      <span class="gemini-nav-icon">⌂</span><span>ภาพรวมระบบ</span>
+<button type="button" class="gemini-nav active" data-target="workspace" onclick="geminiNav('workspace')">
+      <span class="gemini-nav-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+          <polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </span>
+      <span>ภาพรวมระบบ</span>
     </button>
 
     <button type="button" class="gemini-nav" data-target="delivery" onclick="geminiNav('delivery')">
@@ -2217,6 +2245,10 @@ body > header{z-index:900 !important}
                 <div class="sm:col-span-2">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ราคาขาย (บาท) <span class="text-red-500">*</span></label>
                     <input type="number" step="0.01" id="stock-price" required placeholder="280" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                </div>
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">หน่วย</label>
+                    <input type="text" id="stock-unit" placeholder="แพ็ค / ชิ้น / กล่อง" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
                 </div>
                 <div class="sm:col-span-2 flex gap-2">
                     <button type="submit" id="stock-submit-btn" class="w-full py-2 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs transition shadow-sm">บันทึก</button>
@@ -3345,6 +3377,25 @@ function normalizeCompanyProductName(value) {
     return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
+/*
+ * ตรวจชื่อสินค้าซ้ำแบบยืดหยุ่น เฉพาะตอน "บันทึก"
+ * ตัวอย่างที่ถือว่าเป็นชื่อเดียวกัน:
+ *   ดินสอปากกา
+ *   ดินสอ ปากกา
+ *   ดินสอ  ปากกา
+ *   ดินสอ-ปากกา
+ *   ดินสอ/ปากกา
+ *
+ * ไม่เปลี่ยนชื่อสินค้าที่แสดงจริง และไม่เปลี่ยนระบบค้นหา
+ */
+function normalizeProductDuplicateKey(value) {
+    return String(value || '')
+        .normalize('NFKC')
+        .trim()
+        .toLowerCase()
+        .replace(/[\s\-_/\\.,，、]+/g, '');
+}
+
 function getCompanySpecificProduct(companyName, productName) {
     const companyKey = normalizeCompanyProductKey(companyName);
     const productKey = normalizeCompanyProductName(
@@ -3390,6 +3441,7 @@ async function ensureCompanyProductFromStock(companyName, stockProduct, stableCo
         companyKey,
         companyName: cleanCompany,
         name: String(stockProduct.name || '').trim(),
+        unit: String(stockProduct.unit || '').trim(),
         cost: Number(stockProduct.cost) || 0,
         price: Number(stockProduct.price) || 0,
         stockProductId: stockProduct.id || '',
@@ -3404,20 +3456,25 @@ async function ensureCompanyProductFromStock(companyName, stockProduct, stableCo
     return created;
 }
 
-async function ensureProductInStandardStock(name, cost, price) {
+async function ensureProductInStandardStock(name, cost, price, unit = '') {
     const normalized = normalizeCompanyProductName(name);
+    const duplicateNameKey = normalizeProductDuplicateKey(name);
+
     let stockProduct = allProducts.find(p =>
-        normalizeCompanyProductName(p.name) === normalized
+        normalizeCompanyProductName(p.name) === normalized ||
+        normalizeProductDuplicateKey(p.name) === duplicateNameKey
     );
 
-    // ถ้ามีสินค้าเดียวกันใน Manage Stock อยู่แล้ว จะไม่ทับราคามาตรฐาน
-    // เพราะราคาที่กำหนดจากหน้าบริษัทเป็นราคาสำหรับบริษัทนั้นเท่านั้น
+    // ถ้ามีสินค้าเดียวกันใน Manage Stock อยู่แล้ว จะไม่สร้าง products ซ้ำ
+    // รวมกรณีชื่อถูกเว้นวรรค/คั่นเครื่องหมายต่างกัน เช่น
+    // "ดินสอปากกา" กับ "ดินสอ ปากกา"
     if (stockProduct) return stockProduct;
 
     const ref = await db.collection('products').add({
         name: name.trim(),
         cost: Number(cost) || 0,
         price: Number(price) || 0,
+        unit: String(unit || '').trim(),
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
@@ -3425,15 +3482,17 @@ async function ensureProductInStandardStock(name, cost, price) {
         id: ref.id,
         name: name.trim(),
         cost: Number(cost) || 0,
-        price: Number(price) || 0
+        price: Number(price) || 0,
+        unit: String(unit || '').trim()
     };
 }
 
-async function saveCompanyProduct(companyName, name, cost, price, editId = '', stableCompanyKey = '') {
+async function saveCompanyProduct(companyName, name, cost, price, unit = '', editId = '', stableCompanyKey = '') {
     const cleanCompany = String(companyName || '').trim();
     const cleanName = String(name || '').trim();
     const numericCost = Number(cost) || 0;
     const numericPrice = Number(price);
+    const cleanUnit = String(unit || '').trim();
 
     if (!cleanCompany) {
         showToast('ไม่พบชื่อบริษัท', 'error');
@@ -3446,21 +3505,26 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '', s
 
     const companyKey = normalizeCompanyProductKey(stableCompanyKey || cleanCompany);
     const normalizedName = normalizeCompanyProductName(cleanName);
+    const duplicateNameKey = normalizeProductDuplicateKey(cleanName);
 
-    // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน = รายการเดิม
-    // ไม่ใช้ SKU/Barcode เพราะระบบนี้ระบุสินค้าด้วยชื่อสินค้าเป็นหลัก
+    // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน
+    // รวมกรณีชื่อถูกเว้นวรรค/คั่นเครื่องหมายต่างกัน เช่น
+    // "ดินสอปากกา" กับ "ดินสอ ปากกา" ให้ถือเป็นรายการเดียวกัน
     const duplicate = allCompanyProducts.find(p =>
         p.id !== editId &&
         normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
-        normalizeCompanyProductName(p.name) === normalizedName
+        (
+            normalizeCompanyProductName(p.name) === normalizedName ||
+            normalizeProductDuplicateKey(p.name) === duplicateNameKey
+        )
     );
     if (duplicate) {
-        showToast(`⚠️ สินค้า "${cleanName}" มีอยู่แล้วในบริษัทนี้`, 'warning');
+        showToast(`⚠️ สินค้า "${duplicate.name || cleanName}" มีอยู่แล้วในบริษัทนี้`, 'warning');
         return false;
     }
 
     try {
-        const stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice);
+        const stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice, cleanUnit);
 
         if (editId) {
             const oldProduct = allCompanyProducts.find(p => p.id === editId);
@@ -3475,6 +3539,7 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '', s
                 name: cleanName,
                 cost: numericCost,
                 price: numericPrice,
+                unit: cleanUnit,
                 stockProductId: (stockProduct && stockProduct.id) || oldProduct.stockProductId || '',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
@@ -3498,6 +3563,7 @@ async function saveCompanyProduct(companyName, name, cost, price, editId = '', s
             name: cleanName,
             cost: numericCost,
             price: numericPrice,
+            unit: cleanUnit,
             stockProductId: stockProduct && stockProduct.id ? stockProduct.id : '',
             ownerUid: currentAuthUser.uid,
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
@@ -3531,6 +3597,7 @@ window.editCompanyProduct = function(id) {
     const nameInput = document.getElementById('company-product-name-input');
     const costInput = document.getElementById('company-product-cost-input');
     const priceInput = document.getElementById('company-product-price-input');
+    const unitInput = document.getElementById('company-product-unit-input');
     const editIdInput = document.getElementById('company-product-edit-id');
     const saveBtn = document.getElementById('save-company-product-btn');
     const cancelBtn = document.getElementById('cancel-company-product-edit');
@@ -3541,6 +3608,7 @@ window.editCompanyProduct = function(id) {
     nameInput.value = product.name || '';
     costInput.value = Number(product.cost) || 0;
     priceInput.value = Number(product.price) || 0;
+    if (unitInput) unitInput.value = product.unit || '';
 
     saveBtn.textContent = '💾 บันทึกการแก้ไข';
     saveBtn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
@@ -3556,6 +3624,7 @@ window.cancelCompanyProductEdit = function() {
     const nameInput = document.getElementById('company-product-name-input');
     const costInput = document.getElementById('company-product-cost-input');
     const priceInput = document.getElementById('company-product-price-input');
+    const unitInput = document.getElementById('company-product-unit-input');
     const saveBtn = document.getElementById('save-company-product-btn');
     const cancelBtn = document.getElementById('cancel-company-product-edit');
 
@@ -3563,6 +3632,7 @@ window.cancelCompanyProductEdit = function() {
     if (nameInput) nameInput.value = '';
     if (costInput) costInput.value = '';
     if (priceInput) priceInput.value = '';
+    if (unitInput) unitInput.value = '';
 
     if (saveBtn) {
         saveBtn.textContent = '＋ เพิ่ม / บันทึกราคา';
@@ -3697,6 +3767,11 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                             <input id="company-product-price-input" type="number" step="0.01" min="0" placeholder="280"
                                 class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
                         </div>
+                        <div>
+                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">หน่วย</label>
+                            <input id="company-product-unit-input" type="text" placeholder="เช่น แพ็ค, ชิ้น, กล่อง"
+                                class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                        </div>
                         <input type="hidden" id="company-product-edit-id" value="">
                         <div class="flex gap-2 w-full">
                             <button type="button" id="save-company-product-btn"
@@ -3812,7 +3887,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                 </div>
 
                 <!-- ประวัติการซื้อ: เปิดเป็นหน้าต่างแยก เพื่อเพิ่มพื้นที่ให้รายการสินค้าของบริษัท -->
-                <div class="mb-3 flex-shrink-0 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3.5">
+                <div id="company-purchase-history-launcher" class="mb-3 flex-shrink-0 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-3.5 relative z-10">
                     <div class="flex items-center justify-between gap-3">
                         <div class="min-w-0">
                             <div class="text-sm font-bold text-slate-800">📋 ประวัติการซื้อสินค้า</div>
@@ -3905,12 +3980,13 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         const name = companyProductName.value.trim();
         const cost = Number(companyProductCost.value) || 0;
         const price = Number(companyProductPrice.value);
+        const unit = document.getElementById('company-product-unit-input')?.value.trim() || '';
         const editId = companyProductEditId ? companyProductEditId.value.trim() : '';
 
         saveCompanyProductBtn.disabled = true;
         saveCompanyProductBtn.textContent = 'กำลังบันทึก...';
 
-        const ok = await saveCompanyProduct(companyName, name, cost, price, editId, stableCompanyKey);
+        const ok = await saveCompanyProduct(companyName, name, cost, price, unit, editId, stableCompanyKey);
 
         saveCompanyProductBtn.disabled = false;
 
@@ -4077,6 +4153,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     companyKey: targetKey,
                     companyName: String(companyName || '').trim(),
                     name: String(sourceProduct.name || '').trim(),
+                    unit: String(sourceProduct.unit || '').trim(),
                     cost: Number(sourceProduct.cost) || 0,
                     price: Number(sourceProduct.price) || 0,
                     stockProductId,
@@ -4396,6 +4473,7 @@ function getCompanyPriceHistory(companyName, productName) {
         const stockNameInput = document.getElementById('stock-name');
         const stockCostInput = document.getElementById('stock-cost');
         const stockPriceInput = document.getElementById('stock-price');
+        const stockUnitInput = document.getElementById('stock-unit');
         const stockSubmitBtn = document.getElementById('stock-submit-btn');
         const stockCancelEditBtn = document.getElementById('stock-cancel-edit');
         const stockSearchBox = document.getElementById('stock-search-box');
@@ -4510,10 +4588,27 @@ function getCompanyPriceHistory(companyName, productName) {
             const name = stockNameInput.value.trim();
             const cost = parseFloat(stockCostInput.value) || 0;
             const price = parseFloat(stockPriceInput.value);
+            const unit = stockUnitInput.value.trim();
             const editId = stockEditId.value;
 
             if (!name || isNaN(price)) {
                 showToast('กรุณากรอกชื่อสินค้าและราคาขายให้ถูกต้อง', 'error');
+                return;
+            }
+
+            // ตรวจซ้ำก่อนบันทึกสินค้าใน Manage Stock
+            // รองรับ "ดินสอปากกา" กับ "ดินสอ ปากกา" ให้ถือเป็นสินค้าเดียวกัน
+            const duplicateNameKey = normalizeProductDuplicateKey(name);
+            const duplicateStockProduct = allProducts.find(p =>
+                p.id !== editId &&
+                (
+                    normalizeCompanyProductName(p.name) === normalizeCompanyProductName(name) ||
+                    normalizeProductDuplicateKey(p.name) === duplicateNameKey
+                )
+            );
+
+            if (duplicateStockProduct) {
+                showToast(`⚠️ สินค้า "${duplicateStockProduct.name || name}" มีอยู่ในสต็อกแล้ว ไม่สามารถบันทึกซ้ำได้`, 'warning');
                 return;
             }
 
@@ -4522,13 +4617,14 @@ function getCompanyPriceHistory(companyName, productName) {
 
             try {
                 if (editId) {
-                    await db.collection('products').doc(editId).update({ name, cost, price });
+                    await db.collection('products').doc(editId).update({ name, cost, price, unit });
                     showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
                 } else {
                     await db.collection('products').add({
                         name,
                         cost,
                         price,
+                        unit,
                         createdAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
                     showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
@@ -4704,6 +4800,7 @@ function getCompanyPriceHistory(companyName, productName) {
                     name: String(p.name || '').trim(),
                     cost: Number(p.cost) || 0,
                     price: Number(p.price) || 0,
+                    unit: String(p.unit || '').trim(),
                     companyName: String(p.companyName || '').trim(),
                     companyKey: key,
                     stockProductId: p.stockProductId || ''
@@ -4724,7 +4821,7 @@ function getCompanyPriceHistory(companyName, productName) {
                         <div class="min-w-0 flex-1">
                             <div class="flex items-start gap-2">
                                 <span class="text-[11px] text-indigo-600 font-bold flex-shrink-0">#${index + 1}</span>
-                                <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div>
+                                <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}${p.unit ? ` <span class="text-slate-400 font-semibold">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
                             </div>
                             <div class="text-[10px] text-slate-400 mt-1 ml-5">🏢 ${escapeHTML(p.companyName || 'บริษัทที่เลือก')} · ราคาจากรายการของบริษัทนี้</div>
                             <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-1.5 flex-wrap ml-5">
@@ -4809,7 +4906,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 return `
                     <div class="flex items-center justify-between p-3 bg-white border border-slate-100 hover:border-sky-200 rounded-2xl shadow-2xs transition gap-2">
                         <div class="truncate min-w-0">
-                            <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}</div>
+                            <div class="text-xs font-bold text-slate-800 truncate">${escapeHTML(p.name)}${p.unit ? ` <span class="text-slate-400 font-semibold">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
                             <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5 flex-wrap">
                                 <span>ต้นทุน: <strong class="text-slate-700">${cost.toLocaleString()} ฿</strong></span>
                                 <span>ราคาขาย: <strong class="text-sky-600">${price.toLocaleString()} ฿</strong></span>
@@ -4818,7 +4915,7 @@ function getCompanyPriceHistory(companyName, productName) {
                             ${companySourceHtml}
                         </div>
                         <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${price})" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
+                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${price}, '${escapeHTML(p.unit || '').replace(/'/g, "\\'")}' )" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
                             <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
                         </div>
                     </div>
@@ -4826,11 +4923,12 @@ function getCompanyPriceHistory(companyName, productName) {
             }).join('');
         }
 
-        window.editStockItem = function(id, name, cost, price) {
+        window.editStockItem = function(id, name, cost, price, unit = '') {
             stockEditId.value = id;
             stockNameInput.value = name;
             stockCostInput.value = cost;
             stockPriceInput.value = price;
+            stockUnitInput.value = unit || '';
             stockSubmitBtn.textContent = 'บันทึกการแก้ไข';
             stockCancelEditBtn.classList.remove('hidden');
             stockNameInput.focus();
@@ -5078,6 +5176,10 @@ function getCompanyPriceHistory(companyName, productName) {
                                     <label class="block text-[11px] font-semibold text-slate-600 mb-1">ราคาขาย (บาท) *</label>
                                     <input type="number" step="0.01" id="quick-stock-price" placeholder="0" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
                                 </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-slate-600 mb-1">หน่วย</label>
+                                    <input type="text" id="quick-stock-unit" placeholder="แพ็ค / ชิ้น / กล่อง" class="w-full px-3 py-2 text-xs border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                                </div>
                             </div>
                             <button type="button" onclick="quickAddAndSelectStock()" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-xs transition shadow-sm mt-1">
                                 💾 บันทึกเข้าสต็อกและเพิ่มลงรายการทันที
@@ -5217,10 +5319,12 @@ function getCompanyPriceHistory(companyName, productName) {
             const nameInput = document.getElementById('quick-stock-name');
             const costInput = document.getElementById('quick-stock-cost');
             const priceInput = document.getElementById('quick-stock-price');
+            const unitInput = document.getElementById('quick-stock-unit');
 
             const name = nameInput ? nameInput.value.trim() : '';
             const cost = parseFloat(costInput ? costInput.value : 0) || 0;
             const price = parseFloat(priceInput ? priceInput.value : 0);
+            const unit = unitInput ? unitInput.value.trim() : '';
 
             if (!name || isNaN(price) || price <= 0) {
                 showToast('กรุณากรอกชื่อสินค้าและราคาขายให้ถูกต้อง', 'error');
@@ -5228,7 +5332,7 @@ function getCompanyPriceHistory(companyName, productName) {
             }
 
             try {
-                const stockProduct = await ensureProductInStandardStock(name, cost, price);
+                const stockProduct = await ensureProductInStandardStock(name, cost, price, unit);
 
                 const currentCompany = document.getElementById('company-name').value.trim();
                 let effectivePrice = price;
