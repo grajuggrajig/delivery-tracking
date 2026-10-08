@@ -3759,7 +3759,7 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
     `).join('');
 }
 
-function exportCompanyProductsCSV(companyName, stableCompanyKey = '') {
+function exportCompanyProductsCSV(companyName, stableCompanyKey = '', customerName = '') {
     const companyKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
     if (!companyKey) {
         showToast('ไม่พบข้อมูลบริษัทสำหรับ Export', 'error');
@@ -3781,7 +3781,13 @@ function exportCompanyProductsCSV(companyName, stableCompanyKey = '') {
         return `"${text.replace(/"/g, '""')}"`;
     };
 
+    const contactText = String(customerName || '').trim();
+    const titleText = `ประวัติสินค้าของ🏢 ${String(companyName || '').trim()}`;
+    const contactTitle = contactText ? `(ผู้ติดต่อ: ${contactText})` : '(ไม่ระบุผู้ติดต่อ)';
+
     const rows = [
+        [titleText, contactTitle],
+        [''],
         ['ลำดับ', 'ชื่อบริษัท', 'ชื่อสินค้า', 'หน่วย', 'ต้นทุน (บาท)', 'ราคาขายบริษัทนี้ (บาท)'],
         ...companyProducts.map((p, index) => [
             index + 1,
@@ -4362,7 +4368,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
     });
 
     document.getElementById('export-company-products-csv-btn')?.addEventListener('click', () => {
-        exportCompanyProductsCSV(companyName, stableCompanyKey);
+        exportCompanyProductsCSV(companyName, stableCompanyKey, customerName);
     });
 
     companyProductPrice.addEventListener('keypress', e => {
