@@ -5008,7 +5008,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 stockCompanySource.textContent = '';
             }
 
-            const filtered = allProducts.filter(p => String(p.name || '').toLowerCase().includes(keyword));
+            const filtered = allProducts.filter(p => String(p.name || '').toLowerCase().includes(keyword)).sort((a, b) => String(a.name || '').trim().localeCompare(String(b.name || '').trim(), 'th'));
 
             if (badge) {
                 badge.textContent = keyword
