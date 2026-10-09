@@ -1050,7 +1050,7 @@
                     }));
                     const keys = ['requiredAttendanceDays','normal','late','personal','sick','absent','actual'];
                     const total = keys.reduce((obj,k)=>(obj[k]=statsRows.reduce((n,r)=>n+Number(r[k]||0),0),obj),{});
-                    const rowsHTML = statsRows.map(r => `<tr><td class="center">${r.index}</td><td>${escapeHTML(r.employeeNo)}</td><td class="name">${escapeHTML(r.name)}</td><td>${escapeHTML(r.position)}</td><td class="num">${r.requiredAttendanceDays}</td><td class="num normal">${r.normal}</td><td class="num late">${r.late}</td><td class="num personal">${r.personal}</td><td class="num sick">${r.sick}</td><td class="num absent">${r.absent}</td><td class="num actual">${r.actual}</td></tr>`).join('');
+                    const rowsHTML = statsRows.map(r => `<tr><td class="center">${r.index}</td><td>${escapeHTML(r.employeeNo)}</td><td class="name">${escapeHTML(r.name)}</td><td>${escapeHTML(r.position)}</td><td class="num">${r.requiredAttendanceDays}</td><td class="num late">${r.late}</td><td class="num personal">${r.personal}</td><td class="num sick">${r.sick}</td><td class="num absent">${r.absent}</td><td class="num actual">${r.actual}</td></tr>`).join('');
                     const printWindow = window.open('', '_blank');
                     if (!printWindow) { showToast('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาต Pop-up แล้วลองอีกครั้ง', 'error'); return; }
                     printWindow.document.open();
@@ -1069,17 +1069,19 @@
                     .note{margin-top:12px;color:#475569;font-size:9px;line-height:1.6}
                     .signatures{display:flex;justify-content:space-between;gap:30px;margin-top:32px;page-break-inside:avoid}.signature{width:30%;text-align:center;padding-top:20px;border-top:1px dotted #64748b}
                     .footer{margin-top:14px;text-align:right;font-size:9px;color:#64748b}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}
-                    </style></head><body><div class="topline"></div><h1>รายงานสรุปสถิติ</h1>
+                    @media print {.no-print{display:none!important;}}
+</style></head><body>
+<button type="button" onclick="window.close()" class="no-print" style="position:fixed;top:12px;right:12px;padding:8px 14px;border:1px solid #cbd5e1;border-radius:8px;background:#f8fafc;color:#334155;font:600 13px Sarabun,sans-serif;cursor:pointer">ปิดหน้าต่าง</button><div class="topline"></div><h1>รายงานสรุปสถิติ</h1>
                     <div class="subtitle">${escapeHTML(monthName)} พ.ศ. ${yearBE} — ${escapeHTML(periodLabel)}</div>
                     <div class="description">สรุปสถิติการทำงานของพนักงานทั้งหมด • วันทำงานสุทธิหักวันอาทิตย์และวันหยุด H แล้ว</div>
-                    <table><thead><tr><th>#</th><th>รหัสพนักงาน</th><th>ชื่อ - นามสกุล</th><th>ตำแหน่ง / แผนก</th><th>วันทำงานสุทธิ</th><th>มาปกติ (วัน)</th><th>มาสาย (ครั้ง)</th><th>ลากิจ (วัน)</th><th>ลาป่วย (วัน)</th><th>ขาดงาน (วัน)</th><th>ปฏิบัติงานจริง (วัน)</th></tr></thead>
+                    <table><thead><tr><th>#</th><th>รหัสพนักงาน</th><th>ชื่อ - นามสกุล</th><th>ตำแหน่ง / แผนก</th><th>วันทำงานสุทธิ</th><th>มาสาย (ครั้ง)</th><th>ลากิจ (วัน)</th><th>ลาป่วย (วัน)</th><th>ขาดงาน (วัน)</th><th>ปฏิบัติงานจริง (วัน)</th></tr></thead>
                     <tbody>${rowsHTML || '<tr><td colspan="11" class="center">ไม่มีรายชื่อพนักงาน</td></tr>'}</tbody>
 </table>
                     <div class="note">หมายเหตุ: วันทำงานบริษัทนับวันจันทร์–เสาร์ หักวันอาทิตย์และวันที่กำหนดสถานะ H อัตโนมัติ • มาสาย (S) นับเป็นการมาปฏิบัติงาน • ขาดงานคำนวณตามกติกาของระบบสำหรับช่วงเวลาที่เลือก<br>สูตรปฏิบัติงานจริง = วันทำงานสุทธิ − ลากิจ − ลาป่วย − ขาดงาน</div>
                     <div class="signatures"><div class="signature">ผู้จัดทำรายงาน</div><div class="signature">ผู้ตรวจสอบ</div><div class="signature">ผู้อนุมัติ</div></div>
                     <div class="footer">พิมพ์เมื่อ ${new Date().toLocaleString('th-TH')}</div>
                     <div class="no-print" style="text-align:center;margin-top:20px"><button onclick="window.print()">พิมพ์รายงาน</button></div>
-                    <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`);
+                    <script>window.addEventListener('afterprint',()=>window.close());window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`);
                     printWindow.document.close(); printWindow.focus();
                 },
 
