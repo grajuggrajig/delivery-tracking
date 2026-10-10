@@ -1778,6 +1778,115 @@ body > header{z-index:900 !important}
     }
 }
 </style>
+
+<style id="customer-overview-classic-directory">
+/* CUSTOMER OVERVIEW — Classic Company Directory
+   ปรับเฉพาะหน้าภาพรวมบริษัทด้วย CSS; คง ID, events, search และ Firebase เดิม */
+#customer-overview-section{
+  background:linear-gradient(180deg,#fffefa 0%,#f8f9fc 100%) !important;
+  border-color:#e5e0d5 !important;
+  border-radius:18px !important;
+  box-shadow:0 12px 32px rgba(29,39,59,.07) !important;
+}
+#customer-overview-section .customer-overview-kicker{
+  color:#9a793b !important;letter-spacing:.2em !important;
+}
+#customer-overview-section .customer-overview-head h2{color:#1c2b45 !important}
+#customer-overview-section .customer-overview-search-wrap{
+  background:#fff !important;border-color:#e4dfd4 !important;border-radius:12px !important;
+}
+#customer-overview-section .customer-overview-stats{gap:9px}
+#customer-overview-section .overview-stat-card{
+  border-radius:12px !important;border-color:#e8e3d9 !important;
+  background:#fffefa !important;box-shadow:0 3px 10px rgba(31,42,63,.035) !important;
+}
+#customer-overview-section .customer-overview-grid{
+  grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+  gap:10px !important;align-content:start;
+}
+#customer-overview-section .customer-overview-card{
+  min-height:124px !important;
+  box-sizing:border-box !important;
+  padding:14px 14px 12px 88px !important;
+  border:1px solid #e5e0d5 !important;
+  border-radius:12px !important;
+  background:linear-gradient(110deg,#fffefa 0%,#fff 72%,#f8f7f2 100%) !important;
+  box-shadow:0 3px 12px rgba(32,42,60,.045) !important;
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease !important;
+}
+#customer-overview-section .customer-overview-card::before{
+  content:"🏢" !important;
+  position:absolute !important;
+  left:15px !important;top:25px !important;bottom:auto !important;
+  width:58px !important;height:58px !important;
+  display:flex !important;align-items:center !important;justify-content:center !important;
+  border:1px solid #e7dcc4 !important;border-radius:15px !important;
+  background:linear-gradient(145deg,#f8f0df,#fffdf7) !important;
+  box-shadow:inset 0 1px #fff,0 3px 8px rgba(90,70,35,.06) !important;
+  font-size:30px !important;line-height:1 !important;
+}
+#customer-overview-section .customer-overview-card::after{display:none !important}
+#customer-overview-section .customer-overview-card:hover{
+  transform:translateY(-1px) !important;
+  border-color:#cbb98f !important;
+  background:#fff !important;
+  box-shadow:0 8px 20px rgba(45,47,58,.08) !important;
+}
+#customer-overview-section .customer-overview-card-top{
+  align-items:center !important;gap:6px !important;
+}
+#customer-overview-section .customer-overview-company{
+  max-width:calc(100% - 34px) !important;
+  padding:0 !important;border:0 !important;border-radius:0 !important;
+  background:transparent !important;color:#9a793b !important;
+  font-size:9px !important;font-weight:800 !important;letter-spacing:.035em !important;
+}
+#customer-overview-section .customer-overview-company span{
+  white-space:normal !important;display:-webkit-box !important;
+  -webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;
+}
+#customer-overview-section .customer-overview-actions{gap:3px !important}
+#customer-overview-section .customer-overview-edit{
+  width:25px !important;height:25px !important;border-radius:8px !important;
+  background:#fffefa !important;border-color:#e8e1d3 !important;
+}
+#customer-overview-section .customer-overview-name{
+  margin-top:7px !important;color:#1c2b45 !important;
+  font-size:13px !important;font-weight:800 !important;
+  white-space:normal !important;display:-webkit-box !important;
+  -webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;
+  overflow:hidden !important;line-height:1.45 !important;
+}
+#customer-overview-section .customer-overview-line{
+  margin-top:4px !important;font-size:10px !important;color:#697386 !important;
+}
+#customer-overview-section .customer-overview-contact-count{
+  position:static !important;display:inline-flex !important;
+  margin-top:7px !important;padding:3px 7px !important;
+  border-radius:6px !important;background:#f7f1e4 !important;
+  border:1px solid #eee2c9 !important;color:#80652f !important;
+  font-size:9px !important;
+}
+@media(max-width:900px){
+  #customer-overview-section .customer-overview-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important}
+  #customer-overview-section .customer-overview-card{padding-left:78px !important}
+  #customer-overview-section .customer-overview-card::before{left:11px !important;width:52px !important;height:52px !important;font-size:27px !important}
+}
+@media(max-width:700px){
+  #customer-overview-section .customer-overview-grid{grid-template-columns:1fr !important;gap:8px !important}
+  #customer-overview-section .customer-overview-card{min-height:112px !important;padding:12px 12px 10px 76px !important}
+  #customer-overview-section .customer-overview-card::before{left:10px !important;top:25px !important;width:52px !important;height:52px !important}
+  #customer-overview-section .customer-overview-name{font-size:12px !important}
+}
+@media(max-width:420px){
+  #customer-overview-section .customer-overview-card{padding-left:70px !important}
+  #customer-overview-section .customer-overview-card::before{left:8px !important;width:48px !important;height:48px !important;font-size:25px !important}
+}
+@media(prefers-reduced-motion:reduce){
+  #customer-overview-section .customer-overview-card{transition:none !important}
+}
+</style>
+
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
