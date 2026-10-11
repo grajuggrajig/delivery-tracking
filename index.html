@@ -3737,8 +3737,6 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
     const duplicateNameKey = normalizeProductDuplicateKey(cleanName);
 
     // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน
-    // รวมกรณีชื่อถูกเว้นวรรค/คั่นเครื่องหมายต่างกัน เช่น
-    // "ดินสอปากกา" กับ "ดินสอ ปากกา" ให้ถือเป็นรายการเดียวกัน
     const duplicate = allCompanyProducts.find(p =>
         p.id !== editId &&
         normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
@@ -3753,7 +3751,18 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
     }
 
     try {
+        // 🌟 แทรกชุดโค้ดนี้ไว้ที่ต้นบล็อก try เพื่อซิงก์ราคากลับไปยัง Stock Management กลาง
         const stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice, cleanUnit);
+        
+        if (stockProduct && stockProduct.id) {
+            // อัปเดตราคากลางใน Stock Management ทันทีที่บริษัทมีการอัปเดตราคา
+            await db.collection('products').doc(stockProduct.id).update({
+                name: cleanName,
+                cost: numericCost,
+                price: numericPrice,
+                unit: cleanUnit
+            });
+        }
 
         if (editId) {
             const oldProduct = allCompanyProducts.find(p => p.id === editId);
@@ -4915,63 +4924,124 @@ function getCompanyPriceHistory(companyName, productName) {
         stockCancelEditBtn.addEventListener('click', resetStockForm);
 
         stockForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (stockSubmitBtn.disabled) return;
+    e.preventDefault();
+    if (stockSubmitBtn.disabled) return;
 
-            const name = stockNameInput.value.trim();
-            const cost = parseFloat(stockCostInput.value) || 0;
-            const price = parseFloat(stockPriceInput.value);
-            const unit = stockUnitInput.value.trim();
-            const editId = stockEditId.value;
+    const name = stockNameInput.value.trim();
+    const cost = parseFloat(stockCostInput.value) || 0;
+    const price = parseFloat(stockPriceInput.value);
+    const unit = stockUnitInput.value.trim();
+    const editId = stockEditId.value;
 
-            if (!name || isNaN(price)) {
-                showToast('กรุณากรอกชื่อสินค้าและราคาขายให้ถูกต้อง', 'error');
-                return;
-            }
+    if (!name || isNaN(price)) {
+        showToast('กรุณากรอกชื่อสินค้าและราคาขายให้ถูกต้อง', 'error');
+        return;
+    }
 
-            // ตรวจซ้ำก่อนบันทึกสินค้าใน Manage Stock
-            // รองรับ "ดินสอปากกา" กับ "ดินสอ ปากกา" ให้ถือเป็นสินค้าเดียวกัน
-            const duplicateNameKey = normalizeProductDuplicateKey(name);
-            const duplicateStockProduct = allProducts.find(p =>
-                p.id !== editId &&
-                (
-                    normalizeCompanyProductName(p.name) === normalizeCompanyProductName(name) ||
-                    normalizeProductDuplicateKey(p.name) === duplicateNameKey
-                )
+    // ตรวจซ้ำก่อนบันทึกสินค้าใน Manage Stock
+    // รองรับ "ดินสอปากกา" กับ "ดินสอ ปากกา" ให้ถือเป็นสินค้าเดียวกัน
+    const duplicateNameKey = normalizeProductDuplicateKey(name);
+    const duplicateStockProduct = allProducts.find(p =>
+        p.id !== editId &&
+        (
+            normalizeCompanyProductName(p.name) === normalizeCompanyProductName(name) ||
+            normalizeProductDuplicateKey(p.name) === duplicateNameKey
+        )
+    );
+
+    if (duplicateStockProduct) {
+        showToast(`⚠️ สินค้า "${duplicateStockProduct.name || name}" มีอยู่ในสต็อกแล้ว ไม่สามารถบันทึกซ้ำได้`, 'warning');
+        return;
+    }
+
+    stockSubmitBtn.disabled = true;
+    stockSubmitBtn.textContent = 'กำลังบันทึก...';
+
+    try {
+        if (editId) {
+            // 1. อัปเดตข้อมูลกลางในตู้ products ตามปกติ
+            await db.collection('products').doc(editId).update({
+                name,
+                cost,
+                price,
+                unit,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // 🌟 2. ซิงก์ราคาและชื่อใหม่ไปยัง companyProducts ทุกแห่งที่ผูกไว้กับสินค้านี้
+            const relatedCompanyProducts = allCompanyProducts.filter(p => 
+                p.stockProductId === editId || 
+                normalizeCompanyProductName(p.name) === normalizeCompanyProductName(name)
             );
 
-            if (duplicateStockProduct) {
-                showToast(`⚠️ สินค้า "${duplicateStockProduct.name || name}" มีอยู่ในสต็อกแล้ว ไม่สามารถบันทึกซ้ำได้`, 'warning');
-                return;
-            }
+            if (relatedCompanyProducts.length > 0) {
+                // Firestore batch รองรับสูงสุด 500 operations ต่อชุด ป้องกันกรณีมีบริษัทผูกไว้เยอะเกินไป
+                for (let i = 0; i < relatedCompanyProducts.length; i += 450) {
+                    const batch = db.batch();
+                    const chunk = relatedCompanyProducts.slice(i, i + 450);
 
-            stockSubmitBtn.disabled = true;
-            stockSubmitBtn.textContent = 'กำลังบันทึก...';
-
-            try {
-                if (editId) {
-                    await db.collection('products').doc(editId).update({ name, cost, price, unit });
-                    showToast('อัปเดตสินค้าในสต็อกสำเร็จ', 'success');
-                } else {
-                    await db.collection('products').add({
-                        name,
-                        cost,
-                        price,
-                        unit,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    chunk.forEach(cp => {
+                        const cpRef = db.collection('companyProducts').doc(cp.id);
+                        batch.update(cpRef, {
+                            name: name,
+                            cost: cost,
+                            price: price, // อัปเดตราคาขายให้ตรงกับ Stock Management ทันที
+                            unit: unit,
+                            stockProductId: editId,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
                     });
-                    showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
+
+                    await batch.commit();
                 }
-                resetStockForm();
-                renderStockTable(stockSearchBox.value);
-            } catch (err) {
-                console.error(err);
-                showToast('ไม่สามารถบันทึกสินค้าได้', 'error');
-            } finally {
-                stockSubmitBtn.disabled = false;
-                stockSubmitBtn.textContent = editId ? 'บันทึกการแก้ไข' : 'บันทึก';
             }
-        });
+
+            showToast('อัปเดตสินค้าในสต็อกและซิงก์ราคาประจำบริษัทสำเร็จ', 'success');
+        } else {
+            // กรณีเพิ่มสินค้าใหม่เข้ามาใน Stock Management
+            const newProductRef = await db.collection('products').add({
+                name,
+                cost,
+                price,
+                unit,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+
+            // หากมีสินค้าชื่อตรงกันในบริษัทต่างๆ ที่เคยบันทึกไว้ก่อนหน้า ให้ผูก stockProductId ให้โดยอัตโนมัติ
+            const matchingUnlinkedCompanyProducts = allCompanyProducts.filter(p => 
+                !p.stockProductId && normalizeCompanyProductName(p.name) === normalizeCompanyProductName(name)
+            );
+
+            if (matchingUnlinkedCompanyProducts.length > 0) {
+                for (let i = 0; i < matchingUnlinkedCompanyProducts.length; i += 450) {
+                    const batch = db.batch();
+                    const chunk = matchingUnlinkedCompanyProducts.slice(i, i + 450);
+
+                    chunk.forEach(cp => {
+                        const cpRef = db.collection('companyProducts').doc(cp.id);
+                        batch.update(cpRef, {
+                            stockProductId: newProductRef.id,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+
+                    await batch.commit();
+                }
+            }
+
+            showToast('เพิ่มสินค้าลงสต็อกสำเร็จ', 'success');
+        }
+
+        resetStockForm();
+        renderStockTable(stockSearchBox.value);
+    } catch (err) {
+        console.error('Stock Form Submit Error:', err);
+        showToast('ไม่สามารถบันทึกสินค้าได้ กรุณาลองใหม่อีกครั้ง', 'error');
+    } finally {
+        stockSubmitBtn.disabled = false;
+        stockSubmitBtn.textContent = editId ? 'บันทึกการแก้ไข' : 'บันทึก';
+    }
+});
 
         stockSearchBox.addEventListener('input', (e) => {
             // รวมการพิมพ์/ลบที่เกิดติดกันไว้ใน frame เดียว ลดการ render ซ้ำและไม่บล็อกคีย์บอร์ด
