@@ -1887,6 +1887,80 @@ body > header{z-index:900 !important}
 }
 </style>
 
+
+<style id="customer-overview-small-screen-search-fix">
+/* FIX เฉพาะช่องค้นหา CUSTOMER OVERVIEW บนหน้าจอเล็ก
+   ป้องกันกล่องค้นหายืดสูงเต็มพื้นที่และบังรายชื่อบริษัท */
+#customer-overview-section{
+    box-sizing:border-box;
+}
+#customer-overview-section .customer-overview-head{
+    flex:0 0 auto !important;
+    min-height:0 !important;
+    height:auto !important;
+    align-items:flex-start !important;
+}
+#customer-overview-section .customer-overview-head > .min-w-0{
+    flex:0 0 auto !important;
+    width:100%;
+    min-height:0 !important;
+}
+#customer-overview-section .customer-overview-search-wrap{
+    position:relative !important;
+    inset:auto !important;
+    display:flex !important;
+    flex:0 0 auto !important;
+    align-self:stretch !important;
+    width:100% !important;
+    min-width:0 !important;
+    max-width:100% !important;
+    height:44px !important;
+    min-height:44px !important;
+    max-height:44px !important;
+    box-sizing:border-box !important;
+    margin:0 !important;
+    padding:0 12px !important;
+    overflow:hidden !important;
+}
+#customer-overview-section #overview-search-input{
+    display:block !important;
+    flex:1 1 auto !important;
+    width:100% !important;
+    height:100% !important;
+    min-height:0 !important;
+    max-height:100% !important;
+    padding:0 !important;
+    margin:0 !important;
+    line-height:normal !important;
+    box-sizing:border-box !important;
+}
+@media(max-width:900px){
+    #customer-overview-section{
+        min-width:0 !important;
+    }
+    #customer-overview-section .customer-overview-head{
+        display:flex !important;
+        flex-direction:column !important;
+        justify-content:flex-start !important;
+        gap:10px !important;
+        padding-bottom:10px !important;
+    }
+    #customer-overview-section .customer-overview-search-wrap{
+        flex-basis:44px !important;
+        flex-shrink:0 !important;
+    }
+}
+@media(max-width:700px){
+    #customer-overview-section{
+        padding:10px !important;
+    }
+    #customer-overview-section .customer-overview-list{
+        min-height:0 !important;
+        flex:1 1 0 !important;
+    }
+}
+</style>
+
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -8507,3 +8581,95 @@ document.getElementById('running-character')?.addEventListener('click', () => {
 </div>
 </body>
 </html>
+
+<style id="customer-overview-mobile-layout-final-fix">
+/* FIX รอบสอง: ป้องกันพื้นที่รายการถูกยุบหายบนหน้าจอแคบ
+   กำหนดความสูงให้ section และ parent อย่างชัดเจน โดยไม่เปลี่ยน JS/Firebase */
+@media (max-width: 900px) {
+  html, body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+  }
+  body {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    padding-bottom: 0 !important;
+  }
+  main.max-w-7xl {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 1 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+    padding-bottom: 16px !important;
+  }
+  #customer-overview-section {
+    display: flex !important;
+    flex-direction: column !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 420px !important;
+    max-height: none !important;
+    overflow: visible !important;
+    box-sizing: border-box !important;
+  }
+  #customer-overview-section .customer-overview-head {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+  #customer-overview-section .customer-overview-head > .min-w-0 {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+  }
+  #customer-overview-section .customer-overview-search-wrap {
+    display: flex !important;
+    position: relative !important;
+    flex: 0 0 44px !important;
+    width: 100% !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  #customer-overview-section .customer-overview-stats {
+    display: grid !important;
+    flex: 0 0 auto !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  #customer-overview-section .customer-overview-list {
+    display: block !important;
+    flex: 0 0 auto !important;
+    width: 100% !important;
+    min-height: 160px !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+  #customer-overview-section .customer-overview-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+  }
+}
+@media (max-width: 420px) {
+  #customer-overview-section { padding: 10px !important; min-height: 400px !important; }
+  #customer-overview-section .customer-overview-head { gap: 9px !important; }
+}
+</style>
