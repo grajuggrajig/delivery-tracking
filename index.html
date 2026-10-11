@@ -1899,6 +1899,7 @@ body > header{z-index:900 !important}
     min-height:0 !important;
     height:auto !important;
     align-items:flex-start !important;
+	flex-wrap: wrap; /* ป้องกันไม่ให้บล็อกเบียดกันจนช่องค้นหาตกขอบหรือหายไป */
 }
 #customer-overview-section .customer-overview-head > .min-w-0{
     flex:0 0 auto !important;
@@ -1921,6 +1922,8 @@ body > header{z-index:900 !important}
     margin:0 !important;
     padding:0 12px !important;
     overflow:hidden !important;
+	flex: 1 1 280px; /* ยืดหยุ่นตามพื้นที่หน้าจอ ไม่ถูกบีบจนหาย */
+	max-width: 450px; /* กำหนดความกว้างสูงสุดเพื่อให้สวยงามบนจอใหญ่ */
 }
 #customer-overview-section #overview-search-input{
     display:block !important;
