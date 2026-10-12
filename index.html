@@ -5295,8 +5295,19 @@ function getCompanyPriceHistory(companyName, productName) {
             }
 
             stockTableContainer.innerHTML = filtered.map(p => {
-                const cost = Number(p.cost) || 0;
-                const price = Number(p.price) || 0;
+                // ราคามาตรฐานเป็นค่าตั้งต้น แต่หากสินค้านี้เชื่อมกับ Company Directory
+                // ให้ใช้ต้นทุน/ราคาของรายการบริษัทที่เชื่อมอยู่ในการแสดงผลด้วย
+                // เพื่อไม่ให้ราคาบริษัทที่บันทึกไว้ (เช่น 9 บาท) ถูกแสดงเป็น 0 จาก products กลาง
+                const linkedCompanyProduct = allCompanyProducts.find(cp =>
+                    (cp.stockProductId && String(cp.stockProductId) === String(p.id)) ||
+                    normalizeCompanyProductName(cp.name) === normalizeCompanyProductName(p.name)
+                );
+                const cost = linkedCompanyProduct && linkedCompanyProduct.cost !== undefined && linkedCompanyProduct.cost !== null && linkedCompanyProduct.cost !== ''
+                    ? (Number(linkedCompanyProduct.cost) || 0)
+                    : (Number(p.cost) || 0);
+                const price = linkedCompanyProduct && linkedCompanyProduct.price !== undefined && linkedCompanyProduct.price !== null && linkedCompanyProduct.price !== ''
+                    ? (Number(linkedCompanyProduct.price) || 0)
+                    : (Number(p.price) || 0);
                 const profit = price - cost;
                 const profitMargin = price > 0 ? ((profit / price) * 100).toFixed(1) : '0.0';
                 const profitClass = profit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700';
