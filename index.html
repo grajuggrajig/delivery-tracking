@@ -4965,7 +4965,12 @@ function getCompanyPriceHistory(companyName, productName) {
 
     try {
         if (editId) {
-            // 1. อัปเดตข้อมูลกลางในตู้ products ตามปกติ
+            // เก็บข้อมูลเดิมไว้สำหรับหา companyProducts รุ่นเก่าที่อาจยังไม่มี stockProductId
+            const previousStockProduct = allProducts.find(p => p.id === editId);
+            const previousNameKey = normalizeCompanyProductName(previousStockProduct?.name || '');
+            const previousStandardPrice = Number(previousStockProduct?.price);
+
+            // 1. อัปเดตข้อมูลสินค้ามาตรฐานใน products
             await db.collection('products').doc(editId).update({
                 name,
                 cost,
@@ -4974,9 +4979,43 @@ function getCompanyPriceHistory(companyName, productName) {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // แก้เฉพาะข้อมูลสินค้ามาตรฐานใน products
-            // ไม่กระจายชื่อ/ต้นทุน/ราคาไปยัง companyProducts ของบริษัทใด ๆ
-            showToast('อัปเดตสินค้ามาตรฐานในสต็อกสำเร็จ (ราคาบริษัทแยกอิสระ)', 'success');
+            // 2. ซิงก์ชื่อและหน่วยไปยัง companyProducts ที่เชื่อมกับสินค้านี้
+            // ราคาบริษัทจะเปลี่ยนตามราคา Stock Management เฉพาะเมื่อราคาบริษัทเดิม
+            // ตรงกับราคามาตรฐานเดิมเท่านั้น เพื่อรักษาราคาพิเศษที่กำหนดแยกแต่ละบริษัท
+            const linkedCompanyProducts = allCompanyProducts.filter(cp =>
+                String(cp.stockProductId || '') === String(editId) ||
+                (!cp.stockProductId && previousNameKey &&
+                    normalizeCompanyProductName(cp.name || '') === previousNameKey)
+            );
+            let syncedCompanyPrices = 0;
+
+            for (let i = 0; i < linkedCompanyProducts.length; i += 450) {
+                const batch = db.batch();
+                linkedCompanyProducts.slice(i, i + 450).forEach(cp => {
+                    const updateData = {
+                        name,
+                        unit,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    };
+                    const companyPrice = Number(cp.price);
+                    const pricesMatchedBeforeEdit = Number.isFinite(previousStandardPrice) &&
+                        Number.isFinite(companyPrice) &&
+                        Math.abs(companyPrice - previousStandardPrice) < 0.000001;
+                    if (pricesMatchedBeforeEdit) {
+                        updateData.price = price;
+                        syncedCompanyPrices++;
+                    }
+                    batch.update(db.collection('companyProducts').doc(cp.id), updateData);
+                });
+                await batch.commit();
+            }
+
+            showToast(
+                linkedCompanyProducts.length
+                    ? `ซิงก์ชื่อและหน่วยแล้ว ${linkedCompanyProducts.length} รายการบริษัท; อัปเดตราคาที่ตรงกับราคามาตรฐานเดิม ${syncedCompanyPrices} รายการ (คงราคาพิเศษของบริษัทอื่นไว้)`
+                    : 'อัปเดตสินค้ามาตรฐานในสต็อกสำเร็จ (ไม่พบรายการบริษัทที่เชื่อมโยง)',
+                'success'
+            );
         } else {
             // กรณีเพิ่มสินค้าใหม่เข้ามาใน Stock Management
             const newProductRef = await db.collection('products').add({
