@@ -4813,13 +4813,27 @@ function getCompanyPriceHistory(companyName, productName) {
         // Cache สำหรับการค้นหาสต็อกโดยเฉพาะ: ป้องกันการวน allCompanyProducts ซ้ำทุกครั้งที่พิมพ์ 1 ตัวอักษร
         let stockLinkedCompaniesById = new Map();
         let stockLinkedCompaniesByName = new Map();
+        // ดัชนีราคาบริษัทเพื่อไม่ให้ค้นหา allCompanyProducts ซ้ำทุกสินค้าทุกครั้งที่ render
+        let stockCompanyProductByStockId = new Map();
+        let stockCompanyProductByName = new Map();
         let stockSearchFrame = 0;
+        let stockSearchTimer = 0;
 
         function rebuildStockLinkedCompanyCache() {
             stockLinkedCompaniesById = new Map();
             stockLinkedCompaniesByName = new Map();
+            stockCompanyProductByStockId = new Map();
+            stockCompanyProductByName = new Map();
 
             allCompanyProducts.forEach(cp => {
+                // เก็บรายการบริษัทไว้ค้นแบบ O(1) แทน Array.find ที่ทำซ้ำในทุกแถว
+                if (cp.stockProductId && !stockCompanyProductByStockId.has(String(cp.stockProductId))) {
+                    stockCompanyProductByStockId.set(String(cp.stockProductId), cp);
+                }
+                const productNameKey = normalizeCompanyProductName(cp.name);
+                if (productNameKey && !stockCompanyProductByName.has(productNameKey)) {
+                    stockCompanyProductByName.set(productNameKey, cp);
+                }
                 const name = String(cp.companyName || '').trim();
                 const companyKey = normalizeCompanyProductKey(name);
                 if (!companyKey || !name) return;
@@ -5010,13 +5024,17 @@ function getCompanyPriceHistory(companyName, productName) {
 });
 
         stockSearchBox.addEventListener('input', (e) => {
-            // รวมการพิมพ์/ลบที่เกิดติดกันไว้ใน frame เดียว ลดการ render ซ้ำและไม่บล็อกคีย์บอร์ด
+            // หน่วงการกรองสั้น ๆ ระหว่างพิมพ์ และยกเลิกงานเก่าที่รออยู่ เพื่อลดการ render หนักซ้ำ
             const value = e.target.value;
+            if (stockSearchTimer) clearTimeout(stockSearchTimer);
             if (stockSearchFrame) cancelAnimationFrame(stockSearchFrame);
-            stockSearchFrame = requestAnimationFrame(() => {
-                stockSearchFrame = 0;
-                renderStockTable(value);
-            });
+            stockSearchTimer = setTimeout(() => {
+                stockSearchTimer = 0;
+                stockSearchFrame = requestAnimationFrame(() => {
+                    stockSearchFrame = 0;
+                    renderStockTable(value);
+                });
+            }, 100);
         });
 
         stockCompanyFilter.addEventListener('change', () => {
@@ -5298,10 +5316,8 @@ function getCompanyPriceHistory(companyName, productName) {
                 // ราคามาตรฐานเป็นค่าตั้งต้น แต่หากสินค้านี้เชื่อมกับ Company Directory
                 // ให้ใช้ต้นทุน/ราคาของรายการบริษัทที่เชื่อมอยู่ในการแสดงผลด้วย
                 // เพื่อไม่ให้ราคาบริษัทที่บันทึกไว้ (เช่น 9 บาท) ถูกแสดงเป็น 0 จาก products กลาง
-                const linkedCompanyProduct = allCompanyProducts.find(cp =>
-                    (cp.stockProductId && String(cp.stockProductId) === String(p.id)) ||
-                    normalizeCompanyProductName(cp.name) === normalizeCompanyProductName(p.name)
-                );
+                const linkedCompanyProduct = stockCompanyProductByStockId.get(String(p.id)) ||
+                    stockCompanyProductByName.get(normalizeCompanyProductName(p.name)) || null;
                 const cost = linkedCompanyProduct && linkedCompanyProduct.cost !== undefined && linkedCompanyProduct.cost !== null && linkedCompanyProduct.cost !== ''
                     ? (Number(linkedCompanyProduct.cost) || 0)
                     : (Number(p.cost) || 0);
