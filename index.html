@@ -3751,18 +3751,10 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
     }
 
     try {
-        // 🌟 แทรกชุดโค้ดนี้ไว้ที่ต้นบล็อก try เพื่อซิงก์ราคากลับไปยัง Stock Management กลาง
-        const stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice, cleanUnit);
-        
-        if (stockProduct && stockProduct.id) {
-            // อัปเดตราคากลางใน Stock Management ทันทีที่บริษัทมีการอัปเดตราคา
-            await db.collection('products').doc(stockProduct.id).update({
-                name: cleanName,
-                cost: numericCost,
-                price: numericPrice,
-                unit: cleanUnit
-            });
-        }
+        // สินค้ามาตรฐานใช้ข้อมูลราคาแยกจากราคาประจำบริษัท
+        // หากยังไม่มีสินค้าใน products ให้สร้างรายการมาตรฐานโดยไม่คัดลอกราคาของบริษัท
+        // หากมีอยู่แล้ว จะคงต้นทุน/ราคามาตรฐานเดิมไว้ (ซิงก์เฉพาะหน่วยตามฟังก์ชันเดิม)
+        const stockProduct = await ensureProductInStandardStock(cleanName, 0, 0, cleanUnit);
 
         if (editId) {
             const oldProduct = allCompanyProducts.find(p => p.id === editId);
@@ -4968,35 +4960,9 @@ function getCompanyPriceHistory(companyName, productName) {
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
 
-            // 🌟 2. ซิงก์ราคาและชื่อใหม่ไปยัง companyProducts ทุกแห่งที่ผูกไว้กับสินค้านี้
-            const relatedCompanyProducts = allCompanyProducts.filter(p => 
-                p.stockProductId === editId || 
-                normalizeCompanyProductName(p.name) === normalizeCompanyProductName(name)
-            );
-
-            if (relatedCompanyProducts.length > 0) {
-                // Firestore batch รองรับสูงสุด 500 operations ต่อชุด ป้องกันกรณีมีบริษัทผูกไว้เยอะเกินไป
-                for (let i = 0; i < relatedCompanyProducts.length; i += 450) {
-                    const batch = db.batch();
-                    const chunk = relatedCompanyProducts.slice(i, i + 450);
-
-                    chunk.forEach(cp => {
-                        const cpRef = db.collection('companyProducts').doc(cp.id);
-                        batch.update(cpRef, {
-                            name: name,
-                            cost: cost,
-                            price: price, // อัปเดตราคาขายให้ตรงกับ Stock Management ทันที
-                            unit: unit,
-                            stockProductId: editId,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
-
-                    await batch.commit();
-                }
-            }
-
-            showToast('อัปเดตสินค้าในสต็อกและซิงก์ราคาประจำบริษัทสำเร็จ', 'success');
+            // แก้เฉพาะข้อมูลสินค้ามาตรฐานใน products
+            // ไม่กระจายชื่อ/ต้นทุน/ราคาไปยัง companyProducts ของบริษัทใด ๆ
+            showToast('อัปเดตสินค้ามาตรฐานในสต็อกสำเร็จ (ราคาบริษัทแยกอิสระ)', 'success');
         } else {
             // กรณีเพิ่มสินค้าใหม่เข้ามาใน Stock Management
             const newProductRef = await db.collection('products').add({
@@ -5232,11 +5198,51 @@ function getCompanyPriceHistory(companyName, productName) {
                                 <span>ราคาขายบริษัท: <strong class="text-sky-600">${price.toLocaleString()} ฿</strong></span>
                                 <span class="${profitClass} px-2 py-0.5 rounded-md font-semibold">กำไร: ${profitPrefix}${profit.toLocaleString()} ฿ (${profitMargin}%)</span>
                             </div>
+                            <div class="mt-2 ml-5 flex items-center gap-2 flex-wrap">
+                                <label class="text-[10px] text-slate-500" for="company-stock-price-${escapeHTML(p.id)}">แก้ราคาบริษัทนี้</label>
+                                <input id="company-stock-price-${escapeHTML(p.id)}" type="number" min="0.01" step="0.01" value="${price}"
+                                    class="w-28 px-2 py-1.5 text-xs border border-indigo-200 rounded-lg bg-white"
+                                    aria-label="ราคาขายของบริษัท ${escapeHTML(p.companyName || '')} สำหรับ ${escapeHTML(p.name)}">
+                                <button type="button" onclick="saveCompanyStockPrice('${escapeHTML(p.id)}')"
+                                    class="px-3 py-1.5 rounded-lg text-[10px] font-bold text-white bg-indigo-600 hover:bg-indigo-700">
+                                    💾 บันทึกราคาบริษัทนี้
+                                </button>
+                            </div>
                         </div>
                     </div>
                 `;
             }).join('');
         }
+
+        // บันทึกราคาเฉพาะเอกสาร companyProducts ของบริษัทที่เลือก
+        // ไม่เขียนกลับไปยัง products และไม่แก้บริษัทอื่นที่ใช้ชื่อสินค้าเดียวกัน
+        window.saveCompanyStockPrice = async function(companyProductId) {
+            const input = document.getElementById(`company-stock-price-${companyProductId}`);
+            const price = Number(input?.value);
+            if (!companyProductId || !Number.isFinite(price) || price <= 0) {
+                showToast('กรุณากรอกราคาขายบริษัทให้มากกว่า 0', 'error');
+                return;
+            }
+
+            const product = allCompanyProducts.find(p => p.id === companyProductId);
+            if (!product) {
+                showToast('ไม่พบรายการราคาของบริษัทที่เลือก', 'error');
+                return;
+            }
+
+            try {
+                await db.collection('companyProducts').doc(companyProductId).update({
+                    price,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                product.price = price;
+                renderStockTable(stockSearchBox?.value || '');
+                showToast(`บันทึกราคาของบริษัท "${product.companyName || 'ที่เลือก'}" สำเร็จ`, 'success');
+            } catch (err) {
+                console.error('saveCompanyStockPrice:', err);
+                showToast('บันทึกราคาบริษัทไม่สำเร็จ กรุณาลองใหม่', 'error');
+            }
+        };
 
         function renderStockTable(filterText = '') {
             // ไม่ refresh dropdown ทุกครั้งที่พิมพ์ เพราะข้อมูลบริษัทไม่ได้เปลี่ยนตามคำค้น
