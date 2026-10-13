@@ -128,6 +128,43 @@ tbody tr:hover{background:#fafbff}
   .toolbar .search{grid-column:1/-1}
   .select{min-width:0}
 }
+
+/* ตกแต่งปุ่ม/แท็ก LINE ID สไตล์ทันสมัย */
+.line-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 2px 4px 2px 0;
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #e6f4ea 100%);
+  border: 1px solid #a7f3d0;
+  color: #047857;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.line-badge:hover {
+  background: #06c755; /* สีเขียวเอกลักษณ์ของ LINE */
+  border-color: #06c755;
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(6, 199, 85, 0.25);
+}
+
+.line-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.line-text {
+  letter-spacing: 0.01em;
+}
+
 </style>
 </head>
 <body>
@@ -295,7 +332,18 @@ function render(){
         <td><div class="company">🏢 ${esc(r.companyName)}</div></td>
         <td><div class="contact">👤 ${esc(r.customerName)}</div></td>
         <td>${r.phone ? `<a href="tel:${esc(r.phone)}">${esc(r.phone)}</a>` : '<span class="muted">—</span>'}</td>
-        <td>${r.lineIds.length ? r.lineIds.map(x=>`<span class="line-pill">💬 ${esc(x)}</span>`).join('') : '<span class="muted">—</span>'}</td>
+        <td>
+  ${r.lineIds.length ? r.lineIds.map(x => {
+    const cleanId = String(x || '').trim();
+    const lineUrl = `https://line.me/R/ti/p/~${encodeURIComponent(cleanId)}`;
+    return `
+      <a href="${lineUrl}" target="_blank" rel="noopener noreferrer" class="line-badge" title="คลิกเพื่อทัก LINE: ${esc(cleanId)}">
+        <span class="line-icon">💬</span>
+        <span class="line-text">${esc(cleanId)}</span>
+      </a>
+    `;
+  }).join('') : '<span class="muted">—</span>'}
+</td>
         <td>${r.email ? `<span class="email-pill">✉ ${esc(r.email)}</span>` : '<span class="muted">—</span>'}</td>
         <td><span class="muted">Firestore</span></td>
       </tr>`).join('');
