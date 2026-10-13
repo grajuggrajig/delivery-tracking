@@ -5467,6 +5467,8 @@ function getCompanyPriceHistory(companyName, productName) {
             snapshot.forEach(doc => {
                 allProducts.push({ id: doc.id, ...doc.data() });
             });
+            // อัปเดตดัชนีค้นหาเมื่อข้อมูลสินค้าจาก Firestore เปลี่ยน
+            rebuildSuggestionProductSearchIndex();
             refreshStockCompanyFilter();
             if (!stockModal.classList.contains('hidden')) {
                 renderStockTable(stockSearchBox.value);
@@ -5650,6 +5652,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 suggestionModalBox.classList.remove('scale-95');
             }, 10);
             suggestionSearchBox.value = itemInput.value;
+            suggestionVisibleLimit = SUGGESTION_INITIAL_LIMIT;
             renderSuggestionsTable(suggestionSearchBox.value);
             suggestionSearchBox.focus();
         }
@@ -5662,10 +5665,37 @@ function getCompanyPriceHistory(companyName, productName) {
             }, 200);
         }
 
+        // ดัชนีค้นหาสินค้ากลาง: สร้างใหม่เมื่อ Firestore ส่งข้อมูลชุดใหม่มาเท่านั้น
+        let suggestionProductIndexSource = null;
+        let suggestionProductSearchIndex = [];
+        let suggestionVisibleLimit = 100;
+        const SUGGESTION_INITIAL_LIMIT = 100;
+        const SUGGESTION_SEARCH_LIMIT = 250;
+        const SUGGESTION_PAGE_SIZE = 100;
+
+        function rebuildSuggestionProductSearchIndex() {
+            suggestionProductSearchIndex = allProducts.map(p => ({
+                product: p,
+                searchName: String(p.name || '').toLocaleLowerCase('th').trim()
+            }));
+            suggestionProductIndexSource = allProducts;
+        }
+
+        function ensureSuggestionProductSearchIndex() {
+            if (suggestionProductIndexSource !== allProducts || suggestionProductSearchIndex.length !== allProducts.length) {
+                rebuildSuggestionProductSearchIndex();
+            }
+        }
+
         function renderSuggestionsTable(filterText = '') {
-            const keyword = filterText.toLowerCase().trim();
+            ensureSuggestionProductSearchIndex();
+            const keyword = String(filterText || '').toLocaleLowerCase('th').trim();
             const currentCompanyForPrice = document.getElementById('company-name').value.trim();
-            const filteredItems = allProducts.filter(p => p.name.toLowerCase().includes(keyword));
+            const matchingEntries = keyword
+                ? suggestionProductSearchIndex.filter(entry => entry.searchName.includes(keyword))
+                : suggestionProductSearchIndex;
+            const renderLimit = keyword ? SUGGESTION_SEARCH_LIMIT : suggestionVisibleLimit;
+            const filteredItems = matchingEntries.slice(0, renderLimit).map(entry => entry.product);
 
             if (filteredItems.length === 0) {
                 suggestionsTableContainer.innerHTML = `
@@ -5733,6 +5763,24 @@ function getCompanyPriceHistory(companyName, productName) {
                     </div>
                 `;
             }).join('');
+
+            // แสดงปุ่มโหลดเพิ่มเมื่อยังมีรายการที่ไม่ได้ render โดยไม่สร้าง DOM จำนวนมากพร้อมกัน
+            const hasMore = matchingEntries.length > filteredItems.length;
+            if (hasMore && !keyword) {
+                suggestionsTableContainer.insertAdjacentHTML('beforeend', `
+                    <div class="sticky bottom-0 pt-2 pb-1 bg-white/95 text-center">
+                        <div class="text-[10px] text-slate-500 mb-1">แสดง ${filteredItems.length.toLocaleString('th-TH')} จาก ${matchingEntries.length.toLocaleString('th-TH')} รายการ</div>
+                        <button type="button" id="suggestions-load-more-btn" class="px-4 py-2 rounded-xl border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-700 text-xs font-semibold">แสดงเพิ่มอีก ${Math.min(SUGGESTION_PAGE_SIZE, matchingEntries.length - filteredItems.length).toLocaleString('th-TH')} รายการ</button>
+                    </div>`);
+                document.getElementById('suggestions-load-more-btn')?.addEventListener('click', () => {
+                    suggestionVisibleLimit = Math.min(suggestionVisibleLimit + SUGGESTION_PAGE_SIZE, allProducts.length);
+                    renderSuggestionsTable(suggestionSearchBox.value);
+                });
+            } else if (hasMore && keyword) {
+                suggestionsTableContainer.insertAdjacentHTML('beforeend', `<div class="text-center text-[10px] text-slate-500 py-2">แสดง ${filteredItems.length.toLocaleString('th-TH')} รายการแรกจาก ${matchingEntries.length.toLocaleString('th-TH')} รายการ · พิมพ์คำค้นให้เฉพาะเจาะจงขึ้นเพื่อจำกัดผลลัพธ์</div>`);
+            } else if (!keyword && matchingEntries.length > 0) {
+                suggestionsTableContainer.insertAdjacentHTML('beforeend', `<div class="text-center text-[10px] text-slate-400 py-2">แสดงครบ ${filteredItems.length.toLocaleString('th-TH')} รายการ</div>`);
+            }
             syncVisibleSuggestionChecks();
         }
 
@@ -5949,6 +5997,7 @@ function getCompanyPriceHistory(companyName, productName) {
         itemInput.addEventListener('focus', openSuggestionModal);
 
         suggestionSearchBox.addEventListener('input', (e) => {
+            suggestionVisibleLimit = SUGGESTION_INITIAL_LIMIT;
             renderSuggestionsTable(e.target.value);
         });
 
@@ -6301,6 +6350,16 @@ document.getElementById('item-input').addEventListener('blur', function() {
         deliveryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
             if (submitBtn.disabled) return; 
+
+            // รับ Line ID ที่ยังค้างอยู่ในช่องกรอกโดยอัตโนมัติ
+            // เพื่อให้บันทึกได้แม้ผู้ใช้ยังไม่ได้กดปุ่ม “＋ เพิ่ม”
+            const lineInputAtSubmit = document.getElementById('line-id-input');
+            const typedLineIdAtSubmit = normalizeLineId(lineInputAtSubmit?.value);
+            if (typedLineIdAtSubmit && !pendingLineIds.includes(typedLineIdAtSubmit)) {
+                pendingLineIds.push(typedLineIdAtSubmit);
+                if (lineInputAtSubmit) lineInputAtSubmit.value = '';
+                renderLineIdTags();
+            }
 
             const customerName = customerNameInput.value.trim();
 
