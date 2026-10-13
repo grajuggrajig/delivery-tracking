@@ -427,7 +427,9 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{
   if(unsubscribe) unsubscribe();
   window.location.href='index.html';
 });
-document.getElementById('refreshBtn').addEventListener('click',()=>{applyView()});
+document.getElementById('refreshBtn').addEventListener('click', async () => {
+  await loadData();
+});
 document.getElementById('search').addEventListener('input',applyView);
 document.getElementById('companyFilter').addEventListener('change',applyView);
 document.getElementById('sort').addEventListener('change',applyView);
