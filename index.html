@@ -2471,7 +2471,8 @@ body > header{z-index:900 !important}
                 ✕
             </button>
         </div>
-            <div id="stock-mobile-controls">\n            <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            <div id="stock-mobile-controls">
+            <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
     <input type="hidden" id="stock-edit-id">
     
     <!-- ปรับชื่อสินค้าเหลือ 4 ส่วน -->
@@ -7167,34 +7168,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
                         </style>
                     </head>
-                    <body>${html}<script id="stock-mobile-hide-show-script">
-(function(){
-  const toggle = document.getElementById('stock-mobile-toggle');
-  const controls = document.getElementById('stock-mobile-controls');
-  const label = document.getElementById('stock-mobile-toggle-label');
-  const icon = document.getElementById('stock-mobile-toggle-icon');
-  if (!toggle || !controls || !label || !icon) return;
-  function isSmallScreen(){ return window.matchMedia('(max-width: 640px)').matches; }
-  function setCollapsed(collapsed){
-    controls.classList.toggle('stock-controls-collapsed', collapsed && isSmallScreen());
-    toggle.setAttribute('aria-expanded', String(!collapsed));
-    label.textContent = collapsed ? 'แสดงส่วนกรอก' : 'ซ่อนส่วนกรอก';
-    icon.textContent = collapsed ? '▾' : '▴';
-  }
-  toggle.addEventListener('click', function(){
-    setCollapsed(!controls.classList.contains('stock-controls-collapsed'));
-  });
-  window.addEventListener('resize', function(){
-    if (!isSmallScreen()) {
-      controls.classList.remove('stock-controls-collapsed');
-      toggle.setAttribute('aria-expanded','true');
-    } else if (!controls.classList.contains('stock-controls-collapsed')) {
-      setCollapsed(false);
-    }
-  });
-})();
-</script>
-</body>
+                    <body>${html}</body>
                     </html>
                 `);
                 printWindow.document.close();
@@ -8786,6 +8760,40 @@ document.getElementById('running-character')?.addEventListener('click', () => {
     <div class="char-sprite">🚚</div>
     <div class="char-shadow"></div>
 </div>
+
+<script id="stock-mobile-hide-show-script">
+(function(){
+  function initStockMobileToggle(){
+    const toggle = document.getElementById('stock-mobile-toggle');
+    const controls = document.getElementById('stock-mobile-controls');
+    const label = document.getElementById('stock-mobile-toggle-label');
+    const icon = document.getElementById('stock-mobile-toggle-icon');
+    if (!toggle || !controls || !label || !icon || toggle.dataset.bound === '1') return;
+    toggle.dataset.bound = '1';
+    function isSmallScreen(){ return window.matchMedia('(max-width: 640px)').matches; }
+    function setCollapsed(collapsed){
+      const shouldCollapse = collapsed && isSmallScreen();
+      controls.classList.toggle('stock-controls-collapsed', shouldCollapse);
+      toggle.setAttribute('aria-expanded', String(!shouldCollapse));
+      label.textContent = shouldCollapse ? 'แสดงส่วนกรอก' : 'ซ่อนส่วนกรอก';
+      icon.textContent = shouldCollapse ? '▾' : '▴';
+    }
+    toggle.addEventListener('click', function(){
+      setCollapsed(!controls.classList.contains('stock-controls-collapsed'));
+    });
+    window.addEventListener('resize', function(){
+      if (!isSmallScreen()) setCollapsed(false);
+    });
+    setCollapsed(false);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initStockMobileToggle, {once:true});
+  } else {
+    initStockMobileToggle();
+  }
+})();
+</script>
+
 </body>
 </html>
 
