@@ -1964,6 +1964,59 @@ body > header{z-index:900 !important}
 }
 </style>
 
+
+<style id="stock-mobile-form-toggle-style">
+/* ปรับเฉพาะหน้าจอเล็กในหน้าจัดการสต็อก: ย่อฟอร์มเพื่อเพิ่มพื้นที่รายการสินค้า */
+@media (max-width: 640px) {
+    #stock-form-toggle-mobile { display: inline-flex !important; }
+    #stock-modal-box.stock-form-collapsed #stock-form { display: none !important; }
+    #stock-modal-box {
+        display: flex;
+        flex-direction: column;
+        max-height: 94dvh !important;
+        min-height: 0;
+    }
+    #stock-modal-box #stock-table-container {
+        min-height: 0;
+        max-height: none !important;
+        flex: 1 1 auto;
+        overflow-y: auto !important;
+    }
+    #stock-modal-box.stock-form-collapsed #stock-table-container {
+        max-height: 68dvh !important;
+    }
+    #stock-modal-box > div:first-child {
+        flex-shrink: 0;
+        gap: 8px;
+    }
+    #stock-modal-box > div:first-child h3 {
+        font-size: 13px;
+        line-height: 1.35;
+    }
+    #stock-modal-box > div:first-child p {
+        font-size: 10px;
+        line-height: 1.35;
+    }
+    #stock-modal-box > div:first-child .ml-2 {
+        margin-left: 0;
+        flex-shrink: 0;
+    }
+}
+</style>
+<script>
+/* ควบคุมเฉพาะฟอร์มเพิ่ม/แก้ไขสินค้าในหน้าสต็อกบนจอเล็ก */
+function toggleStockFormMobile() {
+    const box = document.getElementById('stock-modal-box');
+    const button = document.getElementById('stock-form-toggle-mobile');
+    if (!box || !button) return;
+
+    const collapsed = box.classList.toggle('stock-form-collapsed');
+    button.textContent = collapsed ? '＋ เพิ่มสินค้า' : '－ ซ่อนฟอร์ม';
+    button.setAttribute('aria-expanded', String(!collapsed));
+    button.title = collapsed ? 'ขยายฟอร์มเพิ่มสินค้า' : 'ย่อฟอร์มเพื่อดูรายการสินค้าเพิ่มขึ้น';
+}
+</script>
+
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -2432,10 +2485,18 @@ body > header{z-index:900 !important}
                 <span id="stock-count-badge" class="ml-2 text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold shadow-2xs">0 รายการ</span>
             </div>
 
-            <!-- ปุ่มปิดแบบ Modern Minimal -->
-            <button type="button" id="close-stock-modal" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 text-xs font-bold shadow-2xs">
-                ✕
-            </button>
+            <!-- ปุ่มย่อ/ขยายฟอร์มเพิ่มสินค้า: แสดงเฉพาะหน้าจอขนาดเล็ก -->
+            <div class="flex items-center gap-2 flex-shrink-0">
+                <button type="button" id="stock-form-toggle-mobile" aria-expanded="true"
+                    class="hidden items-center justify-center px-3 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-sm"
+                    onclick="toggleStockFormMobile()">
+                    － ซ่อนฟอร์ม
+                </button>
+                <!-- ปุ่มปิดแบบ Modern Minimal -->
+                <button type="button" id="close-stock-modal" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 text-xs font-bold shadow-2xs">
+                    ✕
+                </button>
+            </div>
         </div>
             <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
     <input type="hidden" id="stock-edit-id">
