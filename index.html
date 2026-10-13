@@ -1964,59 +1964,35 @@ body > header{z-index:900 !important}
 }
 </style>
 
-
-<style id="stock-mobile-form-toggle-style">
-/* ปรับเฉพาะหน้าจอเล็กในหน้าจัดการสต็อก: ย่อฟอร์มเพื่อเพิ่มพื้นที่รายการสินค้า */
+<style id="stock-mobile-hide-show">
+/* เฉพาะหน้าจอมือถือ: ซ่อน/แสดงส่วนกรอกและตัวกรอง โดยคงขนาดหน้าต่างและขยายพื้นที่รายการสินค้า */
+#stock-mobile-toggle { display:none; }
+#stock-modal-box { min-height:0; }
+#stock-table-container { min-height:0; flex:1 1 0%; }
 @media (max-width: 640px) {
-    #stock-form-toggle-mobile { display: inline-flex !important; }
-    #stock-modal-box.stock-form-collapsed #stock-form { display: none !important; }
-    #stock-modal-box {
-        display: flex;
-        flex-direction: column;
-        max-height: 94dvh !important;
-        min-height: 0;
-    }
-    #stock-modal-box #stock-table-container {
-        min-height: 0;
-        max-height: none !important;
-        flex: 1 1 auto;
-        overflow-y: auto !important;
-    }
-    #stock-modal-box.stock-form-collapsed #stock-table-container {
-        max-height: 68dvh !important;
-    }
-    #stock-modal-box > div:first-child {
-        flex-shrink: 0;
-        gap: 8px;
-    }
-    #stock-modal-box > div:first-child h3 {
-        font-size: 13px;
-        line-height: 1.35;
-    }
-    #stock-modal-box > div:first-child p {
-        font-size: 10px;
-        line-height: 1.35;
-    }
-    #stock-modal-box > div:first-child .ml-2 {
-        margin-left: 0;
-        flex-shrink: 0;
-    }
+  #stock-modal { padding:7px !important; }
+  #stock-modal-box {
+    width:100% !important; max-width:100% !important;
+    height:94vh !important; max-height:94vh !important;
+    padding:12px !important; min-height:0 !important;
+  }
+  #stock-modal-box > div:first-child {
+    flex-shrink:0; gap:7px; padding:12px !important;
+    margin:-12px -12px 10px !important;
+  }
+  #stock-modal-box > div:first-child > div:first-child { min-width:0; gap:8px; }
+  #stock-modal-box h3 { font-size:12px !important; line-height:1.35; }
+  #stock-count-badge { margin-left:0 !important; font-size:10px !important; }
+  #stock-mobile-toggle { display:inline-flex !important; flex-shrink:0; padding:7px 8px; font-size:10px; }
+  #close-stock-modal { flex-shrink:0; width:30px !important; height:30px !important; }
+  #stock-mobile-controls { flex-shrink:0; }
+  #stock-mobile-controls.stock-controls-collapsed { display:none !important; }
+  #stock-form { margin-bottom:8px !important; padding:10px !important; gap:7px !important; }
+  #stock-form input { min-height:36px; padding-top:7px !important; padding-bottom:7px !important; }
+  #stock-mobile-controls > .mb-3 { margin-bottom:7px !important; gap:6px !important; }
+  #stock-table-container { overflow-y:auto !important; padding-bottom:4px; }
 }
 </style>
-<script>
-/* ควบคุมเฉพาะฟอร์มเพิ่ม/แก้ไขสินค้าในหน้าสต็อกบนจอเล็ก */
-function toggleStockFormMobile() {
-    const box = document.getElementById('stock-modal-box');
-    const button = document.getElementById('stock-form-toggle-mobile');
-    if (!box || !button) return;
-
-    const collapsed = box.classList.toggle('stock-form-collapsed');
-    button.textContent = collapsed ? '＋ Show' : '－ Hide';
-    button.setAttribute('aria-expanded', String(!collapsed));
-    button.title = collapsed ? 'ขยายฟอร์มเพิ่มสินค้า' : 'ย่อฟอร์มเพื่อดูรายการสินค้าเพิ่มขึ้น';
-}
-</script>
-
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -2485,29 +2461,17 @@ function toggleStockFormMobile() {
                 <span id="stock-count-badge" class="ml-2 text-xs px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100 font-bold shadow-2xs">0 รายการ</span>
             </div>
 
-            <!-- ปุ่มย่อ/ขยายฟอร์มเพิ่มสินค้า: แสดงเฉพาะหน้าจอขนาดเล็ก -->
-<div class="flex items-center gap-2 flex-shrink-0">
-    <!-- ปุ่ม Toggle (Hide/Show) แบบทันสมัย พร้อมไอคอนเคลื่อนไหว -->
-    <button type="button" id="stock-form-toggle-mobile" aria-expanded="true"
-        class="hidden items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200/60 shadow-xs hover:shadow transition-all duration-200 active:scale-95"
-        onclick="toggleStockFormMobile()">
-        <svg class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path>
-        </svg>
-        <span>Hide</span>
-    </button>
+            <!-- ปุ่มซ่อน/แสดงส่วนกรอกข้อมูล เฉพาะหน้าจอมือถือ -->
+            <button type="button" id="stock-mobile-toggle" class="hidden items-center justify-center gap-1 px-3 py-2 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-100 text-xs font-bold whitespace-nowrap" aria-expanded="true" aria-controls="stock-mobile-controls">
+                <span id="stock-mobile-toggle-icon">▴</span><span id="stock-mobile-toggle-label">ซ่อนส่วนกรอก</span>
+            </button>
 
-    <!-- ปุ่มปิดแบบ Modern Minimal (ปรับปรุงเงามิติและการตอบสนองเมื่อกด) -->
-    <button type="button" id="close-stock-modal" 
-        class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100/80 text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200/60 hover:border-rose-200 transition-all duration-200 shadow-2xs active:scale-95"
-        title="ปิดหน้าต่าง">
-        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
-        </svg>
-    </button>
-</div>
+            <!-- ปุ่มปิดแบบ Modern Minimal -->
+            <button type="button" id="close-stock-modal" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 text-xs font-bold shadow-2xs">
+                ✕
+            </button>
         </div>
-            <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
+            <div id="stock-mobile-controls">\n            <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
     <input type="hidden" id="stock-edit-id">
     
     <!-- ปรับชื่อสินค้าเหลือ 4 ส่วน -->
@@ -2554,6 +2518,7 @@ function toggleStockFormMobile() {
                 </div>
             </div>
             <div id="stock-company-source" class="hidden mb-3 px-3 py-2 rounded-xl border border-indigo-100 bg-indigo-50 text-[10px] text-indigo-700"></div>
+            </div>
             <div id="stock-table-container" class="space-y-2 overflow-y-auto no-scrollbar flex-grow pr-1">
                 <div class="text-center py-8 text-xs text-slate-400 italic">กำลังโหลดรายการสต็อกสินค้า...</div>
             </div>
@@ -7202,7 +7167,34 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
                         </style>
                     </head>
-                    <body>${html}</body>
+                    <body>${html}<script id="stock-mobile-hide-show-script">
+(function(){
+  const toggle = document.getElementById('stock-mobile-toggle');
+  const controls = document.getElementById('stock-mobile-controls');
+  const label = document.getElementById('stock-mobile-toggle-label');
+  const icon = document.getElementById('stock-mobile-toggle-icon');
+  if (!toggle || !controls || !label || !icon) return;
+  function isSmallScreen(){ return window.matchMedia('(max-width: 640px)').matches; }
+  function setCollapsed(collapsed){
+    controls.classList.toggle('stock-controls-collapsed', collapsed && isSmallScreen());
+    toggle.setAttribute('aria-expanded', String(!collapsed));
+    label.textContent = collapsed ? 'แสดงส่วนกรอก' : 'ซ่อนส่วนกรอก';
+    icon.textContent = collapsed ? '▾' : '▴';
+  }
+  toggle.addEventListener('click', function(){
+    setCollapsed(!controls.classList.contains('stock-controls-collapsed'));
+  });
+  window.addEventListener('resize', function(){
+    if (!isSmallScreen()) {
+      controls.classList.remove('stock-controls-collapsed');
+      toggle.setAttribute('aria-expanded','true');
+    } else if (!controls.classList.contains('stock-controls-collapsed')) {
+      setCollapsed(false);
+    }
+  });
+})();
+</script>
+</body>
                     </html>
                 `);
                 printWindow.document.close();
