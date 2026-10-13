@@ -2011,7 +2011,7 @@ function toggleStockFormMobile() {
     if (!box || !button) return;
 
     const collapsed = box.classList.toggle('stock-form-collapsed');
-    button.textContent = collapsed ? '＋ เพิ่มสินค้า' : '－ ซ่อนฟอร์ม';
+    button.textContent = collapsed ? '＋ Show' : '－ Hide';
     button.setAttribute('aria-expanded', String(!collapsed));
     button.title = collapsed ? 'ขยายฟอร์มเพิ่มสินค้า' : 'ย่อฟอร์มเพื่อดูรายการสินค้าเพิ่มขึ้น';
 }
@@ -2486,17 +2486,26 @@ function toggleStockFormMobile() {
             </div>
 
             <!-- ปุ่มย่อ/ขยายฟอร์มเพิ่มสินค้า: แสดงเฉพาะหน้าจอขนาดเล็ก -->
-            <div class="flex items-center gap-2 flex-shrink-0">
-                <button type="button" id="stock-form-toggle-mobile" aria-expanded="true"
-                    class="hidden items-center justify-center px-3 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-sm"
-                    onclick="toggleStockFormMobile()">
-                    － ซ่อนฟอร์ม
-                </button>
-                <!-- ปุ่มปิดแบบ Modern Minimal -->
-                <button type="button" id="close-stock-modal" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 text-xs font-bold shadow-2xs">
-                    ✕
-                </button>
-            </div>
+<div class="flex items-center gap-2 flex-shrink-0">
+    <!-- ปุ่ม Toggle (Hide/Show) แบบทันสมัย พร้อมไอคอนเคลื่อนไหว -->
+    <button type="button" id="stock-form-toggle-mobile" aria-expanded="true"
+        class="hidden items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-sky-700 bg-sky-50 hover:bg-sky-100 border border-sky-200/60 shadow-xs hover:shadow transition-all duration-200 active:scale-95"
+        onclick="toggleStockFormMobile()">
+        <svg class="w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4"></path>
+        </svg>
+        <span>Hide</span>
+    </button>
+
+    <!-- ปุ่มปิดแบบ Modern Minimal (ปรับปรุงเงามิติและการตอบสนองเมื่อกด) -->
+    <button type="button" id="close-stock-modal" 
+        class="w-9 h-9 flex items-center justify-center rounded-xl bg-slate-100/80 text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200/60 hover:border-rose-200 transition-all duration-200 shadow-2xs active:scale-95"
+        title="ปิดหน้าต่าง">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+</div>
         </div>
             <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
     <input type="hidden" id="stock-edit-id">
