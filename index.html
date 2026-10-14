@@ -1993,6 +1993,52 @@ body > header{z-index:900 !important}
   #stock-table-container { overflow-y:auto !important; padding-bottom:4px; }
 }
 </style>
+
+<style id="company-directory-expanded-workspace">
+/* COMPANY DIRECTORY — ขยายเฉพาะหน้าต่างจัดการสินค้าและพื้นที่รายการ
+   คง HTML, IDs, JavaScript, Firebase, ปุ่ม และการทำงานเดิมทั้งหมด */
+#company-all-history-modal{
+    padding:10px !important;
+}
+#company-all-history-modal > div{
+    width:min(1600px,98vw) !important;
+    max-width:1600px !important;
+    height:96vh !important;
+    max-height:96vh !important;
+    min-height:0 !important;
+    padding:20px !important;
+    box-sizing:border-box !important;
+}
+#company-specific-products-container{
+    flex:1 1 0% !important;
+    min-height:180px !important;
+    max-height:none !important;
+    height:auto !important;
+    overflow-y:auto !important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+}
+#company-all-history-modal > div > div:first-child{
+    flex-shrink:0 !important;
+}
+@media(max-width:760px){
+    #company-all-history-modal{
+        padding:6px !important;
+    }
+    #company-all-history-modal > div{
+        width:100% !important;
+        max-width:100% !important;
+        height:96vh !important;
+        max-height:96vh !important;
+        padding:12px !important;
+    }
+    #company-specific-products-container{
+        min-height:120px !important;
+        max-height:none !important;
+    }
+}
+</style>
+
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -4119,18 +4165,24 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 
         <!-- สินค้าและราคาประจำบริษัท -->
         <div class="mb-3 p-4 rounded-2xl bg-gradient-to-br from-sky-50/80 to-indigo-50/60 border border-sky-200 flex-shrink-0 flex flex-col gap-3">
-            <div class="flex items-center justify-between gap-2">
-                <div>
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="min-w-0">
                     <div class="text-sm font-bold text-slate-800">🏷️ เพิ่มสินค้า / ราคาของบริษัทนี้</div>
                     <div class="text-[10px] text-slate-500 mt-0.5">
                         ราคานี้ใช้เฉพาะ <b>${safeCompany}</b> และสินค้าจะถูกบันทึกไว้ใน <b>Manage Stock</b> ด้วย
                     </div>
                 </div>
-                <span id="company-specific-product-count" class="text-[10px] px-2.5 py-1 rounded-lg bg-white text-sky-700 border border-sky-100 font-bold shadow-xs">0 รายการ</span>
+                <div class="flex items-center gap-2 flex-shrink-0">
+                    <span id="company-specific-product-count" class="text-[10px] px-2.5 py-1 rounded-lg bg-white text-sky-700 border border-sky-100 font-bold shadow-xs">0 รายการ</span>
+                    <button type="button" id="toggle-company-product-entry-btn"
+                        class="company-product-entry-toggle hidden px-3 py-2 rounded-xl border border-sky-200 bg-white text-sky-700 text-xs font-bold"
+                        onclick="toggleCompanyProductEntryArea(this)"
+                        aria-controls="company-product-entry-fields" aria-expanded="false">＋ ขยายพื้นที่เพิ่มสินค้า</button>
+                </div>
             </div>
 
             <!-- ปรับ Grid ฟอร์มกรอกข้อมูล 12 คอลัมน์ ให้ปุ่มบันทึก/ยกเลิก อยู่ในแนวเดียวกันพอดี -->
-            <div class="grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
+            <div id="company-product-entry-fields" class="company-product-entry-fields grid grid-cols-1 sm:grid-cols-12 gap-2.5 items-end">
                 <input type="hidden" id="company-product-edit-id" value="">
                 
                 <div class="sm:col-span-4">
@@ -8881,6 +8933,55 @@ document.getElementById('running-character')?.addEventListener('click', () => {
 </script>
 
 </body>
+
+<style id="stock-management-expanded-workspace">
+/* ปรับเฉพาะหน้าต่าง "จัดการรายการสินค้า ราคา และต้นทุนในสต็อก"
+   ขยายได้สูงสุด 1,600px และสูง 96vh โดยคงโครงสร้างและการทำงานเดิม */
+#stock-modal {
+    padding: 10px !important;
+}
+#stock-modal-box {
+    width: min(1600px, 98vw) !important;
+    max-width: 1600px !important;
+    height: 96vh !important;
+    max-height: 96vh !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+}
+@media (max-width: 760px) {
+    #stock-modal {
+        padding: 6px !important;
+    }
+    #stock-modal-box {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 96vh !important;
+        max-height: 96vh !important;
+        padding: 12px !important;
+    }
+}
+</style>
+
+
+<style id="company-directory-mobile-product-entry-toggle">
+/* เฉพาะ Company Directory: ย่อฟอร์มเพิ่มสินค้าในจอเล็ก แต่คงช่องค้นหาไว้นอกพื้นที่ที่ย่อ */
+.company-product-entry-toggle { display: none !important; }
+@media (max-width: 760px) {
+  .company-product-entry-toggle { display: inline-flex !important; align-items: center; justify-content: center; }
+  #company-product-entry-fields.company-product-entry-fields { display: none !important; }
+  #company-product-entry-fields.company-product-entry-fields.is-expanded { display: grid !important; }
+}
+</style>
+<script id="company-directory-mobile-product-entry-toggle-script">
+window.toggleCompanyProductEntryArea = function(button) {
+    const fields = document.getElementById('company-product-entry-fields');
+    if (!fields || !button) return;
+    const expanded = fields.classList.toggle('is-expanded');
+    button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    button.textContent = expanded ? '－ ย่อพื้นที่เพิ่มสินค้า' : '＋ ขยายพื้นที่เพิ่มสินค้า';
+};
+</script>
+
 </html>
 
 <style id="customer-overview-mobile-layout-final-fix">
