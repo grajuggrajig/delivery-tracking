@@ -3932,6 +3932,33 @@ function getCompanySpecificProductCount(companyName, stableCompanyKey = '') {
     ).length;
 }
 
+function formatCompanyProductUpdateDate(product) {
+    const rawDate = product && (product.updatedAt || product.createdAt);
+    if (!rawDate) return 'ยังไม่มีวันที่';
+
+    let dateValue = rawDate;
+    try {
+        if (rawDate && typeof rawDate.toDate === 'function') {
+            dateValue = rawDate.toDate();
+        } else if (rawDate && typeof rawDate.seconds === 'number') {
+            dateValue = new Date(rawDate.seconds * 1000);
+        } else if (typeof rawDate === 'number') {
+            dateValue = new Date(rawDate);
+        } else if (typeof rawDate === 'string') {
+            dateValue = new Date(rawDate);
+        }
+        const date = dateValue instanceof Date ? dateValue : new Date(dateValue);
+        if (Number.isNaN(date.getTime())) return 'รอข้อมูลวันที่';
+        return date.toLocaleDateString('th-TH', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric'
+        });
+    } catch (error) {
+        return 'รอข้อมูลวันที่';
+    }
+}
+
 function renderCompanyProductCatalog(companyName, filterText = '', stableCompanyKey = '') {
     const container = document.getElementById('company-specific-products-container');
     const count = document.getElementById('company-specific-product-count');
@@ -3964,7 +3991,7 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
             <span class="text-[11px] text-sky-600 font-bold text-center">#${index + 1}</span>
             <div class="min-w-0">
                 <div class="text-xs font-bold text-slate-800 break-words">${escapeHTML(p.name)}${p.unit ? ` <span class="font-extrabold text-violet-600">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
-                <div class="text-[10px] text-slate-400 mt-0.5">เชื่อมกับ Manage Stock${p.stockProductId ? ' ✓' : ''}</div>
+                <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[10px] leading-4"><span class="text-slate-400">เชื่อมกับ Manage Stock${p.stockProductId ? ' ✓' : ''}</span><span class="text-indigo-500 whitespace-nowrap">🗓️ อัปเดตราคา: ${escapeHTML(formatCompanyProductUpdateDate(p))}</span></div>
             </div>
             <div class="text-right">
                 <div class="text-[10px] text-slate-400">ต้นทุน</div>
