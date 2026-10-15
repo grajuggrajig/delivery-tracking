@@ -3562,7 +3562,12 @@ function getCompanyPriceHistory(companyName, productName) {
             };
 
             toast.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl text-xs shadow-xl border transition-all duration-300 translate-y-4 opacity-0 ${bgColors[type] || bgColors.success}`;
-            toast.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
+            // แสดงข้อความเป็น textContent เพื่อไม่ให้ HTML จากข้อมูลภายนอกทำงานได้
+            const iconEl = document.createElement('span');
+            iconEl.textContent = icons[type] || '';
+            const messageEl = document.createElement('span');
+            messageEl.textContent = String(message ?? '');
+            toast.append(iconEl, messageEl);
             
             container.appendChild(toast);
             
@@ -7363,8 +7368,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
         });
 
         function escapeHTML(str) {
-            if (!str) return '';
-            return str.replace(/[&<>'"]/g, 
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
