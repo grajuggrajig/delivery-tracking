@@ -1050,7 +1050,7 @@
                     }));
                     const keys = ['requiredAttendanceDays','normal','late','personal','sick','absent','actual'];
                     const total = keys.reduce((obj,k)=>(obj[k]=statsRows.reduce((n,r)=>n+Number(r[k]||0),0),obj),{});
-                    const rowsHTML = statsRows.map(r => `<tr><td class="center">${r.index}</td><td>${escapeHTML(r.employeeNo)}</td><td class="name">${escapeHTML(r.name)}</td><td>${escapeHTML(r.position)}</td><td class="num">${r.requiredAttendanceDays}</td><td class="num late">${r.late}</td><td class="num personal">${r.personal}</td><td class="num sick">${r.sick}</td><td class="num absent">${r.absent}</td><td class="num actual">${r.actual}</td></tr>`).join('');
+                    const rowsHTML = statsRows.map(r => `<tr><td class="center">${r.index}</td><td>${escapeHTML(r.employeeNo)}</td><td class="name">${escapeHTML(r.name)}</td><td>${escapeHTML(r.position)}</td><td class="num">${r.requiredAttendanceDays}</td><td class="num late">${r.late}</td><td class="num personal">${r.personal}</td><td class="num sick">${r.sick}</td><td class="num absent">${r.absent}</td><td class="num actual ${Number(r.actual) < Number(r.requiredAttendanceDays) ? 'incomplete' : 'complete'}">${r.actual}</td></tr>`).join('');
                     const printWindow = window.open('', '_blank');
                     if (!printWindow) { showToast('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาต Pop-up แล้วลองอีกครั้ง', 'error'); return; }
                     printWindow.document.open();
@@ -1065,7 +1065,7 @@
                     table{width:100%;border-collapse:collapse}thead{display:table-header-group}tr{break-inside:avoid}
                     th{background:#1e1b4b;color:white;padding:8px 5px;border:1px solid #d1d5db;text-align:center;white-space:nowrap}
                     td{padding:7px 5px;border:1px solid #cbd5e1}tbody tr:nth-child(even){background:#f8fafc}.center{text-align:center}.num{text-align:center;font-weight:600}.name{font-weight:600;min-width:145px}
-                    .normal{color:#047857}.late{color:#b45309}.personal{color:#1d4ed8}.sick{color:#7e22ce}.absent{color:#be123c}.actual{color:#1e1b4b}
+                    .normal{color:#047857}.late{color:#b45309}.personal{color:#1d4ed8}.sick{color:#7e22ce}.absent{color:#be123c}.actual.complete{color:#000}.actual.incomplete{color:#dc2626}
                     .note{margin-top:12px;color:#475569;font-size:9px;line-height:1.6}
                     .signatures{display:flex;justify-content:space-between;gap:30px;margin-top:32px;page-break-inside:avoid}.signature{width:30%;text-align:center;padding-top:20px;border-top:1px dotted #64748b}
                     .footer{margin-top:14px;text-align:right;font-size:9px;color:#64748b}@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none}}
