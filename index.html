@@ -3562,12 +3562,7 @@ function getCompanyPriceHistory(companyName, productName) {
             };
 
             toast.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl text-xs shadow-xl border transition-all duration-300 translate-y-4 opacity-0 ${bgColors[type] || bgColors.success}`;
-            // แสดงข้อความเป็น textContent เพื่อไม่ให้ HTML จากข้อมูลภายนอกทำงานได้
-            const iconEl = document.createElement('span');
-            iconEl.textContent = icons[type] || '';
-            const messageEl = document.createElement('span');
-            messageEl.textContent = String(message ?? '');
-            toast.append(iconEl, messageEl);
+            toast.innerHTML = `<span>${icons[type] || ''}</span><span>${message}</span>`;
             
             container.appendChild(toast);
             
@@ -6430,13 +6425,28 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
         const deliveryForm = document.getElementById('delivery-form');
         const submitBtn = document.getElementById('submit-btn');
+        // คงรหัสชุดบันทึกเดิมไว้เมื่อเกิดข้อผิดพลาด เพื่อให้การลองใหม่ไม่เพิ่มรายการซ้ำ
+        let pendingDeliverySubmissionId = null;
+        let pendingDeliverySubmissionSignature = null;
+        let pendingNewDeliveryDocRef = null;
+
+        // ใช้รหัสเอกสารคงที่สำหรับลูกค้าใหม่ของผู้ใช้คนเดิม ป้องกันการสร้างเอกสารลูกค้าซ้ำ
+        // เมื่อมีการกดบันทึกพร้อมกันจากหลายแท็บก่อนที่รายการแรกจะปรากฏใน query
+        function getStableNewDeliveryDocRef(uid, customerName) {
+            const source = String(uid || '') + '::' + String(customerName || '').trim().toLocaleLowerCase();
+            let hash = 2166136261;
+            for (let i = 0; i < source.length; i++) {
+                hash ^= source.charCodeAt(i);
+                hash = Math.imul(hash, 16777619);
+            }
+            return db.collection('deliveries').doc('customer_' + (hash >>> 0).toString(36));
+        }
 
         deliveryForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            if (submitBtn.disabled) return; 
+            if (submitBtn.disabled) return;
 
             // รับ Line ID ที่ยังค้างอยู่ในช่องกรอกโดยอัตโนมัติ
-            // เพื่อให้บันทึกได้แม้ผู้ใช้ยังไม่ได้กดปุ่ม “＋ เพิ่ม”
             const lineInputAtSubmit = document.getElementById('line-id-input');
             const typedLineIdAtSubmit = normalizeLineId(lineInputAtSubmit?.value);
             if (typedLineIdAtSubmit && !pendingLineIds.includes(typedLineIdAtSubmit)) {
@@ -6446,16 +6456,40 @@ document.getElementById('item-input').addEventListener('blur', function() {
             }
 
             const customerName = customerNameInput.value.trim();
-
             if (!customerName) {
                 showToast('กรุณากรอกชื่อลูกค้า', 'error');
                 return;
             }
-
             if (pendingItems.length === 0) {
                 showToast('กรุณาเพิ่มรายการสินค้าอย่างน้อย 1 รายการโดยกดปุ่มเพิ่ม', 'error');
                 return;
             }
+
+            const companyName = companyNameInput.value.trim();
+            const companyDistrict = companyDistrictInput ? companyDistrictInput.value.trim() : '';
+            const phone = phoneInput.value.trim();
+            const address = addressInput.value.trim();
+            const lineIds = [...new Set(pendingLineIds.map(normalizeLineId).filter(Boolean))];
+            // ถ้าผู้ใช้แก้ข้อมูลหลังบันทึกไม่สำเร็จ ให้สร้างรหัสชุดใหม่สำหรับข้อมูลชุดใหม่
+            const submissionSignature = JSON.stringify({
+                customerName, companyName, companyDistrict, phone, address, lineIds,
+                items: pendingItems.map(item => ({ text: item.text, totalProfit: item.totalProfit ?? null, dueDate: item.dueDate || '' }))
+            });
+            if (!pendingDeliverySubmissionId || pendingDeliverySubmissionSignature !== submissionSignature) {
+                pendingDeliverySubmissionId = 'batch_' + (window.crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+                pendingDeliverySubmissionSignature = submissionSignature;
+                pendingNewDeliveryDocRef = getStableNewDeliveryDocRef(currentAuthUser.uid, customerName);
+            }
+            const submissionId = pendingDeliverySubmissionId;
+            const newSubItemsObjs = pendingItems.map((item, index) => ({
+                id: submissionId + '_' + index,
+                submissionId,
+                text: item.text,
+                totalProfit: item.totalProfit !== undefined ? item.totalProfit : null,
+                dueDate: item.dueDate || '',
+                status: 'pending',
+                createdAt: new Date().toISOString()
+            }));
 
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังบันทึก...`;
@@ -6473,78 +6507,71 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     const matchingDocs = [];
                     scopedSnapshot.forEach(doc => {
                         const data = doc.data() || {};
-                        if (String(data.customerName || '').trim() === customerName) {
-                            matchingDocs.push(doc);
-                        }
+                        if (String(data.customerName || '').trim() === customerName) matchingDocs.push(doc);
                     });
                     snapshot = { empty: matchingDocs.length === 0, docs: matchingDocs };
                 }
 
-                const newSubItemsObjs = pendingItems.map(item => ({
-                    id: 'sub_' + Math.random().toString(36).substring(2, 9),
-                    text: item.text,
-                    totalProfit: item.totalProfit !== undefined ? item.totalProfit : null,
-                    dueDate: item.dueDate || '',
-                    status: 'pending', 
-                    createdAt: new Date().toISOString()
-                }));
+                const targetDocRef = !snapshot.empty ? snapshot.docs[0].ref : pendingNewDeliveryDocRef;
+                let alreadySaved = false;
+                await db.runTransaction(async (transaction) => {
+                    const currentDoc = await transaction.get(targetDocRef);
+                    if (currentDoc.exists) {
+                        const docData = currentDoc.data() || {};
+                        const existingItems = Array.isArray(docData.subItems) ? docData.subItems : [];
+                        // ถ้า Firestore บันทึกสำเร็จแล้วแต่การตอบกลับขาดหาย การลองใหม่จะไม่เพิ่มชุดเดิมซ้ำ
+                        if (existingItems.some(item => item && item.submissionId === submissionId)) {
+                            alreadySaved = true;
+                            return;
+                        }
+                        const stableCompanyKey = docData.companyKey || normalizeCompanyProductKey(docData.companyName || companyName);
+                        transaction.update(targetDocRef, {
+                            subItems: existingItems.concat(newSubItemsObjs),
+                            companyName: companyName || docData.companyName || '',
+                            companyKey: stableCompanyKey,
+                            district: companyDistrict || docData.district || '',
+                            phone: phone || docData.phone || '',
+                            address: address || docData.address || '',
+                            lineIds: [...new Set([...(Array.isArray(docData.lineIds) ? docData.lineIds : []), ...lineIds])],
+                            customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : [],
+                            purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : [],
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    } else {
+                        transaction.set(targetDocRef, {
+                            customerName,
+                            companyName,
+                            companyKey: normalizeCompanyProductKey(companyName),
+                            district: companyDistrict,
+                            phone,
+                            address,
+                            lineIds,
+                            subItems: newSubItemsObjs,
+                            customerNotes: [],
+                            purchaseHistory: [],
+                            ownerUid: currentAuthUser.uid,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }
+                });
 
-                // เก็บ Line ID ปัจจุบันของลูกค้าไว้ใน Firestore เป็น array
-                const companyName = companyNameInput.value.trim();
-                const companyDistrict = companyDistrictInput ? companyDistrictInput.value.trim() : '';
-                const phone = phoneInput.value.trim();
-                const address = addressInput.value.trim();
-                const lineIds = [...new Set(pendingLineIds.map(normalizeLineId).filter(Boolean))];
+                showToast(alreadySaved ? 'ข้อมูลชุดนี้บันทึกแล้ว ไม่ได้เพิ่มซ้ำ' : (!snapshot.empty
+                    ? `เพิ่ม ${pendingItems.length} รายการให้ "${customerName}" เรียบร้อย`
+                    : 'บันทึกข้อมูลสำเร็จเรียบร้อย'), 'success');
 
-                if (!snapshot.empty) {
-                    const docRef = snapshot.docs[0].ref;
-                    const docData = snapshot.docs[0].data();
-                    let existingItems = docData.subItems || [];
-                    const stableCompanyKey = docData.companyKey || normalizeCompanyProductKey(docData.companyName || companyName);
-                    
-                    existingItems.push(...newSubItemsObjs);
-
-                    await docRef.update({
-                        subItems: existingItems,
-                        companyName: companyName || docData.companyName || '',
-                        companyKey: stableCompanyKey,
-                        district: companyDistrict || docData.district || '',
-                        phone: phone || docData.phone || '',
-                        address: address || docData.address || '',
-                        lineIds,
-                        customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : [],
-                        purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : [],
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-
-                    showToast(`เพิ่ม ${pendingItems.length} รายการให้ "${customerName}" เรียบร้อย`, 'success');
-                } else {
-                    const data = {
-                        customerName,
-                        companyName,
-                        companyKey: normalizeCompanyProductKey(companyName),
-                        district: companyDistrict,
-                        phone,
-                        address,
-                        lineIds,
-                        subItems: newSubItemsObjs,
-                        customerNotes: [],
-                        purchaseHistory: [],
-                        ownerUid: currentAuthUser.uid,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                    };
-                    await db.collection('deliveries').add(data);
-                    showToast('บันทึกข้อมูลสำเร็จเรียบร้อย', 'success');
-                }
-
+                // ล้างข้อมูลและรหัสชุดบันทึกเฉพาะเมื่อ Transaction สำเร็จเท่านั้น
                 deliveryForm.reset();
                 pendingItems = [];
                 pendingLineIds = [];
+                pendingDeliverySubmissionId = null;
+                pendingDeliverySubmissionSignature = null;
+                pendingNewDeliveryDocRef = null;
                 renderLineIdTags();
                 renderPendingItems();
             } catch (err) {
                 console.error('บันทึกข้อมูลไม่สำเร็จ:', err);
-                showToast('เกิดข้อผิดพลาดในการบันทึกข้อมูล กรุณาลองใหม่อีกครั้ง', 'error');
+                // คงรายการในฟอร์มและรหัสชุดบันทึกไว้ เพื่อให้ลองใหม่โดยไม่สร้างรายการซ้ำ
+                showToast('บันทึกไม่สำเร็จหรือยังไม่ได้รับการยืนยัน ข้อมูลยังอยู่ในฟอร์ม กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่', 'error');
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<span>บันทึกข้อมูลทั้งหมด</span>';
@@ -7368,8 +7395,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
         });
 
         function escapeHTML(str) {
-            if (str === null || str === undefined) return '';
-            return String(str).replace(/[&<>'"]/g, 
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
                 tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
             );
         }
