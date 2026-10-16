@@ -4769,7 +4769,8 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 
     closeCompanyImportBtn?.addEventListener('click', closeCompanyImportModal);
     companyImportCancelBtn?.addEventListener('click', closeCompanyImportModal);
-    companyImportModal?.addEventListener('click', e => { if (e.target === companyImportModal) closeCompanyImportModal(); });
+    // ป้องกันคลิกพื้นหลังแล้วปิดหน้าต่างนำเข้าสินค้าโดยไม่ตั้งใจ
+    companyImportModal?.addEventListener('click', e => { if (e.target === companyImportModal) e.preventDefault(); });
 
     companyImportSourceSelect?.addEventListener('change', e => {
         const sourceKey = e.target.value ? decodeURIComponent(e.target.value) : '';
@@ -4831,8 +4832,9 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
     });
     closePurchaseHistoryBtn?.addEventListener('click', closePurchaseHistory);
     closePurchaseHistoryBottomBtn?.addEventListener('click', closePurchaseHistory);
+    // ไม่ปิดประวัติการซื้อเมื่อคลิกพื้นหลัง ปิดผ่านปุ่มปิดเท่านั้น
     purchaseHistoryModal?.addEventListener('click', e => {
-        if (e.target === purchaseHistoryModal) closePurchaseHistory();
+        if (e.target === purchaseHistoryModal) e.preventDefault();
     });
 
     searchInput?.addEventListener('input', (e) => {
@@ -4903,8 +4905,9 @@ function getCompanyPriceHistory(companyName, productName) {
         });
 
         closeCustomerModalBtn.addEventListener('click', closeCustomerModal);
+        // ไม่ปิดหน้าต่างเลือกลูกค้าเมื่อคลิกนอกกรอบ
         customerModal.addEventListener('click', (e) => {
-            if (e.target === customerModal) closeCustomerModal();
+            if (e.target === customerModal) e.preventDefault();
         });
 
         function renderCustomerList(filterText = '') {
@@ -6225,10 +6228,9 @@ function getCompanyPriceHistory(companyName, productName) {
 
         closeSuggestionModalBtn.addEventListener('click', closeSuggestionModal);
 
+        // ป้องกันหน้าต่างเลือกรายการสินค้าปิดจากการคลิกพื้นที่ด้านนอก
         suggestionBox.addEventListener('click', (e) => {
-            if (e.target === suggestionBox) {
-                closeSuggestionModal();
-            }
+            if (e.target === suggestionBox) e.preventDefault();
         });
 
         window.selectSuggestion = function(name, price) {
@@ -7450,8 +7452,9 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
         document.getElementById('close-document-modal').addEventListener('click', closeDocumentModal);
         document.getElementById('document-close-bottom').addEventListener('click', closeDocumentModal);
+        // หน้าต่างเอกสารจะปิดผ่านปุ่ม ✕ / ปิดเท่านั้น ไม่ปิดจากพื้นหลัง
         document.getElementById('document-modal').addEventListener('click', e => {
-            if (e.target.id === 'document-modal') closeDocumentModal();
+            if (e.target.id === 'document-modal') e.preventDefault();
         });
 
         document.getElementById('print-document-btn').addEventListener('click', async () => {
@@ -7668,8 +7671,9 @@ document.getElementById('item-input').addEventListener('blur', function() {
         });
 
         editCustomerCancel.addEventListener('click', closeEditCustomerModal);
+        // ไม่ปิดหน้าต่างแก้ไขลูกค้าจากการคลิกนอกกรอบ
         editCustomerModal.addEventListener('click', (e) => {
-            if (e.target === editCustomerModal) closeEditCustomerModal();
+            if (e.target === editCustomerModal) e.preventDefault();
         });
 
         window.openEditCompanyModal = function(docId, currentCompany, currentDistrict = '') {
@@ -8145,7 +8149,8 @@ window.deleteCrmNote = function(noteId) {
 saveCrmNoteBtn.addEventListener('click', saveCrmNote);
 document.getElementById('close-crm-modal').addEventListener('click', closeCrmModal);
 document.getElementById('crm-close-bottom').addEventListener('click', closeCrmModal);
-crmModal.addEventListener('click', e => { if (e.target === crmModal) closeCrmModal(); });
+// บันทึก CRM จะไม่ปิดเมื่อคลิกพื้นหลัง ป้องกันข้อความที่ยังไม่บันทึกสูญหาย
+crmModal.addEventListener('click', e => { if (e.target === crmModal) e.preventDefault(); });
 // เครื่องมือจัดรูปแบบ: เก็บ selection ไว้ก่อนคลิกปุ่ม เพื่อให้จัดรูปแบบข้อความที่เลือกได้
 const crmFormatToolbar = document.getElementById('crm-format-toolbar');
 let crmSavedRange = null;
@@ -8787,8 +8792,9 @@ companyPickerList.addEventListener('click', (e) => {
 document.getElementById('open-company-picker-btn').addEventListener('click', openCompanyPicker);
 document.getElementById('reminder-company').addEventListener('click', openCompanyPicker);
 document.getElementById('close-company-picker').addEventListener('click', closeCompanyPicker);
+// หน้าต่างเลือกบริษัทจะปิดผ่านปุ่ม ✕ หรือเมื่อเลือกบริษัทเท่านั้น
 companyPickerModal.addEventListener('click', e => {
-    if (e.target === companyPickerModal) closeCompanyPicker();
+    if (e.target === companyPickerModal) e.preventDefault();
 });
 companyPickerSearch.addEventListener('input', e => renderCompanyPicker(e.target.value));
 companyPickerSearch.addEventListener('keydown', e => {
@@ -8813,11 +8819,9 @@ document.getElementById('close-reminder-modal').addEventListener('click', () => 
     document.getElementById('reminder-modal').classList.add('hidden');
 });
 
-// ปิด Modal เมื่อคลิกพื้นที่ว่างรอบนอก
+// ไม่ปิดหน้าต่างแจ้งเตือนเมื่อคลิกพื้นที่ว่างรอบนอก ปิดผ่านปุ่ม ✕ เท่านั้น
 document.getElementById('reminder-modal').addEventListener('click', (e) => {
-    if (e.target === document.getElementById('reminder-modal')) {
-        e.target.classList.add('hidden');
-    }
+    if (e.target === document.getElementById('reminder-modal')) e.preventDefault();
 });
 document.getElementById('save-reminder-btn').addEventListener('click', () => {
     saveReminder();
