@@ -658,6 +658,15 @@ input:focus,textarea:focus,select:focus{
     border-color:#e3ddd2 !important;
     border-radius:18px !important;
 }
+/* Rich-text tools apply only to CRM note entry and history */
+.crm-format-btn{display:inline-flex;align-items:center;gap:4px;min-height:28px;padding:4px 8px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;color:#334155;font-size:11px;cursor:pointer}
+.crm-format-btn:hover{background:#eff6ff;border-color:#bfdbfe}
+.crm-format-divider{height:20px;width:1px;background:#e2e8f0;margin:0 2px}
+.crm-rich-editor{min-height:88px;max-height:240px;overflow-y:auto;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.65;color:#334155}
+.crm-rich-editor:empty:before{content:attr(data-placeholder);color:#94a3b8;pointer-events:none}
+.crm-rich-editor:focus{border-color:#38bdf8;box-shadow:0 0 0 2px rgba(56,189,248,.15)}
+.crm-rich-editor b,.crm-rich-editor strong{font-weight:800}
+.crm-note-rich-content{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.7}
 
 /* ---------- Document workspace: stylish shell, preserve A4 itself ---------- */
 #document-modal{
@@ -2932,7 +2941,19 @@ body > header{z-index:900 !important}
                         <span class="text-[10px] px-2 py-1 rounded-lg bg-white text-sky-700 border border-sky-100 font-semibold">CRM</span>
                     </div>
                     <div class="grid grid-cols-1 sm:grid-cols-[1fr_150px] gap-3">
-                        <div><label class="block text-xs font-semibold text-slate-600 mb-1">💬 โน้ต / รายละเอียดการติดต่อ</label><textarea id="crm-note-input" rows="3" placeholder="พิมพ์รายละเอียดการพูดคุยกับลูกค้า..." class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 resize-none"></textarea></div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">💬 โน้ต / รายละเอียดการติดต่อ</label>
+                            <div id="crm-format-toolbar" class="flex flex-wrap items-center gap-1.5 p-2 border border-sky-200 border-b-0 rounded-t-xl bg-white">
+                                <button type="button" data-crm-format="bold" class="crm-format-btn" title="ตัวหนา"><b>B</b></button>
+                                <span class="crm-format-divider"></span>
+                                <button type="button" data-crm-color="#111827" class="crm-format-btn" title="สีดำหนา"><b style="color:#111827">A</b><span>ดำ</span></button>
+                                <button type="button" data-crm-color="#dc2626" class="crm-format-btn" title="สีแดง"><b style="color:#dc2626">A</b><span>แดง</span></button>
+                                <button type="button" data-crm-color="#0284c7" class="crm-format-btn" title="สีฟ้า"><b style="color:#0284c7">A</b><span>ฟ้า</span></button>
+                                <button type="button" id="crm-format-clear" class="crm-format-btn ml-auto" title="ล้างรูปแบบ">ล้างรูปแบบ</button>
+                            </div>
+                            <div id="crm-note-input" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="พิมพ์รายละเอียดการพูดคุยกับลูกค้า..." class="crm-rich-editor w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-b-xl focus:outline-none focus:ring-2 focus:ring-sky-400" ></div>
+                            <div class="text-[10px] text-slate-400 mt-1">เลือกข้อความก่อน แล้วกด B หรือเลือกสีที่ต้องการ</div>
+                        </div>
                         <div><label class="block text-xs font-semibold text-slate-600 mb-1">📅 วันที่ติดต่อ</label><input type="date" id="crm-contact-date" class="w-full px-3 py-2.5 text-xs border border-sky-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400"><div class="text-[10px] text-slate-400 mt-1.5 leading-relaxed">ใช้บันทึกวันที่โทรคุย / ติดต่อครั้งล่าสุด</div></div>
                     </div>
                     <div class="flex justify-end mt-3"><button type="button" id="save-crm-note-btn" class="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold shadow-sm transition">💾 บันทึกโน้ต</button></div>
@@ -7887,6 +7908,41 @@ function getCustomerNotes(customer) {
     return Array.isArray(customer && customer.customerNotes) ? customer.customerNotes : [];
 }
 
+function sanitizeCrmNoteHtml(html) {
+    const template = document.createElement('template');
+    template.innerHTML = String(html || '');
+    const allowedTags = new Set(['B', 'STRONG', 'SPAN', 'BR', 'DIV', 'P']);
+    const walk = node => {
+        [...node.childNodes].forEach(child => {
+            if (child.nodeType === Node.ELEMENT_NODE) {
+                if (!allowedTags.has(child.tagName)) {
+                    child.replaceWith(document.createTextNode(child.textContent || ''));
+                    return;
+                }
+                [...child.attributes].forEach(attr => {
+                    if (child.tagName !== 'SPAN' || attr.name !== 'style') child.removeAttribute(attr.name);
+                });
+                if (child.tagName === 'SPAN') {
+                    const color = (child.style.color || '').toLowerCase().replace(/\s/g, '');
+                    const colorMap = { '#111827':'#111827', 'rgb(17,24,39)':'#111827', 'rgb(17,31,39)':'#111827', '#dc2626':'#dc2626', 'rgb(220,38,38)':'#dc2626', '#0284c7':'#0284c7', 'rgb(2,132,199)':'#0284c7' };
+                    child.removeAttribute('style');
+                    if (colorMap[color]) child.style.color = colorMap[color];
+                }
+                walk(child);
+            } else if (child.nodeType !== Node.TEXT_NODE) child.remove();
+        });
+    };
+    walk(template.content);
+    return template.innerHTML;
+}
+
+function crmRichHtmlToText(html) {
+    const temp = document.createElement('div');
+    temp.innerHTML = sanitizeCrmNoteHtml(html);
+    temp.querySelectorAll('div,p,br').forEach(el => { if (el.tagName === 'BR') el.replaceWith(document.createTextNode('\n')); else el.append(document.createTextNode('\n')); });
+    return temp.textContent.replace(/\n{3,}/g, '\n\n').trim();
+}
+
 function renderCrmNotes(notes) {
     const sorted = [...notes].sort((a, b) => String(b.contactDate || b.createdAt || '').localeCompare(String(a.contactDate || a.createdAt || '')));
     crmNoteCount.textContent = `${sorted.length} รายการ`;
@@ -7900,7 +7956,7 @@ function renderCrmNotes(notes) {
                 <div class="flex items-start gap-2.5 min-w-0 flex-1">
                     <div class="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center flex-shrink-0">💬</div>
                     <div class="min-w-0 flex-1">
-                        <div class="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap break-words">${escapeHTML(note.note || '')}</div>
+                        <div class="crm-note-rich-content text-xs text-slate-700 break-words">${note.noteHtml ? sanitizeCrmNoteHtml(note.noteHtml) : escapeHTML(note.note || '')}</div>
                         <div class="flex items-center gap-2 mt-2 flex-wrap">
                             ${note.contactDate ? `<span class="text-[10px] px-2 py-0.5 rounded-lg bg-sky-50 text-sky-700 border border-sky-100 font-semibold">📅 ติดต่อวันที่ ${formatDateDisplay(note.contactDate)}</span>` : ''}
                             ${note.createdAt ? `<span class="text-[10px] text-slate-400">บันทึกเมื่อ ${new Date(note.createdAt).toLocaleString('th-TH')}</span>` : ''}
@@ -7917,7 +7973,7 @@ window.openCrmModal = function(docId) {
     if (!customer) return showToast('ไม่พบข้อมูลลูกค้านี้', 'error');
     currentCrmCustomerId = docId;
     crmCustomerTitle.textContent = `👤 ${customer.customerName || '-'}${customer.companyName ? ` • 🏢 ${customer.companyName}` : ''}`;
-    crmNoteInput.value = '';
+    crmNoteInput.innerHTML = '';
     crmContactDate.value = getTodayISODate();
     renderCrmNotes(getCustomerNotes(customer));
     crmModal.classList.remove('hidden');
@@ -7933,7 +7989,8 @@ function closeCrmModal() {
 
 async function saveCrmNote() {
     if (!currentCrmCustomerId) return;
-    const noteText = crmNoteInput.value.trim();
+    const noteHtml = sanitizeCrmNoteHtml(crmNoteInput.innerHTML).trim();
+    const noteText = crmRichHtmlToText(noteHtml);
     const contactDate = crmContactDate.value || '';
     if (!noteText) { showToast('กรุณาพิมพ์รายละเอียดการติดต่อหรือโน้ต', 'error'); crmNoteInput.focus(); return; }
     const customer = allDeliveries.find(item => item.id === currentCrmCustomerId);
@@ -7942,7 +7999,7 @@ async function saveCrmNote() {
     saveCrmNoteBtn.textContent = 'กำลังบันทึก...';
     try {
         const notes = [...getCustomerNotes(customer)];
-        notes.push({ id: 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7), note: noteText, contactDate, createdAt: new Date().toISOString() });
+        notes.push({ id: 'note_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7), note: noteText, noteHtml, contactDate, createdAt: new Date().toISOString() });
         await db.collection('deliveries').doc(currentCrmCustomerId).update({ customerNotes: notes });
 
         // อัปเดตข้อมูลในหน้าจอทันที ไม่ต้องกด F5 และไม่ต้องรอ snapshot รอบถัดไป
@@ -7953,7 +8010,7 @@ async function saveCrmNote() {
             renderCrmNotes(notes);
         }
 
-        crmNoteInput.value = '';
+        crmNoteInput.innerHTML = '';
         crmContactDate.value = getTodayISODate();
         showToast('บันทึกประวัติการติดต่อเรียบร้อย', 'success');
     } catch (err) {
@@ -7995,6 +8052,46 @@ saveCrmNoteBtn.addEventListener('click', saveCrmNote);
 document.getElementById('close-crm-modal').addEventListener('click', closeCrmModal);
 document.getElementById('crm-close-bottom').addEventListener('click', closeCrmModal);
 crmModal.addEventListener('click', e => { if (e.target === crmModal) closeCrmModal(); });
+// เครื่องมือจัดรูปแบบ: เก็บ selection ไว้ก่อนคลิกปุ่ม เพื่อให้จัดรูปแบบข้อความที่เลือกได้
+const crmFormatToolbar = document.getElementById('crm-format-toolbar');
+let crmSavedRange = null;
+crmNoteInput.addEventListener('mouseup', saveCrmSelection);
+crmNoteInput.addEventListener('keyup', saveCrmSelection);
+crmNoteInput.addEventListener('input', saveCrmSelection);
+function saveCrmSelection() {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount && crmNoteInput.contains(selection.anchorNode) && crmNoteInput.contains(selection.focusNode)) {
+        crmSavedRange = selection.getRangeAt(0).cloneRange();
+    }
+}
+function restoreCrmSelection() {
+    crmNoteInput.focus();
+    if (!crmSavedRange) return;
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(crmSavedRange);
+}
+crmFormatToolbar.addEventListener('mousedown', e => { if (e.target.closest('button')) e.preventDefault(); });
+crmFormatToolbar.addEventListener('click', e => {
+    const button = e.target.closest('button');
+    if (!button) return;
+    restoreCrmSelection();
+    if (button.dataset.crmFormat === 'bold') {
+        document.execCommand('bold', false, null);
+    } else if (button.dataset.crmColor) {
+        document.execCommand('foreColor', false, button.dataset.crmColor);
+        // สีดำต้องหนาด้วยตามรูปแบบเน้นที่ต้องการ
+        if (button.dataset.crmColor === '#111827') document.execCommand('bold', false, null);
+    } else if (button.id === 'crm-format-clear') {
+        document.execCommand('removeFormat', false, null);
+    }
+    saveCrmSelection();
+});
+crmNoteInput.addEventListener('paste', e => {
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+    document.execCommand('insertText', false, text);
+});
 crmNoteInput.addEventListener('keydown', e => { if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') { e.preventDefault(); saveCrmNote(); } });
 
 let editingReminderId = null;
