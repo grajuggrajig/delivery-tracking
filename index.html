@@ -3081,7 +3081,7 @@ body > header{z-index:900 !important}
                             <div class="text-sm font-bold text-amber-800">🛡️ จัดข้อมูลเก่าเข้าบัญชี Admin</div>
                             <div class="text-[11px] text-amber-700/80 mt-1 leading-relaxed">ใช้ครั้งเดียวสำหรับข้อมูลเดิมที่ยังไม่มี ownerUid เพื่อให้ข้อมูล CRM/บริษัท/แจ้งเตือนเดิมยังอยู่กับ Admin โดยไม่ถูกแชร์ให้ User อื่น</div>
                         </div>
-                        <button type="button" id="admin-claim-legacy-btn" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm">🔐 จัดข้อมูลเดิม</button>
+                        <button type="button" id="admin-claim-legacy-btn" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold shadow-sm">🔎 ตรวจข้อมูลเก่า</button>
                     </div>
                 </div>
                 <div class="flex items-center justify-between mb-3"><div><div class="text-sm font-bold text-slate-800">📋 รายชื่อผู้ใช้</div><div class="text-[11px] text-slate-400">เปิด/ปิดการใช้งานและเปลี่ยนสิทธิ์ได้ทันที</div></div><span id="admin-user-count" class="text-[11px] px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 font-semibold">0 บัญชี</span></div>
@@ -3192,6 +3192,12 @@ body > header{z-index:900 !important}
                 }
 
                 currentUserProfile = profile;
+                const stockFormEl = document.getElementById('stock-form');
+                if (stockFormEl) stockFormEl.classList.toggle('hidden', profile.role !== 'admin');
+                // วาดรายการสต็อกใหม่ตามสิทธิ์ล่าสุด เพื่อแสดงปุ่มจัดการให้ Admin เท่านั้น
+                if (typeof renderStockTable === 'function') {
+                    renderStockTable(document.getElementById('stock-search-box')?.value || '');
+                }
 
                 const badge = document.getElementById('login-user-badge');
                 if (badge) {
@@ -3327,58 +3333,55 @@ body > header{z-index:900 !important}
             });
         });
 
-        async function claimLegacyDataToCurrentAdmin() {
+        // ตรวจสอบข้อมูลเก่าที่ไม่มีเจ้าของเท่านั้น ห้ามกำหนดให้ Admin อัตโนมัติ
+        // เพราะข้อมูลเดิมอาจเป็นของพนักงานหลายคนและไม่มีหลักฐานยืนยันเจ้าของ
+        async function auditLegacyDataWithoutOwner() {
             if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) return;
 
             const btn = document.getElementById('admin-claim-legacy-btn');
-            if (btn) { btn.disabled = true; btn.textContent = 'กำลังจัดข้อมูล...'; }
+            if (btn) { btn.disabled = true; btn.textContent = 'กำลังตรวจสอบ...'; }
 
             try {
                 const collections = ['deliveries', 'companyProducts', 'reminders'];
+                const counts = {};
                 let total = 0;
 
                 for (const collectionName of collections) {
                     const snapshot = await db.collection(collectionName).get();
-                    let batch = db.batch();
-                    let batchCount = 0;
-
-                    for (const doc of snapshot.docs) {
+                    const unowned = snapshot.docs.filter(doc => {
                         const data = doc.data() || {};
-                        if (data.ownerUid) continue;
-
-                        batch.update(doc.ref, {
-                            ownerUid: currentAuthUser.uid,
-                            ownerMigratedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        batchCount++;
-                        total++;
-
-                        if (batchCount >= 450) {
-                            await batch.commit();
-                            batch = db.batch();
-                            batchCount = 0;
-                        }
-                    }
-
-                    if (batchCount > 0) await batch.commit();
+                        return !String(data.ownerUid || '').trim();
+                    }).length;
+                    counts[collectionName] = unowned;
+                    total += unowned;
                 }
 
-                showToast(total
-                    ? `จัดข้อมูลเดิมเข้า Admin สำเร็จ ${total.toLocaleString('th-TH')} รายการ`
-                    : 'ไม่พบข้อมูลเก่าที่ต้องจัดการ ข้อมูลทั้งหมดมี ownerUid แล้ว', 'success');
+                if (total) {
+                    showConfirmModal(
+                        'พบข้อมูลเก่าที่ยังไม่มีเจ้าของ',
+                        `พบข้อมูลที่ยังไม่ระบุเจ้าของ ${total.toLocaleString('th-TH')} รายการ\n\n` +
+                        `• จัดส่ง: ${counts.deliveries.toLocaleString('th-TH')} รายการ\n` +
+                        `• สินค้าของบริษัท: ${counts.companyProducts.toLocaleString('th-TH')} รายการ\n` +
+                        `• แจ้งเตือน: ${counts.reminders.toLocaleString('th-TH')} รายการ\n\n` +
+                        'ระบบยังไม่ได้แก้ไขข้อมูลใด ๆ เพื่อป้องกันการย้ายข้อมูลของพนักงานคนอื่นเข้า Admin ต้องตรวจสอบเจ้าของจากแหล่งข้อมูลที่เชื่อถือได้ก่อน',
+                        () => showToast('ตรวจสอบเสร็จแล้ว ข้อมูลเดิมยังไม่ถูกแก้ไข', 'info')
+                    );
+                } else {
+                    showToast('ไม่พบข้อมูลเก่าที่ไม่มี ownerUid ใน 3 หมวดนี้', 'success');
+                }
             } catch (err) {
-                console.error('claimLegacyDataToCurrentAdmin:', err);
-                showToast('ไม่สามารถจัดข้อมูลเดิมได้ กรุณาตรวจสอบ Firestore Rules แล้วลองใหม่', 'error');
+                console.error('ตรวจข้อมูลเก่า:', err);
+                showToast('ตรวจข้อมูลเก่าไม่สำเร็จ กรุณาตรวจสอบ Firestore Rules', 'error');
             } finally {
-                if (btn) { btn.disabled = false; btn.textContent = '🔐 จัดข้อมูลเดิม'; }
+                if (btn) { btn.disabled = false; btn.textContent = '🔎 ตรวจข้อมูลเก่า'; }
             }
         }
 
         document.getElementById('admin-claim-legacy-btn')?.addEventListener('click', () => {
             showConfirmModal(
-                'จัดข้อมูลเดิมเข้าบัญชี Admin',
-                'ระบบจะเพิ่ม ownerUid ให้เฉพาะข้อมูลใน deliveries, companyProducts และ reminders ที่ยังไม่มี ownerUid เท่านั้น ข้อมูลที่มี ownerUid อยู่แล้วจะไม่ถูกเปลี่ยน ต้องการดำเนินการหรือไม่?',
-                claimLegacyDataToCurrentAdmin
+                'ตรวจสอบข้อมูลเก่า',
+                'ระบบจะตรวจนับข้อมูลใน deliveries, companyProducts และ reminders ที่ยังไม่มี ownerUid เท่านั้น โดยจะไม่แก้ไขหรือย้ายข้อมูลให้ Admin อัตโนมัติ ต้องการตรวจสอบหรือไม่?',
+                auditLegacyDataWithoutOwner
             );
         });
 
@@ -3771,14 +3774,25 @@ async function ensureProductInStandardStock(name, cost, price, unit = '') {
         const cleanUnit = String(unit || '').trim();
         const currentUnit = String(stockProduct.unit || '').trim();
 
-        if (currentUnit !== cleanUnit && stockProduct.id) {
-            await db.collection('products').doc(stockProduct.id).update({
-                unit: cleanUnit
-            });
+        // ผู้ใช้ทั่วไปอ่านสินค้ากลางได้ แต่ห้ามเขียน/เปลี่ยนหน่วยใน products
+        if (currentUserProfile?.role === 'admin' && currentUnit !== cleanUnit && stockProduct.id) {
+            await db.collection('products').doc(stockProduct.id).update({ unit: cleanUnit });
             stockProduct.unit = cleanUnit;
         }
 
         return stockProduct;
+    }
+
+    // หากเป็นผู้ใช้ทั่วไปและยังไม่มีสินค้ากลางที่ตรงกัน ให้บันทึกเฉพาะ
+    // companyProducts ของบริษัทแทน ไม่สร้างรายการ products กลาง
+    if (currentUserProfile?.role !== 'admin') {
+        return {
+            id: '',
+            name: name.trim(),
+            cost: Number(cost) || 0,
+            price: Number(price) || 0,
+            unit: String(unit || '').trim()
+        };
     }
 
     const ref = await db.collection('products').add({
@@ -3855,9 +3869,7 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
                 stockProductId: (stockProduct && stockProduct.id) || oldProduct.stockProductId || '',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            if (!oldProduct.ownerUid && currentAuthUser?.uid) {
-                updatePayload.ownerUid = currentAuthUser.uid;
-            }
+            // ไม่เติม ownerUid ให้ข้อมูลเก่าโดยอัตโนมัติ เพราะยังยืนยันเจ้าของเดิมไม่ได้
             await db.collection('companyProducts').doc(editId).update(updatePayload);
 
             showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ แล้ว`, 'success');
@@ -3865,6 +3877,7 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
         }
 
         const existing = allCompanyProducts.find(p =>
+            String(p.ownerUid || '') === String(currentAuthUser?.uid || '') &&
             normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
             normalizeCompanyProductName(p.name) === normalizedName
         );
@@ -5046,6 +5059,10 @@ function getCompanyPriceHistory(companyName, productName) {
 
         stockForm.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (currentUserProfile?.role !== 'admin') {
+        showToast('เฉพาะ Admin เท่านั้นที่เพิ่มหรือแก้ไขสินค้ากลางได้', 'error');
+        return;
+    }
     if (stockSubmitBtn.disabled) return;
 
     const name = stockNameInput.value.trim();
@@ -5486,6 +5503,12 @@ function getCompanyPriceHistory(companyName, productName) {
                 // ใช้ cache แทนการ filter allCompanyProducts ซ้ำสำหรับสินค้าทุกตัว
                 const linkedCompanies = getCachedLinkedCompaniesForStockProduct(p);
 
+                const isAdmin = currentUserProfile?.role === 'admin';
+                const stockActionsHtml = isAdmin ? `<div class="flex items-center gap-1.5 flex-shrink-0">
+                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${price}, '${escapeHTML(p.unit || '').replace(/'/g, "\\'")}' )" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
+                            <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
+                        </div>` : '';
+
                 const companySourceHtml = linkedCompanies.length
                     ? `<div class="text-[10px] text-indigo-600 mt-1.5 flex items-start gap-1.5 flex-wrap">
                             <span class="font-bold flex-shrink-0">🏢 บริษัท:</span>
@@ -5504,16 +5527,17 @@ function getCompanyPriceHistory(companyName, productName) {
                             </div>
                             ${companySourceHtml}
                         </div>
-                        <div class="flex items-center gap-1.5 flex-shrink-0">
-                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${price}, '${escapeHTML(p.unit || '').replace(/'/g, "\\'")}' )" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
-                            <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
-                        </div>
+                        ${stockActionsHtml}
                     </div>
                 `;
             }).join('');
         }
 
         window.editStockItem = function(id, name, cost, price, unit = '') {
+            if (currentUserProfile?.role !== 'admin') {
+                showToast('เฉพาะ Admin เท่านั้นที่แก้ไขสินค้ากลางได้', 'error');
+                return;
+            }
             stockEditId.value = id;
             stockNameInput.value = name;
             stockCostInput.value = cost;
@@ -5525,6 +5549,10 @@ function getCompanyPriceHistory(companyName, productName) {
         };
 
         window.deleteStockItem = function(id, name) {
+            if (currentUserProfile?.role !== 'admin') {
+                showToast('เฉพาะ Admin เท่านั้นที่ลบสินค้ากลางได้', 'error');
+                return;
+            }
             showConfirmModal(
                 'ยืนยันลบสินค้าในสต็อก',
                 `ต้องการลบ "${name}" ออกจากรายการสต็อกสินค้ามาตรฐานใช่หรือไม่?`,
