@@ -5446,24 +5446,46 @@ function getCompanyPriceHistory(companyName, productName) {
         deleteUnusedCompanyBtn?.addEventListener('click', deleteUnusedStockCompanyNames);
 
         function refreshStockCompanyFilter() {
-            if (!stockCompanyFilter) return;
+    if (!stockCompanyFilter) return;
 
-            const companies = getActualCompaniesForStock();
-            const currentValue = stockCompanyFilter.value;
-            const options = ['<option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>'];
+    const companies = getActualCompaniesForStock();
+    console.log("Companies data:", companies);
 
-            companies.forEach(company => {
-                const districtText = company.district ? `เขต ${company.district} • ` : '';
-                options.push(`<option value="${escapeHTML(company.key)}">${escapeHTML(districtText + company.name)}</option>`);
-            });
+    const currentValue = stockCompanyFilter.value;
+    const options = ['<option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>'];
 
-            stockCompanyFilter.innerHTML = options.join('');
-            if (companies.some(company => company.key === currentValue)) {
-                stockCompanyFilter.value = currentValue;
-            } else {
-                stockCompanyFilter.value = '';
-            }
+    companies.sort((a, b) => {
+        // 1. เปรียบเทียบตาม "เขต" (district) ก่อน
+        const distA = String(a.district || '').trim();
+        const distB = String(b.district || '').trim();
+
+        // ถ้ามีเขตทั้งคู่ ให้เทียบตัวเลขหรือข้อความของเขตก่อน
+        if (distA !== distB) {
+            // ใช้ numeric: true เพื่อให้ เขต 2 มาก่อน เขต 10 เป็นต้น
+            return distA.localeCompare(distB, 'th', { numeric: true });
         }
+
+        // 2. ถ้าเขตเหมือนกัน (หรือไม่มีเขตทั้งคู่) ให้เรียงตาม "ชื่อบริษัท" (name)
+        const nameA = String(a.name || '').trim();
+        const nameB = String(b.name || '').trim();
+        
+        return nameA.localeCompare(nameB, 'th', { sensitivity: 'accent', numeric: true });
+    });
+
+    companies.forEach(company => {
+        const val = company.key !== undefined ? company.key : company.id;
+        const districtText = company.district ? `เขต ${company.district} • ` : '';
+        options.push(`<option value="${escapeHTML(val)}">${escapeHTML(districtText + company.name)}</option>`);
+    });
+
+    stockCompanyFilter.innerHTML = options.join('');
+
+    if (currentValue && Array.from(stockCompanyFilter.options).some(opt => opt.value === currentValue)) {
+        stockCompanyFilter.value = currentValue;
+    } else {
+        stockCompanyFilter.value = '';
+    }
+}
 
         function getSelectedCompanyStockProducts(companyKey) {
             const key = normalizeCompanyProductKey(companyKey);
