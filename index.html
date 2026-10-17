@@ -5354,10 +5354,9 @@ function getCompanyPriceHistory(companyName, productName) {
             if (stockCompanySearch) stockCompanySearch.classList.remove('hidden');
         });
         stockCompanyFilter.addEventListener('click', () => {
-            if (stockCompanySearch) {
-                stockCompanySearch.classList.remove('hidden');
-                stockCompanySearch.focus();
-            }
+            // อย่าแย่ง focus จาก select เพราะจะทำให้เมนูบริษัทปิดก่อนเลือกค่า
+            // ผู้ใช้ยังคลิกช่องค้นหาบริษัทด้านบนเพื่อพิมพ์ค้นหาได้ตามปกติ
+            if (stockCompanySearch) stockCompanySearch.classList.remove('hidden');
         });
         if (stockCompanySearch) {
             stockCompanySearch.addEventListener('input', () => {
@@ -5558,8 +5557,20 @@ function getCompanyPriceHistory(companyName, productName) {
             const key = normalizeCompanyProductKey(companyKey);
             if (!key) return [];
 
+            // รองรับข้อมูลเดิมทั้งชุดที่ผูกด้วย companyKey และชุดที่มีเฉพาะ companyName
+            // บางรายการ companyKey อาจเป็นรหัสอ้างอิงที่ไม่ตรงกับ key จากรายการจัดส่ง
+            const selectedCompany = getActualCompaniesForStock()
+                .find(company => normalizeCompanyProductKey(company.key) === key);
+            const selectedNameKey = normalizeCompanyProductKey(selectedCompany?.name || '');
+
             return allCompanyProducts
-                .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === key)
+                .filter(p => {
+                    const productCompanyKey = normalizeCompanyProductKey(p.companyKey || '');
+                    const productCompanyNameKey = normalizeCompanyProductKey(p.companyName || '');
+                    return productCompanyKey === key ||
+                        productCompanyNameKey === key ||
+                        (selectedNameKey && productCompanyNameKey === selectedNameKey);
+                })
                 .map(p => ({
                     id: p.id,
                     name: String(p.name || '').trim(),
