@@ -5455,20 +5455,25 @@ function getCompanyPriceHistory(companyName, productName) {
     const options = ['<option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>'];
 
     companies.sort((a, b) => {
-        // 1. เปรียบเทียบตาม "เขต" (district) ก่อน
-        const distA = String(a.district || '').trim();
-        const distB = String(b.district || '').trim();
+        // 1. บริษัทที่มีข้อมูลเขตต้องแสดงก่อนบริษัทที่ไม่ได้ระบุเขต
+        const distA = String(a.district ?? '').trim();
+        const distB = String(b.district ?? '').trim();
+        const hasDistA = distA !== '';
+        const hasDistB = distB !== '';
 
-        // ถ้ามีเขตทั้งคู่ ให้เทียบตัวเลขหรือข้อความของเขตก่อน
-        if (distA !== distB) {
-            // ใช้ numeric: true เพื่อให้ เขต 2 มาก่อน เขต 10 เป็นต้น
-            return distA.localeCompare(distB, 'th', { numeric: true });
+        if (hasDistA !== hasDistB) {
+            return hasDistA ? -1 : 1;
         }
 
-        // 2. ถ้าเขตเหมือนกัน (หรือไม่มีเขตทั้งคู่) ให้เรียงตาม "ชื่อบริษัท" (name)
+        // 2. หากมีเขตทั้งคู่ ให้เรียงเขตแบบตัวเลข (เขต 2 มาก่อนเขต 10)
+        if (hasDistA && hasDistB) {
+            const districtCompare = distA.localeCompare(distB, 'th', { numeric: true });
+            if (districtCompare !== 0) return districtCompare;
+        }
+
+        // 3. เขตเดียวกัน หรือไม่มีเขตทั้งคู่ ให้เรียงตามชื่อบริษัท
         const nameA = String(a.name || '').trim();
         const nameB = String(b.name || '').trim();
-        
         return nameA.localeCompare(nameB, 'th', { sensitivity: 'accent', numeric: true });
     });
 
