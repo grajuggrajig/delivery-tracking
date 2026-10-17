@@ -2058,6 +2058,13 @@ body > header{z-index:900 !important}
 }
 </style>
 
+<style id="stock-company-search-style">
+#stock-company-search { box-sizing:border-box; min-height:38px; }
+#stock-company-search:not(.hidden) { display:block; }
+@media (max-width:640px) {
+  #stock-company-search { font-size:12px; }
+}
+</style>
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -2573,9 +2580,15 @@ body > header{z-index:900 !important}
             <div class="mb-3 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] gap-2">
                 <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
                 <div class="flex items-center gap-2 min-w-0">
-                    <select id="stock-company-filter" class="flex-1 min-w-0 w-full px-3.5 py-2 text-xs border border-indigo-200 bg-indigo-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
-                        <option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>
-                    </select>
+                    <div class="flex-1 min-w-0 flex flex-col gap-1.5">
+                        <input type="search" id="stock-company-search" autocomplete="off"
+                            placeholder="🔎 ค้นหารายชื่อบริษัท..."
+                            aria-label="ค้นหารายชื่อบริษัทในสต็อก"
+                            class="hidden w-full min-w-0 px-3.5 py-2 text-xs border border-indigo-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
+                        <select id="stock-company-filter" class="flex-1 min-w-0 w-full px-3.5 py-2 text-xs border border-indigo-200 bg-indigo-50/40 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
+                            <option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>
+                        </select>
+                    </div>
                     <button type="button" id="delete-unused-company-btn"
                         class="flex-shrink-0 w-9 h-9 p-0 flex items-center justify-center text-base text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100 rounded-xl transition"
                         title="ลบชื่อบริษัทที่ไม่มีการใช้งานแล้ว" aria-label="ลบชื่อบริษัทที่ไม่มีการใช้งานแล้ว">
@@ -5052,6 +5065,7 @@ function getCompanyPriceHistory(companyName, productName) {
         const stockCancelEditBtn = document.getElementById('stock-cancel-edit');
         const stockSearchBox = document.getElementById('stock-search-box');
         const stockCompanyFilter = document.getElementById('stock-company-filter');
+        const stockCompanySearch = document.getElementById('stock-company-search');
         const stockCompanySource = document.getElementById('stock-company-source');
         const stockTableContainer = document.getElementById('stock-table-container');
         const deleteUnusedCompanyBtn = document.getElementById('delete-unused-company-btn');
@@ -5141,6 +5155,11 @@ function getCompanyPriceHistory(companyName, productName) {
                เพื่อให้เปิดครั้งถัดไปเริ่มที่ “ทุกบริษัท / สินค้ามาตรฐาน” */
             if (stockCompanyFilter) {
                 stockCompanyFilter.value = '';
+            }
+            if (stockCompanySearch) {
+                stockCompanySearch.value = '';
+                stockCompanySearch.classList.add('hidden');
+                refreshStockCompanyFilter('');
             }
             if (stockCompanySource) {
                 stockCompanySource.classList.add('hidden');
@@ -5330,6 +5349,42 @@ function getCompanyPriceHistory(companyName, productName) {
             renderStockTable(stockSearchBox.value);
         });
 
+        // แสดงช่องค้นหารายชื่อบริษัทเมื่อผู้ใช้คลิกตัวเลือกบริษัท
+        stockCompanyFilter.addEventListener('focus', () => {
+            if (stockCompanySearch) stockCompanySearch.classList.remove('hidden');
+        });
+        stockCompanyFilter.addEventListener('click', () => {
+            if (stockCompanySearch) {
+                stockCompanySearch.classList.remove('hidden');
+                stockCompanySearch.focus();
+            }
+        });
+        if (stockCompanySearch) {
+            stockCompanySearch.addEventListener('input', () => {
+                const selectedBeforeFilter = stockCompanyFilter.value;
+                refreshStockCompanyFilter(stockCompanySearch.value);
+                if (selectedBeforeFilter && Array.from(stockCompanyFilter.options).some(opt => opt.value === selectedBeforeFilter)) {
+                    stockCompanyFilter.value = selectedBeforeFilter;
+                } else if (stockCompanySearch.value.trim()) {
+                    stockCompanyFilter.value = '';
+                }
+            });
+            stockCompanySearch.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') {
+                    stockCompanySearch.value = '';
+                    refreshStockCompanyFilter('');
+                    stockCompanySearch.classList.add('hidden');
+                    stockCompanyFilter.focus();
+                } else if (event.key === 'Enter') {
+                    const firstCompany = Array.from(stockCompanyFilter.options).find(opt => opt.value);
+                    if (firstCompany) {
+                        stockCompanyFilter.value = firstCompany.value;
+                        renderStockTable(stockSearchBox.value);
+                    }
+                }
+            });
+        }
+
         function getTimestampMillis(value) {
             if (!value) return 0;
             if (typeof value.toMillis === 'function') return value.toMillis();
@@ -5445,7 +5500,7 @@ function getCompanyPriceHistory(companyName, productName) {
 
         deleteUnusedCompanyBtn?.addEventListener('click', deleteUnusedStockCompanyNames);
 
-        function refreshStockCompanyFilter() {
+        function refreshStockCompanyFilter(searchText = '') {
     if (!stockCompanyFilter) return;
 
     const companies = getActualCompaniesForStock();
@@ -5477,7 +5532,14 @@ function getCompanyPriceHistory(companyName, productName) {
         return nameA.localeCompare(nameB, 'th', { sensitivity: 'accent', numeric: true });
     });
 
-    companies.forEach(company => {
+    const companyKeyword = String(searchText || '').trim().toLocaleLowerCase('th');
+    companies.filter(company => {
+        if (!companyKeyword) return true;
+        const name = String(company.name || '').toLocaleLowerCase('th');
+        const district = String(company.district || '').toLocaleLowerCase('th');
+        return name.includes(companyKeyword) || district.includes(companyKeyword) ||
+            (`เขต ${district}`).includes(companyKeyword);
+    }).forEach(company => {
         const val = company.key !== undefined ? company.key : company.id;
         const districtText = company.district ? `เขต ${company.district} • ` : '';
         options.push(`<option value="${escapeHTML(val)}">${escapeHTML(districtText + company.name)}</option>`);
