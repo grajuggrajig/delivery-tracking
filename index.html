@@ -4098,12 +4098,23 @@ async function deleteCompanyProduct(id, name, companyName) {
     );
 }
 
+let companyProductCountCacheSource = null;
+let companyProductCountCache = new Map();
 function getCompanySpecificProductCount(companyName, stableCompanyKey = '') {
     const companyKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
     if (!companyKey) return 0;
-    return allCompanyProducts.filter(p =>
-        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey
-    ).length;
+
+    // รายการจัดส่งมีหลายบริษัท จึงสร้างดัชนีนับสินค้าเพียงครั้งเดียวต่อ snapshot
+    if (companyProductCountCacheSource !== allCompanyProducts) {
+        const nextCounts = new Map();
+        allCompanyProducts.forEach(product => {
+            const key = normalizeCompanyProductKey(product.companyKey || product.companyName);
+            if (key) nextCounts.set(key, (nextCounts.get(key) || 0) + 1);
+        });
+        companyProductCountCache = nextCounts;
+        companyProductCountCacheSource = allCompanyProducts;
+    }
+    return companyProductCountCache.get(companyKey) || 0;
 }
 
 function formatCompanyProductUpdateDate(product) {
@@ -4143,12 +4154,13 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
     const keyword = String(filterText || '').trim().toLowerCase();
 
     // นับสินค้าทั้งหมดของบริษัท ไม่เปลี่ยนตามช่องค้นหา
+    // เรียงรายการบริษัทครั้งเดียวก่อนกรอง ช่วยให้พิมพ์ค้นหาต่อเนื่องได้เร็วขึ้น
     const companyProducts = allCompanyProducts
-        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey);
+        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey)
+        .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
 
     const products = companyProducts
-        .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword))
-        .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+        .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
 
     if (count) count.textContent = `${companyProducts.length} รายการ`;
 
@@ -5651,6 +5663,18 @@ function getCompanyPriceHistory(companyName, productName) {
             }
         };
 
+        let sortedStockProductsSource = null;
+        let sortedStockProductsCache = [];
+        function getSortedStandardStockProducts() {
+            if (sortedStockProductsSource !== allProducts) {
+                sortedStockProductsCache = allProducts.slice().sort((a, b) =>
+                    String(a.name || '').trim().localeCompare(String(b.name || '').trim(), 'th')
+                );
+                sortedStockProductsSource = allProducts;
+            }
+            return sortedStockProductsCache;
+        }
+
         function renderStockTable(filterText = '') {
             // ไม่ refresh dropdown ทุกครั้งที่พิมพ์ เพราะข้อมูลบริษัทไม่ได้เปลี่ยนตามคำค้น
             const keyword = String(filterText || '').toLowerCase().trim();
@@ -5688,7 +5712,8 @@ function getCompanyPriceHistory(companyName, productName) {
                 stockCompanySource.textContent = '';
             }
 
-            const filtered = allProducts.filter(p => String(p.name || '').toLowerCase().includes(keyword)).sort((a, b) => String(a.name || '').trim().localeCompare(String(b.name || '').trim(), 'th'));
+            const filtered = getSortedStandardStockProducts()
+                .filter(p => String(p.name || '').toLowerCase().includes(keyword));
 
             if (badge) {
                 badge.textContent = keyword
@@ -8926,13 +8951,20 @@ document.getElementById('reminder-modal').addEventListener('click', (e) => {
 document.getElementById('save-reminder-btn').addEventListener('click', () => {
     saveReminder();
 });
+        // ค้นหาหลังผู้ใช้หยุดพิมพ์ช่วงสั้น ๆ เพื่อลดการสร้างรายการซ้ำหลายครั้ง
+        // การเรียก applyFilterAndSearch() จากปุ่ม/การเปลี่ยนข้อมูลยังทำงานทันทีตามเดิม
+        let mainSearchRenderTimer = 0;
         document.getElementById('search-input').addEventListener('input', (e) => {
             const value = String(e.target.value || '').trim();
             if (selectedCustomerFilter &&
                 value.toLowerCase() !== selectedCustomerFilter.toLowerCase()) {
                 selectedCustomerFilter = '';
             }
-            applyFilterAndSearch();
+            if (mainSearchRenderTimer) clearTimeout(mainSearchRenderTimer);
+            mainSearchRenderTimer = setTimeout(() => {
+                mainSearchRenderTimer = 0;
+                applyFilterAndSearch();
+            }, 65);
         });
     </script>
 
@@ -8979,11 +9011,34 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
     const rows=getOverviewRows(filterText || '');
     const source=Array.isArray(window.allDeliveries) ? window.allDeliveries :
       (typeof allDeliveries!=='undefined' && Array.isArray(allDeliveries) ? allDeliveries : []);
-    const companies=new Set(source.map(x=>normalizeText(x.companyName)).filter(Boolean));
-    const pending=source.reduce((sum,item)=>sum+(Array.isArray(item.subItems)?item.subItems.filter(x=>x.status!=='completed').length:0),0);
+
+    // สร้างสถิติและดัชนีผู้ติดต่อต่อบริษัทในรอบเดียว แทนการกรอง source ซ้ำทุกการ์ด
+    const companies=new Set();
+    const customers=new Set();
+    const customerNamesByCompanyKey=new Map();
+    const customerNamesByCompanyName=new Map();
+    let pending=0;
+    const addCustomerToIndex=(index,key,customer)=>{
+      if(!key || !customer) return;
+      let names=index.get(key);
+      if(!names){ names=new Set(); index.set(key,names); }
+      names.add(customer);
+    };
+    source.forEach(item=>{
+      const companyName=normalizeText(item.companyName);
+      const companyKey=normalizeText(item.companyKey || item.companyName);
+      const customer=normalizeText(item.customerName);
+      if(companyName) companies.add(companyName);
+      if(customer) customers.add(customer);
+      addCustomerToIndex(customerNamesByCompanyKey,companyKey,customer);
+      addCustomerToIndex(customerNamesByCompanyName,companyName,customer);
+      if(Array.isArray(item.subItems)){
+        for(const sub of item.subItems){ if(sub.status!=='completed') pending++; }
+      }
+    });
 
     document.getElementById('overview-company-count')?.replaceChildren(document.createTextNode(companies.size.toLocaleString('th-TH')));
-    document.getElementById('overview-customer-count')?.replaceChildren(document.createTextNode(countUniqueCustomers().toLocaleString('th-TH')));
+    document.getElementById('overview-customer-count')?.replaceChildren(document.createTextNode(customers.size.toLocaleString('th-TH')));
     document.getElementById('overview-pending-count')?.replaceChildren(document.createTextNode(pending.toLocaleString('th-TH')));
 
     if(!source.length){
@@ -9001,8 +9056,16 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
       const phone=String(item.phone || '').trim();
       const address=String(item.address || '').trim();
       const district=String(item.district || '').trim();
-      const companyRows=source.filter(x=>normalizeText(x.companyKey || x.companyName)===item._overviewKey || normalizeText(x.companyName)===normalizeText(company));
-      const customerCount=new Set(companyRows.map(x=>normalizeText(x.customerName)).filter(Boolean)).size;
+      const keyNames=customerNamesByCompanyKey.get(item._overviewKey);
+      const companyNames=customerNamesByCompanyName.get(normalizeText(company));
+      let customerCount=0;
+      if(keyNames && companyNames && keyNames!==companyNames){
+        const uniqueNames=new Set(keyNames);
+        companyNames.forEach(name=>uniqueNames.add(name));
+        customerCount=uniqueNames.size;
+      }else{
+        customerCount=(keyNames || companyNames || new Set()).size;
+      }
       return `
         <article class="customer-overview-card" tabindex="0" role="button"
           onclick="openOverviewCompany('${encodeURIComponent(company)}')"
@@ -9057,12 +9120,19 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
     else if(typeof applyFilterAndSearch==='function') applyFilterAndSearch();
   };
 
+  let overviewSearchRenderTimer=0;
   function syncOverviewSearch(value){
     const mainSearch=document.getElementById('search-input');
-    if(mainSearch) mainSearch.value=value || '';
+    const nextValue=value || '';
+    if(mainSearch) mainSearch.value=nextValue;
     if(typeof selectedCustomerFilter!=='undefined') selectedCustomerFilter='';
-    if(typeof applyFilterAndSearch==='function') applyFilterAndSearch();
-    window.renderCustomerOverview(value || '');
+    // ช่องค้นหายังคงตอบสนองทันที แต่รวมงานกรอง/วาดผลที่หนักให้ทำหลังหยุดพิมพ์สั้น ๆ
+    if(overviewSearchRenderTimer) clearTimeout(overviewSearchRenderTimer);
+    overviewSearchRenderTimer=setTimeout(()=>{
+      overviewSearchRenderTimer=0;
+      if(typeof applyFilterAndSearch==='function') applyFilterAndSearch();
+      window.renderCustomerOverview(nextValue);
+    },65);
   }
 
   function initOverviewSearch(){
