@@ -207,17 +207,11 @@
                 opacity 0.24s ease,
                 transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 0.28s ease;
-            will-change: width, min-width, max-width, flex-basis, transform, opacity;
+            will-change: transform, opacity;
             overflow: hidden;
             backface-visibility: hidden;
         }
-		/* บังคับซ่อน Scrollbar ทั้งหน้าจอ */
-        html, body {
-            overflow: hidden !important;
-            height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
+
 		
     
         /* ==================== FIREBASE LOGIN + ADMIN USER MANAGEMENT ==================== */
@@ -4871,32 +4865,6 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 
 		
 		
-// ฟังก์ชันค้นหาประวัติราคาของบริษัทแบบยืดหยุ่น รองรับการเทียบชื่อสินค้าบางส่วน
-function getCompanyPriceHistory(companyName, productName) {
-    if (!companyName) return null;
-    let foundPrice = null;
-    const targetCompany = companyName.trim().toLowerCase();
-    const cleanSearchKeyword = productName.replace(/\s*\(.*?\)/g, '').replace(/\s*x\s*\d+$/, '').trim().toLowerCase();
-
-    allDeliveries.forEach(item => {
-        const itemCompany = item.companyName ? item.companyName.trim().toLowerCase() : '';
-        if (itemCompany === targetCompany || itemCompany.includes(targetCompany) || targetCompany.includes(itemCompany)) {
-            const archived = Array.isArray(item.purchaseHistory) ? item.purchaseHistory : [];
-            const current = Array.isArray(item.subItems) ? item.subItems : [];
-            [...archived, ...current].forEach(sub => {
-                const subTextLower = String(sub.text || '').toLowerCase();
-                if (!cleanSearchKeyword || subTextLower.includes(cleanSearchKeyword) || cleanSearchKeyword.includes(subTextLower.split(' x ')[0])) {
-                    foundPrice = sub;
-                }
-            });
-        }
-    });
-    return foundPrice;
-}
-
-		
-		
-
         function openCustomerModal() {
             customerModal.classList.remove('hidden');
             setTimeout(() => {
@@ -5565,17 +5533,30 @@ function getCompanyPriceHistory(companyName, productName) {
     }
 }
 
+        let selectedCompanyStockCacheProductsSource = null;
+        let selectedCompanyStockCacheDeliveriesSource = null;
+        const selectedCompanyStockProductsCache = new Map();
+
         function getSelectedCompanyStockProducts(companyKey) {
             const key = normalizeCompanyProductKey(companyKey);
             if (!key) return [];
 
+            if (selectedCompanyStockCacheProductsSource !== allCompanyProducts ||
+                selectedCompanyStockCacheDeliveriesSource !== allDeliveries) {
+                selectedCompanyStockCacheProductsSource = allCompanyProducts;
+                selectedCompanyStockCacheDeliveriesSource = allDeliveries;
+                selectedCompanyStockProductsCache.clear();
+            }
+            if (selectedCompanyStockProductsCache.has(key)) {
+                return selectedCompanyStockProductsCache.get(key);
+            }
+
             // รองรับข้อมูลเดิมทั้งชุดที่ผูกด้วย companyKey และชุดที่มีเฉพาะ companyName
-            // บางรายการ companyKey อาจเป็นรหัสอ้างอิงที่ไม่ตรงกับ key จากรายการจัดส่ง
             const selectedCompany = getActualCompaniesForStock()
                 .find(company => normalizeCompanyProductKey(company.key) === key);
             const selectedNameKey = normalizeCompanyProductKey(selectedCompany?.name || '');
 
-            return allCompanyProducts
+            const products = allCompanyProducts
                 .filter(p => {
                     const productCompanyKey = normalizeCompanyProductKey(p.companyKey || '');
                     const productCompanyNameKey = normalizeCompanyProductKey(p.companyName || '');
@@ -5592,7 +5573,11 @@ function getCompanyPriceHistory(companyName, productName) {
                     companyName: String(p.companyName || '').trim(),
                     companyKey: key,
                     stockProductId: p.stockProductId || ''
-                }));
+                }))
+                .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+
+            selectedCompanyStockProductsCache.set(key, products);
+            return products;
         }
 
         function renderCompanySpecificStockRows(products) {
@@ -5683,9 +5668,10 @@ function getCompanyPriceHistory(companyName, productName) {
 
             if (selectedCompanyKey) {
                 const company = getActualCompaniesForStock().find(c => c.key === selectedCompanyKey);
-                const companyProducts = getSelectedCompanyStockProducts(selectedCompanyKey)
-                    .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword))
-                    .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+                const allSelectedCompanyProducts = getSelectedCompanyStockProducts(selectedCompanyKey);
+                const companyProducts = keyword
+                    ? allSelectedCompanyProducts.filter(p => normalizeCompanyProductName(p.name).includes(keyword))
+                    : allSelectedCompanyProducts;
 
                 if (stockCompanySource) {
                     stockCompanySource.classList.remove('hidden');
@@ -5694,7 +5680,7 @@ function getCompanyPriceHistory(companyName, productName) {
 
                 if (badge) {
                     badge.textContent = keyword
-                        ? `พบ ${companyProducts.length} จาก ${getSelectedCompanyStockProducts(selectedCompanyKey).length} รายการ`
+                        ? `พบ ${companyProducts.length} จาก ${allSelectedCompanyProducts.length} รายการ`
                         : `${companyProducts.length} รายการ`;
                 }
 
@@ -6872,33 +6858,83 @@ document.getElementById('item-input').addEventListener('blur', function() {
             applyFilterAndSearch();
         }
 
-        function applyFilterAndSearch() {
-            const keyword = document.getElementById('search-input').value.toLowerCase().trim();
-            const selectedCustomer = String(selectedCustomerFilter || '').trim().toLowerCase();
+        // ดัชนีค้นหาแบบ WeakMap: สร้างข้อความค้นหาต่อรายการเพียงครั้งเดียว
+        // snapshot ของ Firestore สร้าง object ชุดใหม่ จึงอัปเดต cache โดยอัตโนมัติ
+        const deliverySearchFieldsCache = new WeakMap();
+        function getDeliverySearchFields(item) {
+            let cached = deliverySearchFieldsCache.get(item);
+            if (cached) return cached;
+            const fields = [];
+            const add = value => {
+                const text = String(value == null ? '' : value).trim().toLowerCase();
+                if (text) fields.push(text);
+            };
+            add(item.customerName);
+            add(item.companyName);
+            add(item.phone);
+            getCustomerLineIds(item).forEach(add);
+            add(item.address);
+            if (Array.isArray(item.subItems)) {
+                item.subItems.forEach(sub => add(sub && sub.text));
+            }
+            if (Array.isArray(item.customerNotes)) {
+                item.customerNotes.forEach(note => {
+                    add(note && note.note);
+                    add(note && note.contactDate);
+                });
+            }
+            deliverySearchFieldsCache.set(item, fields);
+            return fields;
+        }
 
-            const matchedDeliveries = allDeliveries.filter(item => {
-                // ถ้ามีการเลือกลูกค้าจาก modal ให้กรองด้วย "ชื่อลูกค้าแบบตรงกัน"
+        function applyFilterAndSearch() {
+            const searchInput = document.getElementById('search-input');
+            const keyword = String(searchInput?.value || '').toLowerCase().trim();
+            const selectedCustomer = String(selectedCustomerFilter || '').trim().toLowerCase();
+            const matchedDeliveries = [];
+            const filtered = [];
+            const uniqueCompanies = new Set();
+            let discoveredItemCount = 0;
+            let discoveredPendingCount = 0;
+
+            for (const item of allDeliveries) {
+                // ถ้ามีการเลือกลูกค้าจาก modal ให้กรองด้วยชื่อลูกค้าแบบตรงกัน
                 if (selectedCustomer &&
                     String(item.customerName || '').trim().toLowerCase() !== selectedCustomer) {
-                    return false;
+                    continue;
                 }
 
-                return (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
-                    (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
-                    (item.phone && item.phone.toLowerCase().includes(keyword)) ||
-                    (getCustomerLineIds(item).some(lineId => lineId.toLowerCase().includes(keyword))) ||
-                    (item.address && item.address.toLowerCase().includes(keyword)) ||
-                    (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword))) ||
-                    (item.customerNotes && item.customerNotes.some(note => (note.note || '').toLowerCase().includes(keyword) || (note.contactDate || '').toLowerCase().includes(keyword)));
-            });
-            const discoveredItemCount = matchedDeliveries.reduce((total, item) => total + (Array.isArray(item.subItems) ? item.subItems.length : 0), 0);
-            const discoveredPendingCount = matchedDeliveries.reduce((total, item) => total + (Array.isArray(item.subItems) ? item.subItems.filter(sub => sub.status !== 'completed').length : 0), 0);
-            document.getElementById('all-count-badge')?.replaceChildren(document.createTextNode(discoveredItemCount.toLocaleString('th-TH')));
-            document.getElementById('pending-count-badge')?.replaceChildren(document.createTextNode(discoveredPendingCount.toLocaleString('th-TH')));
-            let filtered = currentFilter === 'pending' ? matchedDeliveries.filter(item => Array.isArray(item.subItems) && item.subItems.some(sub => sub.status !== 'completed')) : matchedDeliveries;
-            const uniqueCompanies = new Set(filtered.map(item => item.companyName ? item.companyName.trim() : '').filter(company => company !== ''));
+                const fields = getDeliverySearchFields(item);
+                if (!fields.length || (keyword && !fields.some(field => field.includes(keyword)))) continue;
+
+                matchedDeliveries.push(item);
+                const subs = Array.isArray(item.subItems) ? item.subItems : [];
+                let hasPending = false;
+                discoveredItemCount += subs.length;
+                for (const sub of subs) {
+                    if (sub.status !== 'completed') {
+                        discoveredPendingCount++;
+                        hasPending = true;
+                    }
+                }
+
+                if (currentFilter !== 'pending' || hasPending) {
+                    filtered.push(item);
+                    const company = String(item.companyName || '').trim();
+                    if (company) uniqueCompanies.add(company);
+                }
+            }
+
+            document.getElementById('all-count-badge')?.replaceChildren(
+                document.createTextNode(discoveredItemCount.toLocaleString('th-TH'))
+            );
+            document.getElementById('pending-count-badge')?.replaceChildren(
+                document.createTextNode(discoveredPendingCount.toLocaleString('th-TH'))
+            );
             const companyBadge = document.getElementById('company-count-badge');
-            if (companyBadge) companyBadge.textContent = `พบรายชื่อบริษัท: ${filtered.length} แห่ง (บริษัทไม่ซ้ำ: ${uniqueCompanies.size} แห่ง)`;
+            if (companyBadge) {
+                companyBadge.textContent = `พบรายชื่อบริษัท: ${filtered.length} แห่ง (บริษัทไม่ซ้ำ: ${uniqueCompanies.size} แห่ง)`;
+            }
             renderList(filtered);
         }
 
