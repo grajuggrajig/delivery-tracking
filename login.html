@@ -7,13 +7,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-	
     <style>
         body { font-family: Arial, "Noto Sans Thai", sans-serif; }
         .glass { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
     </style>
-	
-	
 </head>
 <body class="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-100 text-slate-800 flex items-center justify-center p-4">
 
@@ -63,34 +60,29 @@
 
             <a href="index.html"
                class="block text-center text-xs text-slate-400 hover:text-sky-600 transition">
-               
+                ← กลับหน้าหลัก
             </a>
         </form>
 
         <div class="px-6 pb-6 text-center">
-            <p class="text-[11px] text-slate-400">Secured by Firebase Authentication</p>
+            <p class="text-[11px] text-slate-400">ระบบรักษาความปลอดภัยด้วย Firebase Authentication</p>
         </div>
     </div>
 </div>
 
 <script>
 const firebaseConfig = {
-  apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
-  authDomain: "delivery-tracking-2313a.firebaseapp.com",
-  projectId: "delivery-tracking-2313a",
-  storageBucket: "delivery-tracking-2313a.firebasestorage.app",
-  messagingSenderId: "631670801383",
-  appId: "1:631670801383:web:e720570af97bad7011f342",
-  measurementId: "G-BB2D5DJH3F"
+    apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+    authDomain: "delivery-tracking-2313a.firebaseapp.com",
+    projectId: "delivery-tracking-2313a",
+    storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+    messagingSenderId: "631670801383",
+    appId: "1:631670801383:web:e720570af97bad7011f342",
+    measurementId: "G-BB2D5DJH3F"
 };
 
 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
-
-// ให้สถานะการเข้าสู่ระบบใช้งานร่วมกันระหว่างหน้า Login และหน้า CRM
-auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(function(error) {
-    console.warn('ตั้งค่าการจดจำการเข้าสู่ระบบไม่สำเร็จ:', error);
-});
 
 const form = document.getElementById('login-form');
 const email = document.getElementById('email');
@@ -114,24 +106,19 @@ function friendlyError(code) {
         'auth/invalid-credential': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
         'auth/too-many-requests': 'มีการลองเข้าสู่ระบบหลายครั้ง กรุณารอสักครู่',
         'auth/user-disabled': 'บัญชีนี้ถูกปิดการใช้งาน',
-        'auth/network-request-failed': 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้',
-        'auth/api-key-not-valid.-please-pass-a-valid-api-key.': 'Firebase API Key ไม่ถูกต้อง กรุณาตรวจสอบการตั้งค่า Firebase',
-        'auth/invalid-login-credentials': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
+        'auth/network-request-failed': 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้'
     };
     return map[code] || 'ไม่สามารถเข้าสู่ระบบได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่อีกครั้ง';
 }
 
-let redirectingToIndex = false;
 auth.onAuthStateChanged(function(user) {
-    if (user && !redirectingToIndex) {
-        redirectingToIndex = true;
+    if (user) {
         window.location.replace('index.html');
     }
 });
 
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
-
     const mail = email.value.trim();
     const pass = password.value;
 
@@ -143,28 +130,14 @@ form.addEventListener('submit', async function(e) {
 
     try {
         await auth.signInWithEmailAndPassword(mail, pass);
-
         showMessage('เข้าสู่ระบบสำเร็จ กำลังเปิดระบบ...', 'success');
         message.classList.remove('hidden');
-
-        redirectingToIndex = true;
-        setTimeout(function() {
+        setTimeout(() => {
             window.location.replace('index.html');
         }, 350);
-
     } catch (error) {
-        console.error('========== FIREBASE LOGIN ERROR ==========');
-        console.error('Code:', error.code);
-        console.error('Message:', error.message);
-        console.error('Full Error:', error);
-
-        showMessage(
-            friendlyError(error.code) +
-            ' [' + (error.code || 'unknown-error') + ']'
-        );
-
+        showMessage(friendlyError(error.code));
         message.classList.remove('hidden');
-
         loginBtn.disabled = false;
         loginBtn.textContent = '🔓 เข้าสู่ระบบ';
     }
@@ -197,4 +170,3 @@ document.getElementById('forgot-password').addEventListener('click', async funct
 </script>
 </body>
 </html>
-
