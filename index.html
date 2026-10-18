@@ -8135,30 +8135,46 @@ function sanitizeCrmNoteHtml(html) {
     const template = document.createElement('template');
     template.innerHTML = String(html || '');
     const allowedTags = new Set(['B', 'STRONG', 'SPAN', 'BR', 'DIV', 'P']);
+    const colorMap = {
+        '#111827': '#111827', 'rgb(17,24,39)': '#111827', 'rgb(17,31,39)': '#111827',
+        '#dc2626': '#dc2626', 'rgb(220,38,38)': '#dc2626',
+        '#0284c7': '#0284c7', 'rgb(2,132,199)': '#0284c7'
+    };
+    const normalizeColor = value => {
+        const color = String(value || '').toLowerCase().replace(/\s/g, '');
+        return colorMap[color] || '';
+    };
     const walk = node => {
         [...node.childNodes].forEach(child => {
             if (child.nodeType === Node.ELEMENT_NODE) {
+                // Chromium บางเวอร์ชันสร้าง <font color="..."> จาก foreColor
+                // แปลงเป็น SPAN ก่อน sanitize เพื่อไม่ให้สีหายตอนบันทึก
+                if (child.tagName === 'FONT') {
+                    const span = document.createElement('span');
+                    const fontColor = normalizeColor(child.getAttribute('color') || child.style.color);
+                    if (fontColor) span.style.color = fontColor;
+                    while (child.firstChild) span.appendChild(child.firstChild);
+                    child.replaceWith(span);
+                    child = span;
+                }
                 if (!allowedTags.has(child.tagName)) {
                     child.replaceWith(document.createTextNode(child.textContent || ''));
                     return;
                 }
-                [...child.attributes].forEach(attr => {
-                    if (child.tagName !== 'SPAN' || attr.name !== 'style') child.removeAttribute(attr.name);
-                });
-                if (child.tagName === 'SPAN') {
-                    const color = (child.style.color || '').toLowerCase().replace(/\s/g, '');
-                    const colorMap = { '#111827':'#111827', 'rgb(17,24,39)':'#111827', 'rgb(17,31,39)':'#111827', '#dc2626':'#dc2626', 'rgb(220,38,38)':'#dc2626', '#0284c7':'#0284c7', 'rgb(2,132,199)':'#0284c7' };
-                    child.removeAttribute('style');
-                    if (colorMap[color]) child.style.color = colorMap[color];
-                }
+                const savedColor = child.tagName === 'SPAN'
+                    ? normalizeColor(child.style.color || child.getAttribute('color'))
+                    : '';
+                [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
+                if (child.tagName === 'SPAN' && savedColor) child.style.color = savedColor;
                 walk(child);
-            } else if (child.nodeType !== Node.TEXT_NODE) child.remove();
+            } else if (child.nodeType !== Node.TEXT_NODE) {
+                child.remove();
+            }
         });
     };
     walk(template.content);
     return template.innerHTML;
 }
-
 function crmRichHtmlToText(html) {
     const temp = document.createElement('div');
     temp.innerHTML = sanitizeCrmNoteHtml(html);
@@ -8303,6 +8319,8 @@ crmFormatToolbar.addEventListener('click', e => {
     if (button.dataset.crmFormat === 'bold') {
         document.execCommand('bold', false, null);
     } else if (button.dataset.crmColor) {
+        // ใช้ span style แทน <font color> เพื่อให้สีคงอยู่หลัง sanitize และบันทึก
+        document.execCommand('styleWithCSS', false, true);
         document.execCommand('foreColor', false, button.dataset.crmColor);
         // สีดำต้องหนาด้วยตามรูปแบบเน้นที่ต้องการ
         if (button.dataset.crmColor === '#111827') document.execCommand('bold', false, null);
