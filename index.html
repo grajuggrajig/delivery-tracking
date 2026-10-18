@@ -1537,15 +1537,15 @@ body > header{z-index:900 !important}
     align-items: center;
     cursor: pointer;
     user-select: none;
-    /* ควบคุมการเดินไปซ้ายและกลับขวา (ย้ายตำแหน่งทั้งตัว) */
-    animation: charWalkX 6s ease-in-out infinite alternate;
+    /* วิ่งซ้ายจนสุด แล้ววิ่งกลับขวา โดยเปลี่ยนทิศทางตรงจุดกลับตัว */
+    animation: charWalkX 12s ease-in-out infinite;
 }
 
 .char-sprite {
     font-size: 30px;
     filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.2));
-    /* ควบคุมการกระเด้งขึ้นลง + การหันหน้าซ้ายขวา (Flip) โดยไม่หมุนรอบตัวเอง */
-    animation: charBounceRun 0.4s ease-in-out infinite alternate, charFlipFacing 6s steps(1, end) infinite alternate;
+    /* เด้งต่อเนื่อง และหันหัวตามทิศทางในแต่ละครึ่งรอบ */
+    animation: charBounceRun 0.4s ease-in-out infinite alternate, charFlipFacing 12s steps(1, end) infinite;
 }
 
 .char-shadow {
@@ -1558,12 +1558,8 @@ body > header{z-index:900 !important}
 
 /* 1. ควบคุมการเคลื่อนที่ซ้าย-ขวา (Desktop) */
 @keyframes charWalkX {
-    0% {
-        transform: translateX(0);
-    }
-    100% {
-        transform: translateX(-240px); /* ระยะทางที่น้องเสือจะวิ่งไปทางซ้าย */
-    }
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(calc(-100vw + 70px)); } /* จุดกลับตัวด้านซ้าย */
 }
 
 /* 2. ควบคุมการวิ่งกระเด้งขึ้นลงอย่างเดียว (ไม่มี rotate หมุนติ้ว) */
@@ -1578,12 +1574,8 @@ body > header{z-index:900 !important}
 
 /* 3. ควบคุมการหันหน้าซ้าย-ขวาให้ตรงกับจังหวะเดินไปและกลับ */
 @keyframes charFlipFacing {
-    0% {
-        transform: scaleX(1); /* ตอนเริ่มต้น หันหน้ามองขวา */
-    }
-    100% {
-        transform: scaleX(-1); /* ตอนวิ่งกลับ หันหน้ามองซ้าย */
-    }
+    0%, 49.9% { transform: scaleX(1); } /* ช่วงวิ่งไปซ้าย */
+    50%, 100% { transform: scaleX(-1); } /* เมื่อถึงซ้ายให้หันหัวขวาทันที */
 }
 
 /* เงาขยับตามตัว */
@@ -1597,22 +1589,22 @@ body > header{z-index:900 !important}
     .running-char-container {
         right: 15px;
         bottom: 10px;
-        animation: charWalkXMobile 4s ease-in-out infinite alternate;
+        animation: charWalkXMobile 8s ease-in-out infinite;
     }
     .char-sprite {
         font-size: 26px;
-        animation: charBounceRun 0.4s ease-in-out infinite alternate, charFlipFacingMobile 4s steps(1, end) infinite alternate;
+        animation: charBounceRun 0.4s ease-in-out infinite alternate, charFlipFacingMobile 8s steps(1, end) infinite;
     }
 }
 
 @keyframes charWalkXMobile {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-140px); }
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(calc(-100vw + 60px)); }
 }
 
 @keyframes charFlipFacingMobile {
-    0% { transform: scaleX(1); }
-    100% { transform: scaleX(-1); }
+    0%, 49.9% { transform: scaleX(1); }
+    50%, 100% { transform: scaleX(-1); }
 }
 </style>
 
