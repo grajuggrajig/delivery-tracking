@@ -8136,9 +8136,9 @@ function sanitizeCrmNoteHtml(html) {
     template.innerHTML = String(html || '');
     const allowedTags = new Set(['B', 'STRONG', 'SPAN', 'BR', 'DIV', 'P']);
     const colorMap = {
-        '#111827': '#111827', 'rgb(17,24,39)': '#111827', 'rgb(17,31,39)': '#111827',
-        '#dc2626': '#dc2626', 'rgb(220,38,38)': '#dc2626',
-        '#0284c7': '#0284c7', 'rgb(2,132,199)': '#0284c7'
+        '#111827':'#111827', 'rgb(17,24,39)':'#111827', 'rgb(17,31,39)':'#111827',
+        'black':'#111827', '#dc2626':'#dc2626', 'rgb(220,38,38)':'#dc2626', 'red':'#dc2626',
+        '#0284c7':'#0284c7', 'rgb(2,132,199)':'#0284c7'
     };
     const normalizeColor = value => {
         const color = String(value || '').toLowerCase().replace(/\s/g, '');
@@ -8147,12 +8147,12 @@ function sanitizeCrmNoteHtml(html) {
     const walk = node => {
         [...node.childNodes].forEach(child => {
             if (child.nodeType === Node.ELEMENT_NODE) {
-                // Chromium บางเวอร์ชันสร้าง <font color="..."> จาก foreColor
-                // แปลงเป็น SPAN ก่อน sanitize เพื่อไม่ให้สีหายตอนบันทึก
+                // Browser execCommand('foreColor') บางเวอร์ชันสร้าง <font color="...">
+                // แปลงเป็น SPAN ก่อนกรองแท็ก เพื่อให้สีที่อนุญาตไม่หายไป
                 if (child.tagName === 'FONT') {
                     const span = document.createElement('span');
-                    const fontColor = normalizeColor(child.getAttribute('color') || child.style.color);
-                    if (fontColor) span.style.color = fontColor;
+                    const color = normalizeColor(child.getAttribute('color') || child.style.color);
+                    if (color) span.style.color = color;
                     while (child.firstChild) span.appendChild(child.firstChild);
                     child.replaceWith(span);
                     child = span;
@@ -8161,20 +8161,30 @@ function sanitizeCrmNoteHtml(html) {
                     child.replaceWith(document.createTextNode(child.textContent || ''));
                     return;
                 }
-                const savedColor = child.tagName === 'SPAN'
-                    ? normalizeColor(child.style.color || child.getAttribute('color'))
-                    : '';
-                [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
-                if (child.tagName === 'SPAN' && savedColor) child.style.color = savedColor;
+                let savedColor = '';
+                if (child.tagName === 'SPAN') {
+                    savedColor = normalizeColor(child.style.color || child.getAttribute('color'));
+                    // รองรับ style ที่เบราว์เซอร์เขียนเป็น color: rgb(...) และ style attribute อื่นร่วมด้วย
+                    if (!savedColor) {
+                        const colorAttr = child.getAttribute('color');
+                        savedColor = normalizeColor(colorAttr);
+                    }
+                }
+                [...child.attributes].forEach(attr => {
+                    if (child.tagName !== 'SPAN' || attr.name !== 'style') child.removeAttribute(attr.name);
+                });
+                if (child.tagName === 'SPAN') {
+                    child.removeAttribute('style');
+                    if (savedColor) child.style.color = savedColor;
+                }
                 walk(child);
-            } else if (child.nodeType !== Node.TEXT_NODE) {
-                child.remove();
-            }
+            } else if (child.nodeType !== Node.TEXT_NODE) child.remove();
         });
     };
     walk(template.content);
     return template.innerHTML;
 }
+
 function crmRichHtmlToText(html) {
     const temp = document.createElement('div');
     temp.innerHTML = sanitizeCrmNoteHtml(html);
@@ -8319,8 +8329,8 @@ crmFormatToolbar.addEventListener('click', e => {
     if (button.dataset.crmFormat === 'bold') {
         document.execCommand('bold', false, null);
     } else if (button.dataset.crmColor) {
-        // ใช้ span style แทน <font color> เพื่อให้สีคงอยู่หลัง sanitize และบันทึก
-        document.execCommand('styleWithCSS', false, true);
+        // บังคับให้เบราว์เซอร์สร้าง inline style แทนแท็ก FONT ที่ระบบเดิมกรองทิ้ง
+        try { document.execCommand('styleWithCSS', false, true); } catch (err) {}
         document.execCommand('foreColor', false, button.dataset.crmColor);
         // สีดำต้องหนาด้วยตามรูปแบบเน้นที่ต้องการ
         if (button.dataset.crmColor === '#111827') document.execCommand('bold', false, null);
