@@ -4097,8 +4097,13 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
             // หากผู้ใช้เลือกอัปเดตทุกบริษัทที่เชื่อมกับสินค้านี้ ให้ซิงก์เฉพาะรายการบริษัท
             // ที่ผูกกับ stockProductId เดียวกัน โดยคง companyKey/companyName และ ownerUid ของแต่ละรายการ
             const bulkToggle = document.getElementById('company-product-update-linked-toggle');
-            const linkedIds = bulkToggle?.checked && oldProduct.stockProductId
-                ? allCompanyProducts.filter(p => String(p.stockProductId || '') === String(oldProduct.stockProductId)).map(p => p.id)
+            const linkedIds = bulkToggle?.checked
+                ? (String(bulkToggle.dataset.linkedIds || '').split(',').filter(Boolean).length
+                    ? String(bulkToggle.dataset.linkedIds).split(',').filter(Boolean)
+                    : allCompanyProducts.filter(p => {
+                        if (oldProduct.stockProductId && p.stockProductId) return String(p.stockProductId) === String(oldProduct.stockProductId);
+                        return normalizeCompanyProductName(p.name) === normalizeCompanyProductName(oldProduct.name);
+                    }).map(p => p.id))
                 : [];
             if (linkedIds.length > 1) {
                 for (let i = 0; i < linkedIds.length; i += 450) {
@@ -4186,12 +4191,26 @@ window.editCompanyProduct = function(id) {
     if (editIdInput) editIdInput.value = product.id;
     const linkedToggle = document.getElementById('company-product-update-linked-toggle');
     const linkedWrap = document.getElementById('company-product-update-linked-wrap');
-    const linkedCount = product.stockProductId ? allCompanyProducts.filter(p => String(p.stockProductId || '') === String(product.stockProductId)).length : 1;
-    if (linkedToggle) linkedToggle.checked = false;
+    // ข้อมูลเก่าบางรายการอาจยังไม่มี stockProductId จึงใช้ชื่อสินค้าที่ปรับช่องว่างแล้ว
+    // เป็นตัวช่วยค้นหารายการที่เชื่อมโยง โดยจะแก้หลายบริษัทก็ต่อเมื่อผู้ใช้ติ๊กยืนยันเอง
+    const productLinkKey = normalizeCompanyProductName(product.name);
+    const linkedProducts = allCompanyProducts.filter(p => {
+        if (product.stockProductId && p.stockProductId) {
+            return String(p.stockProductId) === String(product.stockProductId);
+        }
+        return productLinkKey && normalizeCompanyProductName(p.name) === productLinkKey;
+    });
+    const linkedCount = Math.max(1, linkedProducts.length);
+    if (linkedToggle) {
+        linkedToggle.checked = false;
+        linkedToggle.dataset.linkedIds = linkedProducts.map(p => p.id).join(',');
+        linkedToggle.dataset.linkedStockId = String(product.stockProductId || '');
+        linkedToggle.dataset.linkedName = productLinkKey;
+    }
     if (linkedWrap) linkedWrap.classList.toggle('hidden', linkedCount < 2);
     if (linkedWrap) {
         const span = linkedWrap.querySelector('span');
-        if (span) span.innerHTML = `<strong>อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง (${linkedCount} บริษัท)</strong><br>ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกัน เฉพาะเมื่อเลือกช่องนี้เท่านั้น`;
+        if (span) span.innerHTML = `<strong>☑ อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง (${linkedCount} บริษัท)</strong><br>ระบบพบรายการที่เชื่อมโยง ${linkedCount} รายการ ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกันเมื่อเลือกช่องนี้`;
     }
     nameInput.innerHTML = sanitizeCompanyProductNameHtml(product.nameHtml) || escapeHTML(product.name || '');
     costInput.value = Number(product.cost) || 0;
@@ -4522,8 +4541,8 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                         class="hidden px-2 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition"
                         title="ยกเลิกการแก้ไข">ยกเลิก</button>
                 </div>
-                <label id="company-product-update-linked-wrap" class="hidden sm:col-span-6 flex items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-900">
-                    <input id="company-product-update-linked-toggle" type="checkbox" class="mt-0.5 accent-indigo-600">
+                <label id="company-product-update-linked-wrap" class="hidden sm:col-span-6 flex items-start gap-2 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-3 py-3 text-xs font-medium text-indigo-950 shadow-sm">
+                    <input id="company-product-update-linked-toggle" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600">
                     <span><strong>อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง</strong><br>ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกัน เฉพาะเมื่อเลือกช่องนี้เท่านั้น</span>
                 </label>
             </div>
