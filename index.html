@@ -3729,7 +3729,10 @@ function normalizeProductDuplicateKey(value) {
         .normalize('NFKC')
         .trim()
         .toLowerCase()
-        .replace(/[\s\-_/\\.,，、]+/g, '');
+        .replace(/[\s\-_/\\.,，、]+/g, '')
+        // รหัสตัวเลขที่ต่างกันเฉพาะเลขศูนย์นำหน้า เช่น #1 และ #01
+        // ให้ถือเป็นรายการเดียวกัน เพื่อป้องกันการสร้างสินค้าในสต็อกซ้ำ
+        .replace(/\d+/g, digits => digits.replace(/^0+(?=\d)/, ''));
 }
 
 function getCompanySpecificProduct(companyName, productName) {
@@ -3807,12 +3810,25 @@ async function ensureProductInStandardStock(name, cost, price, unit = '') {
     // รวมกรณีชื่อถูกเว้นวรรค/คั่นเครื่องหมายต่างกัน เช่น
     // "ดินสอปากกา" กับ "ดินสอ ปากกา"
     if (stockProduct) {
+        const cleanName = String(name || '').trim();
         const cleanUnit = String(unit || '').trim();
         const currentUnit = String(stockProduct.unit || '').trim();
+        const currentName = String(stockProduct.name || '').trim();
+        const shouldRenameEquivalentCode = currentName !== cleanName &&
+            normalizeProductDuplicateKey(currentName) === normalizeProductDuplicateKey(cleanName);
 
-        // ผู้ใช้ทั่วไปอ่านสินค้ากลางได้ แต่ห้ามเขียน/เปลี่ยนหน่วยใน products
-        if (currentUserProfile?.role === 'admin' && currentUnit !== cleanUnit && stockProduct.id) {
-            await db.collection('products').doc(stockProduct.id).update({ unit: cleanUnit });
+        // ผู้ใช้ทั่วไปอ่านสินค้ากลางได้ แต่ห้ามเขียน/เปลี่ยนชื่อหรือหน่วยใน products
+        // Admin สามารถเปลี่ยนชื่อรหัสที่เทียบเท่ากัน (เช่น #1 -> #01)
+        // บนรายการเดิม เพื่อไม่สร้างสินค้าใหม่ซ้ำ และคงต้นทุน/ราคามาตรฐานเดิมไว้
+        if (currentUserProfile?.role === 'admin' && stockProduct.id &&
+            (currentUnit !== cleanUnit || shouldRenameEquivalentCode)) {
+            const updateData = {
+                unit: cleanUnit,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            if (shouldRenameEquivalentCode) updateData.name = cleanName;
+            await db.collection('products').doc(stockProduct.id).update(updateData);
+            if (shouldRenameEquivalentCode) stockProduct.name = cleanName;
             stockProduct.unit = cleanUnit;
         }
 
@@ -3962,6 +3978,46 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
             if (!oldProduct) {
                 showToast('ไม่พบข้อมูลสินค้าที่ต้องการแก้ไข', 'info');
                 return false;
+            }
+
+            // เมื่อแก้ชื่อสินค้าเดิมของบริษัท เช่น #1 เป็น #01
+            // ให้แก้ชื่อสินค้ามาตรฐานที่เชื่อมอยู่แทนการสร้างสินค้าใหม่
+            // โดยไม่เปลี่ยนต้นทุน/ราคามาตรฐาน และไม่แตะราคาขายเฉพาะบริษัท
+            const oldNameDuplicateKey = normalizeProductDuplicateKey(oldProduct.name);
+            const newNameDuplicateKey = normalizeProductDuplicateKey(cleanName);
+            if (stockProduct?.id && oldNameDuplicateKey &&
+                oldNameDuplicateKey === newNameDuplicateKey &&
+                String(oldProduct.name || '').trim() !== cleanName) {
+                await db.collection('products').doc(stockProduct.id).update({
+                    name: cleanName,
+                    unit: cleanUnit,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                stockProduct.name = cleanName;
+                stockProduct.unit = cleanUnit;
+
+                // อัปเดตชื่อในรายการบริษัทที่ผูกกับสินค้าเดียวกันเท่านั้น
+                // คง price และ cost ของแต่ละบริษัทไว้ตามเดิม
+                const linkedForRename = allCompanyProducts.filter(p =>
+                    String(p.stockProductId || '') === String(stockProduct.id)
+                );
+                for (let i = 0; i < linkedForRename.length; i += 450) {
+                    const batch = db.batch();
+                    linkedForRename.slice(i, i + 450).forEach(cp => {
+                        batch.update(db.collection('companyProducts').doc(cp.id), {
+                            name: cleanName,
+                            nameHtml: '',
+                            unit: cleanUnit,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    await batch.commit();
+                }
+                linkedForRename.forEach(cp => {
+                    cp.name = cleanName;
+                    cp.nameHtml = '';
+                    cp.unit = cleanUnit;
+                });
             }
 
             const updatePayload = {
