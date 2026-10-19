@@ -2510,6 +2510,7 @@ body > header{z-index:900 !important}
         
         <!-- ส่วนหัว Modal แบบโมเดิร์น มีลูกเล่นไอคอนและเส้นไล่ระดับสี -->
         <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100/80 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/30 -mx-6 -mt-6 p-6 pt-5">
+            <button type="button" id="product-duplicate-audit-btn" class="order-last ml-auto mr-3 shrink-0 px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100" title="ตรวจหารายการซ้ำและราคาที่เชื่อมโยง">🔎 ตรวจรายการซ้ำ</button>
             <div class="flex items-center gap-3">
                 <!-- กล่องไอคอนดีไซน์พรีเมียม -->
                 <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md shadow-sky-500/20 text-white text-lg">
@@ -3744,26 +3745,40 @@ function getCompanySpecificProduct(companyName, productName) {
     );
     if (!companyKey || !productKey) return null;
 
-    let exact = allCompanyProducts.find(p =>
+    // ใช้เฉพาะชื่อที่ตรงกันหลัง normalize เท่านั้น ห้ามจับคู่ด้วย substring
+    // เพราะอาจหยิบสินค้าคนละรายการหรือราคาของรายการที่ชื่อใกล้กันมาใช้
+    const matches = allCompanyProducts.filter(p =>
         normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
         normalizeCompanyProductName(p.name) === productKey
     );
-    if (exact) return exact;
+    // หากมีรายการซ้ำในบริษัทเดียวกัน ให้คืน null เพื่อบังคับตรวจสอบก่อนเสนอราคา
+    return matches.length === 1 ? matches[0] : null;
+}
 
-    return allCompanyProducts.find(p => {
-        const pCompany = normalizeCompanyProductKey(p.companyKey || p.companyName);
-        const pName = normalizeCompanyProductName(p.name);
-        return pCompany === companyKey && pName &&
-            (pName.includes(productKey) || productKey.includes(pName));
-    }) || null;
+function getCompanySpecificProductMatches(companyName, productName) {
+    const companyKey = normalizeCompanyProductKey(companyName);
+    const productKey = normalizeCompanyProductName(
+        String(productName || '')
+            .replace(/\s*\(\s*[\d,]+(?:\.\d+)?\s*บาท\s*\)\s*$/i, '')
+            .replace(/\s*x\s*\d+\s*$/i, '')
+    );
+    if (!companyKey || !productKey) return [];
+    return allCompanyProducts.filter(p =>
+        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
+        normalizeCompanyProductName(p.name) === productKey
+    );
 }
 
 function getEffectiveProductPrice(companyName, product) {
     if (!product) return 0;
-    const companyProduct = getCompanySpecificProduct(companyName, product.name);
-    return companyProduct && Number.isFinite(Number(companyProduct.price))
-        ? Number(companyProduct.price)
-        : (Number(product.price) || 0);
+    const cleanCompany = String(companyName || '').trim();
+    if (cleanCompany) {
+        const matches = getCompanySpecificProductMatches(cleanCompany, product.name);
+        return matches.length === 1 && Number.isFinite(Number(matches[0].price))
+            ? Number(matches[0].price)
+            : 0;
+    }
+    return Number(product.price) || 0;
 }
 
 // ผูกสินค้าในสต็อกกลางเข้ากับบริษัทโดยอัตโนมัติครั้งแรกที่บริษัทเลือกสินค้านั้น
@@ -3772,8 +3787,12 @@ async function ensureCompanyProductFromStock(companyName, stockProduct, stableCo
     const cleanCompany = String(companyName || '').trim();
     if (!cleanCompany || !stockProduct || !currentAuthUser?.uid) return null;
 
-    const existing = getCompanySpecificProduct(cleanCompany, stockProduct.name);
-    if (existing) return existing;
+    const existingMatches = getCompanySpecificProductMatches(cleanCompany, stockProduct.name);
+    if (existingMatches.length > 1) {
+        showToast(`⚠️ บริษัท "${cleanCompany}" มีรายการ "${stockProduct.name}" ซ้ำ กรุณาตรวจสอบก่อนผูกสินค้า`, 'warning');
+        return null;
+    }
+    if (existingMatches.length === 1) return existingMatches[0];
 
     const companyKey = normalizeCompanyProductKey(stableCompanyKey || cleanCompany);
     const payload = {
@@ -5187,6 +5206,82 @@ function getCompanyPriceHistory(companyName, productName) {
             return Array.from(result.values()).map(([, name]) => name);
         }
 
+
+        // รายงานตรวจสอบสินค้าซ้ำ/ราคาบริษัท: แสดงอย่างเดียว ไม่ลบหรือแก้ข้อมูลอัตโนมัติ
+        function openProductDuplicateAudit() {
+            const groups = new Map();
+            const addAuditItem = (scope, item, companyName = '') => {
+                const name = String(item.name || '').trim();
+                const key = normalizeProductDuplicateKey(name);
+                if (!key || !name) return;
+                const groupKey = scope + '::' + (scope === 'company' ? normalizeCompanyProductKey(item.companyKey || companyName) + '::' : '') + key;
+                if (!groups.has(groupKey)) groups.set(groupKey, { scope, companyName, items: [] });
+                groups.get(groupKey).items.push({ ...item, name, companyName: item.companyName || companyName });
+            };
+            allProducts.forEach(p => addAuditItem('stock', p));
+            allCompanyProducts.forEach(p => addAuditItem('company', p, p.companyName || p.companyKey || 'ไม่ทราบบริษัท'));
+            const duplicates = Array.from(groups.values()).filter(g => g.items.length > 1);
+            const linkMismatches = allCompanyProducts.filter(item => {
+                if (!item.stockProductId) return false;
+                const stockItem = allProducts.find(p => String(p.id) === String(item.stockProductId));
+                return stockItem && normalizeProductDuplicateKey(stockItem.name) !== normalizeProductDuplicateKey(item.name);
+            });
+            const esc = value => escapeHTML(String(value ?? ''));
+            const moneyAudit = value => Number.isFinite(Number(value)) ? Number(value).toLocaleString('th-TH',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' ฿' : 'ไม่ระบุ';
+            const rows = duplicates.map(group => {
+                const title = group.scope === 'stock' ? 'สต็อกมาตรฐาน (products)' : `Company Directory • ${group.companyName}`;
+                return `<section class="rounded-xl border border-amber-200 bg-amber-50/60 p-3 mb-3">
+                    <div class="font-bold text-sm text-amber-900 mb-2">⚠️ ${esc(title)} — พบ ${group.items.length} รายการที่อาจซ้ำ</div>
+                    <div class="space-y-2">${group.items.map(item => `<div class="rounded-lg bg-white border border-amber-100 p-2 text-xs">
+                        <div><b>ชื่อ/รหัสสินค้า:</b> ${esc(item.name)}</div>
+                        <div><b>Document ID:</b> <span class="font-mono break-all">${esc(item.id || '-')}</span></div>
+                        <div><b>บริษัท:</b> ${esc(item.companyName || (group.scope === 'stock' ? 'สต็อกมาตรฐาน' : '-'))}</div>
+                        <div><b>ต้นทุน:</b> ${moneyAudit(item.cost)} <span class="mx-1 text-slate-300">|</span> <b>ราคาขาย:</b> ${moneyAudit(item.price)}</div>
+                        <div><b>Stock Product ID:</b> <span class="font-mono break-all">${esc(item.stockProductId || 'ยังไม่เชื่อม')}</span></div>
+                        ${item.stockProductId && allProducts.find(sp => String(sp.id) === String(item.stockProductId)) && normalizeProductDuplicateKey(allProducts.find(sp => String(sp.id) === String(item.stockProductId)).name) !== normalizeProductDuplicateKey(item.name)
+                            ? `<div class="mt-1 text-rose-700 font-bold">⚠️ ชื่อในสต็อกที่เชื่อมอยู่ไม่ตรงกัน: ${esc(allProducts.find(sp => String(sp.id) === String(item.stockProductId)).name)}</div>`
+                            : ''}
+                    </div>`).join('')}</div>
+                </section>`;
+            }).join('');
+            let modal = document.getElementById('product-duplicate-audit-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'product-duplicate-audit-modal';
+                modal.className = 'fixed inset-0 z-[55000] bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-3';
+                modal.innerHTML = `<div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-4xl max-h-[88vh] flex flex-col overflow-hidden">
+                    <div class="flex items-center justify-between gap-3 p-4 border-b bg-amber-50">
+                        <div><h3 class="font-bold text-slate-800">🔎 ตรวจสอบรายการสินค้าซ้ำและราคาที่เชื่อมโยง</h3><p class="text-xs text-slate-500 mt-1">รายงานนี้ไม่ลบและไม่แก้ข้อมูลใด ๆ</p></div>
+                        <button type="button" id="close-product-duplicate-audit" class="px-3 py-2 rounded-lg bg-white border text-slate-600">ปิด ✕</button>
+                    </div>
+                    <div id="product-duplicate-audit-content" class="p-4 overflow-y-auto"></div>
+                </div>`;
+                document.body.appendChild(modal);
+                modal.addEventListener('click', e => { if (e.target === modal) modal.remove(); });
+                modal.querySelector('#close-product-duplicate-audit').addEventListener('click', () => modal.remove());
+            }
+            const content = modal.querySelector('#product-duplicate-audit-content');
+            const mismatchHtml = linkMismatches.length ? `<section class="rounded-xl border border-rose-200 bg-rose-50 p-3 mb-4">
+                <div class="font-bold text-rose-800 mb-2">⚠️ พบการเชื่อมโยงที่ชื่อไม่ตรงกัน ${linkMismatches.length} รายการ</div>
+                ${linkMismatches.map(item => {
+                    const stockItem = allProducts.find(p => String(p.id) === String(item.stockProductId));
+                    return `<div class="bg-white rounded-lg border border-rose-100 p-2 mb-2 text-xs">
+                        <div><b>บริษัท:</b> ${esc(item.companyName || item.companyKey || '-')}</div>
+                        <div><b>ชื่อ/รหัสใน Company Directory:</b> ${esc(item.name)} • <b>ราคา:</b> ${moneyAudit(item.price)}</div>
+                        <div><b>ชื่อในสต็อกที่เชื่อมอยู่:</b> ${esc(stockItem?.name || '-')} • <b>Stock Product ID:</b> <span class="font-mono break-all">${esc(item.stockProductId)}</span></div>
+                    </div>`;
+                }).join('')}
+            </section>` : `<div class="rounded-xl bg-emerald-50 text-emerald-700 p-3 mb-4 text-xs">ไม่พบชื่อสินค้าที่ไม่ตรงกับรายการสต็อกที่เชื่อมด้วย Stock Product ID</div>`;
+            content.innerHTML = `<div class="rounded-xl border border-sky-200 bg-sky-50 p-3 mb-4 text-xs text-sky-900">
+                <b>ขอบเขต:</b> ตรวจรายการที่มีชื่อ/รหัสเทียบเท่ากันหลังตัดช่องว่าง เครื่องหมาย และเลขศูนย์นำหน้า เช่น #1 / #01
+                <br><b>พบกลุ่มซ้ำ:</b> ${duplicates.length} กลุ่ม • สต็อกมาตรฐาน ${allProducts.length} รายการ • Company Directory ${allCompanyProducts.length} รายการ
+                <br><b>ข้อควรทราบ:</b> รายการต่างบริษัทจะไม่ถูกรวมเป็นรายการซ้ำกัน เพราะราคาของแต่ละบริษัทอาจต่างกัน
+            </div>${mismatchHtml}${rows || '<div class="p-8 text-center text-emerald-700 bg-emerald-50 rounded-xl">ไม่พบกลุ่มรายการซ้ำตามเงื่อนไขที่ตรวจสอบ</div>'}`;
+            modal.classList.remove('hidden');
+        }
+
+        document.getElementById('product-duplicate-audit-btn')?.addEventListener('click', openProductDuplicateAudit);
+
         openStockModalBtn.addEventListener('click', () => {
             /* เปิดกรอบ Stock ให้ผู้ใช้เห็นทันที ก่อนทำงาน render/กรองข้อมูลที่อาจหนัก
                เพื่อไม่ให้ปุ่ม 📦สต็อก & ราคา ดูเหมือนค้างหรือกดไม่ติดเมื่อข้อมูลมีจำนวนมาก */
@@ -5775,17 +5870,12 @@ function getCompanyPriceHistory(companyName, productName) {
             }
 
             stockTableContainer.innerHTML = filtered.map(p => {
-                // ราคามาตรฐานเป็นค่าตั้งต้น แต่หากสินค้านี้เชื่อมกับ Company Directory
-                // ให้ใช้ต้นทุน/ราคาของรายการบริษัทที่เชื่อมอยู่ในการแสดงผลด้วย
-                // เพื่อไม่ให้ราคาบริษัทที่บันทึกไว้ (เช่น 9 บาท) ถูกแสดงเป็น 0 จาก products กลาง
+                // หน้านี้แสดงเฉพาะต้นทุน/ราคามาตรฐานจาก products เท่านั้น
+                // ห้ามนำราคาจาก companyProducts รายการแรกที่พบมาแสดง เพราะแต่ละบริษัทอาจมีราคาต่างกัน
                 const linkedCompanyProduct = stockCompanyProductByStockId.get(String(p.id)) ||
                     stockCompanyProductByName.get(normalizeCompanyProductName(p.name)) || null;
-                const cost = linkedCompanyProduct && linkedCompanyProduct.cost !== undefined && linkedCompanyProduct.cost !== null && linkedCompanyProduct.cost !== ''
-                    ? (Number(linkedCompanyProduct.cost) || 0)
-                    : (Number(p.cost) || 0);
-                const price = linkedCompanyProduct && linkedCompanyProduct.price !== undefined && linkedCompanyProduct.price !== null && linkedCompanyProduct.price !== ''
-                    ? (Number(linkedCompanyProduct.price) || 0)
-                    : (Number(p.price) || 0);
+                const cost = Number(p.cost) || 0;
+                const price = Number(p.price) || 0;
                 const profit = price - cost;
                 const profitMargin = price > 0 ? ((profit / price) * 100).toFixed(1) : '0.0';
                 const profitClass = profit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700';
@@ -6295,9 +6385,21 @@ function getCompanyPriceHistory(companyName, productName) {
                 let effectivePrice = price;
                 let effectiveCost = cost;
                 if (currentCompany) {
-                    const companyProduct = await ensureCompanyProductFromStock(currentCompany, stockProduct);
-                    effectivePrice = Number(companyProduct?.price) || price;
-                    effectiveCost = Number(companyProduct?.cost) || cost;
+                    const matches = getCompanySpecificProductMatches(currentCompany, name);
+                    if (matches.length !== 1) {
+                        showToast(matches.length > 1
+                            ? `⚠️ บริษัท "${currentCompany}" มีรายการ "${name}" ซ้ำ กรุณาตรวจสอบ Company Directory`
+                            : `⚠️ ยังไม่มีราคาของ "${name}" สำหรับบริษัท "${currentCompany}" กรุณาบันทึกราคาใน Company Directory ก่อน`,
+                            'warning');
+                        return;
+                    }
+                    const companyProduct = matches[0];
+                    effectivePrice = Number(companyProduct.price);
+                    effectiveCost = Number(companyProduct.cost) || 0;
+                    if (!Number.isFinite(effectivePrice) || effectivePrice <= 0) {
+                        showToast(`⚠️ ราคาของ "${name}" สำหรับบริษัทที่เลือกไม่ถูกต้อง`, 'warning');
+                        return;
+                    }
                 } else {
                     showToast('บันทึกสินค้าลงสต็อกสำเร็จ', 'success');
                 }
@@ -6343,8 +6445,23 @@ function getCompanyPriceHistory(companyName, productName) {
             
             const productData = allProducts.find(p => p.id === id);
             const currentCompany = document.getElementById('company-name').value.trim();
-            const effectivePrice = getEffectiveProductPrice(currentCompany, productData || { name, price });
-            const cost = productData ? (productData.cost || 0) * qty : 0;
+            const companyMatches = currentCompany ? getCompanySpecificProductMatches(currentCompany, name) : [];
+            if (currentCompany && companyMatches.length !== 1) {
+                showToast(companyMatches.length > 1
+                    ? `⚠️ บริษัทนี้มีรายการ "${name}" ซ้ำ กรุณาตรวจสอบ Company Directory ก่อนเพิ่ม`
+                    : `⚠️ บริษัท "${currentCompany}" ยังไม่มีราคาที่ตรงกับ "${name}" กรุณาบันทึกราคาก่อนเพิ่ม`,
+                    'warning');
+                setTimeout(() => { isAddingSuggestion = false; }, 0);
+                return;
+            }
+            const companyProduct = currentCompany ? companyMatches[0] : null;
+            const effectivePrice = currentCompany ? Number(companyProduct.price) : Number(productData ? productData.price : price);
+            if (currentCompany && (!Number.isFinite(effectivePrice) || effectivePrice <= 0)) {
+                showToast(`⚠️ ราคาของ "${name}" สำหรับบริษัทที่เลือกไม่ถูกต้อง`, 'warning');
+                setTimeout(() => { isAddingSuggestion = false; }, 0);
+                return;
+            }
+            const cost = currentCompany ? (Number(companyProduct.cost) || 0) * qty : (productData ? (productData.cost || 0) * qty : 0);
             const totalSell = effectivePrice * qty;
             const totalProfit = totalSell - cost;
 
@@ -6369,7 +6486,7 @@ function getCompanyPriceHistory(companyName, productName) {
                     rawName: name,
                     text: qty > 1 ? `${name} x ${qty}` : `${name} x 1`,
                     quantity: qty,
-                    unitPrice: price,
+                    unitPrice: effectivePrice,
                     totalCost: cost,
                     totalSell: totalSell,
                     totalProfit: totalProfit,
@@ -6535,7 +6652,9 @@ document.getElementById('item-input').addEventListener('blur', function() {
             }
             
             const dueDate = itemDueDateInput.value ? itemDueDateInput.value.trim() : '';
-            let cleanName = val.replace(/\s*x\s*\d+$/, '').trim();
+            let cleanName = val.replace(/\s*x\s*\d+$/, '').trim()
+                .replace(/\s*\(\s*[\d,]+(?:\.\d+)?\s*บาท\s*\)\s*$/i, '')
+                .trim();
             let addQty = 1;
             const matchQty = val.match(/x\s*(\d+)$/);
             if (matchQty) {
@@ -6544,25 +6663,28 @@ document.getElementById('item-input').addEventListener('blur', function() {
 
             const foundProd = allProducts.find(p => p.name.toLowerCase() === cleanName.toLowerCase());
             const currentCompany = document.getElementById('company-name').value.trim();
-            let companyProduct = getCompanySpecificProduct(currentCompany, cleanName);
+            const companyMatches = currentCompany ? getCompanySpecificProductMatches(currentCompany, cleanName) : [];
+            let companyProduct = companyMatches.length === 1 ? companyMatches[0] : null;
 
-            // ถ้าเลือก/พิมพ์สินค้าที่มีอยู่ใน Manage Stock และเป็นบริษัทใหม่
-            // ให้ผูกสินค้านั้นกับบริษัทโดยอัตโนมัติ เพียงครั้งแรกเท่านั้น
-            if (!companyProduct && currentCompany && foundProd) {
-                try {
-                    companyProduct = await ensureCompanyProductFromStock(currentCompany, foundProd);
-                } catch (err) {
-                    console.error('ensureCompanyProductFromStock:', err);
-                    showToast('ไม่สามารถผูกสินค้าเข้ากับบริษัทนี้ได้', 'error');
-                    isAddingItem = false;
-                    return;
-                }
+            // เมื่อระบุบริษัท ต้องใช้ราคาเฉพาะบริษัทเท่านั้น ห้ามตกกลับไปใช้ราคามาตรฐาน
+            if (currentCompany && companyMatches.length > 1) {
+                showToast(`⚠️ บริษัทนี้มีรายการชื่อ "${cleanName}" ซ้ำ ${companyMatches.length} รายการ กรุณาตรวจสอบใน Company Directory ก่อนเพิ่ม`, 'warning');
+                isAddingItem = false;
+                return;
+            }
+            if (currentCompany && !companyProduct) {
+                showToast(`⚠️ ไม่พบราคา "${cleanName}" ที่ยืนยันได้สำหรับบริษัท "${currentCompany}" กรุณาบันทึกราคาใน Company Directory ก่อนเสนอราคา`, 'warning');
+                isAddingItem = false;
+                return;
             }
 
-            let unitPrice = companyProduct ? Number(companyProduct.price) : (foundProd ? Number(foundProd.price) : 0);
-            let unitCost = companyProduct && Number(companyProduct.cost) > 0
-                ? Number(companyProduct.cost)
-                : (foundProd ? (foundProd.cost || 0) : 0);
+            let unitPrice = currentCompany ? Number(companyProduct.price) : (foundProd ? Number(foundProd.price) : 0);
+            let unitCost = currentCompany ? (Number(companyProduct.cost) || 0) : (foundProd ? (Number(foundProd.cost) || 0) : 0);
+            if (currentCompany && (!Number.isFinite(unitPrice) || unitPrice <= 0)) {
+                showToast(`⚠️ ราคาของ "${cleanName}" สำหรับบริษัท "${currentCompany}" ไม่ถูกต้อง กรุณาตรวจสอบก่อนเพิ่ม`, 'warning');
+                isAddingItem = false;
+                return;
+            }
 
             const existingIndex = pendingItems.findIndex(item => {
                 let itemCleanName = item.rawName || item.text.replace(/\s*x\s*\d+$/, '').trim();
@@ -6784,6 +6906,31 @@ document.getElementById('item-input').addEventListener('blur', function() {
             }
 
             const companyName = companyNameInput.value.trim();
+            if (companyName) {
+                const invalidCompanyItems = [];
+                pendingItems.forEach(item => {
+                    const itemName = String(item.rawName || item.text || '')
+                        .replace(/\s*x\s*\d+\s*$/, '')
+                        .replace(/\s*\(\s*[\d,]+(?:\.\d+)?\s*บาท\s*\)\s*$/i, '')
+                        .trim();
+                    const matches = getCompanySpecificProductMatches(companyName, itemName);
+                    if (matches.length !== 1 || !Number.isFinite(Number(matches[0]?.price)) || Number(matches[0]?.price) <= 0) {
+                        invalidCompanyItems.push(itemName);
+                    } else {
+                        // ยืนยันราคา ณ เวลากดบันทึกจากบริษัทที่เลือก ไม่เชื่อค่าค้างจากฟอร์มเดิม
+                        const qty = Number(item.quantity) || 1;
+                        item.unitPrice = Number(matches[0].price);
+                        item.totalSell = item.unitPrice * qty;
+                        item.totalCost = (Number(matches[0].cost) || 0) * qty;
+                        item.totalProfit = item.totalSell - item.totalCost;
+                    }
+                });
+                if (invalidCompanyItems.length) {
+                    showToast(`⚠️ ยังบันทึกไม่ได้: ราคาไม่ชัดเจนหรือไม่มีราคาของบริษัท "${companyName}" สำหรับ ${Array.from(new Set(invalidCompanyItems)).join(', ')} กรุณาตรวจสอบ Company Directory`, 'warning');
+                    return;
+                }
+                renderPendingItems();
+            }
             const companyDistrict = companyDistrictInput ? companyDistrictInput.value.trim() : '';
             const phone = phoneInput.value.trim();
             const address = addressInput.value.trim();
