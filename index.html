@@ -4094,9 +4094,38 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             // ไม่เติม ownerUid ให้ข้อมูลเก่าโดยอัตโนมัติ เพราะยังยืนยันเจ้าของเดิมไม่ได้
-            await db.collection('companyProducts').doc(editId).update(updatePayload);
-
-            showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ แล้ว`, 'success');
+            // หากผู้ใช้เลือกอัปเดตทุกบริษัทที่เชื่อมกับสินค้านี้ ให้ซิงก์เฉพาะรายการบริษัท
+            // ที่ผูกกับ stockProductId เดียวกัน โดยคง companyKey/companyName และ ownerUid ของแต่ละรายการ
+            const bulkToggle = document.getElementById('company-product-update-linked-toggle');
+            const linkedIds = bulkToggle?.checked && oldProduct.stockProductId
+                ? allCompanyProducts.filter(p => String(p.stockProductId || '') === String(oldProduct.stockProductId)).map(p => p.id)
+                : [];
+            if (linkedIds.length > 1) {
+                for (let i = 0; i < linkedIds.length; i += 450) {
+                    const batch = db.batch();
+                    linkedIds.slice(i, i + 450).forEach(linkedId => {
+                        batch.update(db.collection('companyProducts').doc(linkedId), {
+                            name: cleanName,
+                            nameHtml: sanitizeCompanyProductNameHtml(nameHtml),
+                            cost: numericCost,
+                            price: numericPrice,
+                            unit: cleanUnit,
+                            stockProductId: oldProduct.stockProductId,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    });
+                    await batch.commit();
+                }
+                allCompanyProducts.filter(p => linkedIds.includes(p.id)).forEach(p => {
+                    p.name = cleanName; p.nameHtml = sanitizeCompanyProductNameHtml(nameHtml);
+                    p.cost = numericCost; p.price = numericPrice; p.unit = cleanUnit;
+                });
+                showToast(`อัปเดต "${cleanName}" ให้ ${linkedIds.length} บริษัทที่เชื่อมโยงแล้ว`, 'success');
+            } else {
+                await db.collection('companyProducts').doc(editId).update(updatePayload);
+                showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ แล้ว`, 'success');
+            }
+            if (bulkToggle) bulkToggle.checked = false;
             return true;
         }
 
@@ -4155,6 +4184,15 @@ window.editCompanyProduct = function(id) {
     if (!nameInput || !costInput || !priceInput || !saveBtn) return;
 
     if (editIdInput) editIdInput.value = product.id;
+    const linkedToggle = document.getElementById('company-product-update-linked-toggle');
+    const linkedWrap = document.getElementById('company-product-update-linked-wrap');
+    const linkedCount = product.stockProductId ? allCompanyProducts.filter(p => String(p.stockProductId || '') === String(product.stockProductId)).length : 1;
+    if (linkedToggle) linkedToggle.checked = false;
+    if (linkedWrap) linkedWrap.classList.toggle('hidden', linkedCount < 2);
+    if (linkedWrap) {
+        const span = linkedWrap.querySelector('span');
+        if (span) span.innerHTML = `<strong>อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง (${linkedCount} บริษัท)</strong><br>ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกัน เฉพาะเมื่อเลือกช่องนี้เท่านั้น`;
+    }
     nameInput.innerHTML = sanitizeCompanyProductNameHtml(product.nameHtml) || escapeHTML(product.name || '');
     costInput.value = Number(product.cost) || 0;
     priceInput.value = Number(product.price) || 0;
@@ -4179,6 +4217,10 @@ window.cancelCompanyProductEdit = function() {
     const cancelBtn = document.getElementById('cancel-company-product-edit');
 
     if (editIdInput) editIdInput.value = '';
+    const linkedToggle = document.getElementById('company-product-update-linked-toggle');
+    const linkedWrap = document.getElementById('company-product-update-linked-wrap');
+    if (linkedToggle) linkedToggle.checked = false;
+    if (linkedWrap) linkedWrap.classList.add('hidden');
     if (nameInput) nameInput.innerHTML = '';
     if (costInput) costInput.value = '';
     if (priceInput) priceInput.value = '';
@@ -4480,6 +4522,10 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                         class="hidden px-2 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition"
                         title="ยกเลิกการแก้ไข">ยกเลิก</button>
                 </div>
+                <label id="company-product-update-linked-wrap" class="hidden sm:col-span-6 flex items-start gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs text-indigo-900">
+                    <input id="company-product-update-linked-toggle" type="checkbox" class="mt-0.5 accent-indigo-600">
+                    <span><strong>อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง</strong><br>ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกัน เฉพาะเมื่อเลือกช่องนี้เท่านั้น</span>
+                </label>
             </div>
 
             <div class="flex flex-col sm:flex-row items-center gap-2 pt-1">
