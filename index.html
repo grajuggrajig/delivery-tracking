@@ -2057,6 +2057,46 @@ body > header{z-index:900 !important}
   #stock-company-search { font-size:12px; }
 }
 </style>
+<style id="stock-modal-header-actions-fix">
+/* แก้เฉพาะส่วนหัว Stock Management: ปุ่มตรวจรายการซ้ำและปุ่มปิดอยู่ชิดมุมขวา */
+#stock-modal-box > div:first-child {
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+#stock-modal-box > div:first-child > div:nth-of-type(1) {
+    min-width:0;
+}
+#stock-modal-header-actions {
+    margin-left:auto;
+    flex-shrink:0;
+}
+#product-duplicate-audit-btn {
+    white-space:nowrap;
+}
+@media (max-width:640px) {
+    #stock-modal-box > div:first-child {
+        gap:8px;
+        padding:12px !important;
+        margin-left:-12px !important;
+        margin-right:-12px !important;
+        margin-top:-12px !important;
+        flex-wrap:wrap;
+    }
+    #stock-modal-header-actions {
+        margin-left:auto;
+        gap:6px;
+    }
+    #product-duplicate-audit-btn {
+        padding:7px 8px !important;
+        font-size:10px !important;
+    }
+    #close-stock-modal {
+        width:32px !important;
+        height:32px !important;
+    }
+}
+</style>
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -2510,7 +2550,7 @@ body > header{z-index:900 !important}
         
         <!-- ส่วนหัว Modal แบบโมเดิร์น มีลูกเล่นไอคอนและเส้นไล่ระดับสี -->
         <div class="flex justify-between items-center pb-4 mb-4 border-b border-slate-100/80 bg-gradient-to-r from-slate-50/80 via-white to-sky-50/30 -mx-6 -mt-6 p-6 pt-5">
-            <button type="button" id="product-duplicate-audit-btn" class="order-last ml-auto mr-3 shrink-0 px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100" title="ตรวจหารายการซ้ำและราคาที่เชื่อมโยง">🔎 ตรวจรายการซ้ำ</button>
+            
             <div class="flex items-center gap-3">
                 <!-- กล่องไอคอนดีไซน์พรีเมียม -->
                 <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center shadow-md shadow-sky-500/20 text-white text-lg">
@@ -2531,10 +2571,13 @@ body > header{z-index:900 !important}
                 <span id="stock-mobile-toggle-icon">▴</span><span id="stock-mobile-toggle-label">ซ่อนส่วนกรอก</span>
             </button>
 
-            <!-- ปุ่มปิดแบบ Modern Minimal -->
-            <button type="button" id="close-stock-modal" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100/80 text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all duration-200 text-xs font-bold shadow-2xs">
-                ✕
-            </button>
+            <!-- ปุ่มตรวจรายการซ้ำและปิดหน้าต่าง วางติดกันที่มุมขวา -->
+            <div id="stock-modal-header-actions" class="flex items-center justify-end gap-2 shrink-0 ml-auto">
+                <button type="button" id="product-duplicate-audit-btn" class="shrink-0 px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100" title="ตรวจหารายการซ้ำและราคาที่เชื่อมโยง">🔎 ตรวจรายการซ้ำ</button>
+                <button type="button" id="close-stock-modal" class="w-8 h-8 flex shrink-0 items-center justify-center rounded-full bg-slate-100/80 text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 transition-all duration-200 text-xs font-bold" title="ปิดหน้าต่าง Stock Management" aria-label="ปิดหน้าต่าง Stock Management">
+                    ✕
+                </button>
+            </div>
         </div>
             <div id="stock-mobile-controls">
             <form id="stock-form" class="bg-sky-50/50 p-4 rounded-2xl border border-sky-100 mb-4 grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
