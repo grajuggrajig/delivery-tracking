@@ -2270,6 +2270,28 @@ body > .rem-page > div.mt-5 #rem-status {
   font-size:12px !important;
   line-height:1.6 !important;
 }
+/* ทำให้จำนวนการแจ้งเตือนเด่นชัด แยกเป็นป้ายสีเขียวอ่านง่าย */
+body > .rem-page > div.mt-5 #rem-status .rem-loaded-count {
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:5px !important;
+  margin:5px 0 0 4px !important;
+  padding:5px 10px !important;
+  border:1px solid #a7f3d0 !important;
+  border-radius:999px !important;
+  background:linear-gradient(135deg,#ecfdf5,#d1fae5) !important;
+  color:#047857 !important;
+  font-size:12px !important;
+  font-weight:800 !important;
+  line-height:1.35 !important;
+  box-shadow:0 2px 5px rgba(5,150,105,.10) !important;
+  white-space:nowrap !important;
+}
+body > .rem-page > div.mt-5 #rem-status .rem-loaded-count::before {
+  content:'●';
+  font-size:9px;
+  color:#10b981;
+}
 body > .rem-page > div.mt-5 > p {
   margin-top:13px !important;
   color:#718096 !important;
@@ -2615,7 +2637,7 @@ function showConfirmModal(title, desc, onConfirm) {
         }
 function ensureProfile(user){return db.collection('users').doc(user.uid).get().then(s=>{if(!s.exists)throw new Error('บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');const p={id:s.id,...s.data()};if(p.active===false)throw new Error('บัญชีนี้ถูกปิดการใช้งาน');return p;});}
 function startReminderListeners(){reminderUnsubs.forEach(fn=>{try{fn()}catch(e){}});reminderUnsubs=[];const isAdmin=currentUserProfile?.role==='admin';const uid=currentAuthUser.uid;const scoped=col=>{const r=db.collection(col);return isAdmin?r:r.where('ownerUid','==',uid)};
-reminderUnsubs.push(scoped('reminders').onSnapshot(snap=>{allReminders=[];snap.forEach(d=>allReminders.push({id:d.id,...d.data()}));allReminders.sort((a,b)=>String(a.companyName||'').localeCompare(String(b.companyName||''),'th'));renderReminders();checkTodayReminders();renderCompanyPicker(companyPickerSearch?.value||'');document.getElementById('rem-status').textContent='เชื่อมต่อ Firebase แล้ว • โหลดการแจ้งเตือน '+allReminders.length+' รายการ';},err=>{console.error(err);document.getElementById('rem-status').textContent='โหลดการแจ้งเตือนไม่สำเร็จ: '+(err.message||'Firebase error');}));
+reminderUnsubs.push(scoped('reminders').onSnapshot(snap=>{allReminders=[];snap.forEach(d=>allReminders.push({id:d.id,...d.data()}));allReminders.sort((a,b)=>String(a.companyName||'').localeCompare(String(b.companyName||''),'th'));renderReminders();checkTodayReminders();renderCompanyPicker(companyPickerSearch?.value||'');document.getElementById('rem-status').innerHTML='เชื่อมต่อ Firebase แล้ว <span class="rem-loaded-count">โหลดการแจ้งเตือน '+allReminders.length+' รายการ</span>';},err=>{console.error(err);document.getElementById('rem-status').textContent='โหลดการแจ้งเตือนไม่สำเร็จ: '+(err.message||'Firebase error');}));
 reminderUnsubs.push(scoped('deliveries').onSnapshot(snap=>{allDeliveries=[];snap.forEach(d=>allDeliveries.push({id:d.id,...d.data()}));renderCompanyPicker(companyPickerSearch?.value||'');},err=>console.warn('Delivery names unavailable for company picker',err)));
 }
 auth.onAuthStateChanged(async user=>{if(!user){document.getElementById('rem-status').textContent='ยังไม่ได้เข้าสู่ระบบ กำลังเปิดหน้า Login…';window.location.replace('login.html');return;}currentAuthUser=user;try{currentUserProfile=await ensureProfile(user);document.getElementById('rem-user').textContent='เข้าสู่ระบบ: '+(currentUserProfile.displayName||currentUserProfile.username||user.email);startReminderListeners();}catch(e){console.error(e);await auth.signOut();alert(e.message||'ไม่สามารถตรวจสอบสิทธิ์ได้');window.location.replace('login.html');}});
