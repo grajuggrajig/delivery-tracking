@@ -4050,7 +4050,30 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
         // สินค้ามาตรฐานใช้ข้อมูลราคาแยกจากราคาประจำบริษัท
         // หากยังไม่มีสินค้าใน products ให้สร้างรายการมาตรฐานโดยไม่คัดลอกราคาของบริษัท
         // หากมีอยู่แล้ว จะคงต้นทุน/ราคามาตรฐานเดิมไว้ (ซิงก์เฉพาะหน่วยตามฟังก์ชันเดิม)
-        const stockProduct = await ensureProductInStandardStock(cleanName, 0, 0, cleanUnit);
+        // โหมดแก้ไขต้องยึดสินค้ากลางที่รายการเดิมผูกอยู่เป็นหลัก
+        // ห้ามค้น/สร้างสินค้ากลางจากชื่อใหม่ (#001 -> #002) เพราะจะเหลือ #001 แล้วเพิ่ม #002 ซ้ำ
+        let stockProduct = null;
+        const editingCompanyProduct = editId
+            ? allCompanyProducts.find(p => String(p.id) === String(editId))
+            : null;
+        if (editId && !editingCompanyProduct) {
+            showToast('ไม่พบข้อมูลสินค้าที่ต้องการแก้ไข', 'info');
+            return false;
+        }
+        if (editingCompanyProduct) {
+            const linkedStockId = String(editingCompanyProduct.stockProductId || '').trim();
+            stockProduct = linkedStockId
+                ? allProducts.find(p => String(p.id) === linkedStockId) || null
+                : null;
+            // ข้อมูลเก่าที่ไม่มี stockProductId ให้ใช้รายการเดิมที่ตรงชื่อเท่านั้น
+            if (!stockProduct) {
+                stockProduct = allProducts.find(p =>
+                    normalizeCompanyProductName(p.name) === normalizeCompanyProductName(editingCompanyProduct.name)
+                ) || null;
+            }
+        } else {
+            stockProduct = await ensureProductInStandardStock(cleanName, 0, 0, cleanUnit);
+        }
 
         // ซิงก์ราคาขายและหน่วยกลับไปยังสินค้ามาตรฐาน เฉพาะเมื่อผู้ใช้เป็น Admin
         // รายการ companyProducts ของบริษัทอื่นจะไม่ถูกแก้ไขในขั้นตอนนี้
@@ -4069,19 +4092,12 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
         }
 
         if (editId) {
-            const oldProduct = allCompanyProducts.find(p => p.id === editId);
-            if (!oldProduct) {
-                showToast('ไม่พบข้อมูลสินค้าที่ต้องการแก้ไข', 'info');
-                return false;
-            }
+            const oldProduct = editingCompanyProduct;
 
             // เมื่อแก้ชื่อสินค้าเดิมของบริษัท เช่น #1 เป็น #01
             // ให้แก้ชื่อสินค้ามาตรฐานที่เชื่อมอยู่แทนการสร้างสินค้าใหม่
             // โดยไม่เปลี่ยนต้นทุน/ราคามาตรฐาน และไม่แตะราคาขายเฉพาะบริษัท
-            const oldNameDuplicateKey = normalizeProductDuplicateKey(oldProduct.name);
-            const newNameDuplicateKey = normalizeProductDuplicateKey(cleanName);
-            if (stockProduct?.id && oldNameDuplicateKey &&
-                oldNameDuplicateKey === newNameDuplicateKey &&
+            if (currentUserProfile?.role === 'admin' && stockProduct?.id &&
                 String(oldProduct.name || '').trim() !== cleanName) {
                 await db.collection('products').doc(stockProduct.id).update({
                     name: cleanName,
