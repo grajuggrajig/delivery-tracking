@@ -5945,8 +5945,9 @@ function getCompanyPriceHistory(companyName, productName) {
             }).join('');
         }
 
-        // บันทึกราคาเฉพาะเอกสาร companyProducts ของบริษัทที่เลือก
-        // ไม่เขียนกลับไปยัง products และไม่แก้บริษัทอื่นที่ใช้ชื่อสินค้าเดียวกัน
+        // บันทึกราคาบริษัทและซิงก์ราคามาตรฐานที่เชื่อมโยงใน Manage Stock
+        // ราคาของ companyProducts บริษัทอื่นยังคงแยกกัน ไม่ถูกเขียนทับ
+        // products เป็นข้อมูลกลาง จึงอัปเดตได้เฉพาะ Admin ตามกฎสิทธิ์เดิม
         window.saveCompanyStockPrice = async function(companyProductId) {
             const input = document.getElementById(`company-stock-price-${companyProductId}`);
             const price = Number(input?.value);
@@ -5962,16 +5963,44 @@ function getCompanyPriceHistory(companyName, productName) {
             }
 
             try {
-                await db.collection('companyProducts').doc(companyProductId).update({
+                const batch = db.batch();
+                batch.update(db.collection('companyProducts').doc(companyProductId), {
                     price,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
+
+                // ใช้ stockProductId ที่ผูกไว้เท่านั้น ป้องกันการอัปเดตสินค้าชื่อคล้ายกัน
+                // และไม่แก้ราคาเฉพาะบริษัทอื่น
+                const linkedStock = product.stockProductId
+                    ? allProducts.find(item => String(item.id) === String(product.stockProductId))
+                    : null;
+                const linkedStockId = String(product.stockProductId || '').trim();
+                const syncStandardPrice = currentUserProfile?.role === 'admin' && !!linkedStockId;
+                if (syncStandardPrice) {
+                    batch.update(db.collection('products').doc(linkedStockId), {
+                        price,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }
+
+                await batch.commit();
+
                 product.price = price;
+                product.updatedAt = new Date();
+                if (syncStandardPrice && linkedStock) linkedStock.price = price;
+
+                // บังคับสร้างดัชนีเรียงใหม่ เพราะอาร์เรย์ allProducts ถูกแก้ไขในที่เดิม
+                sortedStockProductsSource = null;
                 renderStockTable(stockSearchBox?.value || '');
-                showToast(`บันทึกราคาของบริษัท "${product.companyName || 'ที่เลือก'}" สำเร็จ`, 'success');
+                showToast(
+                    syncStandardPrice
+                        ? `บันทึกราคาบริษัทและซิงก์ Manage Stock แล้ว (${product.companyName || 'บริษัทที่เลือก'})`
+                        : `บันทึกราคาของบริษัท "${product.companyName || 'ที่เลือก'}" สำเร็จ`,
+                    'success'
+                );
             } catch (err) {
                 console.error('saveCompanyStockPrice:', err);
-                showToast('บันทึกราคาบริษัทไม่สำเร็จ กรุณาลองใหม่', 'error');
+                showToast('บันทึกราคาไม่สำเร็จ กรุณาตรวจสอบสิทธิ์และลองใหม่', 'error');
             }
         };
 
