@@ -3239,6 +3239,7 @@ body > header{z-index:900 !important}
 
         function finishAuthStartup() {
             authStateResolved = true;
+            setLoginLocked(false);
             document.body.classList.remove('auth-pending');
             document.getElementById('auth-startup-screen')?.classList.add('hidden');
         }
@@ -3816,10 +3817,12 @@ function getEffectiveProductPrice(companyName, product) {
     if (!product) return 0;
     const cleanCompany = String(companyName || '').trim();
     if (cleanCompany) {
-        const matches = getCompanySpecificProductMatches(cleanCompany, product.name);
-        return matches.length === 1 && Number.isFinite(Number(matches[0].price))
-            ? Number(matches[0].price)
-            : 0;
+        // ใช้ราคาของบริษัทเมื่อพบรายการที่ตรงกันเพียงรายการเดียว
+        // หากไม่มีหรือข้อมูลซ้ำ ให้คงพฤติกรรมเดิมโดยใช้ราคามาตรฐานของสินค้า
+        const companyProduct = getCompanySpecificProduct(cleanCompany, product.name);
+        if (companyProduct) {
+            return Number(companyProduct.price) || Number(product.price) || 0;
+        }
     }
     return Number(product.price) || 0;
 }
@@ -6437,9 +6440,7 @@ function getCompanyPriceHistory(companyName, productName) {
                     // ถ้ามีอยู่แล้ว จะใช้ราคาของบริษัทเดิมทันที ไม่ต้องเพิ่มสินค้าใหม่ซ้ำ
                     await ensureCompanyProductFromStock(currentCompany, p);
 
-                    const effectivePrice = companyProduct
-                        ? Number(companyProduct.price) || Number(p.price) || 0
-                        : Number(p.price) || 0;
+                    const effectivePrice = getEffectiveProductPrice(currentCompany, p);
                     const unitCost = companyProduct && Number.isFinite(Number(companyProduct.cost))
                         ? Number(companyProduct.cost)
                         : Number(p.cost) || 0;
@@ -6665,13 +6666,15 @@ function getCompanyPriceHistory(companyName, productName) {
 
 		// ฟังก์ชันดึงรายชื่อบริษัทที่ไม่ซ้ำกันจากฐานข้อมูลทั้งหมด
 function getUniqueCompanyList() {
-    const companies = new Set();
-    allDeliveries.forEach(item => {
-        if (item.companyName && item.companyName.trim() !== '') {
-            companies.add(item.companyName.trim());
-        }
+    const companies = new Map();
+    const source = Array.isArray(allDeliveries) ? allDeliveries : [];
+    source.forEach(item => {
+        const name = String(item?.companyName || '').trim();
+        if (!name) return;
+        const key = name.toLocaleLowerCase('th-TH');
+        if (!companies.has(key)) companies.set(key, name);
     });
-    return Array.from(companies);
+    return Array.from(companies.values());
 }
 
 // ตัวอย่างฟังก์ชันเมื่อผู้ใช้เลือกบริษัทและพิมพ์ชื่อสินค้า
@@ -9092,7 +9095,7 @@ function checkTodayReminders() {
             const candidates = getReminderCandidateForNow(reminder, round, roundNumber, now);
             candidates.forEach(candidate => {
                 const { dueDate, notifyDate } = candidate;
-                if (getReminderDateKey(notifyDate) === getReminderDateKey(now)) {
+                if (isReminderTimeReached(now, notifyDate, round.notifyTime)) {
                     const cycleKey = getReminderCycleKey(reminder, round, roundNumber, dueDate, notifyDate);
                     const sent = getReminderHistoryForCycle(reminder, cycleKey);
                     const item = { ...candidate, cycleKey, sent };
@@ -9160,7 +9163,7 @@ function getUniqueReminderCompanies() {
         if (!name) return;
         if (!names.some(n => n.toLowerCase() === name.toLowerCase())) names.push(name);
     };
-    allDeliveries.forEach(item => add(item.companyName));
+    getUniqueCompanyList().forEach(add);
     allReminders.forEach(item => add(item.companyName));
     return names.sort((a, b) => a.localeCompare(b, 'th'));
 }
@@ -9352,9 +9355,10 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
     );
   }
 
-  function countUniqueCustomers(){
-    const source=Array.isArray(window.allDeliveries) ? window.allDeliveries :
-      (typeof allDeliveries!=='undefined' && Array.isArray(allDeliveries) ? allDeliveries : []);
+  function countUniqueCustomers(dataSource){
+    const source=Array.isArray(dataSource) ? dataSource :
+      (Array.isArray(window.allDeliveries) ? window.allDeliveries :
+        (typeof allDeliveries!=='undefined' && Array.isArray(allDeliveries) ? allDeliveries : []));
     return new Set(source.map(x=>normalizeText(x.customerName)).filter(Boolean)).size;
   }
 
@@ -9391,7 +9395,7 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
     });
 
     document.getElementById('overview-company-count')?.replaceChildren(document.createTextNode(companies.size.toLocaleString('th-TH')));
-    document.getElementById('overview-customer-count')?.replaceChildren(document.createTextNode(customers.size.toLocaleString('th-TH')));
+    document.getElementById('overview-customer-count')?.replaceChildren(document.createTextNode(countUniqueCustomers(source).toLocaleString('th-TH')));
     document.getElementById('overview-pending-count')?.replaceChildren(document.createTextNode(pending.toLocaleString('th-TH')));
 
     if(!source.length){
@@ -9710,8 +9714,6 @@ document.getElementById('running-character')?.addEventListener('click', () => {
 })();
 </script>
 
-</body>
-
 <style id="stock-management-expanded-workspace">
 /* ปรับเฉพาะหน้าต่าง "จัดการรายการสินค้า ราคา และต้นทุนในสต็อก"
    ขยายได้สูงสุด 1,600px และสูง 96vh โดยคงโครงสร้างและการทำงานเดิม */
@@ -9759,8 +9761,6 @@ window.toggleCompanyProductEntryArea = function(button) {
     button.textContent = expanded ? '－ ย่อพื้นที่เพิ่มสินค้า' : '＋ ขยายพื้นที่เพิ่มสินค้า';
 };
 </script>
-
-</html>
 
 <style id="customer-overview-mobile-layout-final-fix">
 /* FIX รอบสอง: ป้องกันพื้นที่รายการถูกยุบหายบนหน้าจอแคบ
@@ -9853,3 +9853,6 @@ window.toggleCompanyProductEntryArea = function(button) {
   #customer-overview-section .customer-overview-head { gap: 9px !important; }
 }
 </style>
+
+</body>
+</html>
