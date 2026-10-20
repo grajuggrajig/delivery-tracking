@@ -7271,19 +7271,26 @@ document.getElementById('item-input').addEventListener('blur', function() {
             const selectedCustomer = String(selectedCustomerFilter || '').trim().toLowerCase();
 
             const matchedDeliveries = allDeliveries.filter(item => {
+                if (!item || typeof item !== 'object') return false;
                 // ถ้ามีการเลือกลูกค้าจาก modal ให้กรองด้วย "ชื่อลูกค้าแบบตรงกัน"
-                if (selectedCustomer &&
-                    String(item.customerName || '').trim().toLowerCase() !== selectedCustomer) {
-                    return false;
-                }
+                const customerName = String(item.customerName || '');
+                if (selectedCustomer && customerName.trim().toLowerCase() !== selectedCustomer) return false;
 
-                return (item.customerName && item.customerName.toLowerCase().includes(keyword)) ||
-                    (item.companyName && item.companyName.toLowerCase().includes(keyword)) ||
-                    (item.phone && item.phone.toLowerCase().includes(keyword)) ||
-                    (getCustomerLineIds(item).some(lineId => lineId.toLowerCase().includes(keyword))) ||
-                    (item.address && item.address.toLowerCase().includes(keyword)) ||
-                    (item.subItems && item.subItems.some(sub => sub.text.toLowerCase().includes(keyword))) ||
-                    (item.customerNotes && item.customerNotes.some(note => (note.note || '').toLowerCase().includes(keyword) || (note.contactDate || '').toLowerCase().includes(keyword)));
+                // แปลงเป็นข้อความอย่างปลอดภัย ป้องกันข้อมูลเก่าหรือช่องที่เป็น null ทำให้การค้นหาหยุดทำงาน
+                const companyName = String(item.companyName || '').toLowerCase();
+                const customerLower = customerName.toLowerCase();
+                const phone = String(item.phone || '').toLowerCase();
+                const address = String(item.address || '').toLowerCase();
+                if (customerLower.includes(keyword) || companyName.includes(keyword) ||
+                    phone.includes(keyword) || address.includes(keyword)) return true;
+
+                const lineIds = getCustomerLineIds(item);
+                if (Array.isArray(lineIds) && lineIds.some(lineId => String(lineId || '').toLowerCase().includes(keyword))) return true;
+                const subItems = Array.isArray(item.subItems) ? item.subItems : [];
+                if (subItems.some(sub => String(sub?.text || '').toLowerCase().includes(keyword))) return true;
+                const notes = Array.isArray(item.customerNotes) ? item.customerNotes : [];
+                return notes.some(note => String(note?.note || '').toLowerCase().includes(keyword) ||
+                    String(note?.contactDate || '').toLowerCase().includes(keyword));
             });
             const discoveredItemCount = matchedDeliveries.reduce((total, item) => total + (Array.isArray(item.subItems) ? item.subItems.length : 0), 0);
             const discoveredPendingCount = matchedDeliveries.reduce((total, item) => total + (Array.isArray(item.subItems) ? item.subItems.filter(sub => sub.status !== 'completed').length : 0), 0);
@@ -7362,9 +7369,16 @@ document.getElementById('item-input').addEventListener('blur', function() {
             }
 
             container.innerHTML = data.map(item => {
-                const totalCount = item.subItems.length;
-                const pendingCount = item.subItems.filter(s => s.status === 'pending').length;
-                const completedCount = item.subItems.filter(s => s.status === 'completed').length;
+                // นับสถานะสินค้าในรอบเดียว แทนการวนซ้ำ filter หลายครั้งต่อหนึ่งลูกค้า
+                const subItems = Array.isArray(item?.subItems) ? item.subItems : [];
+                let totalCount = 0;
+                let pendingCount = 0;
+                let completedCount = 0;
+                for (const subItem of subItems) {
+                    totalCount++;
+                    if (subItem?.status === 'pending') pendingCount++;
+                    else if (subItem?.status === 'completed') completedCount++;
+                }
                 const companyProductCount = getCompanySpecificProductCount(item.companyName, item.companyKey);
                 
                 return `
