@@ -3513,6 +3513,19 @@ body > header{z-index:900 !important}
         let selectedCustomerFilter = '';
         let currentCrmCustomerId = null;
 
+        // ลดการ render ซ้ำระหว่างพิมพ์ค้นหา โดยไม่หน่วงการเพิ่ม/แก้ไข/ลบหรือการ sync Firebase
+        const searchRenderTimers = new WeakMap();
+        function scheduleSearchRender(input, renderCallback, delay = 75) {
+            if (!input || typeof renderCallback !== 'function') return;
+            const previousTimer = searchRenderTimers.get(input);
+            if (previousTimer) clearTimeout(previousTimer);
+            const timer = setTimeout(() => {
+                searchRenderTimers.delete(input);
+                renderCallback();
+            }, delay);
+            searchRenderTimers.set(input, timer);
+        }
+
 
 // ฟังก์ชันกดเช็คประวัติราคาของบริษัทปัจจุบัน
 function checkCompanyItemHistory() {
@@ -3857,6 +3870,7 @@ async function ensureCompanyProductFromStock(companyName, stockProduct, stableCo
     const ref = await db.collection('companyProducts').add(payload);
     const created = { id: ref.id, ...payload };
     allCompanyProducts.push(created);
+    invalidateCompanyCatalogCache();
     return created;
 }
 
@@ -4334,6 +4348,25 @@ function formatCompanyProductUpdateDate(product) {
     }
 }
 
+let companyCatalogCacheSource = null;
+const companyCatalogSortedCache = new Map();
+function invalidateCompanyCatalogCache() {
+    companyCatalogCacheSource = null;
+    companyCatalogSortedCache.clear();
+}
+function getSortedCompanyCatalogForKey(companyKey) {
+    if (companyCatalogCacheSource !== allCompanyProducts) {
+        companyCatalogCacheSource = allCompanyProducts;
+        companyCatalogSortedCache.clear();
+    }
+    if (!companyCatalogSortedCache.has(companyKey)) {
+        companyCatalogSortedCache.set(companyKey, allCompanyProducts
+            .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey)
+            .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th')));
+    }
+    return companyCatalogSortedCache.get(companyKey);
+}
+
 function renderCompanyProductCatalog(companyName, filterText = '', stableCompanyKey = '') {
     setupCompanyProductNameFormatting();
     const container = document.getElementById('company-specific-products-container');
@@ -4345,9 +4378,7 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
 
     // นับสินค้าทั้งหมดของบริษัท ไม่เปลี่ยนตามช่องค้นหา
     // เรียงรายการบริษัทครั้งเดียวก่อนกรอง ช่วยให้พิมพ์ค้นหาต่อเนื่องได้เร็วขึ้น
-    const companyProducts = allCompanyProducts
-        .filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey)
-        .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+    const companyProducts = getSortedCompanyCatalogForKey(companyKey);
 
     const products = companyProducts
         .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
@@ -4909,10 +4940,12 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         const targetKey = normalizeCompanyProductKey(companyName);
         const sourceKey = companyImportSourceSelect?.value ? decodeURIComponent(companyImportSourceSelect.value) : '';
         const sourceName = selected[0]?.companyName || '';
-        const importable = selected.filter(sourceProduct => !allCompanyProducts.some(target =>
-            normalizeCompanyProductKey(target.companyKey || target.companyName) === targetKey &&
-            normalizeCompanyProductName(target.name) === normalizeCompanyProductName(sourceProduct.name)
-        ));
+        const existingTargetProductNames = new Set(allCompanyProducts
+            .filter(target => normalizeCompanyProductKey(target.companyKey || target.companyName) === targetKey)
+            .map(target => normalizeCompanyProductName(target.name)));
+        const importable = selected.filter(sourceProduct =>
+            !existingTargetProductNames.has(normalizeCompanyProductName(sourceProduct.name))
+        );
 
         if (!importable.length) {
             showToast('สินค้าที่เลือกมีอยู่ในบริษัทนี้แล้วทั้งหมด', 'info');
@@ -5002,15 +5035,16 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         renderCompanyImportProducts(companyImportSearch?.value || '');
     });
 
-    companyImportSearch?.addEventListener('input', e => renderCompanyImportProducts(e.target.value));
+    companyImportSearch?.addEventListener('input', e => scheduleSearchRender(e.target, () => renderCompanyImportProducts(e.target.value), 80));
 
     companyImportSelectAllBtn?.addEventListener('click', () => {
         const keyword = String(companyImportSearch?.value || '').trim().toLowerCase();
         const visible = companyImportSourceProducts.filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
-        const selectable = visible.filter(p => !allCompanyProducts.some(target =>
-            normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(stableCompanyKey || companyName) &&
-            normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
-        ));
+        const targetCompanyKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
+        const existingTargetProductNames = new Set(allCompanyProducts
+            .filter(target => normalizeCompanyProductKey(target.companyKey || target.companyName) === targetCompanyKey)
+            .map(target => normalizeCompanyProductName(target.name)));
+        const selectable = visible.filter(p => !existingTargetProductNames.has(normalizeCompanyProductName(p.name)));
         const allSelected = selectable.length > 0 && selectable.every(p => companyImportSelectedIds.has(p.id));
         selectable.forEach(p => allSelected ? companyImportSelectedIds.delete(p.id) : companyImportSelectedIds.add(p.id));
         updateCompanyImportSelectionUI();
@@ -5019,7 +5053,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
     companyImportConfirmBtn?.addEventListener('click', importSelectedCompanyProducts);
 
     companyProductSearch.addEventListener('input', e => {
-        renderCompanyProductCatalog(companyName, e.target.value, stableCompanyKey);
+        scheduleSearchRender(e.target, () => renderCompanyProductCatalog(companyName, e.target.value, stableCompanyKey), 80);
     });
 
     document.getElementById('export-company-products-csv-btn')?.addEventListener('click', () => {
@@ -5057,7 +5091,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
     });
 
     searchInput?.addEventListener('input', (e) => {
-        renderItems(e.target.value);
+        scheduleSearchRender(e.target, () => renderItems(e.target.value), 80);
     });
 
     if (purchaseHistoryCount) purchaseHistoryCount.textContent = items.length.toLocaleString('th-TH');
@@ -5120,7 +5154,7 @@ function getCompanyPriceHistory(companyName, productName) {
         customerNameInput.addEventListener('click', openCustomerModal);
 
         customerSearchBox.addEventListener('input', (e) => {
-            renderCustomerList(e.target.value);
+            scheduleSearchRender(e.target, () => renderCustomerList(e.target.value), 80);
         });
 
         closeCustomerModalBtn.addEventListener('click', closeCustomerModal);
@@ -5794,7 +5828,6 @@ function getCompanyPriceHistory(companyName, productName) {
     if (!stockCompanyFilter) return;
 
     const companies = getActualCompaniesForStock();
-    console.log("Companies data:", companies);
 
     const currentValue = stockCompanyFilter.value;
     const options = ['<option value="">🏢 ทุกบริษัท / สินค้ามาตรฐาน</option>'];
@@ -6133,6 +6166,7 @@ function getCompanyPriceHistory(companyName, productName) {
             userDataUnsubscribers.push(
                 scopedRef('companyProducts').onSnapshot({ includeMetadataChanges: true }, snapshot => {
                     allCompanyProducts = [];
+                    invalidateCompanyCatalogCache();
                     snapshot.forEach(doc => {
                         allCompanyProducts.push({ id: doc.id, ...doc.data() });
                     });
@@ -6647,7 +6681,7 @@ function getCompanyPriceHistory(companyName, productName) {
 
         suggestionSearchBox.addEventListener('input', (e) => {
             suggestionVisibleLimit = SUGGESTION_INITIAL_LIMIT;
-            renderSuggestionsTable(e.target.value);
+            scheduleSearchRender(e.target, () => renderSuggestionsTable(e.target.value), 65);
         });
 
         closeSuggestionModalBtn.addEventListener('click', closeSuggestionModal);
@@ -9280,7 +9314,7 @@ document.getElementById('close-company-picker').addEventListener('click', closeC
 companyPickerModal.addEventListener('click', e => {
     if (e.target === companyPickerModal) e.preventDefault();
 });
-companyPickerSearch.addEventListener('input', e => renderCompanyPicker(e.target.value));
+companyPickerSearch.addEventListener('input', e => scheduleSearchRender(e.target, () => renderCompanyPicker(e.target.value), 80));
 companyPickerSearch.addEventListener('keydown', e => {
     if (e.key === 'Enter' && e.target.value.trim()) {
         e.preventDefault();
