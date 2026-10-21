@@ -6020,6 +6020,55 @@ function getCompanyPriceHistory(companyName, productName) {
             }
         };
 
+        // ป้องกันการยิงอัปเดตซ้ำระหว่าง Firestore snapshots ที่เข้ามาต่อเนื่อง
+        const standardPriceRepairInFlight = new Set();
+        function repairZeroStandardPricesFromLinkedCompanies() {
+            if (currentUserProfile?.role !== 'admin' || !Array.isArray(allProducts) ||
+                !Array.isArray(allCompanyProducts) || !allProducts.length || !allCompanyProducts.length) return;
+
+            const linkedByStockId = new Map();
+            allCompanyProducts.forEach(companyProduct => {
+                const stockId = String(companyProduct.stockProductId || '').trim();
+                const companyPrice = Number(companyProduct.price);
+                if (!stockId || !Number.isFinite(companyPrice) || companyPrice <= 0) return;
+                if (!linkedByStockId.has(stockId)) linkedByStockId.set(stockId, []);
+                linkedByStockId.get(stockId).push(companyPrice);
+            });
+
+            allProducts.forEach(stockProduct => {
+                const stockId = String(stockProduct.id || '').trim();
+                const currentPrice = Number(stockProduct.price);
+                if (!stockId || (Number.isFinite(currentPrice) && currentPrice > 0) ||
+                    standardPriceRepairInFlight.has(stockId)) return;
+
+                const prices = linkedByStockId.get(stockId);
+                if (!prices || !prices.length) return;
+
+                // เติมราคาได้เมื่อราคาบริษัทที่เชื่อมอยู่เหมือนกันทั้งหมดเท่านั้น
+                // หากราคาต่างกัน ให้คง 0 ไว้เพื่อไม่ทำให้ราคาของบริษัทอื่นปะปนกัน
+                const agreedPrice = prices[0];
+                const pricesAgree = prices.every(price => Math.abs(price - agreedPrice) < 0.000001);
+                if (!pricesAgree || agreedPrice <= 0) return;
+
+                standardPriceRepairInFlight.add(stockId);
+                db.collection('products').doc(stockId).update({
+                    price: agreedPrice,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).then(() => {
+                    const liveProduct = allProducts.find(item => String(item.id) === stockId);
+                    if (liveProduct && !(Number(liveProduct.price) > 0)) liveProduct.price = agreedPrice;
+                    sortedStockProductsSource = null;
+                    if (stockModal && !stockModal.classList.contains('hidden')) {
+                        renderStockTable(stockSearchBox?.value || '');
+                    }
+                }).catch(error => {
+                    console.warn('Auto-repair zero standard price skipped:', stockId, error);
+                }).finally(() => {
+                    standardPriceRepairInFlight.delete(stockId);
+                });
+            });
+        }
+
         let sortedStockProductsSource = null;
         let sortedStockProductsCache = [];
         function getSortedStandardStockProducts() {
@@ -6216,6 +6265,12 @@ function getCompanyPriceHistory(companyName, productName) {
                         allCompanyProducts.push({ id: doc.id, ...doc.data() });
                     });
                     rebuildStockLinkedCompanyCache();
+
+                    // ซ่อมข้อมูลราคามาตรฐานที่เป็น 0 เฉพาะกรณีที่มีราคาบริษัทที่เชื่อมด้วย
+                    // Stock Product ID ตรงกัน และราคาบวกของทุกรายการที่เชื่อมโยงตรงกันทั้งหมด
+                    // ห้ามเลือก/เขียนทับด้วยราคาบริษัทใดบริษัทหนึ่ง หากแต่ละบริษัทมีราคาต่างกัน
+                    // และให้ Admin เป็นผู้เขียน products ตามสิทธิ์เดิมเท่านั้น
+                    repairZeroStandardPricesFromLinkedCompanies();
 
                     const historyModal = document.getElementById('company-all-history-modal');
                     if (historyModal) {
