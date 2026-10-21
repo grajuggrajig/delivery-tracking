@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#5145cd">
+<title>PDF Document Center | Delivery Tracking & CRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<style>
+:root{--primary:#5145cd;--blue:#0d6efd;--ink:#172033;--muted:#64748b;--line:#e6eaf2;--bg:#f4f6fc;--green:#0f9f6e;--red:#dc3545}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:'Prompt',sans-serif;color:var(--ink);min-height:100vh}
+.topbar{background:linear-gradient(120deg,#0d6efd,#5145cd,#6610f2);color:#fff;padding:18px clamp(16px,4vw,42px);display:flex;justify-content:space-between;align-items:center;gap:14px;box-shadow:0 5px 22px #3d48a52b}
+.brand{display:flex;align-items:center;gap:13px}.brand-icon{width:48px;height:48px;border-radius:15px;background:#ffffff26;display:grid;place-items:center;font-size:23px}.brand h1{font-size:clamp(18px,2.2vw,25px);margin:0;font-weight:600}.brand p{margin:3px 0 0;color:#e5eaff;font-size:12px}
+.user-area{display:flex;align-items:center;gap:10px;font-size:12px}.pill{background:#ffffff22;border:1px solid #ffffff40;border-radius:999px;padding:7px 12px}.btn{border:0;border-radius:11px;padding:10px 15px;font:500 13px 'Prompt';cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;transition:.18s}.btn:disabled{opacity:.55;cursor:not-allowed}.btn-primary{background:var(--primary);color:#fff;box-shadow:0 4px 12px #5145cd2b}.btn-primary:hover:not(:disabled){background:#4035b5;transform:translateY(-1px)}.btn-light{background:#fff;color:#344054;border:1px solid var(--line)}.btn-danger{background:#fff0f1;color:#c62838;border:1px solid #ffd4d8}.btn-small{padding:7px 10px;border-radius:9px;font-size:12px}
+main{width:min(1180px,calc(100% - 32px));margin:26px auto 42px}.welcome{display:flex;justify-content:space-between;align-items:flex-end;gap:14px;margin-bottom:20px}.welcome h2{margin:0;font-size:24px}.welcome p{margin:5px 0 0;color:var(--muted);font-size:13px}.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-bottom:18px}.stat,.panel{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 7px 25px #263b6310}.stat{padding:17px 19px;display:flex;align-items:center;gap:14px}.stat-icon{width:44px;height:44px;border-radius:13px;display:grid;place-items:center;font-size:18px;background:#efedff;color:var(--primary)}.stat strong{display:block;font-size:22px;line-height:1.2}.stat span{font-size:12px;color:var(--muted)}.panel{padding:20px;margin-bottom:18px}.panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:15px}.panel-head h3{margin:0;font-size:16px}.subtext{font-size:12px;color:var(--muted);margin-top:4px}
+.dropzone{border:2px dashed #c8c6f4;border-radius:15px;background:linear-gradient(140deg,#f8f8ff,#f2f6ff);padding:25px 16px;text-align:center;transition:.2s}.dropzone.dragover{border-color:var(--primary);background:#eeedff}.upload-icon{font-size:34px;color:var(--primary);margin-bottom:8px}.dropzone h4{margin:0 0 5px;font-size:15px}.dropzone p{font-size:12px;color:var(--muted);margin:0 0 14px}.upload-row{display:flex;align-items:center;gap:12px;margin-top:14px;flex-wrap:wrap}.progress-wrap{flex:1;min-width:160px;background:#edf0f7;height:8px;border-radius:20px;overflow:hidden;display:none}.progress-bar{height:100%;width:0;background:linear-gradient(90deg,#0d6efd,#7c3aed);transition:width .15s}.progress-label{font-size:12px;color:var(--muted)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.search{position:relative;flex:1;min-width:200px}.search i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#98a2b3}.search input{width:100%;padding:11px 12px 11px 38px;border:1px solid var(--line);border-radius:11px;font:13px 'Prompt';outline:none}.search input:focus{border-color:#8a82eb;box-shadow:0 0 0 3px #5145cd14}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{width:100%;border-collapse:collapse;min-width:660px}th{background:#f8f9fd;color:#64748b;font-size:11px;font-weight:600;text-align:left;padding:12px 14px;white-space:nowrap}td{padding:12px 14px;border-top:1px solid #edf0f5;font-size:12px;vertical-align:middle}tr:hover td{background:#fbfcff}.file-cell{display:flex;align-items:center;gap:11px;min-width:230px}.pdf-icon{width:38px;height:42px;border-radius:9px;background:#fff0f0;color:#dc3545;display:grid;place-items:center;font-size:18px;flex-shrink:0}.file-name{font-weight:500;max-width:340px;overflow-wrap:anywhere}.file-meta{font-size:10px;color:#8a94a6;margin-top:3px}.actions{display:flex;gap:6px;justify-content:flex-end}.empty{text-align:center;padding:35px 12px;color:#8490a3;font-size:13px}.empty i{display:block;font-size:27px;margin-bottom:10px;color:#b4bdd0}.notice{border-radius:12px;padding:12px 14px;background:#fff8e6;color:#875b00;border:1px solid #ffe7a3;font-size:12px;line-height:1.7;margin-bottom:16px}.hidden{display:none!important}.footer{text-align:center;color:#9aa3b2;font-size:11px;padding:10px}
+#access-block{min-height:calc(100vh - 90px);display:grid;place-items:center;padding:24px}.access-card{max-width:480px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px;text-align:center;box-shadow:0 10px 35px #263b6314}.access-card i{font-size:38px;color:var(--primary);margin-bottom:13px}.access-card h2{margin:0 0 8px}.access-card p{color:var(--muted);font-size:13px;line-height:1.8}
+@media(max-width:700px){.topbar{align-items:flex-start;padding:14px}.brand-icon{width:40px;height:40px}.user-area{flex-direction:column;align-items:flex-end}.welcome{align-items:flex-start;flex-direction:column}.stats{grid-template-columns:1fr;gap:9px}.stat{padding:13px 15px}.panel{padding:14px}main{width:calc(100% - 20px);margin-top:16px}.panel-head{align-items:flex-start;flex-direction:column}.brand p{max-width:210px}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><div class="brand-icon"><i class="fa-solid fa-file-pdf"></i></div><div><h1>PDF Document Center</h1><p>ศูนย์จัดเก็บและจัดการเอกสาร PDF</p></div></div>
+  <div class="user-area"><span id="user-badge" class="pill"><i class="fa-solid fa-circle-notch fa-spin"></i> กำลังตรวจสอบสิทธิ์</span><button id="logout-btn" class="btn btn-light btn-small hidden"><i class="fa-solid fa-right-from-bracket"></i> ออกจากระบบ</button></div>
+</header>
+<section id="access-block" class="hidden"><div class="access-card"><i id="access-icon" class="fa-solid fa-shield-halved"></i><h2 id="access-title">ไม่สามารถเข้าใช้งานได้</h2><p id="access-message">กรุณาเข้าสู่ระบบด้วยบัญชีที่ได้รับอนุญาต</p><a id="back-login" class="btn btn-primary" href="./index.html"><i class="fa-solid fa-arrow-left"></i> ไปหน้าเข้าสู่ระบบเดิม</a></div></section>
+<main id="app-main" class="hidden">
+  <div class="welcome"><div><h2>จัดการเอกสาร PDF</h2><p>อัปโหลด ค้นหา เปิดดู และดาวน์โหลดเอกสารจาก Firebase Storage</p></div><button id="refresh-btn" class="btn btn-light"><i class="fa-solid fa-rotate"></i> รีเฟรชรายการ</button></div>
+  <div class="notice"><i class="fa-solid fa-shield-halved"></i> เอกสารในหน้านี้ควรเข้าถึงได้เฉพาะบัญชีที่เปิดใช้งานและได้รับสิทธิ์ PDF เท่านั้น การบังคับใช้สิทธิ์จริงต้องตั้งค่า Firebase Storage Rules และ Firestore Rules ตามคำแนะนำที่ให้มาพร้อมไฟล์นี้</div>
+  <div class="stats">
+    <div class="stat"><div class="stat-icon"><i class="fa-solid fa-file-pdf"></i></div><div><strong id="stat-total">0</strong><span>เอกสารทั้งหมด</span></div></div>
+    <div class="stat"><div class="stat-icon" style="background:#e6f8f0;color:#0f9f6e"><i class="fa-solid fa-cloud-arrow-up"></i></div><div><strong id="stat-size">0 B</strong><span>ขนาดรวมของไฟล์</span></div></div>
+    <div class="stat"><div class="stat-icon" style="background:#eaf3ff;color:#0d6efd"><i class="fa-solid fa-user-check"></i></div><div><strong id="stat-user">—</strong><span>บัญชีที่เข้าสู่ระบบ</span></div></div>
+  </div>
+  <section class="panel">
+    <div class="panel-head"><div><h3><i class="fa-solid fa-cloud-arrow-up" style="color:var(--primary)"></i> อัปโหลดไฟล์ PDF</h3><div class="subtext">เลือกไฟล์ PDF จากเครื่องของคุณ (สูงสุด 20 MB ต่อไฟล์)</div></div></div>
+    <div id="dropzone" class="dropzone"><div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div><h4>ลากไฟล์ PDF มาวางที่นี่</h4><p>หรือเลือกไฟล์จากคอมพิวเตอร์ของคุณ</p><input id="file-input" type="file" accept="application/pdf,.pdf" multiple hidden><button id="choose-btn" class="btn btn-primary"><i class="fa-solid fa-folder-open"></i> เลือกไฟล์ PDF</button></div>
+    <div class="upload-row"><div id="progress-wrap" class="progress-wrap"><div id="progress-bar" class="progress-bar"></div></div><span id="progress-label" class="progress-label">พร้อมอัปโหลด</span></div>
+  </section>
+  <section class="panel">
+    <div class="panel-head"><div><h3><i class="fa-solid fa-folder-open" style="color:var(--primary)"></i> รายการเอกสาร</h3><div class="subtext">ค้นหาจากชื่อไฟล์ หรือชื่อผู้ที่อัปโหลด</div></div><span id="list-count" class="pill" style="color:#5145cd;background:#f0efff;border-color:#e0ddff">0 รายการ</span></div>
+    <div class="toolbar"><label class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="search-input" type="search" placeholder="ค้นหาชื่อเอกสาร..."></label><button id="clear-search" class="btn btn-light"><i class="fa-solid fa-xmark"></i> ล้างค้นหา</button></div>
+    <div class="table-wrap"><table><thead><tr><th>ชื่อเอกสาร</th><th>ขนาด</th><th>วันที่อัปโหลด</th><th style="text-align:right">การทำงาน</th></tr></thead><tbody id="file-list"><tr><td colspan="4"><div class="empty"><i class="fa-solid fa-folder-open"></i>กำลังโหลดรายการเอกสาร...</div></td></tr></tbody></table></div>
+  </section>
+  <div class="footer">PDF Document Center · Firebase Storage · Delivery Tracking & CRM</div>
+</main>
+<script>
+/* ใช้ Firebase project เดียวกับ Delivery Tracking & CRM */
+const firebaseConfig = {
+  apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+  authDomain: "delivery-tracking-2313a.firebaseapp.com",
+  projectId: "delivery-tracking-2313a",
+  storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+  messagingSenderId: "631670801383",
+  appId: "1:631670801383:web:e720570af97bad7011f342",
+  measurementId: "G-BB2D5DJH3F"
+};
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const STORAGE_FOLDER = 'pdf-documents';
+const META_COLLECTION = 'pdfDocuments';
+let currentUser = null, userProfile = null, documents = [], activeUploads = 0;
+
+const $ = id => document.getElementById(id);
+const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const formatSize = bytes => {
+  if (!Number.isFinite(Number(bytes)) || Number(bytes) < 0) return '—';
+  const units = ['B','KB','MB','GB']; let n = Number(bytes), i = 0;
+  while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+  return `${n.toLocaleString('th-TH',{maximumFractionDigits:2})} ${units[i]}`;
+};
+const formatDate = value => {
+  const d = value && typeof value.toDate === 'function' ? value.toDate() : value ? new Date(value) : null;
+  return d && !Number.isNaN(d.getTime()) ? d.toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'}) : '—';
+};
+function showToast(icon, title) { Swal.fire({toast:true,position:'top-end',icon,title,showConfirmButton:false,timer:3000,timerProgressBar:true}); }
+function showAccess(title, message, signedIn=false) {
+  $('app-main').classList.add('hidden'); $('access-block').classList.remove('hidden');
+  $('access-title').textContent = title; $('access-message').textContent = message;
+  $('user-badge').textContent = signedIn ? 'ไม่มีสิทธิ์เข้าถึง' : 'ยังไม่ได้เข้าสู่ระบบ';
+  $('logout-btn').classList.toggle('hidden', !signedIn);
+}
+function hasPdfPermission(profile) {
+  // ใช้ schema users เดียวกับ CRM: role='admin' หรือกำหนด pdfAccess:true โดย Admin
+  return !!profile && profile.active !== false &&
+    (String(profile.role || '').toLowerCase() === 'admin' || profile.pdfAccess === true);
+}
+async function handleAuth(user) {
+  if (!user) {
+    currentUser = null;
+    userProfile = null;
+    documents = [];
+    showAccess('กรุณาเข้าสู่ระบบก่อน', 'หน้านี้ใช้บัญชี Firebase Login เดียวกับระบบเดิม กรุณาเข้าสู่ระบบที่หน้า login.html แล้วกลับมาหน้านี้');
+    return;
+  }
+  currentUser = user;
+  userProfile = null;
+  documents = [];
+  $('app-main').classList.add('hidden');
+  $('access-block').classList.add('hidden');
+  $('user-badge').innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> กำลังตรวจสอบสิทธิ์';
+  $('logout-btn').classList.remove('hidden');
+  try {
+    const snap = await db.collection('users').doc(user.uid).get();
+    if (!snap.exists) { showAccess('ไม่พบบัญชีผู้ใช้ในระบบ', 'บัญชีนี้ไม่มีโปรไฟล์ใน Firestore collection users จึงไม่สามารถเปิดหน้าเอกสารได้', true); return; }
+    userProfile = snap.data();
+    if (!hasPdfPermission(userProfile)) {
+      showAccess('ยังไม่ได้รับสิทธิ์ใช้งาน PDF', 'บัญชีต้องเปิดใช้งานอยู่ และต้องเป็น admin หรือมีค่า pdfAccess:true ในเอกสาร users ของบัญชีนี้', true);
+      return;
+    }
+    $('access-block').classList.add('hidden'); $('app-main').classList.remove('hidden');
+    const display = userProfile.displayName || userProfile.username || user.email || 'ผู้ใช้';
+    $('user-badge').textContent = display;
+    $('stat-user').textContent = display;
+    await loadDocuments();
+  } catch (error) {
+    console.error(error);
+    showAccess('ตรวจสอบสิทธิ์ไม่สำเร็จ', error.code === 'permission-denied' ? 'Firestore Rules ยังไม่อนุญาตให้อ่าน users/{uid} กรุณาตรวจสอบกฎความปลอดภัยของระบบ' : (error.message || 'โปรดลองใหม่'), true);
+  }
+}
+function isPdfFile(file) {
+  return file && (file.type === 'application/pdf' || /\.pdf$/i.test(file.name));
+}
+function safeFileName(name) {
+  return String(name || 'document.pdf').replace(/[\/\\?#%:*|"<>]/g,'_').replace(/[\u0000-\u001f]/g,'_').slice(0,180) || 'document.pdf';
+}
+async function uploadFiles(fileList) {
+  if (!currentUser || !hasPdfPermission(userProfile)) return showToast('error','บัญชีนี้ไม่มีสิทธิ์อัปโหลด PDF');
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  for (const file of files) {
+    if (!isPdfFile(file)) { showToast('error',`ข้ามไฟล์ ${file.name}: อนุญาตเฉพาะ PDF`); continue; }
+    if (file.size > MAX_FILE_SIZE) { showToast('error',`ไฟล์ ${file.name} มีขนาดเกิน 20 MB`); continue; }
+    if (file.size <= 0) { showToast('error',`ไฟล์ ${file.name} ว่างเปล่า`); continue; }
+    const id = (window.crypto && typeof window.crypto.randomUUID === 'function')
+      ? window.crypto.randomUUID()
+      : `${Date.now()}_${Math.random().toString(36).slice(2)}_${Math.random().toString(36).slice(2)}`;
+    const objectPath = `${STORAGE_FOLDER}/${currentUser.uid}/${id}_${safeFileName(file.name)}`;
+    const ref = storage.ref().child(objectPath);
+    activeUploads++;
+    $('progress-wrap').style.display = 'block';
+    $('progress-label').textContent = `กำลังอัปโหลด ${file.name}`;
+    $('choose-btn').disabled = true;
+    let storageUploaded = false;
+    try {
+      await new Promise((resolve, reject) => {
+        const task = ref.put(file, {contentType:'application/pdf', customMetadata:{ownerUid:currentUser.uid, originalName:file.name}});
+        task.on('state_changed', snap => {
+          const percent = snap.totalBytes ? Math.round(snap.bytesTransferred / snap.totalBytes * 100) : 0;
+          $('progress-bar').style.width = `${percent}%`;
+          $('progress-label').textContent = `กำลังอัปโหลด ${file.name} · ${percent}%`;
+        }, reject, resolve);
+      });
+      storageUploaded = true;
+      await db.collection(META_COLLECTION).doc(id).set({
+        name: file.name, storagePath: objectPath, size: file.size, contentType:'application/pdf',
+        ownerUid: currentUser.uid, uploadedBy: userProfile.displayName || userProfile.username || currentUser.email || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      showToast('success',`อัปโหลด ${file.name} สำเร็จ`);
+    } catch (error) {
+      console.error('PDF upload failed:', error);
+      if (storageUploaded) {
+        try { await ref.delete(); } catch (cleanupError) { console.warn('Orphan PDF cleanup failed:', cleanupError); }
+      }
+      const message = error.code === 'storage/unauthorized' || error.code === 'permission-denied'
+        ? 'Firebase Rules ไม่อนุญาตให้บันทึกไฟล์หรือข้อมูลเอกสาร'
+        : error.code === 'storage/canceled' ? 'ยกเลิกการอัปโหลดแล้ว'
+        : (error.message || 'เกิดข้อผิดพลาด');
+      showToast('error',`อัปโหลดไม่สำเร็จ: ${message}`);
+    } finally {
+      activeUploads--;
+      $('progress-bar').style.width = '0%';
+      if (!activeUploads) { $('progress-wrap').style.display = 'none'; $('progress-label').textContent = 'พร้อมอัปโหลด'; $('choose-btn').disabled = false; }
+    }
+  }
+  $('file-input').value = '';
+  await loadDocuments();
+}
+async function loadDocuments() {
+  if (!currentUser || !hasPdfPermission(userProfile)) return;
+  $('file-list').innerHTML = '<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-circle-notch fa-spin"></i>กำลังโหลดรายการ...</div></td></tr>';
+  try {
+    const snap = await db.collection(META_COLLECTION).orderBy('createdAt','desc').limit(500).get();
+    documents = snap.docs.map(doc => ({id:doc.id,...doc.data()})).filter(d => typeof d.storagePath === 'string' && d.storagePath.startsWith(`${STORAGE_FOLDER}/`) && /\.pdf$/i.test(d.name || ''));
+    renderDocuments();
+  } catch (error) {
+    console.error('Load PDF metadata failed:', error);
+    $('file-list').innerHTML = `<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-triangle-exclamation"></i>โหลดรายการไม่ได้: ${escapeHtml(error.code === 'permission-denied' ? 'Firestore Rules ยังไม่อนุญาต collection pdfDocuments' : error.message || 'เกิดข้อผิดพลาด')}</div></td></tr>`;
+    $('stat-total').textContent = '—'; $('stat-size').textContent = '—';
+  }
+}
+function renderDocuments() {
+  const q = $('search-input').value.trim().toLocaleLowerCase('th');
+  const filtered = documents.filter(d => `${d.name || ''} ${d.uploadedBy || ''}`.toLocaleLowerCase('th').includes(q));
+  $('stat-total').textContent = documents.length.toLocaleString('th-TH');
+  $('stat-size').textContent = formatSize(documents.reduce((sum,d)=>sum+Number(d.size||0),0));
+  $('list-count').textContent = `${filtered.length.toLocaleString('th-TH')} รายการ`;
+  if (!filtered.length) {
+    $('file-list').innerHTML = `<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-folder-open"></i>${q ? 'ไม่พบเอกสารที่ตรงกับคำค้นหา' : 'ยังไม่มีเอกสาร PDF — อัปโหลดไฟล์แรกได้เลย'}</div></td></tr>`;
+    return;
+  }
+  $('file-list').innerHTML = filtered.map(d => `<tr>
+    <td><div class="file-cell"><div class="pdf-icon"><i class="fa-solid fa-file-pdf"></i></div><div><div class="file-name">${escapeHtml(d.name || 'document.pdf')}</div><div class="file-meta">อัปโหลดโดย ${escapeHtml(d.uploadedBy || 'ไม่ระบุ')}</div></div></div></td>
+    <td>${formatSize(d.size)}</td><td>${formatDate(d.createdAt)}</td>
+    <td><div class="actions"><button class="btn btn-light btn-small" data-action="preview" data-id="${escapeHtml(d.id)}" title="เปิดดู PDF"><i class="fa-solid fa-eye"></i> ดู</button><button class="btn btn-primary btn-small" data-action="download" data-id="${escapeHtml(d.id)}" title="ดาวน์โหลด PDF"><i class="fa-solid fa-download"></i> ดาวน์โหลด</button>${(d.ownerUid === currentUser.uid || String(userProfile.role||'').toLowerCase()==='admin') ? `<button class="btn btn-danger btn-small" data-action="delete" data-id="${escapeHtml(d.id)}" title="ลบเอกสาร"><i class="fa-solid fa-trash"></i></button>` : ''}</div></td>
+  </tr>`).join('');
+}
+async function getAuthorizedDownloadUrl(doc) {
+  if (!currentUser || !hasPdfPermission(userProfile)) throw new Error('ไม่มีสิทธิ์เข้าถึงเอกสาร');
+  if (!doc || typeof doc.storagePath !== 'string' || !doc.storagePath.startsWith(`${STORAGE_FOLDER}/`) || !/\.pdf$/i.test(doc.name || '')) throw new Error('เส้นทางเอกสารไม่ถูกต้อง');
+  return storage.ref().child(doc.storagePath).getDownloadURL();
+}
+async function openOrDownload(id, download=false) {
+  const doc = documents.find(d => d.id === id);
+  if (!doc) return showToast('error','ไม่พบเอกสารนี้');
+  try {
+    const url = await getAuthorizedDownloadUrl(doc);
+    if (download) {
+      // ดาวน์โหลดผ่าน Firebase Storage SDK เพื่อให้เบราว์เซอร์บันทึกเป็นไฟล์แทนการเปิดแท็บใหม่
+      const blob = await storage.ref().child(doc.storagePath).getBlob();
+      const objectUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objectUrl; a.download = safeFileName(doc.name); a.rel = 'noopener';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+      showToast('success','เริ่มดาวน์โหลดแล้ว');
+    } else {
+      const win = window.open(url, '_blank', 'noopener,noreferrer');
+      if (!win) showToast('info','เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาตป๊อปอัปแล้วลองอีกครั้ง');
+    }
+  } catch (error) {
+    console.error(error);
+    const message = error.code === 'storage/object-not-found' ? 'ไม่พบไฟล์ใน Firebase Storage'
+      : error.code === 'storage/unauthorized' ? 'ไม่มีสิทธิ์อ่านไฟล์ตาม Firebase Storage Rules'
+      : error.code === 'storage/canceled' ? 'การดาวน์โหลดถูกยกเลิก'
+      : error.code === 'storage/unknown' ? 'ดาวน์โหลดไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่'
+      : (error.message || 'ไม่สามารถเปิดหรือดาวน์โหลดไฟล์ได้');
+    showToast('error', message);
+  }
+}
+async function deleteDocument(id) {
+  const doc = documents.find(d => d.id === id);
+  if (!doc) return;
+  if (!(doc.ownerUid === currentUser.uid || String(userProfile.role||'').toLowerCase()==='admin')) return showToast('error','ลบได้เฉพาะไฟล์ของตนเองหรือผู้ดูแลระบบ');
+  const result = await Swal.fire({icon:'warning',title:'ลบเอกสารนี้?',text:doc.name,showCancelButton:true,confirmButtonText:'ลบเอกสาร',cancelButtonText:'ยกเลิก',confirmButtonColor:'#dc3545'});
+  if (!result.isConfirmed) return;
+  try {
+    await storage.ref().child(doc.storagePath).delete();
+    await db.collection(META_COLLECTION).doc(doc.id).delete();
+    showToast('success','ลบเอกสารเรียบร้อย'); await loadDocuments();
+  } catch (error) {
+    console.error(error); showToast('error',error.code === 'storage/unauthorized' || error.code === 'permission-denied' ? 'ไม่มีสิทธิ์ลบตาม Firebase Rules' : (error.message || 'ลบเอกสารไม่สำเร็จ'));
+  }
+}
+$('choose-btn').addEventListener('click', () => $('file-input').click());
+$('file-input').addEventListener('change', e => uploadFiles(e.target.files));
+$('refresh-btn').addEventListener('click', loadDocuments);
+$('search-input').addEventListener('input', renderDocuments);
+$('clear-search').addEventListener('click', () => { $('search-input').value=''; renderDocuments(); });
+$('file-list').addEventListener('click', e => {
+  const btn = e.target.closest('button[data-action]'); if (!btn) return;
+  const id = btn.dataset.id;
+  if (btn.dataset.action === 'preview') openOrDownload(id,false);
+  if (btn.dataset.action === 'download') openOrDownload(id,true);
+  if (btn.dataset.action === 'delete') deleteDocument(id);
+});
+const dropzone = $('dropzone');
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+dropzone.addEventListener('drop', e => { e.preventDefault(); dropzone.classList.remove('dragover'); uploadFiles(e.dataTransfer.files); });
+$('logout-btn').addEventListener('click', async () => {
+  const result = await Swal.fire({icon:'question',title:'ออกจากระบบ?',text:'การออกจากระบบจะออกจาก Firebase Login ของระบบเดียวกันด้วย',showCancelButton:true,confirmButtonText:'ออกจากระบบ',cancelButtonText:'ยกเลิก'});
+  if (result.isConfirmed) { await auth.signOut(); location.href='./index.html'; }
+});
+auth.onAuthStateChanged(handleAuth);
+</script>
+</body>
+</html>
