@@ -24,6 +24,41 @@ main{width:min(1180px,calc(100% - 32px));margin:26px auto 42px}.welcome{display:
 .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}.search{position:relative;flex:1;min-width:200px}.search i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#98a2b3}.search input{width:100%;padding:11px 12px 11px 38px;border:1px solid var(--line);border-radius:11px;font:13px 'Prompt';outline:none}.search input:focus{border-color:#8a82eb;box-shadow:0 0 0 3px #5145cd14}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:13px}table{width:100%;border-collapse:collapse;min-width:660px}th{background:#f8f9fd;color:#64748b;font-size:11px;font-weight:600;text-align:left;padding:12px 14px;white-space:nowrap}td{padding:12px 14px;border-top:1px solid #edf0f5;font-size:12px;vertical-align:middle}tr:hover td{background:#fbfcff}.file-cell{display:flex;align-items:center;gap:11px;min-width:230px}.pdf-icon{width:38px;height:42px;border-radius:9px;background:#fff0f0;color:#dc3545;display:grid;place-items:center;font-size:18px;flex-shrink:0}.file-name{font-weight:500;max-width:340px;overflow-wrap:anywhere}.file-meta{font-size:10px;color:#8a94a6;margin-top:3px}.actions{display:flex;gap:6px;justify-content:flex-end}.empty{text-align:center;padding:35px 12px;color:#8490a3;font-size:13px}.empty i{display:block;font-size:27px;margin-bottom:10px;color:#b4bdd0}.notice{border-radius:12px;padding:12px 14px;background:#fff8e6;color:#875b00;border:1px solid #ffe7a3;font-size:12px;line-height:1.7;margin-bottom:16px}.hidden{display:none!important}.footer{text-align:center;color:#9aa3b2;font-size:11px;padding:10px}
 #access-block{min-height:calc(100vh - 90px);display:grid;place-items:center;padding:24px}.access-card{max-width:480px;background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px;text-align:center;box-shadow:0 10px 35px #263b6314}.access-card i{font-size:38px;color:var(--primary);margin-bottom:13px}.access-card h2{margin:0 0 8px}.access-card p{color:var(--muted);font-size:13px;line-height:1.8}
 @media(max-width:700px){.topbar{align-items:flex-start;padding:14px}.brand-icon{width:40px;height:40px}.user-area{flex-direction:column;align-items:flex-end}.welcome{align-items:flex-start;flex-direction:column}.stats{grid-template-columns:1fr;gap:9px}.stat{padding:13px 15px}.panel{padding:14px}main{width:calc(100% - 20px);margin-top:16px}.panel-head{align-items:flex-start;flex-direction:column}.brand p{max-width:210px}}
+
+/* PDF Document Center redesign: wide dashboard, company grouping and responsive controls */
+:root{--primary:#5145cd;--blue:#2563eb;--ink:#17345f;--muted:#7183a2;--line:#e2eaf7;--bg:#f2f7ff;--green:#0ca678;--red:#f04452}
+body{background:linear-gradient(180deg,#f3f7ff 0%,#edf4ff 100%);color:var(--ink)}
+.topbar{padding:14px clamp(16px,3vw,38px);background:linear-gradient(110deg,#2463f5 0%,#4f35e8 58%,#6d12e8 100%);min-height:90px}
+.brand-icon{width:58px;height:58px;border-radius:18px;background:#ffffff2b;box-shadow:0 8px 22px #2415a833;font-size:27px}
+.brand h1{font-size:clamp(20px,2vw,26px);letter-spacing:.1px}.brand p{font-size:12px}
+.user-area{gap:12px}.user-area .pill{background:#ffffff22;border-color:#ffffff33;color:#fff}
+main{width:min(1600px,calc(100% - 40px));margin:20px auto 24px}
+.welcome{display:none}.notice{display:none}
+.panel,.stat{border-radius:13px;border-color:#e5edfb;box-shadow:0 5px 18px #244a8510}
+.panel{padding:20px;margin-bottom:18px}.panel-head{margin-bottom:14px}.panel-head h3{font-size:18px;color:#163660}
+.subtext{font-size:12px}.dropzone{min-height:185px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:14px;background:linear-gradient(135deg,#f8fbff,#f0f6ff);border:2px dashed #b9d5ff;border-radius:9px}
+.upload-icon{font-size:38px;margin-bottom:4px;color:#2864f5}.dropzone h4{font-size:14px;color:#2254b8}.dropzone p{margin-bottom:8px}
+#upload-panel .upload-layout{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(300px,1fr);gap:24px;align-items:center}
+#upload-panel .upload-side-title{font-size:13px;font-weight:600;margin-bottom:8px;color:#1b3d6c}
+#company-input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:9px;font:13px 'Prompt';margin-bottom:10px;background:#fff;color:var(--ink)}
+#pending-files{display:grid;gap:5px;max-height:145px;overflow:auto;margin-bottom:10px}
+.pending-file{display:flex;align-items:center;gap:10px;border:1px solid #e4ebf6;border-radius:8px;background:#fff;padding:8px 10px;font-size:12px;min-width:0}
+.pending-file .pending-name{flex:1;min-width:0;overflow-wrap:anywhere}.pending-file .pending-size{color:var(--muted);font-size:10px;white-space:nowrap}.pending-file button{border:0;background:transparent;color:#7284a4;cursor:pointer}
+#upload-all-btn{width:100%;background:linear-gradient(100deg,#5145ed,#4b4ce9);color:#fff}
+#documents-panel .panel-head{display:flex;flex-direction:row;align-items:center;flex-wrap:wrap}
+.toolbar{align-items:center}.company-tabs{display:flex;gap:6px;flex-wrap:wrap;flex:2;min-width:250px}
+.company-tab{border:1px solid #e0e8f5;border-radius:10px;padding:9px 13px;background:#fff;color:#526987;font:500 12px 'Prompt';cursor:pointer;white-space:nowrap}
+.company-tab.active{background:linear-gradient(100deg,#5145ed,#4c4ce9);border-color:transparent;color:#fff;box-shadow:0 4px 12px #5145cd2b}
+.search{min-width:190px;flex:1}.search input{border-radius:8px;padding-top:10px;padding-bottom:10px}
+#company-filter{border:1px solid var(--line);background:#fff;border-radius:8px;padding:10px 12px;font:12px 'Prompt';color:#526987;min-width:130px}
+.table-wrap{border-radius:9px;border-color:#e1eafa}table{min-width:800px}th{background:#f4f7fc;padding:12px 14px;color:#667d9e;font-size:11px}td{padding:9px 12px;font-size:12px;color:#1c3b68}tr:hover td{background:#f8fbff}
+.file-cell{min-width:210px}.pdf-icon{width:30px;height:34px;border-radius:6px;background:#fff0f1;font-size:16px}.actions{gap:5px}.actions .btn{white-space:nowrap}.actions [data-action="preview"]{background:#e9efff;color:#315ff1;border:0}.actions [data-action="download"]{background:#0ca678;color:white;border:0}.actions [data-action="delete"]{background:#f04452;color:#fff;border:0}
+.company-group-row td{background:#fff!important;border-top:1px solid #e4ecf8;padding:11px 14px;font-weight:600;color:#293fda}.group-toggle{border:0;background:transparent;color:#667fa8;cursor:pointer;margin-right:10px}.company-count{display:inline-block;margin-left:12px;border-radius:20px;background:#edf1ff;color:#4262dd;padding:2px 8px;font-size:10px;font-weight:500}
+#bottom-notes{display:grid;grid-template-columns:1.35fr 1fr;gap:16px;margin-top:14px}.info-note{border-radius:7px;border:1px solid #d5e7ff;background:#f3f8ff;padding:13px 16px;font-size:11px;color:#3b6097;line-height:1.8}.success-note{border-color:#c9f3e4;background:#f0fcf7;color:#0b9972}.footer{display:none}
+#preview-modal{position:fixed;inset:0;z-index:9999;background:#0e1b34b8;display:none;align-items:center;justify-content:center;padding:18px}#preview-modal.open{display:flex}.preview-window{background:#fff;width:min(1100px,100%);height:min(92vh,900px);border-radius:14px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 70px #0004}.preview-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;border-bottom:1px solid var(--line)}.preview-head strong{overflow-wrap:anywhere}.preview-head button{border:0;background:#f1f4fb;border-radius:8px;padding:9px 12px;cursor:pointer;color:#334c75}.preview-window iframe{width:100%;height:100%;border:0;background:#f4f6fb}
+@media(max-width:850px){#upload-panel .upload-layout{grid-template-columns:1fr;gap:14px}#bottom-notes{grid-template-columns:1fr}main{width:calc(100% - 20px);margin-top:12px}.panel{padding:13px}.topbar{min-height:76px}.brand-icon{width:43px;height:43px}.user-area .pill{max-width:140px;overflow-wrap:anywhere}}
+@media(max-width:560px){.brand p{display:none}.brand h1{font-size:17px}.user-area{font-size:10px}.user-area .pill{padding:6px 8px}.company-tabs{min-width:100%;overflow-x:auto;flex-wrap:nowrap;padding-bottom:3px}.company-tab{padding:8px 10px}.toolbar{gap:7px}.search{min-width:100%;flex-basis:100%}#company-filter{flex:1}#clear-search{padding:9px}}
+
 </style>
 </head>
 <body>
@@ -40,18 +75,28 @@ main{width:min(1180px,calc(100% - 32px));margin:26px auto 42px}.welcome{display:
     <div class="stat"><div class="stat-icon" style="background:#e6f8f0;color:#0f9f6e"><i class="fa-solid fa-cloud-arrow-up"></i></div><div><strong id="stat-size">0 B</strong><span>ขนาดรวมของไฟล์</span></div></div>
     <div class="stat"><div class="stat-icon" style="background:#eaf3ff;color:#0d6efd"><i class="fa-solid fa-user-check"></i></div><div><strong id="stat-user">—</strong><span>บัญชีที่เข้าสู่ระบบ</span></div></div>
   </div>
-  <section class="panel">
-    <div class="panel-head"><div><h3><i class="fa-solid fa-cloud-arrow-up" style="color:var(--primary)"></i> อัปโหลดไฟล์ PDF</h3><div class="subtext">เลือกไฟล์ PDF จากเครื่องของคุณ (สูงสุด 20 MB ต่อไฟล์)</div></div></div>
-    <div id="dropzone" class="dropzone"><div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div><h4>ลากไฟล์ PDF มาวางที่นี่</h4><p>หรือเลือกไฟล์จากคอมพิวเตอร์ของคุณ</p><input id="file-input" type="file" accept="application/pdf,.pdf" multiple hidden><button id="choose-btn" class="btn btn-primary"><i class="fa-solid fa-folder-open"></i> เลือกไฟล์ PDF</button></div>
+  <div class="hidden" aria-hidden="true"><span id="stat-total">0</span><span id="stat-size">0 B</span><span id="stat-user">—</span></div>
+  <section class="panel" id="upload-panel">
+    <div class="panel-head"><div><h3><i class="fa-regular fa-file-pdf" style="color:var(--primary)"></i> อัปโหลดไฟล์ PDF</h3><div class="subtext">เลือกไฟล์ PDF หรือลากไฟล์มาวางได้ (ขนาดไม่เกิน 20 MB ต่อไฟล์)</div></div></div>
+    <div class="upload-layout">
+      <div><div id="dropzone" class="dropzone"><div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div><h4>ลากไฟล์ PDF มาวางที่นี่</h4><p>หรือ</p><input id="file-input" type="file" accept="application/pdf,.pdf" multiple hidden><button id="choose-btn" class="btn btn-primary"><i class="fa-solid fa-folder-open"></i> เลือกไฟล์</button><div class="subtext" style="margin-top:9px">รองรับเฉพาะไฟล์ PDF ขนาดไม่เกิน 20 MB ต่อไฟล์</div></div></div>
+      <div><div class="upload-side-title">อัปโหลดหลายไฟล์ <button id="choose-more-btn" class="btn btn-small btn-light" type="button">เลือกหลายไฟล์</button></div>
+        <label class="subtext" for="company-input">จัดเก็บภายใต้บริษัท</label><input id="company-input" list="company-options" placeholder="เช่น บริษัท A หรือไม่ระบุบริษัท"><datalist id="company-options"></datalist>
+        <div id="pending-files"><div class="subtext">ยังไม่ได้เลือกไฟล์</div></div>
+        <button id="upload-all-btn" class="btn" type="button"><i class="fa-solid fa-cloud-arrow-up"></i> อัปโหลดทั้งหมด (0 ไฟล์)</button>
+      </div>
+    </div>
     <div class="upload-row"><div id="progress-wrap" class="progress-wrap"><div id="progress-bar" class="progress-bar"></div></div><span id="progress-label" class="progress-label">พร้อมอัปโหลด</span></div>
   </section>
-  <section class="panel">
-    <div class="panel-head"><div><h3><i class="fa-solid fa-folder-open" style="color:var(--primary)"></i> รายการเอกสาร</h3><div class="subtext">ค้นหาจากชื่อไฟล์ หรือชื่อผู้ที่อัปโหลด</div></div><span id="list-count" class="pill" style="color:#5145cd;background:#f0efff;border-color:#e0ddff">0 รายการ</span></div>
-    <div class="toolbar"><label class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="search-input" type="search" placeholder="ค้นหาชื่อเอกสาร..."></label><button id="clear-search" class="btn btn-light"><i class="fa-solid fa-xmark"></i> ล้างค้นหา</button></div>
-    <div class="table-wrap"><table><thead><tr><th>ชื่อเอกสาร</th><th>ขนาด</th><th>วันที่อัปโหลด</th><th style="text-align:right">การทำงาน</th></tr></thead><tbody id="file-list"><tr><td colspan="4"><div class="empty"><i class="fa-solid fa-folder-open"></i>กำลังโหลดรายการเอกสาร...</div></td></tr></tbody></table></div>
+  <section class="panel" id="documents-panel">
+    <div class="panel-head"><h3><i class="fa-solid fa-border-all" style="color:var(--primary)"></i> เอกสารทั้งหมด</h3><span id="list-count" class="pill" style="color:#5145cd;background:#f0efff;border-color:#e0ddff">0 รายการ</span></div>
+    <div class="toolbar"><div id="company-tabs" class="company-tabs"><button class="company-tab active" data-company="*">ทั้งหมด</button></div><label class="search"><i class="fa-solid fa-magnifying-glass"></i><input id="search-input" type="search" placeholder="ค้นหาเอกสาร..."></label><select id="company-filter" aria-label="กรองตามบริษัท"><option value="*">ทุกบริษัท</option></select><button id="clear-search" class="btn btn-light"><i class="fa-solid fa-xmark"></i> ล้าง</button></div>
+    <div class="table-wrap"><table><thead><tr><th style="width:40px"><input id="select-all" type="checkbox" aria-label="เลือกทั้งหมด"></th><th>ชื่อเอกสาร</th><th>บริษัท</th><th>ขนาดไฟล์</th><th>วันที่อัปโหลด</th><th>ผู้ที่อัปโหลด</th><th style="text-align:right">จัดการ</th></tr></thead><tbody id="file-list"><tr><td colspan="7"><div class="empty"><i class="fa-solid fa-folder-open"></i>กำลังโหลดรายการเอกสาร...</div></td></tr></tbody></table></div>
+    <div id="bottom-notes"><div class="info-note"><strong><i class="fa-solid fa-circle-info"></i> หมายเหตุ:</strong><br>• ระบบแยกไฟล์ตามบริษัทที่เลือกหรือระบุไว้ตอนอัปโหลด<br>• หากไม่เลือกบริษัท ไฟล์จะอยู่ในหมวด “ไม่ระบุบริษัท”<br>• ผู้ใช้สามารถค้นหา จัดการ และลบไฟล์ได้ตามสิทธิ์ที่ได้รับ</div><div class="info-note success-note"><strong><i class="fa-solid fa-circle-check"></i> การจัดเก็บตามบริษัท</strong><br>ช่วยให้ค้นหาเอกสารได้ง่ายขึ้น และแยกเป็นสัดส่วนตามบริษัท<br>ไม่ต้องเปิดหาไฟล์เอง</div></div>
   </section>
   <div class="footer">PDF Document Center · Firebase Storage · Delivery Tracking & CRM</div>
 </main>
+<div id="preview-modal" role="dialog" aria-modal="true" aria-label="ตัวอย่างเอกสาร PDF"><div class="preview-window"><div class="preview-head"><strong id="preview-title">ตัวอย่าง PDF</strong><div><button id="preview-download" type="button"><i class="fa-solid fa-download"></i> ดาวน์โหลด</button> <button id="preview-close" type="button"><i class="fa-solid fa-xmark"></i> ปิด</button></div></div><iframe id="preview-frame" title="ตัวอย่างเอกสาร PDF"></iframe></div></div>
 <script>
 /* ใช้ Firebase project เดียวกับ Delivery Tracking & CRM */
 const firebaseConfig = {
@@ -72,6 +117,7 @@ const MAX_FILE_SIZE = 20 * 1024 * 1024;
 const STORAGE_FOLDER = 'pdf-documents';
 const META_COLLECTION = 'pdfDocuments';
 let currentUser = null, userProfile = null, documents = [], activeUploads = 0;
+let pendingFiles = [], activeCompany = '*', collapsedCompanies = new Set();
 
 const $ = id => document.getElementById(id);
 const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -166,6 +212,7 @@ async function uploadFiles(fileList) {
       storageUploaded = true;
       await db.collection(META_COLLECTION).doc(id).set({
         name: file.name, storagePath: objectPath, size: file.size, contentType:'application/pdf',
+        company: ($('company-input')?.value || '').trim() || 'ไม่ระบุบริษัท',
         ownerUid: currentUser.uid, uploadedBy: userProfile.displayName || userProfile.username || currentUser.email || '',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
@@ -191,33 +238,43 @@ async function uploadFiles(fileList) {
 }
 async function loadDocuments() {
   if (!currentUser || !hasPdfPermission(userProfile)) return;
-  $('file-list').innerHTML = '<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-circle-notch fa-spin"></i>กำลังโหลดรายการ...</div></td></tr>';
+  $('file-list').innerHTML = '<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-circle-notch fa-spin"></i>กำลังโหลดรายการ...</div></td></tr>';
   try {
     const snap = await db.collection(META_COLLECTION).orderBy('createdAt','desc').limit(500).get();
     documents = snap.docs.map(doc => ({id:doc.id,...doc.data()})).filter(d => typeof d.storagePath === 'string' && d.storagePath.startsWith(`${STORAGE_FOLDER}/`) && /\.pdf$/i.test(d.name || ''));
     renderDocuments();
   } catch (error) {
     console.error('Load PDF metadata failed:', error);
-    $('file-list').innerHTML = `<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-triangle-exclamation"></i>โหลดรายการไม่ได้: ${escapeHtml(error.code === 'permission-denied' ? 'Firestore Rules ยังไม่อนุญาต collection pdfDocuments' : error.message || 'เกิดข้อผิดพลาด')}</div></td></tr>`;
+    $('file-list').innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-triangle-exclamation"></i>โหลดรายการไม่ได้: ${escapeHtml(error.code === 'permission-denied' ? 'Firestore Rules ยังไม่อนุญาต collection pdfDocuments' : error.message || 'เกิดข้อผิดพลาด')}</div></td></tr>`;
     $('stat-total').textContent = '—'; $('stat-size').textContent = '—';
   }
 }
 function renderDocuments() {
   const q = $('search-input').value.trim().toLocaleLowerCase('th');
-  const filtered = documents.filter(d => `${d.name || ''} ${d.uploadedBy || ''}`.toLocaleLowerCase('th').includes(q));
+  const company = $('company-filter')?.value || activeCompany;
+  const filtered = documents.filter(d => `${d.name || ''} ${d.uploadedBy || ''} ${d.company || 'ไม่ระบุบริษัท'}`.toLocaleLowerCase('th').includes(q) && (company === '*' || (d.company || 'ไม่ระบุบริษัท') === company));
   $('stat-total').textContent = documents.length.toLocaleString('th-TH');
   $('stat-size').textContent = formatSize(documents.reduce((sum,d)=>sum+Number(d.size||0),0));
   $('list-count').textContent = `${filtered.length.toLocaleString('th-TH')} รายการ`;
-  if (!filtered.length) {
-    $('file-list').innerHTML = `<tr><td colspan="4"><div class="empty"><i class="fa-solid fa-folder-open"></i>${q ? 'ไม่พบเอกสารที่ตรงกับคำค้นหา' : 'ยังไม่มีเอกสาร PDF — อัปโหลดไฟล์แรกได้เลย'}</div></td></tr>`;
-    return;
-  }
-  $('file-list').innerHTML = filtered.map(d => `<tr>
-    <td><div class="file-cell"><div class="pdf-icon"><i class="fa-solid fa-file-pdf"></i></div><div><div class="file-name">${escapeHtml(d.name || 'document.pdf')}</div><div class="file-meta">อัปโหลดโดย ${escapeHtml(d.uploadedBy || 'ไม่ระบุ')}</div></div></div></td>
-    <td>${formatSize(d.size)}</td><td>${formatDate(d.createdAt)}</td>
-    <td><div class="actions"><button class="btn btn-light btn-small" data-action="preview" data-id="${escapeHtml(d.id)}" title="เปิดดู PDF"><i class="fa-solid fa-eye"></i> ดู</button><button class="btn btn-primary btn-small" data-action="download" data-id="${escapeHtml(d.id)}" title="ดาวน์โหลด PDF"><i class="fa-solid fa-download"></i> ดาวน์โหลด</button>${(d.ownerUid === currentUser.uid || String(userProfile.role||'').toLowerCase()==='admin') ? `<button class="btn btn-danger btn-small" data-action="delete" data-id="${escapeHtml(d.id)}" title="ลบเอกสาร"><i class="fa-solid fa-trash"></i></button>` : ''}</div></td>
-  </tr>`).join('');
+  if (!filtered.length) { $('file-list').innerHTML = `<tr><td colspan="7"><div class="empty"><i class="fa-solid fa-folder-open"></i>${q ? 'ไม่พบเอกสารที่ตรงกับคำค้นหา' : 'ยังไม่มีเอกสาร PDF — อัปโหลดไฟล์แรกได้เลย'}</div></td></tr>`; return; }
+  const groups = new Map();
+  filtered.forEach(d => { const c = d.company || 'ไม่ระบุบริษัท'; if(!groups.has(c)) groups.set(c,[]); groups.get(c).push(d); });
+  $('file-list').innerHTML = Array.from(groups.entries()).map(([companyName,items]) => {
+    const collapsed = collapsedCompanies.has(companyName);
+    const header = `<tr class="company-group-row"><td colspan="7"><button class="group-toggle" data-toggle-company="${escapeHtml(companyName)}"><i class="fa-solid fa-chevron-${collapsed?'right':'down'}"></i></button><i class="fa-solid fa-folder" style="color:#5145ed;margin-right:9px"></i>${escapeHtml(companyName)} <span class="company-count">${items.length} ไฟล์</span></td></tr>`;
+    const rows = collapsed ? '' : items.map(d => `<tr><td><input type="checkbox" class="doc-select" value="${escapeHtml(d.id)}" aria-label="เลือก ${escapeHtml(d.name)}"></td><td><div class="file-cell"><div class="pdf-icon"><i class="fa-solid fa-file-pdf"></i></div><div><div class="file-name">${escapeHtml(d.name || 'document.pdf')}</div><span class="company-count" style="margin:3px 0 0">PDF</span></div></div></td><td>${escapeHtml(d.company || 'ไม่ระบุบริษัท')}</td><td>${formatSize(d.size)}</td><td>${formatDate(d.createdAt)}</td><td>${escapeHtml(d.uploadedBy || 'ไม่ระบุ')}</td><td><div class="actions"><button class="btn btn-small" data-action="preview" data-id="${escapeHtml(d.id)}" title="ดู PDF"><i class="fa-solid fa-eye"></i> ดู</button><button class="btn btn-small" data-action="download" data-id="${escapeHtml(d.id)}" title="ดาวน์โหลด"><i class="fa-solid fa-download"></i> ดาวน์โหลด</button>${(d.ownerUid === currentUser.uid || String(userProfile.role||'').toLowerCase()==='admin') ? `<button class="btn btn-small" data-action="delete" data-id="${escapeHtml(d.id)}" title="ลบ"><i class="fa-solid fa-trash"></i> ลบ</button>` : ''}</div></td></tr>`).join('');
+    return header + rows;
+  }).join('');
+  updateCompanyFilters();
 }
+function updateCompanyFilters(){
+ const names=[...new Set(documents.map(d=>d.company||'ไม่ระบุบริษัท'))].sort((a,b)=>a.localeCompare(b,'th'));
+ const filter=$('company-filter'), old=filter.value; filter.innerHTML='<option value="*">ทุกบริษัท</option>'+names.map(n=>`<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+ if(names.includes(old)) filter.value=old; else filter.value=activeCompany==='*'?'*':(names.includes(activeCompany)?activeCompany:'*');
+ $('company-options').innerHTML=names.map(n=>`<option value="${escapeHtml(n)}"></option>`).join('');
+ $('company-tabs').innerHTML=`<button class="company-tab ${filter.value==='*'?'active':''}" data-company="*"><i class="fa-solid fa-folder-open"></i> ทั้งหมด (${documents.length})</button>`+names.map(n=>`<button class="company-tab ${filter.value===n?'active':''}" data-company="${escapeHtml(n)}"><i class="fa-solid fa-folder"></i> ${escapeHtml(n)} (${documents.filter(d=>(d.company||'ไม่ระบุบริษัท')===n).length})</button>`).join('');
+}
+
 async function getAuthorizedDownloadUrl(doc) {
   if (!currentUser || !hasPdfPermission(userProfile)) throw new Error('ไม่มีสิทธิ์เข้าถึงเอกสาร');
   if (!doc || typeof doc.storagePath !== 'string' || !doc.storagePath.startsWith(`${STORAGE_FOLDER}/`) || !/\.pdf$/i.test(doc.name || '')) throw new Error('เส้นทางเอกสารไม่ถูกต้อง');
@@ -238,12 +295,13 @@ async function openOrDownload(id, download=false) {
       setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
       showToast('success','เริ่มดาวน์โหลดแล้ว');
     } else {
-      const win = window.open(url, '_blank', 'noopener,noreferrer');
-      if (!win) showToast('info','เบราว์เซอร์บล็อกหน้าต่างใหม่ กรุณาอนุญาตป๊อปอัปแล้วลองอีกครั้ง');
+      $('preview-title').textContent = doc.name || 'ตัวอย่าง PDF';
+      $('preview-frame').src = url; $('preview-modal').classList.add('open'); $('preview-download').onclick = () => openOrDownload(id, true);
     }
   } catch (error) {
     console.error(error);
-    const message = error.code === 'storage/object-not-found' ? 'ไม่พบไฟล์ใน Firebase Storage'
+    const message = location.protocol === 'file:' ? 'กำลังเปิดไฟล์ HTML โดยตรง (file://) ทำให้ Firebase Storage ถูกบล็อกด้วย CORS กรุณาเปิดผ่าน Firebase Hosting หรือเว็บเซิร์ฟเวอร์ HTTPS/localhost'
+      : error.code === 'storage/object-not-found' ? 'ไม่พบไฟล์ใน Firebase Storage'
       : error.code === 'storage/unauthorized' ? 'ไม่มีสิทธิ์อ่านไฟล์ตาม Firebase Storage Rules'
       : error.code === 'storage/canceled' ? 'การดาวน์โหลดถูกยกเลิก'
       : error.code === 'storage/unknown' ? 'ดาวน์โหลดไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่'
@@ -265,11 +323,22 @@ async function deleteDocument(id) {
     console.error(error); showToast('error',error.code === 'storage/unauthorized' || error.code === 'permission-denied' ? 'ไม่มีสิทธิ์ลบตาม Firebase Rules' : (error.message || 'ลบเอกสารไม่สำเร็จ'));
   }
 }
-$('choose-btn').addEventListener('click', () => $('file-input').click());
-$('file-input').addEventListener('change', e => uploadFiles(e.target.files));
+function renderPending(){ const box=$('pending-files'); box.innerHTML=pendingFiles.length?pendingFiles.map((f,i)=>`<div class="pending-file"><i class="fa-solid fa-file-pdf" style="color:#e63950;font-size:19px"></i><span class="pending-name">${escapeHtml(f.name)}</span><span class="pending-size">${formatSize(f.size)}</span><button type="button" data-remove-pending="${i}" aria-label="นำไฟล์ออก"><i class="fa-solid fa-xmark"></i></button></div>`).join(''):'<div class="subtext">ยังไม่ได้เลือกไฟล์</div>'; $('upload-all-btn').innerHTML=`<i class="fa-solid fa-cloud-arrow-up"></i> อัปโหลดทั้งหมด (${pendingFiles.length} ไฟล์)`; }
+function addPending(files){ for(const f of Array.from(files||[])){ if(!isPdfFile(f)){showToast('error',`ข้ามไฟล์ ${f.name}: อนุญาตเฉพาะ PDF`);continue;} if(f.size>MAX_FILE_SIZE){showToast('error',`ไฟล์ ${f.name} มีขนาดเกิน 20 MB`);continue;} if(!pendingFiles.some(x=>x.name===f.name&&x.size===f.size&&x.lastModified===f.lastModified))pendingFiles.push(f); } renderPending(); }
+$('choose-btn').addEventListener('click', () => $('file-input').click()); $('choose-more-btn').addEventListener('click',()=> $('file-input').click());
+$('file-input').addEventListener('change', e => {addPending(e.target.files);e.target.value='';});
+$('pending-files').addEventListener('click',e=>{const b=e.target.closest('[data-remove-pending]');if(b){pendingFiles.splice(Number(b.dataset.removePending),1);renderPending();}});
+$('upload-all-btn').addEventListener('click',async()=>{if(!pendingFiles.length)return showToast('info','กรุณาเลือกไฟล์ PDF ก่อน');const batch=pendingFiles.slice();pendingFiles=[];renderPending();await uploadFiles(batch);});
 $('refresh-btn').addEventListener('click', loadDocuments);
 $('search-input').addEventListener('input', renderDocuments);
-$('clear-search').addEventListener('click', () => { $('search-input').value=''; renderDocuments(); });
+$('clear-search').addEventListener('click', () => { $('search-input').value=''; $('company-filter').value='*'; activeCompany='*'; renderDocuments(); });
+$('company-filter').addEventListener('change',()=>{activeCompany=$('company-filter').value;renderDocuments();});
+$('company-tabs').addEventListener('click',e=>{const b=e.target.closest('[data-company]');if(!b)return;activeCompany=b.dataset.company;$('company-filter').value=activeCompany;renderDocuments();});
+$('file-list').addEventListener('click',e=>{const b=e.target.closest('[data-toggle-company]');if(b){const n=b.dataset.toggleCompany;collapsedCompanies.has(n)?collapsedCompanies.delete(n):collapsedCompanies.add(n);renderDocuments();}});
+$('preview-close').addEventListener('click',()=>{$('preview-modal').classList.remove('open');$('preview-frame').src='about:blank';});
+$('preview-modal').addEventListener('click',e=>{if(e.target===$('preview-modal'))$('preview-close').click();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('preview-close').click();});
+$('select-all').addEventListener('change',e=>document.querySelectorAll('.doc-select').forEach(c=>c.checked=e.target.checked));
 $('file-list').addEventListener('click', e => {
   const btn = e.target.closest('button[data-action]'); if (!btn) return;
   const id = btn.dataset.id;
@@ -285,6 +354,7 @@ $('logout-btn').addEventListener('click', async () => {
   const result = await Swal.fire({icon:'question',title:'ออกจากระบบ?',text:'การออกจากระบบจะออกจาก Firebase Login ของระบบเดียวกันด้วย',showCancelButton:true,confirmButtonText:'ออกจากระบบ',cancelButtonText:'ยกเลิก'});
   if (result.isConfirmed) { await auth.signOut(); location.href='./index.html'; }
 });
+if (location.protocol === 'file:') console.warn('PDF Document Center: อย่าเปิด HTML ด้วย file:// เพราะ Firebase Storage CORS จะปฏิเสธ origin null; ให้เปิดผ่าน HTTPS Hosting หรือ localhost');
 auth.onAuthStateChanged(handleAuth);
 </script>
 </body>
