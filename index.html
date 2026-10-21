@@ -4430,7 +4430,7 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
                     class="px-2.5 py-1.5 text-[10px] font-bold text-sky-700 bg-sky-50 hover:bg-sky-600 hover:text-white border border-sky-100 rounded-lg transition"
                     title="แก้ไขชื่อ ต้นทุน หรือราคาของบริษัท">✏️ แก้ไข</button>
                 <button type="button"
-                    onclick="deleteCompanyProduct('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\'")}', '${escapeHTML(companyName).replace(/'/g, "\'")}')"
+                    onclick="deleteCompanyProduct('${p.id}', '${escapeHTML(p.name).replace(/'/g, String.fromCharCode(92,39))}', '${escapeHTML(companyName).replace(/'/g, String.fromCharCode(92,39))}')"
                     class="px-2.5 py-1.5 text-[10px] font-semibold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg transition"
                     title="ลบสินค้าราคาประจำของบริษัท">ลบ</button>
             </div>
@@ -5208,7 +5208,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 const exactMatch = allDeliveries.some(item => String(item.customerName || '').toLowerCase() === keyword);
                 if (!exactMatch) {
                     htmlContent += `
-                        <div onclick="addNewCustomerFromModal('${escapeHTML(filterText).replace(/'/g, "\\'")}')" 
+                        <div onclick="addNewCustomerFromModal('${escapeHTML(filterText).replace(/'/g, String.fromCharCode(92,39))}')" 
                              class="flex items-center justify-between p-3.5 rounded-2xl border bg-sky-600 text-white shadow-md transition cursor-pointer mb-2 hover:bg-sky-700">
                             <div class="flex items-center gap-2.5 truncate">
                                 <span class="text-base">➕</span>
@@ -5232,7 +5232,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 const rowBg = index % 2 === 0 ? 'bg-white hover:bg-sky-50/70 border-slate-100' : 'bg-slate-50/70 hover:bg-sky-50/90 border-slate-200/60';
                 
                 return `
-                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, "\\'")}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.district || '').replace(/'/g, "\\'")}', '${escapeHTML(item.phone || '').replace(/'/g, "\\'")}', '${escapeHTML(item.address || '').replace(/'/g, "\\'")}', '${encodeURIComponent(JSON.stringify(getCustomerLineIds(item)))}')" 
+                    <div onclick="selectCustomerItem('${escapeHTML(item.customerName).replace(/'/g, String.fromCharCode(92,39))}', '${escapeHTML(item.companyName || '').replace(/'/g, String.fromCharCode(92,39))}', '${escapeHTML(item.district || '').replace(/'/g, String.fromCharCode(92,39))}', '${escapeHTML(item.phone || '').replace(/'/g, String.fromCharCode(92,39))}', '${escapeHTML(item.address || '').replace(/'/g, String.fromCharCode(92,39))}', '${encodeURIComponent(JSON.stringify(getCustomerLineIds(item)))}')" 
                          class="flex items-center justify-between p-3 rounded-2xl border ${rowBg} shadow-2xs transition cursor-pointer group mb-1.5">
                         <div class="flex items-center gap-3 truncate">
                             <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
@@ -6100,8 +6100,8 @@ function getCompanyPriceHistory(companyName, productName) {
 
                 const isAdmin = currentUserProfile?.role === 'admin';
                 const stockActionsHtml = isAdmin ? `<div class="flex items-center gap-1.5 flex-shrink-0">
-                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}', ${cost}, ${price}, '${escapeHTML(p.unit || '').replace(/'/g, "\\'")}' )" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
-                            <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, "\\'")}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
+                            <button type="button" onclick="editStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, String.fromCharCode(92,39))}', ${cost}, ${price}, '${escapeHTML(p.unit || '').replace(/'/g, String.fromCharCode(92,39))}' )" class="px-2.5 py-1 text-[11px] bg-sky-50 text-sky-700 hover:bg-sky-100 rounded-xl transition font-medium">แก้ไข</button>
+                            <button type="button" onclick="deleteStockItem('${p.id}', '${escapeHTML(p.name).replace(/'/g, String.fromCharCode(92,39))}')" class="px-2.5 py-1 text-[11px] bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-xl transition font-medium">ลบ</button>
                         </div>` : '';
 
                 const companySourceHtml = linkedCompanies.length
@@ -7403,11 +7403,11 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             <div class="flex items-center gap-2.5 flex-wrap">
                                 <div class="inline-flex items-center gap-1.5 font-bold text-indigo-950 text-sm bg-indigo-100/70 px-2.5 py-0.5 rounded-md border border-indigo-200/60">
                                     <span>${escapeHTML(item.customerName)}</span>
-                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, "\\'")}')" title="แก้ไขข้อมูลลูกค้า (ชื่อ บริษัท เบอร์โทร ที่อยู่)" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
+                                    <button onclick="openEditCustomerModal('${item.id}', '${escapeHTML(item.customerName || '').replace(/'/g, String.fromCharCode(92,39))}')" title="แก้ไขข้อมูลลูกค้า (ชื่อ บริษัท เบอร์โทร ที่อยู่)" class="text-indigo-400 hover:text-indigo-700 transition">✏️</button>
                                 </div>
                                 <div class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md font-medium border border-purple-100 text-[11px]">
                                     <span>${item.district !== undefined && item.district !== null && String(item.district).trim() !== '' ? `เขต ${escapeHTML(item.district)} • ` : ''}${escapeHTML(item.companyName || 'ไม่ระบุบริษัท')}</span>
-                                    <button onclick="openEditCompanyModal('${item.id}', '${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.district || '').replace(/'/g, "\\'")}')" title="แก้ไขชื่อบริษัท" class="text-purple-400 hover:text-purple-700 transition">✏️</button>
+                                    <button onclick="openEditCompanyModal('${item.id}', '${escapeHTML(item.companyName || '').replace(/'/g, String.fromCharCode(92,39))}', '${escapeHTML(item.district || '').replace(/'/g, String.fromCharCode(92,39))}')" title="แก้ไขชื่อบริษัท" class="text-purple-400 hover:text-purple-700 transition">✏️</button>
                                 </div>
                                 <button type="button" onclick="toggleCustomerDetails('${item.id}')" class="text-[10px] font-bold text-slate-500 hover:text-indigo-700 bg-white/80 px-2 py-1 rounded-md border border-slate-200 hover:border-indigo-200 transition" title="แสดง/ซ่อนรายละเอียดลูกค้า">▾ รายละเอียด</button>
                             </div>
@@ -7418,7 +7418,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                     title="ดูและบันทึกประวัติการติดต่อกับลูกค้า">
                                     📝 CRM <span class="${Array.isArray(item.customerNotes) && item.customerNotes.length > 0 ? 'crm-count-badge text-[10px] font-extrabold' : 'text-[10px] opacity-70'}"${Array.isArray(item.customerNotes) && item.customerNotes.length > 0 ? ' style="color:#dc2626 !important; font-weight:900 !important;"' : ''}>(${Array.isArray(item.customerNotes) ? item.customerNotes.length : 0})</span>
                                 </button>
-                                <button onclick="showCompanyAllHistory('${escapeHTML(item.companyName || '').replace(/'/g, "\\'")}', '${escapeHTML(item.companyKey || '').replace(/'/g, "\\'")}')" 
+                                <button onclick="showCompanyAllHistory('${escapeHTML(item.companyName || '').replace(/'/g, String.fromCharCode(92,39))}', '${escapeHTML(item.companyKey || '').replace(/'/g, String.fromCharCode(92,39))}')" 
                                     class="text-[11px] font-medium text-sky-600 hover:text-sky-800 transition px-2 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 border border-sky-200/60 flex items-center gap-1"
                                     title="ดูประวัติสินค้าทั้งหมดที่บริษัทนี้เคยซื้อ">
                                     📦 ดูสินค้าทั้งหมด <span class="ml-0.5 px-1.5 py-0.5 rounded-full bg-white text-sky-700 border border-sky-200 font-bold">${companyProductCount}</span>
@@ -7483,8 +7483,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                             ` : ''}
                                         </div>
                                         <div class="flex items-center gap-1.5 flex-shrink-0">
-                                            <button onclick="openEditSubItemModal('${item.id}', '${sub.id}', '${escapeHTML(sub.text).replace(/'/g, "\\'")}', '${sub.dueDate || ''}')" title="แก้ไขรายการหรือราคา" class="text-slate-400 hover:text-sky-600 transition px-1.5 py-1 rounded-lg hover:bg-sky-50 text-[11px]">✏️</button>
-                                            <button onclick="deleteSubItem('${item.id}', '${sub.id}', '${escapeHTML(sub.text).replace(/'/g, "\\'")}')" title="ลบรายการนี้" class="text-slate-400 hover:text-rose-600 transition px-1.5 py-1 rounded-lg hover:bg-rose-50 text-[11px]">✕</button>
+                                            <button onclick="openEditSubItemModal('${item.id}', '${sub.id}', '${escapeHTML(sub.text).replace(/'/g, String.fromCharCode(92,39))}', '${sub.dueDate || ''}')" title="แก้ไขรายการหรือราคา" class="text-slate-400 hover:text-sky-600 transition px-1.5 py-1 rounded-lg hover:bg-sky-50 text-[11px]">✏️</button>
+                                            <button onclick="deleteSubItem('${item.id}', '${sub.id}', '${escapeHTML(sub.text).replace(/'/g, String.fromCharCode(92,39))}')" title="ลบรายการนี้" class="text-slate-400 hover:text-rose-600 transition px-1.5 py-1 rounded-lg hover:bg-rose-50 text-[11px]">✕</button>
                                             <button onclick="toggleSubItemStatus('${item.id}', '${sub.id}', '${escapeHTML(item.customerName)}', '${escapeHTML(sub.text)}', '${sub.status || 'pending'}')" title="${isDone ? 'เปลี่ยนเป็นค้างส่ง' : 'ติ๊กกว่าส่งแล้ว'}" class="px-2.5 py-1 rounded-lg ${isDone ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200' : 'bg-white text-sky-600 hover:bg-emerald-500 hover:text-white border border-sky-200'} font-medium transition text-[11px]">
                                                 ${isDone ? '✓ ส่งแล้ว' : 'รอส่ง'}
                                             </button>
