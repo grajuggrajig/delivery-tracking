@@ -207,7 +207,7 @@
                 opacity 0.24s ease,
                 transform 0.42s cubic-bezier(0.22, 1, 0.36, 1),
                 box-shadow 0.28s ease;
-            will-change: width, min-width, max-width, flex-basis, transform, opacity;
+            will-change: transform, opacity; /* ลดการจองเลเยอร์ GPU ขนาดใหญ่; คง transition/พฤติกรรมเดิม */
             overflow: hidden;
             backface-visibility: hidden;
         }
@@ -1147,7 +1147,7 @@ body > header{z-index:900 !important}
 #toast-container{z-index:60000 !important}
 
 /* Navigation must switch instantly; avoid a leftover transition feeling like a second page. */
-.gemini-nav{will-change:background,transform}
+.gemini-nav{will-change:transform} /* background เปลี่ยนทันที ไม่ต้องจองเลเยอร์เพิ่ม */
 .gemini-nav:active{transform:translateX(1px) scale(.985)}
 .gemini-ui-switching{pointer-events:none !important}
 
