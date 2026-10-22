@@ -4021,76 +4021,6 @@ function setupCompanyProductNameFormatting() {
 }
 setupCompanyProductNameFormatting();
 
-// หาเครือข่ายบริษัทที่เชื่อมโยงกันจากความสัมพันธ์สินค้าเดิม:
-// stockProductId เดียวกันถือว่าเชื่อมกัน; หากรายการใดไม่มี stockProductId
-// จะใช้ชื่อสินค้าที่ normalize แล้วเป็น fallback ตามหลักการเดิมของหน้าจอแก้ไข
-function getLinkedCompanyKeysForNewProduct(startCompanyKey, startCompanyName) {
-    const records = Array.isArray(allCompanyProducts) ? allCompanyProducts : [];
-    const parent = new Map();
-    const companyNames = new Map();
-    const ensure = key => {
-        if (!key) return;
-        if (!parent.has(key)) parent.set(key, key);
-    };
-    const find = key => {
-        if (!parent.has(key)) parent.set(key, key);
-        let root = key;
-        while (parent.get(root) !== root) root = parent.get(root);
-        while (parent.get(key) !== key) {
-            const next = parent.get(key);
-            parent.set(key, root);
-            key = next;
-        }
-        return root;
-    };
-    const union = (a, b) => {
-        if (!a || !b) return;
-        const ra = find(a), rb = find(b);
-        if (ra !== rb) parent.set(rb, ra);
-    };
-    const products = records.map(p => {
-        const name = String(p.companyName || p.companyKey || '').trim();
-        const key = normalizeCompanyProductKey(p.companyKey || name);
-        if (key) {
-            ensure(key);
-            if (name && !companyNames.has(key)) companyNames.set(key, name);
-        }
-        return { p, key, stockId: String(p.stockProductId || '').trim(), nameKey: normalizeCompanyProductName(p.name) };
-    }).filter(x => x.key);
-
-    const byStockId = new Map();
-    const byName = new Map();
-    products.forEach(x => {
-        if (x.stockId) {
-            if (!byStockId.has(x.stockId)) byStockId.set(x.stockId, []);
-            byStockId.get(x.stockId).push(x);
-        }
-        if (x.nameKey) {
-            if (!byName.has(x.nameKey)) byName.set(x.nameKey, []);
-            byName.get(x.nameKey).push(x);
-        }
-    });
-    byStockId.forEach(group => {
-        for (let i = 1; i < group.length; i++) union(group[0].key, group[i].key);
-    });
-    byName.forEach(group => {
-        // เหมือน editCompanyProduct: ชื่อเป็น fallback เฉพาะเมื่ออย่างน้อยหนึ่งรายการไม่มี ID
-        if (!group.some(x => !x.stockId)) return;
-        for (let i = 1; i < group.length; i++) union(group[0].key, group[i].key);
-    });
-
-    const startKey = normalizeCompanyProductKey(startCompanyKey || startCompanyName);
-    if (!startKey) return [];
-    ensure(startKey);
-    if (startCompanyName && !companyNames.has(startKey)) companyNames.set(startKey, String(startCompanyName).trim());
-    const root = find(startKey);
-    const result = new Map([[startKey, String(startCompanyName || companyNames.get(startKey) || '').trim()]]);
-    companyNames.forEach((name, key) => {
-        if (find(key) === root) result.set(key, name);
-    });
-    return Array.from(result.entries()).filter(([key, name]) => key && name).map(([key, name]) => ({ key, name }));
-}
-
 async function saveCompanyProduct(companyName, name, cost, price, unit = '', editId = '', stableCompanyKey = '', nameHtml = '') {
     const cleanCompany = String(companyName || '').trim();
     const cleanName = String(name || '').trim();
@@ -4281,55 +4211,16 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        const addLinkedToggle = document.getElementById('company-product-add-linked-toggle');
-        if (!editId && addLinkedToggle?.checked) {
-            const linkedCompanies = getLinkedCompanyKeysForNewProduct(companyKey, cleanCompany);
-            const targets = linkedCompanies.length ? linkedCompanies : [{ key: companyKey, name: cleanCompany }];
-            const existingForTargets = allCompanyProducts.filter(p => targets.some(target =>
-                normalizeCompanyProductKey(p.companyKey || p.companyName) === target.key &&
-                (normalizeCompanyProductName(p.name) === normalizedName ||
-                 normalizeProductDuplicateKey(p.name) === duplicateNameKey)
-            ));
-            const alreadyExists = new Set(existingForTargets.map(p => normalizeCompanyProductKey(p.companyKey || p.companyName)));
-            const toCreate = targets.filter(target => !alreadyExists.has(target.key));
-            if (!toCreate.length) {
-                showToast('สินค้านี้มีอยู่แล้วในทุกบริษัทที่เชื่อมโยง ไม่มีการสร้างรายการซ้ำ', 'info');
-                return false;
-            }
-
-            let batch = db.batch();
-            let batchCount = 0;
-            let createdCount = 0;
-            for (const target of toCreate) {
-                const targetRef = db.collection('companyProducts').doc();
-                batch.set(targetRef, {
-                    ...payload,
-                    companyKey: target.key,
-                    companyName: target.name,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                batchCount++;
-                createdCount++;
-                if (batchCount === 450) {
-                    await batch.commit();
-                    batch = db.batch();
-                    batchCount = 0;
-                }
-            }
-            if (batchCount > 0) await batch.commit();
-            const skippedCount = targets.length - createdCount;
-            showToast(`เพิ่ม "${cleanName}" ให้ ${createdCount} บริษัทที่เชื่อมโยงแล้ว${skippedCount ? ` (ข้าม ${skippedCount} บริษัทที่มีสินค้าอยู่แล้ว)` : ''} โดยใช้ราคาเดียวกัน`, 'success');
-        } else if (existing && existing.id) {
+        if (existing && existing.id) {
             await db.collection('companyProducts').doc(existing.id).update(payload);
-            showToast(`บันทึก "${cleanName}" ในราคาของบริษัท "${cleanCompany}" แล้ว`, 'success');
         } else {
             await db.collection('companyProducts').add({
                 ...payload,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
-            showToast(`บันทึก "${cleanName}" ในราคาของบริษัท "${cleanCompany}" แล้ว`, 'success');
         }
-        if (addLinkedToggle) addLinkedToggle.checked = false;
+
+        showToast(`บันทึก "${cleanName}" ในราคาของบริษัท "${cleanCompany}" แล้ว`, 'success');
         return true;
     } catch (err) {
         console.error('saveCompanyProduct:', err);
@@ -4358,10 +4249,6 @@ window.editCompanyProduct = function(id) {
     if (editIdInput) editIdInput.value = product.id;
     const linkedToggle = document.getElementById('company-product-update-linked-toggle');
     const linkedWrap = document.getElementById('company-product-update-linked-wrap');
-    const addLinkedWrap = document.getElementById('company-product-add-linked-wrap');
-    const addLinkedToggle = document.getElementById('company-product-add-linked-toggle');
-    if (addLinkedWrap) addLinkedWrap.classList.add('hidden');
-    if (addLinkedToggle) addLinkedToggle.checked = false;
     // ข้อมูลเก่าบางรายการอาจยังไม่มี stockProductId จึงใช้ชื่อสินค้าที่ปรับช่องว่างแล้ว
     // เป็นตัวช่วยค้นหารายการที่เชื่อมโยง โดยจะแก้หลายบริษัทก็ต่อเมื่อผู้ใช้ติ๊กยืนยันเอง
     const productLinkKey = normalizeCompanyProductName(product.name);
@@ -4409,12 +4296,8 @@ window.cancelCompanyProductEdit = function() {
     if (editIdInput) editIdInput.value = '';
     const linkedToggle = document.getElementById('company-product-update-linked-toggle');
     const linkedWrap = document.getElementById('company-product-update-linked-wrap');
-    const addLinkedWrap = document.getElementById('company-product-add-linked-wrap');
-    const addLinkedToggle = document.getElementById('company-product-add-linked-toggle');
     if (linkedToggle) linkedToggle.checked = false;
     if (linkedWrap) linkedWrap.classList.add('hidden');
-    if (addLinkedToggle) addLinkedToggle.checked = false;
-    if (addLinkedWrap) addLinkedWrap.classList.remove('hidden');
     if (nameInput) nameInput.innerHTML = '';
     if (costInput) costInput.value = '';
     if (priceInput) priceInput.value = '';
@@ -4733,10 +4616,6 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                         class="hidden px-2 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition"
                         title="ยกเลิกการแก้ไข">ยกเลิก</button>
                 </div>
-                <label id="company-product-add-linked-wrap" class="sm:col-span-6 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-3 text-xs font-medium text-sky-950 shadow-sm">
-                    <input id="company-product-add-linked-toggle" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-sky-600">
-                    <span><strong>เพิ่มสินค้าใหม่นี้ให้ทุกบริษัทที่เชื่อมโยง</strong><br>ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยเดียวกัน • ระบบจะข้ามบริษัทที่มีสินค้านี้อยู่แล้ว</span>
-                </label>
                 <label id="company-product-update-linked-wrap" class="hidden sm:col-span-6 flex items-start gap-2 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-3 py-3 text-xs font-medium text-indigo-950 shadow-sm">
                     <input id="company-product-update-linked-toggle" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600">
                     <span><strong>อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง</strong><br>ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกัน เฉพาะเมื่อเลือกช่องนี้เท่านั้น</span>
