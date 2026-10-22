@@ -8621,13 +8621,23 @@ function sanitizeCrmNoteHtml(html) {
     template.innerHTML = String(html || '');
     const allowedTags = new Set(['B', 'STRONG', 'SPAN', 'BR', 'DIV', 'P']);
     const colorMap = {
-        '#111827':'#111827', 'rgb(17,24,39)':'#111827', 'rgb(17,31,39)':'#111827',
-        'black':'#111827', '#dc2626':'#dc2626', 'rgb(220,38,38)':'#dc2626', 'red':'#dc2626',
-        '#0284c7':'#0284c7', 'rgb(2,132,199)':'#0284c7'
+        '#111827':'#111827', '#111827ff':'#111827', 'black':'#111827',
+        'rgb(17,24,39)':'#111827', 'rgba(17,24,39,1)':'#111827',
+        '#dc2626':'#dc2626', '#dc2626ff':'#dc2626', 'red':'#dc2626',
+        'rgb(220,38,38)':'#dc2626', 'rgba(220,38,38,1)':'#dc2626',
+        '#0284c7':'#0284c7', '#0284c7ff':'#0284c7',
+        'rgb(2,132,199)':'#0284c7', 'rgba(2,132,199,1)':'#0284c7'
     };
+    // ทำค่าสีจากเบราว์เซอร์ให้เป็นรูปแบบมาตรฐานเดียวกันก่อนบันทึกลง Firestore
     const normalizeColor = value => {
         const color = String(value || '').toLowerCase().replace(/\s/g, '');
-        return colorMap[color] || '';
+        if (colorMap[color]) return colorMap[color];
+        const rgb = color.match(/^rgba?\((\d+),(\d+),(\d+)(?:,(?:0?\.\d+|1))?\)$/);
+        if (rgb) {
+            const canonical = `rgb(${Number(rgb[1])},${Number(rgb[2])},${Number(rgb[3])})`;
+            return colorMap[canonical] || '';
+        }
+        return '';
     };
     const walk = node => {
         [...node.childNodes].forEach(child => {
@@ -8636,7 +8646,8 @@ function sanitizeCrmNoteHtml(html) {
                 // แปลงเป็น SPAN ก่อนกรองแท็ก เพื่อให้สีที่อนุญาตไม่หายไป
                 if (child.tagName === 'FONT') {
                     const span = document.createElement('span');
-                    const color = normalizeColor(child.getAttribute('color') || child.style.color);
+                    const color = normalizeColor(child.style.color) ||
+                        normalizeColor(child.getAttribute('color'));
                     if (color) span.style.color = color;
                     while (child.firstChild) span.appendChild(child.firstChild);
                     child.replaceWith(span);
@@ -8647,13 +8658,13 @@ function sanitizeCrmNoteHtml(html) {
                     return;
                 }
                 let savedColor = '';
+                let savedBold = false;
                 if (child.tagName === 'SPAN') {
-                    savedColor = normalizeColor(child.style.color || child.getAttribute('color'));
-                    // รองรับ style ที่เบราว์เซอร์เขียนเป็น color: rgb(...) และ style attribute อื่นร่วมด้วย
-                    if (!savedColor) {
-                        const colorAttr = child.getAttribute('color');
-                        savedColor = normalizeColor(colorAttr);
-                    }
+                    // เก็บทั้งสีและตัวหนาที่ execCommand('styleWithCSS') อาจบันทึกไว้ใน SPAN
+                    savedColor = normalizeColor(child.style.color) ||
+                        normalizeColor(child.getAttribute('color'));
+                    const weight = String(child.style.fontWeight || '').toLowerCase().trim();
+                    savedBold = weight === 'bold' || (Number(weight) >= 600 && Number(weight) <= 900);
                 }
                 [...child.attributes].forEach(attr => {
                     if (child.tagName !== 'SPAN' || attr.name !== 'style') child.removeAttribute(attr.name);
@@ -8661,6 +8672,8 @@ function sanitizeCrmNoteHtml(html) {
                 if (child.tagName === 'SPAN') {
                     child.removeAttribute('style');
                     if (savedColor) child.style.color = savedColor;
+                    // อย่าทิ้ง font-weight ระหว่าง sanitize ก่อนเขียนลง Firestore
+                    if (savedBold) child.style.fontWeight = '700';
                 }
                 walk(child);
             } else if (child.nodeType !== Node.TEXT_NODE) child.remove();
