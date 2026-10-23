@@ -2590,7 +2590,7 @@ body > header{z-index:900 !important}
             <!-- ปุ่มตรวจรายการซ้ำและปิดหน้าต่าง วางติดกันที่มุมขวา -->
             <div id="stock-modal-header-actions" class="flex items-center justify-end gap-2 shrink-0 ml-auto">
                 <button type="button" id="product-duplicate-audit-btn" class="shrink-0 px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100" title="ตรวจหารายการซ้ำและราคาที่เชื่อมโยง">🔎 ตรวจรายการซ้ำ</button>
-                <button type="button" id="product-global-cleanup-btn" class="shrink-0 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-bold hover:bg-rose-100" title="ค้นหาและลบรายการสินค้าชื่อเดียวกันจากทุกบริษัท">🗑️ ลบสินค้าทดสอบ</button>
+                <button type="button" id="product-global-cleanup-btn" class="shrink-0 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-bold hover:bg-rose-100" title="ค้นหาและลบรายการสินค้าชื่อเดียวกันจากทุกบริษัท">🗑️ ลบสินค้าทั้งหมด</button>
                 <button type="button" id="close-stock-modal" class="w-8 h-8 flex shrink-0 items-center justify-center rounded-full bg-slate-100/80 text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 transition-all duration-200 text-xs font-bold" title="ปิดหน้าต่าง Stock Management" aria-label="ปิดหน้าต่าง Stock Management">
                     ✕
                 </button>
@@ -4980,7 +4980,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     ${currentUserProfile?.role === 'admin' ? `<button type="button" id="open-product-retirement-btn"
                         class="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-extrabold shadow-sm transition"
                         data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
-                        onclick="openProductRetirementModal(this.dataset.companyName, this.dataset.companyKey)">🗑️ เลิกขายสินค้าทุกบริษัท</button>` : ''}
+                        onclick="openProductRetirementModal(this.dataset.companyName, this.dataset.companyKey)">🗑️ สินค้าทุกบริษัท</button>` : ''}
                     <button type="button" id="add-company-product-to-others-btn"
                         class="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-extrabold shadow-sm transition"
                         data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
