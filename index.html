@@ -4230,6 +4230,82 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
     }
 }
 
+
+/* เพิ่มสินค้าใหม่ให้หลายบริษัทที่เลือก โดยคงรายการและราคาของบริษัทเดิมไว้ */
+window.openAddCompanyProductToOthers = function(sourceCompanyName, sourceCompanyKey) {
+    const prior = document.getElementById('add-company-product-network-modal');
+    if (prior) prior.remove();
+    const names = new Map();
+    (typeof getUniqueCompanyList === 'function' ? getUniqueCompanyList() : []).forEach(n => {
+        n = String(n || '').trim(); if (n) names.set(normalizeCompanyProductKey(n), n);
+    });
+    (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).forEach(p => {
+        const n = String(p.companyName || '').trim(); if (n) names.set(normalizeCompanyProductKey(n), n);
+    });
+    const sourceKey = normalizeCompanyProductKey(sourceCompanyKey || sourceCompanyName);
+    const targets = [...names.entries()].filter(([k]) => k !== sourceKey).map(([,n]) => n).sort((a,b)=>a.localeCompare(b,'th'));
+    const modal = document.createElement('div');
+    modal.id = 'add-company-product-network-modal';
+    modal.className = 'fixed inset-0 flex items-center justify-center p-3 sm:p-5';
+    modal.style.cssText = 'z-index:45000;background:rgba(15,23,42,.62);backdrop-filter:blur(5px)';
+    modal.innerHTML = `
+      <div class="bg-white rounded-2xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[92vh] flex flex-col overflow-hidden">
+        <div class="px-5 py-4 text-white bg-gradient-to-r from-indigo-900 via-blue-700 to-violet-700 flex items-center justify-between gap-3">
+          <div><div class="text-sm font-extrabold">🔗 เพิ่มสินค้าไปบริษัทอื่น</div><div class="text-[11px] text-blue-100 mt-1">บริษัทต้นทาง: ${escapeHTML(sourceCompanyName)}</div></div>
+          <button type="button" data-network-close class="w-8 h-8 rounded-lg bg-white/15 font-bold">✕</button>
+        </div>
+        <div class="p-4 border-b border-slate-100 bg-slate-50">
+          <input id="network-company-search" type="search" placeholder="🔍 ค้นหาชื่อบริษัท..." class="w-full px-3 py-2.5 text-sm border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-indigo-200">
+          <div class="flex items-center justify-between gap-2 mt-3 text-xs"><span class="font-bold text-indigo-700">เลือกแล้ว <b id="network-company-selected-count">0</b> บริษัท</span>
+          <div class="flex gap-2"><button type="button" id="network-select-visible" class="px-3 py-1.5 rounded-lg border bg-white">เลือกที่แสดง</button><button type="button" id="network-clear-selection" class="px-3 py-1.5 rounded-lg border bg-white">ล้างที่เลือก</button></div></div>
+        </div>
+        <div id="network-company-list" class="p-3 overflow-y-auto min-h-0 flex-1 space-y-1" style="max-height:52vh"></div>
+        <div class="p-4 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="text-[11px] text-slate-500">ใช้ชื่อสินค้า ต้นทุน ราคา และหน่วยจากฟอร์มปัจจุบัน<br>รายการที่มีสินค้าอยู่แล้วจะไม่ถูกเขียนทับ</div>
+          <div class="flex gap-2 shrink-0"><button type="button" data-network-close class="px-4 py-2 rounded-xl border text-slate-600 font-bold text-xs">ยกเลิก</button><button type="button" id="network-company-confirm" class="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs">＋ เพิ่มให้บริษัทที่เลือก</button></div>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const list = modal.querySelector('#network-company-list'), search = modal.querySelector('#network-company-search');
+    const count = modal.querySelector('#network-company-selected-count'), selected = new Set();
+    const render = () => {
+        const kw = search.value.trim().toLocaleLowerCase('th-TH');
+        const visible = targets.filter(n => n.toLocaleLowerCase('th-TH').includes(kw));
+        count.textContent = selected.size;
+        list.innerHTML = visible.length ? visible.map((n,i)=>`<label class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/50 cursor-pointer">
+          <input type="checkbox" data-network-company="${escapeHTML(n)}" ${selected.has(n)?'checked':''} class="w-4 h-4 accent-indigo-600 shrink-0">
+          <span class="text-xs sm:text-sm font-semibold text-slate-700 break-words flex-1">${escapeHTML(n)}</span><span class="text-[10px] text-slate-400">บริษัท ${i+1}</span></label>`).join('') : '<div class="p-8 text-center text-sm text-slate-400">ไม่พบบริษัทที่ค้นหา</div>';
+    };
+    render(); search.addEventListener('input',render);
+    list.addEventListener('change',e=>{const cb=e.target.closest('[data-network-company]');if(!cb)return;cb.checked?selected.add(cb.dataset.networkCompany):selected.delete(cb.dataset.networkCompany);render();});
+    modal.querySelector('#network-select-visible').addEventListener('click',()=>{const kw=search.value.trim().toLocaleLowerCase('th-TH');targets.filter(n=>n.toLocaleLowerCase('th-TH').includes(kw)).forEach(n=>selected.add(n));render();});
+    modal.querySelector('#network-clear-selection').addEventListener('click',()=>{selected.clear();render();});
+    modal.querySelectorAll('[data-network-close]').forEach(b=>b.addEventListener('click',()=>modal.remove()));
+    modal.querySelector('#network-company-confirm').addEventListener('click',async()=>{
+        if(!selected.size){showToast('กรุณาเลือกบริษัทอย่างน้อย 1 บริษัท','warning');return;}
+        const editor=document.getElementById('company-product-name-input');
+        const name=String(editor?.innerText||editor?.textContent||'').replace(/\u00a0/g,' ').trim();
+        const cost=document.getElementById('company-product-cost-input')?.value||'0';
+        const price=document.getElementById('company-product-price-input')?.value||'';
+        const unit=document.getElementById('company-product-unit-input')?.value||'';
+        if(document.getElementById('company-product-edit-id')?.value){showToast('ฟังก์ชันนี้ใช้เพิ่มสินค้าใหม่เท่านั้น กรุณายกเลิกโหมดแก้ไขก่อน','warning');return;}
+        if(!name||!(Number(price)>0)){showToast('กรุณากรอกชื่อสินค้าและราคาขายให้ถูกต้องก่อน','warning');return;}
+        const btn=modal.querySelector('#network-company-confirm');btn.disabled=true;btn.textContent='กำลังบันทึก...';
+        let added=0,skipped=0,failed=0;
+        const nameHtml=editor?.innerHTML||'';
+        for(const company of selected){
+            const dup=(Array.isArray(allCompanyProducts)?allCompanyProducts:[]).some(p=>
+                normalizeCompanyProductKey(p.companyKey||p.companyName)===normalizeCompanyProductKey(company)&&
+                (normalizeCompanyProductName(p.name)===normalizeCompanyProductName(name)||normalizeProductDuplicateKey(p.name)===normalizeProductDuplicateKey(name)));
+            if(dup){skipped++;continue;}
+            if(await saveCompanyProduct(company,name,cost,price,unit,'',normalizeCompanyProductKey(company),nameHtml))added++;else failed++;
+        }
+        modal.remove();
+        showToast(added?`เพิ่มสินค้าให้ ${added} บริษัทสำเร็จ${skipped?` • ข้ามรายการซ้ำ ${skipped} บริษัท`:''}${failed?` • ไม่สำเร็จ ${failed} บริษัท`:''}`:`ไม่มีบริษัทที่เพิ่มได้${skipped?` • ข้ามรายการซ้ำ ${skipped} บริษัท`:''}${failed?` • ไม่สำเร็จ ${failed} บริษัท`:''}`,added?(failed?'warning':'success'):(failed?'error':'info'));
+        if(added && typeof refreshCompanyProducts === 'function'){try{await refreshCompanyProducts();}catch(e){console.warn(e);}}
+    });
+};
+
 window.editCompanyProduct = function(id) {
     const product = allCompanyProducts.find(p => p.id === id);
     if (!product) {
@@ -4560,7 +4636,11 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                         ราคานี้ใช้เฉพาะ <b>${safeCompany}</b> และสินค้าจะถูกบันทึกไว้ใน <b>Manage Stock</b> ด้วย
                     </div>
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                    <button type="button" id="add-company-product-to-others-btn"
+                        class="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-extrabold shadow-sm transition"
+                        data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
+                        onclick="openAddCompanyProductToOthers(this.dataset.companyName, this.dataset.companyKey)">🔗 เพิ่มสินค้าไปบริษัทอื่น</button>
                     <span id="company-specific-product-count" class="text-[10px] px-2.5 py-1 rounded-lg bg-white text-sky-700 border border-sky-100 font-bold shadow-xs">0 รายการ</span>
                     <button type="button" id="toggle-company-product-entry-btn"
                         class="company-product-entry-toggle hidden px-3 py-2 rounded-xl border border-sky-200 bg-white text-sky-700 text-xs font-bold"
