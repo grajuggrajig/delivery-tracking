@@ -2590,6 +2590,7 @@ body > header{z-index:900 !important}
             <!-- ปุ่มตรวจรายการซ้ำและปิดหน้าต่าง วางติดกันที่มุมขวา -->
             <div id="stock-modal-header-actions" class="flex items-center justify-end gap-2 shrink-0 ml-auto">
                 <button type="button" id="product-duplicate-audit-btn" class="shrink-0 px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100" title="ตรวจหารายการซ้ำและราคาที่เชื่อมโยง">🔎 ตรวจรายการซ้ำ</button>
+                <button type="button" id="product-global-cleanup-btn" class="shrink-0 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-bold hover:bg-rose-100" title="ค้นหาและลบรายการสินค้าชื่อเดียวกันจากทุกบริษัท">🗑️ ลบสินค้าทดสอบ</button>
                 <button type="button" id="close-stock-modal" class="w-8 h-8 flex shrink-0 items-center justify-center rounded-full bg-slate-100/80 text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 transition-all duration-200 text-xs font-bold" title="ปิดหน้าต่าง Stock Management" aria-label="ปิดหน้าต่าง Stock Management">
                     ✕
                 </button>
@@ -5890,7 +5891,135 @@ function getCompanyPriceHistory(companyName, productName) {
             modal.classList.remove('hidden');
         }
 
+
+        // ล้างรายการสินค้าทดสอบ/เลิกขายด้วยชื่อเดียวกันจากสต็อกและทุกบริษัท
+        // ลบเฉพาะเอกสาร products และ companyProducts; ไม่ลบประวัติการจัดส่ง/ขาย/เอกสารย้อนหลัง
+        function openProductGlobalCleanup() {
+            if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) {
+                showToast('เฉพาะ Admin เท่านั้นที่ใช้ฟังก์ชันนี้ได้', 'error');
+                return;
+            }
+            document.getElementById('product-global-cleanup-modal')?.remove();
+            const modal = document.createElement('div');
+            modal.id = 'product-global-cleanup-modal';
+            modal.className = 'fixed inset-0 z-[55000] flex items-center justify-center p-3';
+            modal.style.cssText = 'background:rgba(15,23,42,.72);backdrop-filter:blur(8px)';
+            modal.innerHTML = `
+              <section class="bg-white w-full max-w-3xl max-h-[94vh] rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-rose-200">
+                <header class="flex items-center justify-between gap-3 px-5 py-4 text-white" style="background:linear-gradient(110deg,#7f1d1d,#be123c)">
+                  <div><div class="font-extrabold text-base">🗑️ ลบรายการสินค้าตามชื่อจากทุกบริษัท</div>
+                  <div class="text-xs text-rose-100 mt-1">ค้นหาชื่อ แล้วตรวจสอบรายการที่จะลบก่อนยืนยัน</div></div>
+                  <button type="button" data-clean-close class="rounded-lg bg-white/15 w-9 h-9 font-bold">✕</button>
+                </header>
+                <div class="p-4 sm:p-5 overflow-y-auto space-y-3">
+                  <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 leading-5">
+                    <b>โปรดระวัง:</b> การลบนี้นำรายการชื่อเดียวกันออกจากสต็อกมาตรฐานและรายการราคาของทุกบริษัท แต่จะไม่ลบประวัติย้อนหลังหรือรายการจัดส่ง จึงควรใช้กับสินค้าทดสอบ/เลิกขายเท่านั้น และตรวจชื่อให้ถูกต้องก่อนยืนยัน
+                  </div>
+                  <label class="block text-xs font-bold text-slate-700" for="product-global-cleanup-name">ชื่อสินค้าที่ต้องการค้นหา</label>
+                  <div class="flex flex-col sm:flex-row gap-2">
+                    <input id="product-global-cleanup-name" class="flex-1 min-w-0 border border-slate-300 rounded-xl px-3 py-2.5 text-sm" placeholder="เช่น ทดสอบ" autocomplete="off">
+                    <button id="product-global-cleanup-search" type="button" class="rounded-xl px-4 py-2.5 text-xs font-extrabold bg-indigo-600 text-white">🔎 ค้นหาทุกบริษัท</button>
+                  </div>
+                  <div id="product-global-cleanup-results" class="text-xs text-slate-500 rounded-xl border border-dashed p-5 text-center">พิมพ์ชื่อสินค้าแล้วกดค้นหา</div>
+                  <div id="product-global-cleanup-confirm-wrap" class="hidden border-t pt-4 space-y-2">
+                    <label class="block text-xs font-bold text-rose-800" for="product-global-cleanup-confirm">พิมพ์ชื่อสินค้าที่ต้องการลบให้ตรงทุกตัวเพื่อยืนยัน</label>
+                    <input id="product-global-cleanup-confirm" class="w-full border border-rose-300 rounded-xl px-3 py-2.5 text-sm" placeholder="พิมพ์ชื่อสินค้าให้ตรงกับชื่อที่ค้นพบ">
+                    <button id="product-global-cleanup-delete" type="button" disabled class="w-full rounded-xl px-4 py-3 bg-rose-700 text-white text-xs font-extrabold disabled:opacity-40">🗑️ ยืนยันลบจากทุกบริษัท</button>
+                    <p class="text-[10px] text-slate-500">ระบบจะอ่านข้อมูลจาก Firebase ใหม่ก่อนลบ หากจำนวนหรือรายการเปลี่ยนไป จะยกเลิกเพื่อให้ค้นหาและตรวจสอบใหม่</p>
+                  </div>
+                </div>
+              </section>`;
+            document.body.appendChild(modal);
+            modal.querySelectorAll('[data-clean-close]').forEach(b => b.addEventListener('click', () => modal.remove()));
+            const nameInput = modal.querySelector('#product-global-cleanup-name');
+            const confirmInput = modal.querySelector('#product-global-cleanup-confirm');
+            const results = modal.querySelector('#product-global-cleanup-results');
+            const confirmWrap = modal.querySelector('#product-global-cleanup-confirm-wrap');
+            const deleteBtn = modal.querySelector('#product-global-cleanup-delete');
+            let selectedName = '';
+            let selectedKey = '';
+            let expectedIds = [];
+            const keyOf = value => normalizeProductDuplicateKey(value);
+            const getMatches = (products, companyProducts, key) => ({
+                stock: products.filter(p => keyOf(p.name) === key),
+                companies: companyProducts.filter(p => keyOf(p.name) === key)
+            });
+            const renderMatches = matches => {
+                const rows = [
+                    ...matches.stock.map(p => ({...p, __scope:'สต็อกมาตรฐาน'})),
+                    ...matches.companies.map(p => ({...p, __scope:`บริษัท: ${p.companyName || p.companyKey || 'ไม่ระบุบริษัท'}`}))
+                ];
+                expectedIds = rows.map(p => `${p.__scope.startsWith('สต็อก') ? 'products' : 'companyProducts'}:${p.id}`).sort();
+                results.className = 'rounded-xl border p-3 space-y-2';
+                results.innerHTML = `<div class="font-extrabold text-slate-800">พบทั้งหมด ${rows.length} รายการ — สต็อกมาตรฐาน ${matches.stock.length} รายการ, ทุกรายการบริษัท ${matches.companies.length} รายการ</div>` +
+                    (rows.length ? `<div class="max-h-64 overflow-y-auto space-y-2">${rows.map(p => `<div class="rounded-lg border bg-slate-50 p-2"><div class="font-bold text-slate-800">${escapeHTML(p.name || '(ไม่มีชื่อ)')}</div><div class="text-slate-600 mt-1">${escapeHTML(p.__scope)}</div><div class="text-[10px] text-slate-400 break-all">Document ID: ${escapeHTML(p.id || '-')}</div></div>`).join('')}</div>` : '<div class="text-slate-500 py-3">ไม่พบรายการชื่อเดียวกัน</div>');
+                confirmWrap.classList.toggle('hidden', !rows.length);
+                confirmInput.value = '';
+                deleteBtn.disabled = true;
+            };
+            modal.querySelector('#product-global-cleanup-search').addEventListener('click', async () => {
+                const typed = nameInput.value.trim();
+                selectedKey = keyOf(typed);
+                selectedName = typed;
+                if (!selectedKey) { showToast('กรุณากรอกชื่อสินค้าที่ต้องการค้นหา', 'error'); return; }
+                results.textContent = 'กำลังอ่านข้อมูลล่าสุดจาก Firebase...';
+                confirmWrap.classList.add('hidden');
+                try {
+                    const [ps, cs] = await Promise.all([db.collection('products').get(), db.collection('companyProducts').get()]);
+                    const matches = getMatches(ps.docs.map(d=>({id:d.id,...d.data()})), cs.docs.map(d=>({id:d.id,...d.data()})), selectedKey);
+                    if (!matches.stock.length && !matches.companies.length) {
+                        results.className='rounded-xl border p-4 text-center text-slate-500'; results.textContent='ไม่พบชื่อสินค้าที่ตรงกันแบบชื่อเต็ม (หลังปรับช่องว่าง/เครื่องหมาย/ตัวพิมพ์เล็กใหญ่)';
+                        return;
+                    }
+                    renderMatches(matches);
+                } catch (err) {
+                    console.error('Product global cleanup search failed:', err);
+                    results.textContent='อ่านข้อมูลไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อและสิทธิ์ Firebase แล้วลองใหม่';
+                    showToast('ค้นหารายการไม่สำเร็จ', 'error');
+                }
+            });
+            confirmInput.addEventListener('input', () => { deleteBtn.disabled = confirmInput.value.trim() !== selectedName || !expectedIds.length; });
+            deleteBtn.addEventListener('click', async () => {
+                if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) { showToast('เฉพาะ Admin เท่านั้นที่ใช้ฟังก์ชันนี้ได้', 'error'); return; }
+                if (confirmInput.value.trim() !== selectedName || !expectedIds.length) return;
+                deleteBtn.disabled = true;
+                try {
+                    const [ps, cs] = await Promise.all([db.collection('products').get(), db.collection('companyProducts').get()]);
+                    const freshProducts = ps.docs.map(d=>({id:d.id,...d.data()}));
+                    const freshCompanies = cs.docs.map(d=>({id:d.id,...d.data()}));
+                    const fresh = getMatches(freshProducts, freshCompanies, selectedKey);
+                    const freshIds = [
+                        ...fresh.stock.map(p=>`products:${p.id}`),
+                        ...fresh.companies.map(p=>`companyProducts:${p.id}`)
+                    ].sort();
+                    if (JSON.stringify(freshIds) !== JSON.stringify(expectedIds)) {
+                        showToast('ข้อมูลเปลี่ยนระหว่างตรวจสอบ ระบบยกเลิกลบ กรุณาค้นหาใหม่', 'error');
+                        renderMatches(fresh);
+                        return;
+                    }
+                    const refs = [
+                        ...fresh.stock.map(p=>db.collection('products').doc(p.id)),
+                        ...fresh.companies.map(p=>db.collection('companyProducts').doc(p.id))
+                    ];
+                    for (let i=0; i<refs.length; i+=400) {
+                        const batch = db.batch();
+                        refs.slice(i,i+400).forEach(ref=>batch.delete(ref));
+                        await batch.commit();
+                    }
+                    showToast(`ลบรายการสินค้า "${selectedName}" จาก ${refs.length} รายการแล้ว โดยคงประวัติย้อนหลังไว้`, 'success');
+                    modal.remove();
+                    // รีเฟรชรายการในหน้าสต็อกจาก Firebase ตามกลไกเดิม หากมีฟังก์ชัน render อยู่
+                    try { if (typeof loadStockData === 'function') await loadStockData(); } catch(e) { console.warn(e); }
+                } catch (err) {
+                    console.error('Product global cleanup delete failed:', err);
+                    showToast('ลบไม่สำเร็จ อาจเกิดจากสิทธิ์ Firebase หรือการเชื่อมต่อ กรุณาตรวจสอบข้อมูลก่อนลองอีกครั้ง', 'error');
+                    deleteBtn.disabled = false;
+                }
+            });
+        }
+
         document.getElementById('product-duplicate-audit-btn')?.addEventListener('click', openProductDuplicateAudit);
+        document.getElementById('product-global-cleanup-btn')?.addEventListener('click', openProductGlobalCleanup);
 
         openStockModalBtn.addEventListener('click', () => {
             /* เปิดกรอบ Stock ให้ผู้ใช้เห็นทันที ก่อนทำงาน render/กรองข้อมูลที่อาจหนัก
