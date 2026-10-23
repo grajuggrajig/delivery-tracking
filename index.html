@@ -2101,6 +2101,12 @@ body > header{z-index:900 !important}
     }
 }
 </style>
+
+<style id="product-retirement-ui">
+#product-retirement-modal{z-index:45000!important}
+#product-retirement-modal button:focus-visible,#product-retirement-modal select:focus-visible,#product-retirement-modal input:focus-visible{outline:3px solid rgba(99,102,241,.28);outline-offset:2px}
+@media(max-width:640px){#product-retirement-modal section{max-height:96vh}#product-retirement-modal .grid.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -4450,6 +4456,339 @@ function formatCompanyProductUpdateDate(product) {
     }
 }
 
+
+/* ==================== ADMIN: SAFE COMPANY PRODUCT RETIREMENT ====================
+   ลบเฉพาะ companyProducts ที่ผูกกับ stockProductId เดียวกันเท่านั้น
+   ไม่ลบ products กลาง, deliveries หรือเอกสารย้อนหลัง
+   หากตรวจสอบข้อมูล/ประวัติไม่ได้ จะไม่อนุญาตให้ลบ (fail closed)
+*/
+function productRetirementNormalizeName(value) {
+    return normalizeCompanyProductName(String(value || '')
+        .replace(/\s*\(\s*[\d,]+(?:\.\d+)?\s*บาท\s*\)\s*$/i, '')
+        .replace(/\s*x\s*\d+\s*$/i, '')
+        .trim());
+}
+
+function productRetirementGetStockQuantity(product) {
+    if (!product || typeof product !== 'object') return 0;
+    const keys = ['stockQty','stockQuantity','onHand','onHandQty','inventoryQty','inventory','availableStock','stockBalance','remainingStock','currentStock','stockCount','qtyInStock','availableQuantity','remainingQty','stock','quantity','qty'];
+    let max = 0;
+    keys.forEach(key => {
+        if (Object.prototype.hasOwnProperty.call(product, key)) {
+            const n = Number(product[key]);
+            if (Number.isFinite(n)) max = Math.abs(n) > Math.abs(max) ? n : max;
+        }
+    });
+    return max;
+}
+
+function productRetirementRecordMatches(record, productId, productName) {
+    const idKeys = new Set(['stockProductId','productId','productRefId','stockId','itemProductId','standardProductId']);
+    const nameKeys = new Set(['name','productName','itemName','rawName','text','description','product']);
+    const normalizedName = productRetirementNormalizeName(productName);
+    let matched = false;
+    const seen = new Set();
+    const walk = (value, key = '') => {
+        if (matched || value == null) return;
+        if (typeof value === 'object') {
+            if (seen.has(value)) return;
+            seen.add(value);
+            if (Array.isArray(value)) { value.forEach(v => walk(v, key)); return; }
+            Object.keys(value).forEach(k => walk(value[k], k));
+            return;
+        }
+        if (idKeys.has(String(key)) && String(value) === String(productId)) {
+            matched = true; return;
+        }
+        if (nameKeys.has(String(key))) {
+            const candidate = productRetirementNormalizeName(value);
+            if (candidate && normalizedName && candidate === normalizedName) matched = true;
+        }
+    };
+    walk(record);
+    return matched;
+}
+
+function productRetirementClassify(source, companyProducts, products, deliveries) {
+    const stockId = String(source?.stockProductId || '').trim();
+    const stockProduct = stockId ? products.find(p => String(p.id) === stockId) : null;
+    const sourceName = String(source?.name || '').trim();
+    const sameNameRows = companyProducts.filter(p =>
+        productRetirementNormalizeName(p.name) === productRetirementNormalizeName(sourceName));
+    const exactLinkedRows = stockId
+        ? companyProducts.filter(p => String(p.stockProductId || '').trim() === stockId)
+        : [];
+    const candidateRows = exactLinkedRows.slice();
+    const uncertainRows = sameNameRows.filter(p =>
+        !stockId || String(p.stockProductId || '').trim() !== stockId);
+    const safe = [], blocked = [], review = [];
+
+    if (!stockId || !stockProduct) {
+        review.push({
+            id: source.id, companyName: source.companyName || '(ไม่ระบุบริษัท)', name: sourceName,
+            unit: source.unit || '', reason: !stockId
+                ? 'ไม่มีรหัสอ้างอิงสินค้ากลางที่ยืนยันได้'
+                : 'ไม่พบสินค้ากลางตามรหัสอ้างอิงนี้ใน Firebase'
+        });
+        // แสดงรายการชื่อเหมือนกันทุกบริษัทไว้ตรวจเพิ่ม แต่ห้ามอนุมานว่าเป็นสินค้าเดียวกัน
+        uncertainRows.forEach(row => review.push({
+            id: row.id, companyName: row.companyName || '(ไม่ระบุบริษัท)', name: row.name || '',
+            unit: row.unit || '', reason: !row.stockProductId
+                ? 'ชื่อสินค้าตรงกันแต่ไม่มีรหัสอ้างอิงสินค้ากลาง'
+                : `ชื่อสินค้าตรงกันแต่ใช้รหัสสินค้ากลางคนละรหัส (${row.stockProductId})`
+        }));
+        return { stockId, stockProduct, safe, blocked, review, uncertainRows, exactLinkedRows };
+    }
+
+    const stockQty = productRetirementGetStockQuantity(stockProduct);
+    candidateRows.forEach(row => {
+        const companyName = String(row.companyName || '(ไม่ระบุบริษัท)');
+        const item = { id: row.id, companyName, name: row.name || '', unit: row.unit || '', stockProductId: stockId };
+        const rowQty = productRetirementGetStockQuantity(row);
+        const historyMatches = deliveries.filter(d => productRetirementRecordMatches(d, stockId, row.name || sourceName));
+        const pendingMatches = historyMatches.filter(d => {
+            const raw = JSON.stringify(d || {}).toLocaleLowerCase('th-TH');
+            return /pending|รอส่ง|ค้างส่ง|ยังไม่ส่ง/.test(raw);
+        });
+        if (stockQty > 0 || rowQty > 0) {
+            blocked.push({ ...item, reason: `ยังมีสต็อกที่ตรวจพบ (สินค้ากลาง ${stockQty}, รายการบริษัท ${rowQty})` });
+        } else if (historyMatches.length) {
+            blocked.push({ ...item, reason: `พบประวัติซื้อ/ขาย/จัดส่งหรือรายการเอกสารที่อ้างอิงสินค้า ${historyMatches.length} รายการ${pendingMatches.length ? ` และพบรายการค้างส่ง ${pendingMatches.length} รายการ` : ''}` });
+        } else {
+            safe.push(item);
+        }
+    });
+
+    uncertainRows.forEach(row => review.push({
+        id: row.id, companyName: row.companyName || '(ไม่ระบุบริษัท)', name: row.name || '',
+        unit: row.unit || '', reason: !row.stockProductId
+            ? 'ชื่อสินค้าตรงกันแต่ไม่มีรหัสอ้างอิงสินค้ากลาง'
+            : `ชื่อสินค้าตรงกันแต่ใช้รหัสสินค้ากลางคนละรหัส (${row.stockProductId})`
+    }));
+
+    if (!candidateRows.length) {
+        review.push({
+            id: source.id, companyName: source.companyName || '(ไม่ระบุบริษัท)', name: sourceName,
+            unit: source.unit || '', reason: 'ไม่พบรายการบริษัทที่เชื่อมด้วยรหัสสินค้ากลางเดียวกัน'
+        });
+    }
+    return { stockId, stockProduct, safe, blocked, review, uncertainRows, exactLinkedRows };
+}
+
+window.openProductRetirementModal = function(companyName, companyKey) {
+    if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) {
+        showToast('เฉพาะ Admin เท่านั้นที่ใช้ฟังก์ชันนี้ได้', 'error');
+        return;
+    }
+    const existing = document.getElementById('product-retirement-modal');
+    if (existing) existing.remove();
+    const key = normalizeCompanyProductKey(companyKey || companyName);
+    const sourceRows = allCompanyProducts.filter(p =>
+        normalizeCompanyProductKey(p.companyKey || p.companyName) === key
+    ).sort((a,b) => String(a.name || '').localeCompare(String(b.name || ''), 'th'));
+    const options = sourceRows.map(p => {
+        const ref = String(p.stockProductId || '').trim();
+        return `<option value="${escapeHTML(p.id)}">${escapeHTML(ref ? `[รหัสกลาง ${ref}] ` : '[ไม่มีรหัสกลาง] ')}${escapeHTML(p.name || '(ไม่มีชื่อ)')}${p.unit ? ` / ${escapeHTML(p.unit)}` : ''}</option>`;
+    }).join('');
+    const modal = document.createElement('div');
+    modal.id = 'product-retirement-modal';
+    modal.className = 'fixed inset-0 z-[45000] flex items-center justify-center p-3 sm:p-5';
+    modal.style.cssText = 'background:rgba(15,23,42,.68);backdrop-filter:blur(8px)';
+    modal.innerHTML = `
+      <section class="bg-white w-full max-w-4xl max-h-[94vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
+        <header class="flex items-center justify-between gap-3 px-5 py-4 text-white" style="background:linear-gradient(110deg,#7f1d1d,#be123c,#9f1239)">
+          <div><div class="font-extrabold text-base">🗑️ เลิกขายสินค้าจากทุกบริษัท</div>
+          <div class="text-xs text-rose-100 mt-1">บริษัทต้นทาง: ${escapeHTML(companyName || '')} · เฉพาะ Admin</div></div>
+          <button type="button" data-retire-close class="rounded-lg bg-white/15 hover:bg-white/25 w-9 h-9 font-bold">✕</button>
+        </header>
+        <div class="p-4 sm:p-5 overflow-y-auto space-y-4">
+          <div class="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 leading-5">
+            <b>มาตรการความปลอดภัย:</b> ระบบจะลบเฉพาะรายการราคาบริษัทที่ผูกกับรหัสสินค้ากลางเดียวกัน และตรวจแล้วว่าไม่มีประวัติ/สต็อกเท่านั้น ไม่ลบสินค้ากลางหรือประวัติย้อนหลัง รายการที่ข้อมูลไม่ชัดเจนจะถูกข้าม
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
+            <div><label for="product-retirement-source" class="block text-xs font-bold text-slate-700 mb-1.5">ขั้นที่ 1 · เลือกสินค้าต้นทางที่ถูกต้อง</label>
+              <select id="product-retirement-source" class="w-full border border-slate-300 rounded-xl px-3 py-2.5 text-xs bg-white">
+                <option value="">-- เลือกสินค้าจากบริษัทนี้ --</option>${options}
+              </select>
+            </div>
+            <button id="product-retirement-preview-btn" type="button" class="rounded-xl px-4 py-2.5 text-xs font-extrabold bg-indigo-600 hover:bg-indigo-700 text-white">🔎 ตรวจสอบทุกบริษัท</button>
+          </div>
+          <div id="product-retirement-source-info" class="hidden rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700"></div>
+          <div id="product-retirement-results" class="space-y-3">
+            <div class="text-center text-xs text-slate-400 border border-dashed rounded-xl p-8">เลือกสินค้า แล้วกด “ตรวจสอบทุกบริษัท” เพื่ออ่านข้อมูลล่าสุดจาก Firebase</div>
+          </div>
+          <div id="product-retirement-confirm-wrap" class="hidden border-t border-slate-200 pt-4 space-y-2">
+            <label class="block text-xs font-bold text-rose-800">ขั้นที่ 4 · พิมพ์รหัสสินค้าหรือชื่อสินค้าที่แสดงด้านบนเพื่อยืนยัน</label>
+            <input id="product-retirement-confirm-input" autocomplete="off" class="w-full rounded-xl border border-rose-200 px-3 py-2.5 text-xs" placeholder="พิมพ์รหัสสินค้ากลาง หรือชื่อสินค้าให้ตรงทุกตัว">
+            <div class="text-[10px] text-slate-500">ก่อนลบจริง ระบบจะโหลดข้อมูลจาก Firebase ใหม่และตรวจความปลอดภัยอีกครั้ง หากข้อมูลเปลี่ยน ระบบจะหยุดให้ตรวจสอบใหม่</div>
+            <div class="flex flex-wrap justify-end gap-2">
+              <button type="button" data-retire-close class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold">ยกเลิก</button>
+              <button id="product-retirement-execute-btn" type="button" disabled class="px-4 py-2 rounded-xl bg-rose-700 hover:bg-rose-800 disabled:opacity-40 text-white text-xs font-extrabold">🗑️ ยืนยันลบรายการที่ปลอดภัย</button>
+            </div>
+          </div>
+        </div>
+      </section>`;
+    document.body.appendChild(modal);
+    modal.querySelectorAll('[data-retire-close]').forEach(btn => btn.addEventListener('click', () => modal.remove()));
+    // ป้องกันหน้าต่างปิดเองเมื่อคลิกพื้นที่ฉากหลัง: ปิดได้จากปุ่ม ✕ หรือ ยกเลิก เท่านั้น
+    let lastPreview = null;
+    let sourceSelected = null;
+
+    const readFreshData = async () => {
+        const [cpSnap, productSnap, deliverySnap] = await Promise.all([
+            db.collection('companyProducts').get(),
+            db.collection('products').get(),
+            db.collection('deliveries').get()
+        ]);
+        return {
+            companyProducts: cpSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+            products: productSnap.docs.map(d => ({ id: d.id, ...d.data() })),
+            deliveries: deliverySnap.docs.map(d => ({ id: d.id, ...d.data(), subItems: Array.isArray(d.data()?.subItems) ? d.data().subItems : [] }))
+        };
+    };
+    const renderGroup = (title, rows, cls, emptyText) => `
+      <section class="rounded-xl border ${cls} overflow-hidden">
+        <div class="px-3 py-2 font-extrabold text-xs">${title} <span class="opacity-75">(${rows.length} รายการ)</span></div>
+        <div class="p-2 space-y-2 max-h-48 overflow-y-auto">${rows.length ? rows.map(row => `
+          <div class="rounded-lg border border-slate-100 bg-white p-2.5 text-xs">
+            <div class="font-bold text-slate-800">${escapeHTML(row.companyName)} · ${escapeHTML(row.name)}${row.unit ? ` / ${escapeHTML(row.unit)}` : ''}</div>
+            <div class="text-[10px] text-slate-500 mt-1">รหัสอ้างอิง: ${escapeHTML(row.stockProductId || 'ไม่พบ')} · เอกสารรายการ: ${escapeHTML(row.id)}</div>
+            <div class="text-[11px] mt-1">${escapeHTML(row.reason || (row.stockProductId ? 'ตรวจไม่พบประวัติหรือสต็อกในข้อมูลที่อ่านได้' : 'ข้อมูลอ้างอิงไม่ครบ'))}</div>
+          </div>`).join('') : `<div class="text-[11px] text-slate-400 p-2">${emptyText}</div>`}</div>
+      </section>`;
+    const renderPreview = (source, data, result) => {
+        const sourceInfo = modal.querySelector('#product-retirement-source-info');
+        const results = modal.querySelector('#product-retirement-results');
+        sourceInfo.classList.remove('hidden');
+        sourceInfo.innerHTML = `<div class="font-extrabold text-sm text-slate-900">${escapeHTML(source.name || '')}</div>
+          <div class="mt-1">รหัสสินค้ากลาง: <b>${escapeHTML(result.stockId || 'ไม่มีรหัสที่ยืนยันได้')}</b> · หน่วย: <b>${escapeHTML(source.unit || result.stockProduct?.unit || '-')}</b></div>
+          <div class="mt-1">บริษัทต้นทาง: ${escapeHTML(source.companyName || companyName || '')} · บริษัทที่มีรายการรหัสเดียวกัน: <b>${new Set(result.exactLinkedRows.map(p => normalizeCompanyProductKey(p.companyKey || p.companyName))).size}</b></div>`;
+        const total = result.safe.length + result.blocked.length + result.review.length;
+        results.innerHTML = `<div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
+          <div class="rounded-xl bg-slate-50 border p-3"><div class="text-[10px] text-slate-500">บริษัทที่ได้รับผลกระทบ/ตรวจสอบ</div><div class="text-xl font-black">${new Set([...result.exactLinkedRows,...result.uncertainRows].map(p=>normalizeCompanyProductKey(p.companyKey||p.companyName))).size}</div></div>
+          <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-3"><div class="text-[10px] text-emerald-700">ลบได้อย่างปลอดภัย</div><div class="text-xl font-black text-emerald-700">${result.safe.length}</div></div>
+          <div class="rounded-xl bg-rose-50 border border-rose-200 p-3"><div class="text-[10px] text-rose-700">ห้ามลบ · ประวัติ/สต็อก</div><div class="text-xl font-black text-rose-700">${result.blocked.length}</div></div>
+          <div class="rounded-xl bg-amber-50 border border-amber-200 p-3"><div class="text-[10px] text-amber-700">ตรวจสอบเพิ่มเติม</div><div class="text-xl font-black text-amber-700">${result.review.length}</div></div>
+        </div>
+        <div class="text-[11px] text-slate-500">รวม ${total} รายการที่ตรวจพบ · จะลบจริงเฉพาะ ${result.safe.length} รายการในกลุ่มปลอดภัยเท่านั้น</div>
+        ${renderGroup('✓ ลบได้อย่างปลอดภัย', result.safe, 'border-emerald-200 bg-emerald-50/70', 'ไม่มีรายการที่ผ่านเงื่อนไขครบทุกข้อ')}
+        ${renderGroup('⛔ ห้ามลบเพราะมีประวัติหรือสต็อก', result.blocked, 'border-rose-200 bg-rose-50/70', 'ไม่พบรายการที่ติดเงื่อนไขนี้')}
+        ${renderGroup('⚠️ ตรวจสอบเพิ่มเติม / ข้อมูลไม่ชัดเจน', result.review, 'border-amber-200 bg-amber-50/70', 'ไม่พบรายการที่ต้องตรวจเพิ่ม')}
+        ${!result.stockId ? '<div class="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-800 font-bold">ไม่สามารถลบได้: สินค้าต้นทางไม่มีรหัสอ้างอิงสินค้ากลางที่ยืนยันได้</div>' : ''}
+        ${result.safe.length ? '' : '<div class="rounded-xl bg-slate-100 p-3 text-xs text-slate-600">ไม่มีรายการที่ผ่านเงื่อนไข จึงไม่เปิดให้ดำเนินการลบ</div>'}`;
+        const wrap = modal.querySelector('#product-retirement-confirm-wrap');
+        wrap.classList.toggle('hidden', result.safe.length === 0 || !result.stockId);
+        const input = modal.querySelector('#product-retirement-confirm-input');
+        input.value = '';
+        input.placeholder = `พิมพ์ ${result.stockId || source.name} ให้ตรงทุกตัว`;
+        modal.querySelector('#product-retirement-execute-btn').disabled = true;
+        sourceSelected = source;
+        lastPreview = { sourceId: source.id, source, data, result, safeIds: result.safe.map(r => r.id).sort() };
+    };
+    modal.querySelector('#product-retirement-preview-btn').addEventListener('click', async () => {
+        if (currentUserProfile?.role !== 'admin') { showToast('เฉพาะ Admin เท่านั้น', 'error'); return; }
+        const selectedId = modal.querySelector('#product-retirement-source').value;
+        const source = allCompanyProducts.find(p => String(p.id) === selectedId);
+        if (!source) { showToast('กรุณาเลือกสินค้าต้นทางที่ถูกต้อง', 'warning'); return; }
+        const btn = modal.querySelector('#product-retirement-preview-btn');
+        btn.disabled = true; btn.textContent = 'กำลังตรวจ Firebase...';
+        try {
+            const data = await readFreshData();
+            const freshSource = data.companyProducts.find(p => String(p.id) === selectedId);
+            if (!freshSource) throw new Error('ไม่พบรายการต้นทางใน Firebase ล่าสุด');
+            const result = productRetirementClassify(freshSource, data.companyProducts, data.products, data.deliveries);
+            renderPreview(freshSource, data, result);
+        } catch (err) {
+            console.error('product retirement preview failed:', err);
+            modal.querySelector('#product-retirement-results').innerHTML = `<div class="rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs text-rose-800">ตรวจสอบข้อมูลล่าสุดไม่สำเร็จ จึงไม่อนุญาตให้ลบ: ${escapeHTML(err.message || 'Firebase error')}</div>`;
+            modal.querySelector('#product-retirement-confirm-wrap').classList.add('hidden');
+            lastPreview = null;
+        } finally {
+            btn.disabled = false; btn.textContent = '🔎 ตรวจสอบทุกบริษัท';
+        }
+    });
+    modal.querySelector('#product-retirement-confirm-input').addEventListener('input', e => {
+        const expected = String(lastPreview?.result?.stockId || lastPreview?.source?.name || '');
+        modal.querySelector('#product-retirement-execute-btn').disabled = !lastPreview || e.target.value.trim() !== expected;
+    });
+    modal.querySelector('#product-retirement-execute-btn').addEventListener('click', async () => {
+        if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) {
+            showToast('เฉพาะ Admin เท่านั้น', 'error'); return;
+        }
+        if (!lastPreview || !sourceSelected) { showToast('กรุณาตรวจสอบข้อมูลใหม่ก่อน', 'warning'); return; }
+        const btn = modal.querySelector('#product-retirement-execute-btn');
+        btn.disabled = true; btn.textContent = 'กำลังตรวจสอบและดำเนินการ...';
+        try {
+            const fresh = await readFreshData();
+            const freshSource = fresh.companyProducts.find(p => String(p.id) === String(lastPreview.sourceId));
+            if (!freshSource) throw new Error('รายการต้นทางเปลี่ยนแปลงหรือถูกลบไปแล้ว');
+            const freshResult = productRetirementClassify(freshSource, fresh.companyProducts, fresh.products, fresh.deliveries);
+            const freshSafeIds = freshResult.safe.map(r => r.id).sort();
+            if (String(freshResult.stockId) !== String(lastPreview.result.stockId) ||
+                JSON.stringify(freshSafeIds) !== JSON.stringify(lastPreview.safeIds) ||
+                freshSafeIds.length === 0) {
+                renderPreview(freshSource, fresh, freshResult);
+                throw new Error('ข้อมูล Firebase เปลี่ยนจากตัวอย่างเดิม ระบบหยุดเพื่อความปลอดภัย กรุณาตรวจสอบและยืนยันใหม่');
+            }
+            const safeSet = new Set(freshSafeIds);
+            const deletedItems = freshResult.safe.map(row => ({
+                id: row.id, companyName: row.companyName, name: row.name, unit: row.unit, stockProductId: row.stockProductId
+            }));
+            const skippedItems = [...freshResult.blocked, ...freshResult.review].map(row => ({
+                id: row.id, companyName: row.companyName, name: row.name, unit: row.unit,
+                stockProductId: row.stockProductId || '', reason: row.reason || ''
+            }));
+            // ต้องเขียน audit log ให้สำเร็จก่อนเสมอ มิฉะนั้นจะไม่เริ่มลบ
+            const auditRef = await db.collection('productRetirementAudit').add({
+                action: 'retire_company_product_links',
+                status: 'started',
+                sourceCompanyName: freshSource.companyName || companyName || '',
+                sourceCompanyProductId: freshSource.id,
+                sourceProductName: freshSource.name || '',
+                stockProductId: freshResult.stockId,
+                actorUid: currentAuthUser.uid,
+                actorEmail: currentAuthUser.email || '',
+                actorDisplayName: currentUserProfile.displayName || currentUserProfile.username || '',
+                deletedItems, skippedItems,
+                plannedDeleteCount: deletedItems.length,
+                skippedCount: skippedItems.length,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            let deletedCount = 0;
+            try {
+                for (let i = 0; i < deletedItems.length; i += 450) {
+                    const batch = db.batch();
+                    deletedItems.slice(i, i + 450).forEach(item => {
+                        if (!safeSet.has(item.id)) return;
+                        batch.delete(db.collection('companyProducts').doc(item.id));
+                    });
+                    await batch.commit();
+                    deletedCount += deletedItems.slice(i, i + 450).length;
+                }
+                await auditRef.update({
+                    status: 'completed',
+                    deletedCount,
+                    completedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (deleteErr) {
+                await auditRef.update({
+                    status: 'partial_or_failed',
+                    deletedCount,
+                    failureMessage: String(deleteErr?.message || deleteErr).slice(0, 500),
+                    completedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(logErr => console.error('Unable to update retirement audit status:', logErr));
+                throw deleteErr;
+            }
+            showToast(`เลิกขายสำเร็จ ${deletedCount} รายการ · ข้าม ${skippedItems.length} รายการ`, 'success');
+            modal.remove();
+        } catch (err) {
+            console.error('product retirement failed:', err);
+            showToast(`หยุดการลบเพื่อความปลอดภัย: ${err.message || 'เกิดข้อผิดพลาด'}`, 'error');
+            btn.disabled = false; btn.textContent = '🗑️ ยืนยันลบรายการที่ปลอดภัย';
+        }
+    });
+};
+
 let companyCatalogCacheSource = null;
 const companyCatalogSortedCache = new Map();
 function invalidateCompanyCatalogCache() {
@@ -4637,6 +4976,10 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
+                    ${currentUserProfile?.role === 'admin' ? `<button type="button" id="open-product-retirement-btn"
+                        class="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-extrabold shadow-sm transition"
+                        data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
+                        onclick="openProductRetirementModal(this.dataset.companyName, this.dataset.companyKey)">🗑️ เลิกขายสินค้าทุกบริษัท</button>` : ''}
                     <button type="button" id="add-company-product-to-others-btn"
                         class="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-extrabold shadow-sm transition"
                         data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
