@@ -4740,7 +4740,7 @@ window.openProductRetirementModal = function(companyName, companyKey) {
     modal.innerHTML = `
       <section class="bg-white w-full max-w-4xl max-h-[94vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         <header class="flex items-center justify-between gap-3 px-5 py-4 text-white" style="background:linear-gradient(110deg,#7f1d1d,#be123c,#9f1239)">
-          <div><div class="font-extrabold text-base">🗑️ เลิกขายสินค้าจากทุกบริษัท</div>
+          <div><div class="font-extrabold text-base">🗑️ ลยสินค้าออกจากทุกบริษัท</div>
           <div class="text-xs text-rose-100 mt-1">บริษัทต้นทาง: ${escapeHTML(companyName || '')} · เฉพาะ Admin</div></div>
           <button type="button" data-retire-close class="rounded-lg bg-white/15 hover:bg-white/25 w-9 h-9 font-bold">✕</button>
         </header>
@@ -5125,7 +5125,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     ${currentUserProfile?.role === 'admin' ? `<button type="button" id="open-product-retirement-btn"
                         class="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-extrabold shadow-sm transition"
                         data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
-                        onclick="openProductRetirementModal(this.dataset.companyName, this.dataset.companyKey)">🗑️ สินค้าทุกบริษัท</button>` : ''}
+                        onclick="openProductRetirementModal(this.dataset.companyName, this.dataset.companyKey)">🗑️ลบสินค้าทุกบริษัท</button>` : ''}
                     <button type="button" id="add-company-product-to-others-btn"
                         class="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-extrabold shadow-sm transition"
                         data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
