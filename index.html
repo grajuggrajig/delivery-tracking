@@ -2107,6 +2107,143 @@ body > header{z-index:900 !important}
 #product-retirement-modal button:focus-visible,#product-retirement-modal select:focus-visible,#product-retirement-modal input:focus-visible{outline:3px solid rgba(99,102,241,.28);outline-offset:2px}
 @media(max-width:640px){#product-retirement-modal section{max-height:96vh}#product-retirement-modal .grid.grid-cols-2{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
+
+<style id="production-hardening-targeted-ui">
+/* FIX: global header styling must never narrow dynamic deletion modal title bars */
+#product-retirement-modal,
+#product-global-cleanup-modal{
+  z-index:55000 !important;
+  isolation:isolate;
+}
+#product-retirement-modal > section,
+#product-global-cleanup-modal > section{
+  width:min(100%,920px);
+  max-height:94dvh;
+  min-width:0;
+  box-sizing:border-box;
+}
+#product-retirement-modal header,
+#product-global-cleanup-modal header,
+#stock-modal-box header{
+  margin-left:0 !important;
+  width:100% !important;
+  max-width:100% !important;
+  min-height:0 !important;
+  box-sizing:border-box !important;
+  flex-shrink:0 !important;
+}
+#product-retirement-modal header > div,
+#product-global-cleanup-modal header > div{
+  min-width:0;
+}
+#product-retirement-modal header .font-extrabold,
+#product-global-cleanup-modal header .font-extrabold{
+  font-size:16px !important;
+  line-height:1.5 !important;
+}
+#product-retirement-modal .text-xs,
+#product-global-cleanup-modal .text-xs{
+  font-size:13px !important;
+  line-height:1.65 !important;
+}
+#product-retirement-modal .text-\[10px\],
+#product-global-cleanup-modal .text-\[10px\]{
+  font-size:11px !important;
+  line-height:1.55 !important;
+}
+#product-retirement-modal label,
+#product-global-cleanup-modal label{
+  font-size:13px !important;
+  line-height:1.6 !important;
+}
+#product-retirement-modal input,
+#product-retirement-modal select,
+#product-global-cleanup-modal input,
+#product-global-cleanup-modal select,
+#product-retirement-modal button,
+#product-global-cleanup-modal button{
+  font-size:13px !important;
+  min-height:40px;
+}
+#product-retirement-modal .overflow-y-auto,
+#product-global-cleanup-modal .overflow-y-auto{
+  overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+#stock-modal-header-actions button{
+  min-height:40px !important;
+  font-size:13px !important;
+  white-space:nowrap;
+}
+/* CUSTOMER OVERVIEW: balanced visual weight and a purposeful right-side illustration */
+#customer-overview-section .customer-overview-head{
+  position:relative;
+  min-height:116px;
+  align-items:flex-start !important;
+  padding-right:220px !important;
+}
+#customer-overview-section .customer-overview-head::after{
+  content:"";
+  position:absolute;
+  right:12px;
+  top:2px;
+  width:184px;
+  height:104px;
+  pointer-events:none;
+  border:1px solid rgba(213,199,165,.72);
+  border-radius:18px;
+  background:
+    radial-gradient(circle at 78% 22%,rgba(124,58,237,.16) 0 10px,transparent 11px),
+    linear-gradient(145deg,rgba(238,244,255,.95),rgba(255,250,237,.96));
+  box-shadow:inset 0 1px #fff,0 5px 16px rgba(31,42,63,.05);
+}
+#customer-overview-section .customer-overview-head::before{
+  content:"🏢";
+  position:absolute;
+  right:72px;
+  top:14px;
+  z-index:1;
+  width:64px;
+  height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border-radius:17px;
+  border:1px solid rgba(255,255,255,.9);
+  background:linear-gradient(145deg,#fff,#f5ead4);
+  box-shadow:0 7px 18px rgba(31,42,63,.10);
+  font-size:36px;
+  pointer-events:none;
+}
+#customer-overview-section .customer-overview-head > .min-w-0{
+  position:relative;
+  z-index:2;
+}
+#customer-overview-section .customer-overview-head h2{font-size:21px !important}
+#customer-overview-section .customer-overview-head p{font-size:12px !important;line-height:1.6}
+#customer-overview-section #overview-search-input{font-size:13px !important}
+#customer-overview-section .overview-stat-card strong{font-size:18px !important}
+#customer-overview-section .customer-overview-company{font-size:13px !important}
+#customer-overview-section .customer-overview-name{font-size:14px !important}
+#customer-overview-section .customer-overview-line{font-size:11px !important}
+#customer-overview-section .customer-overview-contact-count{font-size:10px !important}
+@media(max-width:760px){
+  #customer-overview-section .customer-overview-head{
+    min-height:0 !important;
+    padding-right:0 !important;
+  }
+  #customer-overview-section .customer-overview-head::before,
+  #customer-overview-section .customer-overview-head::after{display:none !important}
+}
+@media(max-width:640px){
+  #product-retirement-modal,
+  #product-global-cleanup-modal{padding:8px !important}
+  #product-retirement-modal > section,
+  #product-global-cleanup-modal > section{max-height:96dvh !important}
+  #stock-modal-header-actions{flex-wrap:wrap}
+}
+</style>
+
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -2590,7 +2727,7 @@ body > header{z-index:900 !important}
             <!-- ปุ่มตรวจรายการซ้ำและปิดหน้าต่าง วางติดกันที่มุมขวา -->
             <div id="stock-modal-header-actions" class="flex items-center justify-end gap-2 shrink-0 ml-auto">
                 <button type="button" id="product-duplicate-audit-btn" class="shrink-0 px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100" title="ตรวจหารายการซ้ำและราคาที่เชื่อมโยง">🔎 ตรวจรายการซ้ำ</button>
-                <button type="button" id="product-global-cleanup-btn" class="shrink-0 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-bold hover:bg-rose-100" title="ค้นหาและลบรายการสินค้าชื่อเดียวกันจากทุกบริษัท">🗑️ ลบสินค้าทั้งหมด</button>
+                <button type="button" id="product-global-cleanup-btn" class="hidden shrink-0 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-bold hover:bg-rose-100" title="เฉพาะ Admin: ค้นหาและลบรายการสินค้าชื่อเดียวกันจากทุกบริษัท" aria-label="ลบสินค้าทั้งหมด (เฉพาะ Admin)">🗑️ ลบสินค้าทั้งหมด</button>
                 <button type="button" id="close-stock-modal" class="w-8 h-8 flex shrink-0 items-center justify-center rounded-full bg-slate-100/80 text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 transition-all duration-200 text-xs font-bold" title="ปิดหน้าต่าง Stock Management" aria-label="ปิดหน้าต่าง Stock Management">
                     ✕
                 </button>
@@ -3268,6 +3405,7 @@ body > header{z-index:900 !important}
                 currentUserProfile = null;
                 document.getElementById('login-user-badge')?.classList.add('hidden');
                 document.getElementById('open-admin-users-btn')?.classList.add('hidden');
+                document.getElementById('product-global-cleanup-btn')?.classList.add('hidden');
                 document.getElementById('logout-btn')?.classList.add('hidden');
 
                 // index.html เป็นหน้าหลักหลัง Login เท่านั้น
@@ -3290,6 +3428,10 @@ body > header{z-index:900 !important}
                 }
 
                 currentUserProfile = profile;
+                // ปุ่มล้างสินค้าขยะให้เห็นเฉพาะ Admin หลังโหลดโปรไฟล์จาก Firebase สำเร็จเท่านั้น
+                // มีการตรวจ role ซ้ำใน openProductGlobalCleanup และ handler ยืนยันลบด้วย
+                const globalCleanupBtn = document.getElementById('product-global-cleanup-btn');
+                if (globalCleanupBtn) globalCleanupBtn.classList.toggle('hidden', profile.role !== 'admin');
                 const stockFormEl = document.getElementById('stock-form');
                 if (stockFormEl) stockFormEl.classList.toggle('hidden', profile.role !== 'admin');
                 // วาดรายการสต็อกใหม่ตามสิทธิ์ล่าสุด เพื่อแสดงปุ่มจัดการให้ Admin เท่านั้น
@@ -4630,6 +4772,9 @@ window.openProductRetirementModal = function(companyName, companyKey) {
         </div>
       </section>`;
     document.body.appendChild(modal);
+    // Keep the dialog open during searching/selection; only explicit close/cancel controls dismiss it.
+    modal.addEventListener('click', event => event.stopPropagation());
+    modal.querySelector('section')?.addEventListener('click', event => event.stopPropagation());
     modal.querySelectorAll('[data-retire-close]').forEach(btn => btn.addEventListener('click', () => modal.remove()));
     // ป้องกันหน้าต่างปิดเองเมื่อคลิกพื้นที่ฉากหลัง: ปิดได้จากปุ่ม ✕ หรือ ยกเลิก เท่านั้น
     let lastPreview = null;
@@ -5930,6 +6075,9 @@ function getCompanyPriceHistory(companyName, productName) {
                 </div>
               </section>`;
             document.body.appendChild(modal);
+            // Prevent outside-click/global click handlers from accidentally closing the active cleanup dialog.
+            modal.addEventListener('click', event => event.stopPropagation());
+            modal.querySelector('section')?.addEventListener('click', event => event.stopPropagation());
             modal.querySelectorAll('[data-clean-close]').forEach(b => b.addEventListener('click', () => modal.remove()));
             const nameInput = modal.querySelector('#product-global-cleanup-name');
             const confirmInput = modal.querySelector('#product-global-cleanup-confirm');
