@@ -2727,7 +2727,7 @@ body > header{z-index:900 !important}
             <!-- ปุ่มตรวจรายการซ้ำและปิดหน้าต่าง วางติดกันที่มุมขวา -->
             <div id="stock-modal-header-actions" class="flex items-center justify-end gap-2 shrink-0 ml-auto">
                 <button type="button" id="product-duplicate-audit-btn" class="shrink-0 px-3 py-2 rounded-xl border border-amber-200 bg-amber-50 text-amber-800 text-xs font-bold hover:bg-amber-100" title="ตรวจหารายการซ้ำและราคาที่เชื่อมโยง">🔎 ตรวจรายการซ้ำ</button>
-                <button type="button" id="product-global-cleanup-btn" class="hidden shrink-0 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-bold hover:bg-rose-100" title="เฉพาะ Admin: ค้นหาและลบรายการสินค้าชื่อเดียวกันจากทุกบริษัท" aria-label="ลบสินค้าทั้งหมด (เฉพาะ Admin)">🗑️ ลบรายการสินค้าทั้งหมด</button>
+                <button type="button" id="product-global-cleanup-btn" class="hidden shrink-0 px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 text-rose-800 text-xs font-bold hover:bg-rose-100" title="เฉพาะ Admin: ค้นหาและลบรายการสินค้าชื่อเดียวกันจากทุกบริษัท" aria-label="ลบสินค้าทั้งหมด (เฉพาะ Admin)">🗑️ ลบสินค้าทั้งหมด</button>
                 <button type="button" id="close-stock-modal" class="w-8 h-8 flex shrink-0 items-center justify-center rounded-full bg-slate-100/80 text-slate-500 hover:bg-rose-50 hover:text-rose-600 border border-slate-200 transition-all duration-200 text-xs font-bold" title="ปิดหน้าต่าง Stock Management" aria-label="ปิดหน้าต่าง Stock Management">
                     ✕
                 </button>
@@ -4740,7 +4740,7 @@ window.openProductRetirementModal = function(companyName, companyKey) {
     modal.innerHTML = `
       <section class="bg-white w-full max-w-4xl max-h-[94vh] rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
         <header class="flex items-center justify-between gap-3 px-5 py-4 text-white" style="background:linear-gradient(110deg,#7f1d1d,#be123c,#9f1239)">
-          <div><div class="font-extrabold text-base">🗑️ ลบรายการสินค้าออกจากทุกบริษัท</div>
+          <div><div class="font-extrabold text-base">🗑️ เลิกขายสินค้าจากทุกบริษัท</div>
           <div class="text-xs text-rose-100 mt-1">บริษัทต้นทาง: ${escapeHTML(companyName || '')} · เฉพาะ Admin</div></div>
           <button type="button" data-retire-close class="rounded-lg bg-white/15 hover:bg-white/25 w-9 h-9 font-bold">✕</button>
         </header>
@@ -5125,7 +5125,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     ${currentUserProfile?.role === 'admin' ? `<button type="button" id="open-product-retirement-btn"
                         class="px-3 py-1.5 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-[11px] font-extrabold shadow-sm transition"
                         data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
-                        onclick="openProductRetirementModal(this.dataset.companyName, this.dataset.companyKey)">🗑️ลบรายการสินค้าทุกบริษัท</button>` : ''}
+                        onclick="openProductRetirementModal(this.dataset.companyName, this.dataset.companyKey)">🗑️ สินค้าทุกบริษัท</button>` : ''}
                     <button type="button" id="add-company-product-to-others-btn"
                         class="px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-[11px] font-extrabold shadow-sm transition"
                         data-company-name="${escapeHTML(companyName)}" data-company-key="${escapeHTML(stableCompanyKey || normalizeCompanyProductKey(companyName))}"
@@ -6066,11 +6066,29 @@ function getCompanyPriceHistory(companyName, productName) {
                     <button id="product-global-cleanup-search" type="button" class="rounded-xl px-4 py-2.5 text-xs font-extrabold bg-indigo-600 text-white">🔎 ค้นหาทุกบริษัท</button>
                   </div>
                   <div id="product-global-cleanup-results" class="text-xs text-slate-500 rounded-xl border border-dashed p-5 text-center">พิมพ์ชื่อสินค้าแล้วกดค้นหา</div>
-                  <div id="product-global-cleanup-confirm-wrap" class="hidden border-t pt-4 space-y-2">
-                    <label class="block text-xs font-bold text-rose-800" for="product-global-cleanup-confirm">พิมพ์ชื่อสินค้าที่ต้องการลบให้ตรงทุกตัวเพื่อยืนยัน</label>
-                    <input id="product-global-cleanup-confirm" class="w-full border border-rose-300 rounded-xl px-3 py-2.5 text-sm" placeholder="พิมพ์ชื่อสินค้าให้ตรงกับชื่อที่ค้นพบ">
-                    <button id="product-global-cleanup-delete" type="button" disabled class="w-full rounded-xl px-4 py-3 bg-rose-700 text-white text-xs font-extrabold disabled:opacity-40">🗑️ ยืนยันลบจากทุกบริษัท</button>
-                    <p class="text-[10px] text-slate-500">ระบบจะอ่านข้อมูลจาก Firebase ใหม่ก่อนลบ หากจำนวนหรือรายการเปลี่ยนไป จะยกเลิกเพื่อให้ค้นหาและตรวจสอบใหม่</p>
+                  <div id="product-global-cleanup-confirm-wrap" class="hidden border-t border-rose-100 pt-4 space-y-4">
+                    <div class="flex items-start gap-3 rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50 via-white to-orange-50 p-4">
+                      <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-xl shadow-sm">⚠️</div>
+                      <div class="min-w-0">
+                        <div class="text-sm font-extrabold text-rose-900">ยืนยันการลบสินค้าทุกบริษัท</div>
+                        <p class="mt-1 text-xs leading-5 text-rose-800">รายการที่ตรงกันจะถูกลบออกจากสต็อกมาตรฐานและข้อมูลราคาของบริษัททั้งหมด โปรดตรวจสอบรายการก่อนดำเนินการ</p>
+                      </div>
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="block text-xs font-bold text-slate-700" for="product-global-cleanup-confirm">ขั้นตอนที่ 1 · พิมพ์ชื่อสินค้าให้ตรงทุกตัว</label>
+                      <input id="product-global-cleanup-confirm" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100" placeholder="พิมพ์ชื่อสินค้าเพื่อยืนยัน">
+                    </div>
+                    <div class="space-y-1.5">
+                      <label class="block text-xs font-bold text-slate-700" for="product-global-cleanup-admin-password">ขั้นตอนที่ 2 · ยืนยันตัวตนด้วยรหัสผ่านบัญชี Admin</label>
+                      <div class="relative">
+                        <input id="product-global-cleanup-admin-password" type="password" autocomplete="current-password" class="w-full rounded-xl border border-indigo-200 bg-indigo-50/40 px-3.5 py-3 pr-16 text-sm outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100" placeholder="กรอกรหัสผ่านบัญชี Admin">
+                        <button id="product-global-cleanup-toggle-password" type="button" class="absolute inset-y-0 right-2 my-1 rounded-lg px-3 text-xs font-bold text-indigo-700 hover:bg-indigo-100" aria-label="แสดงหรือซ่อนรหัสผ่าน">แสดง</button>
+                      </div>
+                      <p class="text-[11px] leading-5 text-slate-500">ใช้รหัสผ่านของบัญชี Admin ที่เข้าสู่ระบบอยู่ รหัสผ่านจะไม่ถูกบันทึกลงฐานข้อมูล</p>
+                    </div>
+                    <div id="product-global-cleanup-auth-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-semibold leading-5 text-rose-800" role="alert"></div>
+                    <button id="product-global-cleanup-delete" type="button" disabled class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-700 to-red-600 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-rose-200 transition hover:from-rose-800 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"><span>🗑️</span><span>ยืนยันรหัสผ่านและลบจากทุกบริษัท</span></button>
+                    <p class="text-center text-[10px] leading-5 text-slate-500">ระบบจะตรวจสอบสิทธิ์ Admin และอ่านข้อมูลจาก Firebase ใหม่ก่อนลบ หากข้อมูลเปลี่ยนแปลง ระบบจะยกเลิกการลบเพื่อความปลอดภัย</p>
                   </div>
                 </div>
               </section>`;
@@ -6081,6 +6099,9 @@ function getCompanyPriceHistory(companyName, productName) {
             modal.querySelectorAll('[data-clean-close]').forEach(b => b.addEventListener('click', () => modal.remove()));
             const nameInput = modal.querySelector('#product-global-cleanup-name');
             const confirmInput = modal.querySelector('#product-global-cleanup-confirm');
+            const passwordInput = modal.querySelector('#product-global-cleanup-admin-password');
+            const togglePasswordBtn = modal.querySelector('#product-global-cleanup-toggle-password');
+            const authError = modal.querySelector('#product-global-cleanup-auth-error');
             const results = modal.querySelector('#product-global-cleanup-results');
             const confirmWrap = modal.querySelector('#product-global-cleanup-confirm-wrap');
             const deleteBtn = modal.querySelector('#product-global-cleanup-delete');
@@ -6103,6 +6124,11 @@ function getCompanyPriceHistory(companyName, productName) {
                     (rows.length ? `<div class="max-h-64 overflow-y-auto space-y-2">${rows.map(p => `<div class="rounded-lg border bg-slate-50 p-2"><div class="font-bold text-slate-800">${escapeHTML(p.name || '(ไม่มีชื่อ)')}</div><div class="text-slate-600 mt-1">${escapeHTML(p.__scope)}</div><div class="text-[10px] text-slate-400 break-all">Document ID: ${escapeHTML(p.id || '-')}</div></div>`).join('')}</div>` : '<div class="text-slate-500 py-3">ไม่พบรายการชื่อเดียวกัน</div>');
                 confirmWrap.classList.toggle('hidden', !rows.length);
                 confirmInput.value = '';
+                passwordInput.value = '';
+                passwordInput.type = 'password';
+                togglePasswordBtn.textContent = 'แสดง';
+                authError.textContent = '';
+                authError.classList.add('hidden');
                 deleteBtn.disabled = true;
             };
             modal.querySelector('#product-global-cleanup-search').addEventListener('click', async () => {
@@ -6126,12 +6152,39 @@ function getCompanyPriceHistory(companyName, productName) {
                     showToast('ค้นหารายการไม่สำเร็จ', 'error');
                 }
             });
-            confirmInput.addEventListener('input', () => { deleteBtn.disabled = confirmInput.value.trim() !== selectedName || !expectedIds.length; });
+            const updateDeleteButton = () => {
+                deleteBtn.disabled = confirmInput.value.trim() !== selectedName
+                    || !passwordInput.value
+                    || !expectedIds.length;
+                authError.classList.add('hidden');
+                authError.textContent = '';
+            };
+            confirmInput.addEventListener('input', updateDeleteButton);
+            passwordInput.addEventListener('input', updateDeleteButton);
+            togglePasswordBtn.addEventListener('click', () => {
+                const reveal = passwordInput.type === 'password';
+                passwordInput.type = reveal ? 'text' : 'password';
+                togglePasswordBtn.textContent = reveal ? 'ซ่อน' : 'แสดง';
+                passwordInput.focus();
+            });
             deleteBtn.addEventListener('click', async () => {
                 if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) { showToast('เฉพาะ Admin เท่านั้นที่ใช้ฟังก์ชันนี้ได้', 'error'); return; }
-                if (confirmInput.value.trim() !== selectedName || !expectedIds.length) return;
+                if (confirmInput.value.trim() !== selectedName || !passwordInput.value || !expectedIds.length) return;
                 deleteBtn.disabled = true;
+                const originalButtonText = deleteBtn.innerHTML;
+                deleteBtn.innerHTML = '<span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white"></span><span>กำลังตรวจสอบบัญชี Admin…</span>';
                 try {
+                    // ตรวจสิทธิ์จากโปรไฟล์ล่าสุด ป้องกันใช้สิทธิ์ Admin จากข้อมูลหน้าเว็บที่ค้างอยู่
+                    const profileSnap = await db.collection('users').doc(currentAuthUser.uid).get();
+                    const latestProfile = profileSnap.exists ? profileSnap.data() : null;
+                    if (!latestProfile || latestProfile.role !== 'admin' || latestProfile.active === false) {
+                        throw new Error('ADMIN_ACCESS_REVOKED');
+                    }
+                    if (!currentAuthUser.email) throw new Error('ADMIN_EMAIL_MISSING');
+                    // ยืนยันรหัสผ่านบัญชีที่เข้าสู่ระบบอยู่จริงผ่าน Firebase Authentication
+                    const credential = firebase.auth.EmailAuthProvider.credential(currentAuthUser.email, passwordInput.value);
+                    await currentAuthUser.reauthenticateWithCredential(credential);
+                    passwordInput.value = '';
                     const [ps, cs] = await Promise.all([db.collection('products').get(), db.collection('companyProducts').get()]);
                     const freshProducts = ps.docs.map(d=>({id:d.id,...d.data()}));
                     const freshCompanies = cs.docs.map(d=>({id:d.id,...d.data()}));
@@ -6160,8 +6213,27 @@ function getCompanyPriceHistory(companyName, productName) {
                     try { if (typeof loadStockData === 'function') await loadStockData(); } catch(e) { console.warn(e); }
                 } catch (err) {
                     console.error('Product global cleanup delete failed:', err);
-                    showToast('ลบไม่สำเร็จ อาจเกิดจากสิทธิ์ Firebase หรือการเชื่อมต่อ กรุณาตรวจสอบข้อมูลก่อนลองอีกครั้ง', 'error');
-                    deleteBtn.disabled = false;
+                    passwordInput.value = '';
+                    if (err?.code === 'auth/wrong-password' || err?.code === 'auth/invalid-credential' || err?.code === 'auth/invalid-login-credentials') {
+                        authError.textContent = 'รหัสผ่านไม่ถูกต้อง กรุณาตรวจสอบแล้วกรอกใหม่ ระบบยังไม่ได้ลบข้อมูล';
+                        authError.classList.remove('hidden');
+                        passwordInput.focus();
+                    } else if (err?.code === 'auth/too-many-requests') {
+                        authError.textContent = 'มีการลองรหัสผ่านหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่';
+                        authError.classList.remove('hidden');
+                    } else if (err?.message === 'ADMIN_ACCESS_REVOKED') {
+                        authError.textContent = 'บัญชีนี้ไม่มีสิทธิ์ Admin หรือถูกปิดใช้งานแล้ว ระบบยกเลิกการลบ';
+                        authError.classList.remove('hidden');
+                    } else if (err?.message === 'ADMIN_EMAIL_MISSING') {
+                        authError.textContent = 'ไม่พบอีเมล Firebase ของบัญชีที่เข้าสู่ระบบ จึงยืนยันรหัสผ่านไม่ได้';
+                        authError.classList.remove('hidden');
+                    } else {
+                        authError.textContent = 'ยืนยันตัวตนหรือลบไม่สำเร็จ ระบบไม่ได้ยืนยันว่าลบสำเร็จ กรุณาตรวจสอบสิทธิ์ Firebase และลองใหม่';
+                        authError.classList.remove('hidden');
+                    }
+                    showToast('ยืนยันตัวตนหรือลบไม่สำเร็จ', 'error');
+                    updateDeleteButton();
+                    deleteBtn.innerHTML = originalButtonText;
                 }
             });
         }
