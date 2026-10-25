@@ -4551,25 +4551,31 @@ async function requireAdminPasswordForDelete(actionLabel = 'ยืนยัน�
     }
     return await new Promise(resolve => {
         const modal = document.createElement('div');
-        modal.className = 'fixed inset-0 z-[10080] flex items-center justify-center bg-slate-950/65 backdrop-blur-sm p-4';
+        // Keep this security dialog above all app modals/toasts. Outside clicks never dismiss it.
+        modal.className = 'fixed inset-0 z-[2147483000] flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-3 sm:p-5';
         modal.innerHTML = `
-          <section role="dialog" aria-modal="true" aria-labelledby="admin-delete-password-title" class="w-full max-w-md overflow-hidden rounded-3xl border border-white/70 bg-white shadow-2xl">
-            <header class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] min-h-[132px] bg-white">
-              <div class="flex items-center justify-center px-4 py-5 bg-gradient-to-br from-white via-slate-50 to-indigo-50">
-                <div class="flex h-20 w-20 items-center justify-center rounded-3xl border border-indigo-100 bg-white text-4xl shadow-lg shadow-indigo-100/70" aria-label="ไอคอนบริษัท">🏢</div>
-              </div>
-              <div class="relative flex items-center overflow-hidden bg-gradient-to-br from-blue-800 via-indigo-700 to-violet-700 px-5 py-5 text-white">
-                <div class="absolute -right-5 -top-7 h-24 w-24 rounded-full bg-white/10"></div>
-                <div class="relative flex items-center gap-3"><div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-2xl shadow-lg">🔐</div><div class="min-w-0"><h2 id="admin-delete-password-title" class="text-lg font-extrabold leading-6">ยืนยันตัวตน Admin</h2><p class="mt-1 text-xs leading-4 text-white/85">ตรวจสอบรหัสผ่านก่อนดำเนินการ</p></div></div>
+          <section role="dialog" aria-modal="true" aria-labelledby="admin-delete-password-title" class="w-full max-w-3xl overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-2xl shadow-slate-950/40">
+            <header style="margin-left:0 !important;width:100% !important;max-width:100% !important;min-height:0 !important;box-sizing:border-box !important;position:relative !important;flex-shrink:0 !important;grid-column:1 / -1 !important;" class="w-full bg-gradient-to-r from-blue-900 via-indigo-700 to-violet-600 px-5 py-4 sm:px-7 sm:py-5 text-white">
+              <div class="flex items-center justify-between gap-4">
+                <div class="flex min-w-0 items-center gap-3"><div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-2xl shadow-inner">🔐</div><div class="min-w-0"><h2 id="admin-delete-password-title" class="text-lg font-extrabold sm:text-xl">ยืนยันตัวตน Admin</h2><p class="mt-1 text-xs text-white/85 sm:text-sm">ตรวจสอบรหัสผ่านก่อนดำเนินการลบข้อมูล</p></div></div>
+                <div class="hidden rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-xs font-semibold sm:block">SECURITY CHECK</div>
               </div>
             </header>
-            <div class="space-y-4 p-6">
-              <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900"><strong>รายการที่กำลังดำเนินการ</strong><div class="mt-1">${escapeHTML(actionLabel)}</div><p class="mt-2 text-xs">เพื่อความปลอดภัย กรุณายืนยันรหัสผ่านบัญชี Admin ที่เข้าสู่ระบบอยู่</p></div>
-              <label class="block text-sm font-bold text-slate-700" for="admin-delete-password-input">รหัสผ่านบัญชี Admin</label>
-              <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-violet-500 focus-within:ring-4 focus-within:ring-violet-100"><input id="admin-delete-password-input" type="password" autocomplete="current-password" class="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none" placeholder="กรอกรหัสผ่าน Admin"><button type="button" id="admin-delete-password-toggle" class="shrink-0 px-2 py-1 text-xs font-bold text-violet-700">แสดง</button></div>
-              <p id="admin-delete-password-error" class="hidden text-sm font-semibold text-rose-600" role="alert"></p>
-              <div class="flex gap-3 pt-1"><button type="button" id="admin-delete-password-cancel" class="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">ยกเลิก</button><button type="button" id="admin-delete-password-confirm" class="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-violet-200 hover:from-indigo-700 hover:to-violet-700">ยืนยันรหัสผ่าน</button></div>
-              <p class="text-center text-[11px] leading-relaxed text-slate-400">รหัสผ่านจะไม่ถูกบันทึกในหน้าเว็บหรือฐานข้อมูล</p>
+            <div class="grid grid-cols-1 md:grid-cols-[0.85fr_1.15fr]">
+              <aside class="relative flex min-h-[180px] flex-col items-center justify-center overflow-hidden border-b border-indigo-100 bg-gradient-to-br from-slate-50 via-white to-indigo-50 px-6 py-7 text-center md:min-h-[330px] md:border-b-0 md:border-r">
+                <div class="pointer-events-none absolute -left-10 -top-10 h-36 w-36 rounded-full bg-indigo-100/70 blur-2xl"></div><div class="pointer-events-none absolute -bottom-12 -right-8 h-40 w-40 rounded-full bg-violet-100/80 blur-2xl"></div>
+                <div class="relative mb-4 flex h-24 w-24 items-center justify-center rounded-[28px] border border-indigo-100 bg-white text-5xl shadow-lg shadow-indigo-900/10">🏢</div>
+                <h3 class="relative text-base font-extrabold text-slate-800">ระบบจัดการข้อมูลบริษัท</h3>
+                <p class="relative mt-2 max-w-xs text-sm leading-relaxed text-slate-500">ยืนยันตัวตนก่อนลบข้อมูล เพื่อช่วยป้องกันการกดผิดและการใช้งานโดยไม่ได้รับอนุญาต</p>
+                <div class="relative mt-4 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700"><span>●</span> การยืนยันตัวตนแบบปลอดภัย</div>
+              </aside>
+              <div class="min-w-0 space-y-4 p-5 sm:p-7">
+                <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900"><strong class="flex items-center gap-2"><span>⚠️</span> รายการที่กำลังดำเนินการ</strong><div class="mt-1 break-words">${escapeHTML(actionLabel)}</div><p class="mt-2 text-xs leading-relaxed">เพื่อความปลอดภัย กรุณายืนยันรหัสผ่านบัญชี Admin ที่เข้าสู่ระบบอยู่</p></div>
+                <div><label class="mb-2 block text-sm font-bold text-slate-700" for="admin-delete-password-input">รหัสผ่านบัญชี Admin</label><div class="flex items-center gap-2 rounded-2xl border border-indigo-200 bg-slate-50 px-3 ring-4 ring-indigo-50 transition focus-within:border-violet-500 focus-within:ring-violet-100"><input id="admin-delete-password-input" type="password" autocomplete="current-password" class="min-w-0 flex-1 bg-transparent py-3.5 text-sm outline-none" placeholder="กรอกรหัสผ่าน Admin"><button type="button" id="admin-delete-password-toggle" class="shrink-0 rounded-lg px-2 py-2 text-xs font-extrabold text-violet-700 hover:bg-violet-50">แสดง</button></div></div>
+                <p id="admin-delete-password-error" class="hidden text-sm font-semibold text-rose-600" role="alert"></p>
+                <div class="flex flex-col gap-3 pt-1 sm:flex-row"><button type="button" id="admin-delete-password-cancel" class="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50">ยกเลิก</button><button type="button" id="admin-delete-password-confirm" class="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-violet-200 transition hover:from-indigo-700 hover:to-violet-700">🔐 ยืนยันรหัสผ่าน</button></div>
+                <p class="text-center text-[11px] leading-relaxed text-slate-400">รหัสผ่านจะไม่ถูกบันทึกในหน้าเว็บหรือฐานข้อมูล</p>
+              </div>
             </div>
           </section>`;
         document.body.appendChild(modal);
@@ -4585,8 +4591,10 @@ async function requireAdminPasswordForDelete(actionLabel = 'ยืนยัน�
             e.currentTarget.textContent = input.type === 'password' ? 'แสดง' : 'ซ่อน';
             input.focus();
         });
-        modal.addEventListener('click', e => { if (e.target === modal) finish(false); });
+        // Deliberately ignore clicks on the backdrop so the security prompt cannot disappear accidentally.
+        modal.addEventListener('click', e => { if (e.target === modal) { e.preventDefault(); e.stopPropagation(); } });
         input.addEventListener('keydown', e => { if (e.key === 'Enter') confirmBtn.click(); if (e.key === 'Escape') finish(false); });
+        modal.addEventListener('keydown', e => { if (e.key === 'Escape') { e.preventDefault(); finish(false); } });
         confirmBtn.addEventListener('click', async () => {
             const password = input.value;
             if (!password) { error.textContent = 'กรุณากรอกรหัสผ่าน Admin'; error.classList.remove('hidden'); input.focus(); return; }
