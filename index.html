@@ -3560,6 +3560,7 @@ body > header{z-index:900 !important}
             const u=adminUsersCache.find(x=>x.id===id); if(!u) return;
             const username = u.username || u.email || id;
             showConfirmModal('ลบผู้ใช้', `ต้องการลบผู้ใช้ “${username}” ออกจากระบบหรือไม่? การลบนี้จะลบโปรไฟล์สิทธิ์ใน Firestore ทำให้บัญชีไม่สามารถเข้าใช้งาน CRM ได้อีก`, async () => {
+                if (!(await requireAdminPasswordForDelete(`ลบบัญชีผู้ใช้ ${username}`))) return;
                 btn.disabled = true;
                 try {
                     await db.collection('users').doc(id).delete();
@@ -4537,11 +4538,84 @@ window.cancelCompanyProductEdit = function() {
     if (cancelBtn) cancelBtn.classList.add('hidden');
 };
 
+// Shared Admin password gate for permanent destructive actions.
+// Uses Firebase Authentication reauthentication; never stores a password in HTML.
+async function requireAdminPasswordForDelete(actionLabel = 'ยืนยันการลบข้อมูล') {
+    if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) {
+        showToast('เฉพาะ Admin เท่านั้นที่ดำเนินการนี้ได้', 'error');
+        return false;
+    }
+    if (!currentAuthUser.email || typeof currentAuthUser.reauthenticateWithCredential !== 'function') {
+        showToast('ไม่สามารถตรวจสอบรหัสผ่านบัญชี Admin ได้ กรุณาเข้าสู่ระบบใหม่', 'error');
+        return false;
+    }
+    return await new Promise(resolve => {
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 z-[10080] flex items-center justify-center bg-slate-950/65 backdrop-blur-sm p-4';
+        modal.innerHTML = `
+          <section role="dialog" aria-modal="true" aria-labelledby="admin-delete-password-title" class="w-full max-w-md overflow-hidden rounded-3xl border border-white/70 bg-white shadow-2xl">
+            <header class="grid grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)] min-h-[132px] bg-white">
+              <div class="flex items-center justify-center px-4 py-5 bg-gradient-to-br from-white via-slate-50 to-indigo-50">
+                <div class="flex h-20 w-20 items-center justify-center rounded-3xl border border-indigo-100 bg-white text-4xl shadow-lg shadow-indigo-100/70" aria-label="ไอคอนบริษัท">🏢</div>
+              </div>
+              <div class="relative flex items-center overflow-hidden bg-gradient-to-br from-blue-800 via-indigo-700 to-violet-700 px-5 py-5 text-white">
+                <div class="absolute -right-5 -top-7 h-24 w-24 rounded-full bg-white/10"></div>
+                <div class="relative flex items-center gap-3"><div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-2xl shadow-lg">🔐</div><div class="min-w-0"><h2 id="admin-delete-password-title" class="text-lg font-extrabold leading-6">ยืนยันตัวตน Admin</h2><p class="mt-1 text-xs leading-4 text-white/85">ตรวจสอบรหัสผ่านก่อนดำเนินการ</p></div></div>
+              </div>
+            </header>
+            <div class="space-y-4 p-6">
+              <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-relaxed text-amber-900"><strong>รายการที่กำลังดำเนินการ</strong><div class="mt-1">${escapeHTML(actionLabel)}</div><p class="mt-2 text-xs">เพื่อความปลอดภัย กรุณายืนยันรหัสผ่านบัญชี Admin ที่เข้าสู่ระบบอยู่</p></div>
+              <label class="block text-sm font-bold text-slate-700" for="admin-delete-password-input">รหัสผ่านบัญชี Admin</label>
+              <div class="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 focus-within:border-violet-500 focus-within:ring-4 focus-within:ring-violet-100"><input id="admin-delete-password-input" type="password" autocomplete="current-password" class="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none" placeholder="กรอกรหัสผ่าน Admin"><button type="button" id="admin-delete-password-toggle" class="shrink-0 px-2 py-1 text-xs font-bold text-violet-700">แสดง</button></div>
+              <p id="admin-delete-password-error" class="hidden text-sm font-semibold text-rose-600" role="alert"></p>
+              <div class="flex gap-3 pt-1"><button type="button" id="admin-delete-password-cancel" class="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">ยกเลิก</button><button type="button" id="admin-delete-password-confirm" class="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-violet-200 hover:from-indigo-700 hover:to-violet-700">ยืนยันรหัสผ่าน</button></div>
+              <p class="text-center text-[11px] leading-relaxed text-slate-400">รหัสผ่านจะไม่ถูกบันทึกในหน้าเว็บหรือฐานข้อมูล</p>
+            </div>
+          </section>`;
+        document.body.appendChild(modal);
+        const input = modal.querySelector('#admin-delete-password-input');
+        const confirmBtn = modal.querySelector('#admin-delete-password-confirm');
+        const cancelBtn = modal.querySelector('#admin-delete-password-cancel');
+        const error = modal.querySelector('#admin-delete-password-error');
+        let finished = false;
+        const finish = value => { if (finished) return; finished = true; modal.remove(); resolve(value); };
+        cancelBtn.addEventListener('click', () => finish(false));
+        modal.querySelector('#admin-delete-password-toggle').addEventListener('click', e => {
+            input.type = input.type === 'password' ? 'text' : 'password';
+            e.currentTarget.textContent = input.type === 'password' ? 'แสดง' : 'ซ่อน';
+            input.focus();
+        });
+        modal.addEventListener('click', e => { if (e.target === modal) finish(false); });
+        input.addEventListener('keydown', e => { if (e.key === 'Enter') confirmBtn.click(); if (e.key === 'Escape') finish(false); });
+        confirmBtn.addEventListener('click', async () => {
+            const password = input.value;
+            if (!password) { error.textContent = 'กรุณากรอกรหัสผ่าน Admin'; error.classList.remove('hidden'); input.focus(); return; }
+            confirmBtn.disabled = true; cancelBtn.disabled = true; confirmBtn.textContent = 'กำลังตรวจสอบ...'; error.classList.add('hidden');
+            try {
+                const latestProfileSnap = await db.collection('users').doc(currentAuthUser.uid).get();
+                const latestProfile = latestProfileSnap.exists ? latestProfileSnap.data() : null;
+                if (!latestProfile || latestProfile.role !== 'admin' || latestProfile.active === false) throw new Error('ADMIN_ACCESS_REVOKED');
+                const credential = firebase.auth.EmailAuthProvider.credential(currentAuthUser.email, password);
+                await currentAuthUser.reauthenticateWithCredential(credential);
+                input.value = '';
+                finish(true);
+            } catch (err) {
+                console.error('Admin delete password verification failed:', err);
+                confirmBtn.disabled = false; cancelBtn.disabled = false; confirmBtn.textContent = 'ยืนยันรหัสผ่าน'; input.value = ''; input.focus();
+                error.textContent = err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential' ? 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่' : err.message === 'ADMIN_ACCESS_REVOKED' ? 'บัญชีนี้ไม่มีสิทธิ์ Admin แล้ว' : 'ตรวจสอบรหัสผ่านไม่สำเร็จ กรุณาตรวจสอบรหัสผ่านแล้วลองอีกครั้ง';
+                error.classList.remove('hidden');
+            }
+        });
+        setTimeout(() => input.focus(), 50);
+    });
+}
+
 async function deleteCompanyProduct(id, name, companyName) {
     showConfirmModal(
         'ลบสินค้าเฉพาะบริษัท',
         `ต้องการลบ "${name}" ออกจากรายการสินค้าของบริษัท "${companyName}" ใช่หรือไม่?\n\nสินค้ามาตรฐานใน Manage Stock จะไม่ถูกลบ`,
         async () => {
+            if (!(await requireAdminPasswordForDelete(`ลบสินค้า ${name} จากบริษัท ${companyName}`))) return;
             try {
                 await db.collection('companyProducts').doc(id).delete();
                 showToast(`ลบ "${name}" จากรายการของบริษัทแล้ว`, 'success');
@@ -4862,6 +4936,7 @@ window.openProductRetirementModal = function(companyName, companyKey) {
             showToast('เฉพาะ Admin เท่านั้น', 'error'); return;
         }
         if (!lastPreview || !sourceSelected) { showToast('กรุณาตรวจสอบข้อมูลใหม่ก่อน', 'warning'); return; }
+        if (!(await requireAdminPasswordForDelete('เลิกขายสินค้าจากทุกบริษัทที่ผ่านการตรวจสอบ'))) return;
         const btn = modal.querySelector('#product-retirement-execute-btn');
         btn.disabled = true; btn.textContent = 'กำลังตรวจสอบและดำเนินการ...';
         try {
@@ -6079,20 +6154,26 @@ function getCompanyPriceHistory(companyName, productName) {
                       <label class="block text-xs font-bold text-slate-700" for="product-global-cleanup-confirm">ขั้นตอนที่ 1 · พิมพ์ชื่อสินค้าให้ตรงทุกตัว</label>
                       <input id="product-global-cleanup-confirm" class="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm outline-none transition focus:border-rose-400 focus:ring-4 focus:ring-rose-100" placeholder="พิมพ์ชื่อสินค้าเพื่อยืนยัน">
                     </div>
-                    <div class="space-y-1.5">
-                      <label class="block text-xs font-bold text-slate-700" for="product-global-cleanup-admin-password">ขั้นตอนที่ 2 · ยืนยันตัวตนด้วยรหัสผ่านบัญชี Admin</label>
-                      <div class="relative">
-                        <input id="product-global-cleanup-admin-password" type="password" autocomplete="current-password" class="w-full rounded-xl border border-indigo-200 bg-indigo-50/40 px-3.5 py-3 pr-16 text-sm outline-none transition focus:border-indigo-400 focus:bg-white focus:ring-4 focus:ring-indigo-100" placeholder="กรอกรหัสผ่านบัญชี Admin">
-                        <button id="product-global-cleanup-toggle-password" type="button" class="absolute inset-y-0 right-2 my-1 rounded-lg px-3 text-xs font-bold text-indigo-700 hover:bg-indigo-100" aria-label="แสดงหรือซ่อนรหัสผ่าน">แสดง</button>
-                      </div>
-                      <p class="text-[11px] leading-5 text-slate-500">ใช้รหัสผ่านของบัญชี Admin ที่เข้าสู่ระบบอยู่ รหัสผ่านจะไม่ถูกบันทึกลงฐานข้อมูล</p>
-                    </div>
-                    <div id="product-global-cleanup-auth-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-semibold leading-5 text-rose-800" role="alert"></div>
-                    <button id="product-global-cleanup-delete" type="button" disabled class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-700 to-red-600 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-rose-200 transition hover:from-rose-800 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none"><span>🗑️</span><span>ยืนยันรหัสผ่านและลบจากทุกบริษัท</span></button>
-                    <p class="text-center text-[10px] leading-5 text-slate-500">ระบบจะตรวจสอบสิทธิ์ Admin และอ่านข้อมูลจาก Firebase ใหม่ก่อนลบ หากข้อมูลเปลี่ยนแปลง ระบบจะยกเลิกการลบเพื่อความปลอดภัย</p>
+                    <button id="product-global-cleanup-open-password" type="button" disabled class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-3.5 text-sm font-extrabold text-white shadow-lg shadow-indigo-200 transition hover:from-indigo-700 hover:to-violet-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">🔐 ดำเนินการต่อ · ยืนยันรหัสผ่าน Admin</button>
+                    <p class="text-center text-[10px] leading-5 text-slate-500">ขั้นตอนถัดไปจะเปิดหน้าต่างยืนยันรหัสผ่านก่อนลบข้อมูลจริง</p>
                   </div>
                 </div>
-              </section>`;
+              </section>
+              <div id="product-global-cleanup-password-popup" class="hidden fixed inset-0 z-[55010] flex items-center justify-center p-4" style="background:rgba(15,23,42,.78);backdrop-filter:blur(10px)">
+                <section class="w-full max-w-md overflow-hidden rounded-3xl border border-indigo-100 bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="product-global-cleanup-password-title">
+                  <header class="relative overflow-hidden px-6 py-6 text-white" style="background:linear-gradient(135deg,#312e81,#4f46e5 55%,#7c3aed)">
+                    <div class="absolute -right-6 -top-8 h-28 w-28 rounded-full bg-white/10"></div>
+                    <div class="relative flex items-start gap-4"><div class="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-white/20 bg-white/15 text-2xl shadow-lg">🔐</div><div><h3 id="product-global-cleanup-password-title" class="text-lg font-extrabold">ยืนยันตัวตน Admin</h3><p class="mt-1 text-sm leading-5 text-indigo-100">กรอกรหัสผ่านบัญชีที่เข้าสู่ระบบอยู่ เพื่ออนุมัติการลบสินค้า</p></div></div>
+                  </header>
+                  <div class="space-y-4 p-6">
+                    <div class="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 text-xs leading-5 text-amber-900">⚠️ <b>โปรดตรวจสอบอีกครั้ง</b><br>การดำเนินการนี้จะลบรายการที่ตรงกันจากสต็อกมาตรฐานและข้อมูลราคาของทุกบริษัท</div>
+                    <div class="rounded-xl border border-slate-200 bg-slate-50 p-3"><div class="text-[11px] font-semibold text-slate-500">สินค้าที่กำลังยืนยัน</div><div id="product-global-cleanup-popup-product-name" class="mt-1 break-words text-base font-extrabold text-slate-900"></div></div>
+                    <div class="space-y-1.5"><label class="block text-sm font-bold text-slate-700" for="product-global-cleanup-admin-password">รหัสผ่านบัญชี Admin</label><div class="relative"><input id="product-global-cleanup-admin-password" type="password" autocomplete="current-password" class="w-full rounded-xl border border-indigo-200 bg-white px-4 py-3.5 pr-16 text-sm outline-none transition focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100" placeholder="กรอกรหัสผ่านของคุณ"><button id="product-global-cleanup-toggle-password" type="button" class="absolute inset-y-0 right-2 my-1 rounded-lg px-3 text-xs font-bold text-indigo-700 hover:bg-indigo-50" aria-label="แสดงหรือซ่อนรหัสผ่าน">แสดง</button></div><p class="text-[11px] leading-5 text-slate-500">รหัสผ่านจะใช้ยืนยันกับ Firebase Authentication เท่านั้น และไม่ถูกบันทึกลงฐานข้อมูล</p></div>
+                    <div id="product-global-cleanup-auth-error" class="hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs font-semibold leading-5 text-rose-800" role="alert"></div>
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row"><button id="product-global-cleanup-cancel-password" type="button" class="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-600 hover:bg-slate-50">ยกเลิก</button><button id="product-global-cleanup-delete" type="button" disabled class="flex-1 rounded-xl bg-gradient-to-r from-rose-700 to-red-600 px-4 py-3 text-sm font-extrabold text-white shadow-lg shadow-rose-200 transition hover:from-rose-800 hover:to-red-700 disabled:cursor-not-allowed disabled:opacity-40 disabled:shadow-none">🗑️ ยืนยันและลบสินค้า</button></div>
+                  </div>
+                </section>
+              </div>`;
             document.body.appendChild(modal);
             // Prevent outside-click/global click handlers from accidentally closing the active cleanup dialog.
             modal.addEventListener('click', event => event.stopPropagation());
@@ -6105,6 +6186,10 @@ function getCompanyPriceHistory(companyName, productName) {
             const authError = modal.querySelector('#product-global-cleanup-auth-error');
             const results = modal.querySelector('#product-global-cleanup-results');
             const confirmWrap = modal.querySelector('#product-global-cleanup-confirm-wrap');
+            const openPasswordBtn = modal.querySelector('#product-global-cleanup-open-password');
+            const passwordPopup = modal.querySelector('#product-global-cleanup-password-popup');
+            const popupProductName = modal.querySelector('#product-global-cleanup-popup-product-name');
+            const cancelPasswordBtn = modal.querySelector('#product-global-cleanup-cancel-password');
             const deleteBtn = modal.querySelector('#product-global-cleanup-delete');
             let selectedName = '';
             let selectedKey = '';
@@ -6131,6 +6216,8 @@ function getCompanyPriceHistory(companyName, productName) {
                 authError.textContent = '';
                 authError.classList.add('hidden');
                 deleteBtn.disabled = true;
+                openPasswordBtn.disabled = true;
+                passwordPopup.classList.add('hidden');
             };
             modal.querySelector('#product-global-cleanup-search').addEventListener('click', async () => {
                 const typed = nameInput.value.trim();
@@ -6154,14 +6241,29 @@ function getCompanyPriceHistory(companyName, productName) {
                 }
             });
             const updateDeleteButton = () => {
-                deleteBtn.disabled = confirmInput.value.trim() !== selectedName
-                    || !passwordInput.value
-                    || !expectedIds.length;
+                const nameConfirmed = confirmInput.value.trim() === selectedName && !!selectedName && !!expectedIds.length;
+                openPasswordBtn.disabled = !nameConfirmed;
+                deleteBtn.disabled = !nameConfirmed || !passwordInput.value;
                 authError.classList.add('hidden');
                 authError.textContent = '';
             };
             confirmInput.addEventListener('input', updateDeleteButton);
             passwordInput.addEventListener('input', updateDeleteButton);
+            openPasswordBtn.addEventListener('click', () => {
+                if (confirmInput.value.trim() !== selectedName || !expectedIds.length) return;
+                popupProductName.textContent = selectedName;
+                passwordPopup.classList.remove('hidden');
+                passwordInput.value = '';
+                updateDeleteButton();
+                setTimeout(() => passwordInput.focus(), 30);
+            });
+            cancelPasswordBtn.addEventListener('click', () => {
+                passwordInput.value = '';
+                passwordPopup.classList.add('hidden');
+                authError.classList.add('hidden');
+                updateDeleteButton();
+            });
+            passwordPopup.addEventListener('click', event => { if (event.target === passwordPopup) event.stopPropagation(); });
             togglePasswordBtn.addEventListener('click', () => {
                 const reveal = passwordInput.type === 'password';
                 passwordInput.type = reveal ? 'text' : 'password';
@@ -6553,6 +6655,7 @@ function getCompanyPriceHistory(companyName, productName) {
         // ลบเฉพาะข้อมูลราคาประจำบริษัทที่ไม่มีบริษัทนั้นใช้งานอยู่ใน deliveries แล้ว
         // ไม่ลบสินค้าใน products (สต็อกมาตรฐาน) และไม่แตะข้อมูลบริษัทที่ยังใช้งานอยู่
         async function deleteUnusedStockCompanyNames() {
+            if (!(await requireAdminPasswordForDelete('ลบชื่อบริษัทที่ไม่ใช้งานจากข้อมูลสต็อก'))) return;
             const actualCompanies = getActualCompaniesForStock();
             const activeKeys = new Set(actualCompanies.map(company => company.key));
 
@@ -6984,6 +7087,7 @@ function getCompanyPriceHistory(companyName, productName) {
                 'ยืนยันลบสินค้าในสต็อก',
                 `ต้องการลบ "${name}" ออกจากรายการสต็อกสินค้ามาตรฐานใช่หรือไม่?`,
                 async () => {
+                    if (!(await requireAdminPasswordForDelete(`ลบสินค้ากลาง ${name}`))) return;
                     try {
                         await db.collection('products').doc(id).delete();
                         showToast('ลบสินค้าออกจากสต็อกแล้ว', 'success');
@@ -7882,6 +7986,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
         };
 
         window.deleteCustomerLineId = async function(docId, encodedLineId) {
+            if (!(await requireAdminPasswordForDelete('ลบ Line ID ของลูกค้า'))) return;
             let rawId = encodedLineId;
             try { rawId = decodeURIComponent(String(encodedLineId || '')); } catch (_) {}
             const id = normalizeLineId(rawId);
@@ -9218,6 +9323,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 'ยืนยันการลบรายการสินค้า',
                 `คุณต้องการลบรายการ "${itemText}" นี้ออกใช่หรือไม่?`,
                 async () => {
+                    if (!(await requireAdminPasswordForDelete(`ลบรายการสินค้า ${itemText}`))) return;
                     try {
                         const docRef = db.collection('deliveries').doc(docId);
                         const docSnap = await docRef.get();
@@ -9359,6 +9465,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 'ยืนยันการลบข้อมูลลูกค้า',
                 `คุณต้องการลบข้อมูลประวัติและรายการทั้งหมดของ "${name}" ออกจากระบบใช่หรือไม่?`,
                 async () => {
+                    if (!(await requireAdminPasswordForDelete(`ลบข้อมูลลูกค้าและประวัติ ${name}`))) return;
                     try {
                         await db.collection('deliveries').doc(docId).delete();
                         showToast(`ลบข้อมูลของ "${name}" สำเร็จ`, 'success');
@@ -9536,6 +9643,7 @@ async function saveCrmNote() {
 window.deleteCrmNote = function(noteId) {
     if (!currentCrmCustomerId || !noteId) return;
     showConfirmModal('ยืนยันการลบโน้ต', 'ต้องการลบประวัติการติดต่อนี้ใช่หรือไม่?', async () => {
+        if (!(await requireAdminPasswordForDelete('ลบประวัติการติดต่อ CRM'))) return;
         try {
             const docRef = db.collection('deliveries').doc(currentCrmCustomerId);
             const docSnap = await docRef.get();
@@ -9914,6 +10022,7 @@ window.toggleReminder = async function(id, currentStatus) {
 
 window.deleteReminder = function(id) {
     showConfirmModal('ยืนยันการลบการแจ้งเตือน', 'คุณต้องการลบการแจ้งเตือนนี้ใช่หรือไม่?', async () => {
+        if (!(await requireAdminPasswordForDelete('ลบการแจ้งเตือน'))) return;
         try {
             await db.collection('reminders').doc(id).delete();
             showToast('ลบการแจ้งเตือนแล้ว', 'success');
