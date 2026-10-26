@@ -113,6 +113,35 @@ tbody tr:hover{background:#fafbff}
 .empty{text-align:center;padding:45px 20px;color:#94a3b8;font-size:13px}
 .footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
 
+/* รูปแบบสำหรับพิมพ์: พิมพ์รายการที่แสดงอยู่ตามคำค้นหา/ตัวกรองปัจจุบัน */
+@page{size:A4 landscape;margin:12mm}
+@media print{
+  html,body{min-height:0!important;background:#fff!important;color:#111827!important}
+  body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #app{display:block!important;min-height:0!important}
+  .topbar,.actions,.toolbar,.footer{display:none!important}
+  .page{width:100%!important;margin:0!important}
+  .hero{padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important}
+  .hero-top{display:block!important}
+  .kicker{font-size:9pt!important;color:#333!important}
+  h1{font-size:17pt!important;margin:4px 0 6px!important}
+  .sub{font-size:9pt!important;color:#444!important}
+  .stats{grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin:10px 0!important}
+  .stat{padding:7px 9px!important;border:1px solid #d1d5db!important;border-radius:5px!important;background:#fff!important}
+  .stat b{font-size:12pt!important}
+  .stat span{font-size:8pt!important;color:#374151!important}
+  .table-wrap{margin-top:8px!important;border:1px solid #9ca3af!important;border-radius:0!important;overflow:visible!important;box-shadow:none!important}
+  table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important}
+  thead{display:table-header-group}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  thead th{position:static!important;background:#e5e7eb!important;color:#111827!important;font-size:8pt!important;padding:6px!important;border:1px solid #9ca3af!important;white-space:normal!important}
+  tbody td{font-size:8pt!important;padding:6px!important;border:1px solid #d1d5db!important;overflow-wrap:anywhere!important}
+  .company{color:#111827!important}
+  .line-badge,.email-pill{background:#fff!important;color:#111827!important;border:0!important;box-shadow:none!important;padding:0!important;margin:0!important;white-space:normal!important}
+  a{color:#111827!important;text-decoration:none!important}
+  .empty{padding:16px!important;color:#374151!important}
+}
+
 @media(max-width:760px){
   .topbar{padding:10px 12px}
   .brand strong{font-size:14px}.brand span{font-size:9px}
@@ -215,8 +244,7 @@ tbody tr:hover{background:#fafbff}
         </div>
         <div class="actions">
           <button class="btn" id="refreshBtn">↻ รีเฟรช</button>
-          <button class="btn green" id="exportFilteredBtn">⬇ Export CSV ที่ค้นหา</button>
-          <button class="btn primary" id="exportAllBtn">⬇ Export CSV ทั้งหมด</button>
+          <button class="btn primary" id="printPageBtn">🖨️ พิมพ์หน้านี้</button>
         </div>
       </div>
 
@@ -387,35 +415,6 @@ function fillCompanies(){
   sel.innerHTML='<option value="">ทุกบริษัท</option>'+companies.map(([key,name])=>`<option value="${esc(key)}">${esc(name)}</option>`).join('');
   sel.value=old;
 }
-function csvCell(v){
-  // CSV มาตรฐาน: ครอบทุกช่องด้วย " และ escape " เป็น ""
-  return '"' + String(v??'').replace(/"/g,'""').replace(/\r?\n/g,' ') + '"';
-}
-function exportCSV(rows, suffix){
-  if(!rows.length){ alert('ไม่มีข้อมูลสำหรับ Export CSV'); return; }
-  const headers=['ชื่อบริษัท','ชื่อผู้ติดต่อ','เบอร์โทร','LINE','อีเมล'];
-  const lines=[headers.map(csvCell).join(',')];
-  rows.forEach(r=>{
-    lines.push([
-      r.companyName,
-      r.customerName,
-      r.phone,
-      r.lineIds.join(' | '),
-      r.email
-    ].map(csvCell).join(','));
-  });
-  // UTF-8 BOM + CRLF เพื่อให้ Excel/Windows อ่านภาษาไทยได้ถูกต้อง
-  const csv='\uFEFF'+lines.join('\r\n')+'\r\n';
-  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement('a');
-  const stamp=new Date();
-  const pad=n=>String(n).padStart(2,'0');
-  const filename=`yellow_pages_${stamp.getFullYear()}${pad(stamp.getMonth()+1)}${pad(stamp.getDate())}_${pad(stamp.getHours())}${pad(stamp.getMinutes())}${pad(stamp.getSeconds())}_${suffix}.csv`;
-  a.href=url;a.download=filename;
-  document.body.appendChild(a);a.click();a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
-}
 async function loadData(){
   if(!currentUser || !profile) return;
   if(unsubscribe) unsubscribe();
@@ -474,8 +473,13 @@ document.getElementById('refreshBtn').addEventListener('click', async () => {
 document.getElementById('search').addEventListener('input',applyView);
 document.getElementById('companyFilter').addEventListener('change',applyView);
 document.getElementById('sort').addEventListener('change',applyView);
-document.getElementById('exportAllBtn').addEventListener('click',()=>exportCSV(rawRows,'all'));
-document.getElementById('exportFilteredBtn').addEventListener('click',()=>exportCSV(visibleRows,'filtered'));
+document.getElementById('printPageBtn').addEventListener('click',()=>{
+  if(!visibleRows.length){
+    alert('ไม่มีรายการให้พิมพ์');
+    return;
+  }
+  window.print();
+});
 
 auth.onAuthStateChanged(async user=>{
   currentUser=user||null;
