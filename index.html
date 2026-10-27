@@ -4107,12 +4107,26 @@ function sanitizeCompanyProductNameHtml(html) {
     const source = String(html || '');
     if (!source.trim()) return '';
     const parsed = new DOMParser().parseFromString(source, 'text/html');
-    const allowedColors = new Set(['#dc2626', '#2563eb', '#15803d', '#334155']);
+    // อนุญาตสีทั้ง 12 สีที่แถบเครื่องมือใช้จริง และแปลงค่า rgb ที่ browser สร้างจาก execCommand ให้เป็น hex
+    const allowedColors = new Set([
+        '#ef4444', '#f97316', '#eab308', '#22c55e', '#15803d', '#06b6d4',
+        '#0ea5e9', '#2563eb', '#7c3aed', '#d946ef', '#ec4899', '#334155'
+    ]);
     const normalizedColorMap = {
-        'rgb(220, 38, 38)': '#dc2626',
-        'rgb(37, 99, 235)': '#2563eb',
+        'rgb(239, 68, 68)': '#ef4444',
+        'rgb(249, 115, 22)': '#f97316',
+        'rgb(234, 179, 8)': '#eab308',
+        'rgb(34, 197, 94)': '#22c55e',
         'rgb(21, 128, 61)': '#15803d',
-        'rgb(51, 65, 85)': '#334155'
+        'rgb(6, 182, 212)': '#06b6d4',
+        'rgb(14, 165, 233)': '#0ea5e9',
+        'rgb(37, 99, 235)': '#2563eb',
+        'rgb(124, 58, 237)': '#7c3aed',
+        'rgb(217, 70, 239)': '#d946ef',
+        'rgb(236, 72, 153)': '#ec4899',
+        'rgb(51, 65, 85)': '#334155',
+        // รองรับสีจากรุ่นก่อนเพื่อให้ชื่อสินค้าที่บันทึกไว้เดิมยังแสดงผลได้
+        'rgb(220, 38, 38)': '#ef4444'
     };
     const cleanNode = node => {
         if (node.nodeType === Node.TEXT_NODE) return document.createTextNode(node.nodeValue || '');
