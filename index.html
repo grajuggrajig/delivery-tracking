@@ -298,7 +298,6 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style id="premium-classic-ui">
 /* =========================================================
@@ -3363,8 +3362,6 @@ body > header{z-index:900 !important}
         }
         const db = firebase.firestore();
         const auth = firebase.auth();
-        // Firebase Storage สำหรับเก็บรูปแยกตามเอกสารลูกค้า/บริษัท
-        const customerPhotoStorage = firebase.storage();
         auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(error => {
             console.warn('Firebase Auth persistence warning:', error);
         });
@@ -9261,60 +9258,13 @@ document.getElementById('item-input').addEventListener('blur', function() {
             editCustomerConfirm.textContent = 'กำลังบันทึก...';
 
             try {
-                // รูปใหม่จะถูกอัปโหลดไป Firebase Storage ก่อน แล้วจึงบันทึก URL ลง Firestore
-                // รูปเดิมที่เป็น URL จะคงเดิม ส่วนรูปเก่าแบบ Data URL จะย้ายเข้า Storage เมื่อกดบันทึก
-                let customerPhotoUrl = editCustomerPhotoData || '';
-                if (customerPhotoUrl.startsWith('data:image/')) {
-                    const activeUser = auth.currentUser || currentAuthUser;
-                    if (!activeUser || !activeUser.uid) {
-                        throw new Error('กรุณาเข้าสู่ระบบก่อนอัปโหลดรูปภาพ');
-                    }
-                    if (!customerPhotoStorage || typeof customerPhotoStorage.ref !== 'function') {
-                        throw new Error('Firebase Storage ยังไม่พร้อมใช้งาน');
-                    }
-                    // Firebase Storage browser uploads must run from a real HTTP(S) origin.
-                    // Opening this HTML directly from disk gives Origin: null and causes CORS preflight failure.
-                    if (window.location.protocol === 'file:' || window.location.origin === 'null') {
-                        throw new Error('กรุณาเปิดหน้านี้ผ่านเว็บไซต์ HTTPS (GitHub Pages) ไม่ใช่เปิดไฟล์ HTML จากเครื่องโดยตรง เพราะ Origin: null จะทำให้ Firebase Storage ปฏิเสธ CORS');
-                    }
-                    editCustomerConfirm.textContent = 'กำลังอัปโหลดรูปภาพ...';
-                    const photoPath = 'customer-photos/' + activeUser.uid + '/' + encodeURIComponent(String(docId)) + '.jpg';
-                    const photoRef = customerPhotoStorage.ref().child(photoPath);
-                    try {
-                        await photoRef.putString(customerPhotoUrl, 'data_url', {
-                            contentType: 'image/jpeg',
-                            cacheControl: 'public,max-age=3600'
-                        });
-                        customerPhotoUrl = await photoRef.getDownloadURL();
-                    } catch (storageError) {
-                        console.error('Firebase Storage upload failed:', {
-                            code: storageError && storageError.code,
-                            message: storageError && storageError.message,
-                            origin: window.location.origin,
-                            path: photoPath
-                        });
-                        const storageCode = String(storageError && storageError.code || '');
-                        if (storageCode.includes('storage/unauthorized') || storageCode.includes('storage/unauthenticated')) {
-                            throw new Error('Firebase Storage ปฏิเสธสิทธิ์อัปโหลด (unauthorized) กรุณาตรวจสอบ Storage Rules สำหรับ customer-photos และตรวจว่าผู้ใช้เข้าสู่ระบบแล้ว');
-                        }
-                        if (storageCode.includes('storage/bucket-not-found')) {
-                            throw new Error('ไม่พบ Firebase Storage bucket กรุณาตรวจสอบว่าเปิดใช้ Storage ในโปรเจกต์ delivery-tracking-2313a และ bucket ตรงกับการตั้งค่า Firebase');
-                        }
-                        if (storageCode.includes('storage/retry-limit-exceeded') || storageCode.includes('storage/unknown') || !storageCode) {
-                            throw new Error('อัปโหลดรูปไม่สำเร็จ อาจเกิดจาก CORS หรือเครือข่าย หากเปิดผ่าน HTTPS แล้ว ให้ตรวจ Storage Rules และการตั้งค่า CORS ของ bucket');
-                        }
-                        throw storageError;
-                    }
-                }
-
-                editCustomerConfirm.textContent = 'กำลังบันทึกข้อมูล...';
                 await db.collection('deliveries').doc(docId).update({
                     customerName: newCustomerName,
                     companyName: newCompanyName,
                     phone: newPhone,
                     lineIds: newLineIds,
                     address: newAddress,
-                    customerPhoto: customerPhotoUrl
+                    customerPhoto: editCustomerPhotoData || ''
                 });
 
                 // เคลียร์สถานะปุ่มทันทีหลัง Firebase รับคำสั่งสำเร็จ
@@ -9323,17 +9273,10 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 showToast('แก้ไขข้อมูลลูกค้าสำเร็จ', 'success');
                 closeEditCustomerModal();
             } catch (err) {
-                console.error('แก้ไขข้อมูลลูกค้าหรืออัปโหลดรูปไม่สำเร็จ:', err);
+                console.error('แก้ไขข้อมูลลูกค้าไม่สำเร็จ:', err);
                 editCustomerConfirm.disabled = false;
                 editCustomerConfirm.textContent = 'บันทึกการแก้ไข';
-                const code = String(err?.code || '');
-                if (code.includes('storage/unauthorized') || code.includes('storage/unauthenticated') || code.includes('storage/bucket-not-found')) {
-                    showToast('อัปโหลดรูปไม่สำเร็จ: ตรวจสอบ Firebase Storage และ Storage Rules', 'error');
-                } else if (String(err?.message || '').includes('Firebase Storage') || String(err?.message || '').includes('Origin: null') || String(err?.message || '').includes('HTTPS')) {
-                    showToast(err.message, 'error');
-                } else {
-                    showToast('บันทึกข้อมูลไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตและสิทธิ์ Firebase แล้วลองอีกครั้ง', 'error');
-                }
+                showToast('ไม่สามารถแก้ไขข้อมูลลูกค้าได้ กรุณาลองใหม่อีกครั้ง', 'error');
             }
         });
 
