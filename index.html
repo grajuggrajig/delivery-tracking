@@ -9032,6 +9032,11 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                         title="พิมพ์รายการสินค้าทั้งหมดของบริษัทนี้">
                         🖨️ พิมพ์หน้านี้
                     </button>
+                    <button type="button" id="add-company-products-to-history-btn"
+                        class="w-full sm:w-auto px-3 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                        title="เลือกสินค้าและเพิ่มเข้าประวัติการซื้อ เพื่อออกเอกสาร">
+                        ＋ เพิ่มรายการสินค้าเข้าประวัติ / ออกบิล
+                    </button>
     ${currentUserProfile?.role === 'admin' ? `<button type="button" id="open-product-retirement-btn"
         class="p-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs shadow-sm transition flex items-center justify-center"
         title="ลบรายการสินค้าทุกบริษัท"
@@ -9128,6 +9133,24 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 
         <!-- ขยายพื้นที่แสดงรายการสินค้าให้สูงและจุใจมากขึ้น (max-h-[46vh]) -->
         <div id="company-specific-products-container" class="space-y-2 overflow-y-auto no-scrollbar flex-1 min-h-[220px] max-h-[46vh] pr-1"></div>
+
+        <!-- Modal เลือกสินค้าเพื่อเพิ่มเข้า Purchase History และออกเอกสาร -->
+        <div id="company-add-history-modal" class="fixed inset-0 bg-slate-950/65 backdrop-blur-sm z-[400] hidden items-center justify-center p-4">
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden border border-indigo-100">
+                <div class="bg-gradient-to-r from-indigo-700 via-blue-600 to-violet-600 text-white px-5 py-4 flex items-center justify-between gap-3">
+                    <div><div class="text-base font-extrabold">🧾 เพิ่มรายการสินค้าเข้าประวัติการซื้อ</div><div class="text-[11px] text-white/85 mt-1">เลือกสินค้า ระบุจำนวน และบันทึกเพื่อให้ปรากฏในประวัติและใช้ทำใบเสนอราคา/ใบเสร็จได้</div></div>
+                    <button type="button" id="close-company-add-history-modal" class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 text-white text-lg">✕</button>
+                </div>
+                <div class="p-4 border-b border-slate-100 bg-slate-50 space-y-3">
+                    <label class="block text-xs font-bold text-slate-700">👤 บันทึกให้ลูกค้า / ประวัติของบริษัทนี้</label>
+                    <select id="company-add-history-customer" class="w-full px-3 py-2.5 text-sm border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400"></select>
+                    <input id="company-add-history-search" type="search" placeholder="🔎 ค้นหาสินค้าในรายการของบริษัทนี้..." class="w-full px-3 py-2.5 text-sm border border-sky-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-sky-400">
+                    <div class="flex items-center justify-between gap-2 text-xs"><span id="company-add-history-selected-count" class="font-bold text-indigo-700">เลือก 0 รายการ</span><div class="flex gap-2"><button type="button" id="company-add-history-select-visible" class="px-3 py-1.5 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 font-bold">เลือกที่แสดง</button><button type="button" id="company-add-history-clear" class="px-3 py-1.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 font-bold">ล้างที่เลือก</button></div></div>
+                </div>
+                <div id="company-add-history-products" class="p-4 space-y-2 overflow-y-auto flex-1 min-h-0"><div class="text-center text-slate-400 py-8">กำลังโหลดรายการสินค้า...</div></div>
+                <div class="px-5 py-3 border-t border-slate-100 flex items-center justify-between gap-3"><div class="text-[11px] text-slate-500">ราคาที่บันทึกจะยึดราคาของบริษัทนี้โดยเฉพาะ</div><div class="flex gap-2"><button type="button" id="cancel-company-add-history" class="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold">ยกเลิก</button><button type="button" id="save-company-add-history" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-extrabold">✓ เพิ่มเข้าประวัติการซื้อ</button></div></div>
+            </div>
+        </div>
 
         <!-- Modal ย่อย: รับสินค้าจากบริษัทอื่น -->
         <div id="company-import-modal" class="fixed inset-0 bg-slate-950/55 backdrop-blur-sm z-[250] hidden items-center justify-center p-4">
@@ -9567,6 +9590,122 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 
     document.getElementById('print-company-products-btn')?.addEventListener('click', () => {
         printCompanyProducts(companyName, stableCompanyKey, customerName);
+    });
+
+    // เพิ่มสินค้าจาก Company Directory เข้าประวัติการซื้อ เพื่อใช้สร้างเอกสารได้
+    const addHistoryModal = document.getElementById('company-add-history-modal');
+    const addHistoryProducts = document.getElementById('company-add-history-products');
+    const addHistoryCustomer = document.getElementById('company-add-history-customer');
+    const addHistorySearch = document.getElementById('company-add-history-search');
+    const addHistorySelectedCount = document.getElementById('company-add-history-selected-count');
+    const addHistorySaveBtn = document.getElementById('save-company-add-history');
+    const selectedHistoryProductQty = new Map();
+    const companyHistoryKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
+    const getHistoryProducts = () => (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).filter(p =>
+        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyHistoryKey && String(p.name || '').trim()
+    );
+    const historyCustomers = () => (Array.isArray(allDeliveries) ? allDeliveries : []).filter(d =>
+        normalizeCompanyProductKey(d.companyKey || d.companyName) === companyHistoryKey
+    );
+    const renderAddHistoryProducts = () => {
+        if (!addHistoryProducts) return;
+        const kw = String(addHistorySearch?.value || '').trim().toLocaleLowerCase('th-TH');
+        const products = getHistoryProducts().filter(p => !kw || String(p.name || '').toLocaleLowerCase('th-TH').includes(kw));
+        addHistoryProducts.innerHTML = products.length ? products.map(p => {
+            const id = String(p.id);
+            const selected = selectedHistoryProductQty.has(id);
+            const qty = selectedHistoryProductQty.get(id) || 1;
+            const price = Number(p.price) || 0;
+            return `<div class="flex items-center gap-3 p-3 rounded-xl border ${selected ? 'border-indigo-300 bg-indigo-50/60' : 'border-slate-200 bg-white'}">
+                <input type="checkbox" class="company-add-history-check w-4 h-4 accent-indigo-600" data-product-id="${escapeHTML(id)}" ${selected ? 'checked' : ''} aria-label="เลือก ${escapeHTML(p.name)}">
+                <div class="flex-1 min-w-0"><div class="text-sm font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div><div class="text-[11px] text-slate-500 mt-0.5">ราคาขายบริษัทนี้: <b class="text-sky-700">${price.toLocaleString('th-TH')} บาท</b>${p.unit ? ' · หน่วย ' + escapeHTML(p.unit) : ''}</div></div>
+                <label class="text-[10px] text-slate-500 flex items-center gap-1">จำนวน <input type="number" min="1" step="1" value="${qty}" data-qty-product-id="${escapeHTML(id)}" class="company-add-history-qty w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right" ${selected ? '' : 'disabled'}></label>
+            </div>`;
+        }).join('') : '<div class="text-center text-slate-400 py-8 text-sm">ไม่พบสินค้าของบริษัทนี้</div>';
+        if (addHistorySelectedCount) addHistorySelectedCount.textContent = `เลือก ${selectedHistoryProductQty.size} รายการ`;
+    };
+    const openAddHistoryModal = () => {
+        if (!addHistoryModal) return;
+        selectedHistoryProductQty.clear();
+        if (addHistorySearch) addHistorySearch.value = '';
+        const customers = historyCustomers();
+        addHistoryCustomer.innerHTML = '<option value="__new__">＋ สร้างประวัติใหม่สำหรับบริษัทนี้</option>' + customers.map(d => `<option value="${escapeHTML(d.id)}">${escapeHTML(d.customerName || 'ไม่ระบุชื่อลูกค้า')} · ${escapeHTML(d.companyName || companyName)}</option>`).join('');
+        // เลือกลูกค้าเดิมเมื่อมีข้อมูลเดียว หรือมีผู้ติดต่อที่ทราบจากหน้าประวัติ
+        if (customerName) {
+            const match = customers.find(d => String(d.customerName || '') === String(customerName));
+            if (match) addHistoryCustomer.value = match.id;
+        } else if (customers.length === 1) addHistoryCustomer.value = customers[0].id;
+        renderAddHistoryProducts();
+        addHistoryModal.classList.remove('hidden'); addHistoryModal.classList.add('flex');
+    };
+    const closeAddHistoryModal = () => { addHistoryModal?.classList.add('hidden'); addHistoryModal?.classList.remove('flex'); };
+    document.getElementById('add-company-products-to-history-btn')?.addEventListener('click', openAddHistoryModal);
+    document.getElementById('close-company-add-history-modal')?.addEventListener('click', closeAddHistoryModal);
+    document.getElementById('cancel-company-add-history')?.addEventListener('click', closeAddHistoryModal);
+    addHistoryModal?.addEventListener('click', e => { if (e.target === addHistoryModal) e.preventDefault(); });
+    addHistorySearch?.addEventListener('input', renderAddHistoryProducts);
+    addHistoryProducts?.addEventListener('change', e => {
+        const check = e.target.closest('.company-add-history-check');
+        if (check) {
+            const id = check.dataset.productId;
+            if (check.checked) selectedHistoryProductQty.set(id, selectedHistoryProductQty.get(id) || 1);
+            else selectedHistoryProductQty.delete(id);
+            renderAddHistoryProducts(); return;
+        }
+        const qtyInput = e.target.closest('.company-add-history-qty');
+        if (qtyInput) {
+            const id = qtyInput.dataset.qtyProductId;
+            const qty = Math.max(1, Math.floor(Number(qtyInput.value) || 1));
+            qtyInput.value = qty;
+            if (selectedHistoryProductQty.has(id)) selectedHistoryProductQty.set(id, qty);
+            renderAddHistoryProducts();
+        }
+    });
+    document.getElementById('company-add-history-select-visible')?.addEventListener('click', () => {
+        const kw = String(addHistorySearch?.value || '').trim().toLocaleLowerCase('th-TH');
+        getHistoryProducts().filter(p => !kw || String(p.name || '').toLocaleLowerCase('th-TH').includes(kw)).forEach(p => {
+            if (!selectedHistoryProductQty.has(String(p.id))) selectedHistoryProductQty.set(String(p.id), 1);
+        });
+        renderAddHistoryProducts();
+    });
+    document.getElementById('company-add-history-clear')?.addEventListener('click', () => { selectedHistoryProductQty.clear(); renderAddHistoryProducts(); });
+    addHistorySaveBtn?.addEventListener('click', async () => {
+        if (addHistorySaveBtn.disabled) return;
+        if (!selectedHistoryProductQty.size) { showToast('กรุณาเลือกสินค้าอย่างน้อย 1 รายการ', 'warning'); return; }
+        if (!currentAuthUser?.uid) { showToast('กรุณาเข้าสู่ระบบก่อนบันทึก', 'error'); return; }
+        const products = getHistoryProducts().filter(p => selectedHistoryProductQty.has(String(p.id)));
+        if (products.length !== selectedHistoryProductQty.size) { showToast('รายการสินค้าบางรายการไม่พบแล้ว กรุณาเปิดหน้าต่างใหม่', 'warning'); return; }
+        const chosenCustomerId = addHistoryCustomer.value;
+        const existingCustomer = chosenCustomerId !== '__new__' ? allDeliveries.find(d => d.id === chosenCustomerId) : null;
+        if (existingCustomer && currentUserProfile?.role !== 'admin' && existingCustomer.ownerUid && existingCustomer.ownerUid !== currentAuthUser.uid) {
+            showToast('ไม่มีสิทธิ์เพิ่มรายการในประวัติลูกค้ารายนี้', 'error'); return;
+        }
+        const batchId = 'company_purchase_' + (window.crypto?.randomUUID?.() || Date.now().toString(36) + Math.random().toString(36).slice(2));
+        const now = new Date().toISOString();
+        const newSubItems = products.map((p, i) => {
+            const qty = selectedHistoryProductQty.get(String(p.id)) || 1;
+            const price = Number(p.price);
+            if (!Number.isFinite(price) || price < 0) throw new Error(`ราคาสินค้าไม่ถูกต้อง: ${p.name}`);
+            const safeName = String(p.name || '').trim();
+            return { id: `${batchId}_${i}`, submissionId: batchId, text: `${safeName} (${price.toLocaleString('en-US', {useGrouping:false, maximumFractionDigits:2})} บาท) x ${qty}`, dueDate: '', status: 'pending', totalProfit: (price - (Number(p.cost) || 0)) * qty, createdAt: now, source: 'company-directory', companyProductId: p.id };
+        });
+        addHistorySaveBtn.disabled = true; addHistorySaveBtn.textContent = 'กำลังบันทึก...';
+        try {
+            let targetRef;
+            if (existingCustomer) targetRef = db.collection('deliveries').doc(existingCustomer.id);
+            else {
+                targetRef = db.collection('deliveries').doc();
+                await targetRef.set({ customerName: companyName, companyName, companyKey: stableCompanyKey || companyHistoryKey, ownerUid: currentAuthUser.uid, createdAt: firebase.firestore.FieldValue.serverTimestamp(), subItems: firebase.firestore.FieldValue.arrayUnion(...newSubItems), updatedAt: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
+            }
+            if (existingCustomer) await targetRef.update({ subItems: firebase.firestore.FieldValue.arrayUnion(...newSubItems), updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+            showToast(`เพิ่มสินค้า ${newSubItems.length} รายการเข้าประวัติการซื้อแล้ว สามารถกด “ออกเอกสาร” เพื่อทำบิลได้`, 'success');
+            closeAddHistoryModal();
+            // รีเฟรชประวัติสินค้าของบริษัทจากข้อมูลที่ listener อัปเดตแล้ว
+            setTimeout(() => showCompanyAllHistory(companyName, stableCompanyKey), 350);
+        } catch (err) {
+            console.error('เพิ่มสินค้าเข้าประวัติการซื้อไม่สำเร็จ:', err);
+            showToast(`บันทึกไม่สำเร็จ: ${err.message || 'กรุณาตรวจสอบสิทธิ์ Firestore'}`, 'error');
+        } finally { addHistorySaveBtn.disabled = false; addHistorySaveBtn.textContent = '✓ เพิ่มเข้าประวัติการซื้อ'; }
     });
 
     companyProductPrice.addEventListener('keypress', e => {
@@ -12336,7 +12475,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     });
                 }
 
-                if (!product && !missing.includes(itemName)) missing.push(itemName);
+                if (!product && !(embeddedPrice > 0) && !missing.includes(itemName)) missing.push(itemName);
 
                 // ราคาเฉพาะบริษัทมีสิทธิ์เหนือราคามาตรฐานของ Manage Stock
                 const companyProduct = product
@@ -12802,7 +12941,9 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             tr{page-break-inside:avoid;page-break-after:auto}
                             @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
                         </style>
-                    </head>
+                    
+
+</head>
                     <body>${html}</body>
                     </html>
                 `);
@@ -14871,6 +15012,71 @@ window.toggleCompanyProductEntryArea = function(button) {
   };
 })();
 </script>
+
+
+<style id="company-add-history-modal-layout-fix">
+/* Keep the action footer permanently visible; only the product list scrolls. */
+#company-add-history-modal {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 99999 !important;
+  box-sizing: border-box !important;
+  padding: max(10px, env(safe-area-inset-top)) 12px max(10px, env(safe-area-inset-bottom)) !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: hidden !important;
+  isolation: isolate !important;
+}
+#company-add-history-modal > div {
+  box-sizing: border-box !important;
+  width: min(760px, 100%) !important;
+  max-width: 760px !important;
+  height: min( min(820px, calc(100vh - 20px)), calc(100dvh - 20px) ) !important;
+  max-height: calc(100vh - 20px) !important;
+  max-height: calc(100dvh - 20px) !important;
+  min-height: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  position: relative !important;
+  pointer-events: auto !important;
+}
+#company-add-history-modal > div > div:first-child,
+#company-add-history-modal > div > div:nth-child(2),
+#company-add-history-modal > div > div:last-child {
+  flex: 0 0 auto !important;
+  min-height: 0 !important;
+  position: relative !important;
+  z-index: 3 !important;
+  pointer-events: auto !important;
+}
+#company-add-history-products {
+  display: block !important;
+  flex: 1 1 0% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  overscroll-behavior: contain !important;
+  -webkit-overflow-scrolling: touch !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+#save-company-add-history, #cancel-company-add-history, #close-company-add-history-modal,
+#company-add-history-select-visible, #company-add-history-clear {
+  position: relative !important;
+  z-index: 10 !important;
+  pointer-events: auto !important;
+  touch-action: manipulation !important;
+  flex-shrink: 0 !important;
+}
+@media (max-width: 640px) {
+  #company-add-history-modal { padding: 8px !important; }
+  #company-add-history-modal > div { height: calc(100vh - 16px) !important; height: calc(100dvh - 16px) !important; border-radius: 18px !important; }
+  #company-add-history-modal > div > div:last-child { flex-wrap: wrap !important; gap: 8px !important; }
+  #company-add-history-modal > div > div:last-child > div:last-child { display: flex !important; flex-wrap: wrap !important; justify-content: flex-end !important; }
+}
+</style>
 
 </body>
 </html>
