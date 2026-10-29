@@ -9027,25 +9027,16 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
-<div class="flex flex-col sm:flex-row items-center gap-2">
-    <!-- ปุ่มพิมพ์หน้านี้ (Hover แล้วตัวอักษรสีเขียวเข้ม บนพื้นหลังเขียวอ่อน) -->
-    <button type="button" id="print-company-products-btn"
-            class="group w-full sm:w-auto px-4 py-2.5 text-emerald-700 hover:text-emerald-900 bg-white hover:bg-emerald-50 active:bg-emerald-100 border border-emerald-200 hover:border-emerald-300 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-2xs hover:shadow-md hover:shadow-emerald-100"
-            title="พิมพ์รายการสินค้าทั้งหมดของบริษัทนี้">
-        <span class="text-sm transition-transform group-hover:scale-110">🖨️</span>
-        <span>พิมพ์หน้านี้</span>
-    </button>
-
-    <!-- ปุ่มสร้างเอกสาร (Hover แล้วตัวอักษรสีน้ำเงินเข้ม บนพื้นหลังน้ำเงินอ่อน) -->
-    <button type="button" id="add-company-products-to-history-btn"
-            class="group w-full sm:w-auto px-4 py-2.5 text-indigo-600 hover:text-indigo-900 bg-white hover:bg-indigo-50 active:bg-indigo-100 border border-indigo-200 hover:border-indigo-300 rounded-xl text-xs font-semibold transition-all duration-200 flex items-center justify-center gap-2 shadow-2xs hover:shadow-md hover:shadow-indigo-100"
-            title="เลือกสินค้าและเพิ่มเข้าประวัติการซื้อ เพื่อออกเอกสาร">
-        <svg class="w-4 h-4 text-indigo-500 group-hover:text-indigo-700 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-        </svg>
-        <span>สร้างเอกสาร</span>
-    </button>
-</div>
+                    <button type="button" id="print-company-products-btn"
+                        class="w-full sm:w-auto px-3 py-2 text-emerald-700 hover:text-white hover:bg-emerald-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-emerald-200 bg-white shadow-2xs"
+                        title="พิมพ์รายการสินค้าทั้งหมดของบริษัทนี้">
+                        🖨️ พิมพ์หน้านี้
+                    </button>
+                    <button type="button" id="add-company-products-to-history-btn"
+                        class="w-full sm:w-auto px-3 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                        title="เลือกสินค้าและเพิ่มเข้าประวัติการซื้อ เพื่อออกเอกสาร">
+                        ＋ เพิ่มรายการสินค้าเข้าประวัติ / ออกบิล
+                    </button>
     ${currentUserProfile?.role === 'admin' ? `<button type="button" id="open-product-retirement-btn"
         class="p-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs shadow-sm transition flex items-center justify-center"
         title="ลบรายการสินค้าทุกบริษัท"
@@ -12341,9 +12332,9 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                     title="ดูประวัติสินค้าทั้งหมดที่บริษัทนี้เคยซื้อ">
                                     📦 ดูสินค้าทั้งหมด <span class="ml-0.5 px-1.5 py-0.5 rounded-full bg-white text-sky-700 border border-sky-200 font-bold">${companyProductCount}</span>
                                 </button>
-                                <button onclick="openDocumentModal('${item.id}')"
+                                <button onclick="openQuotationFromCustomer('${item.id}')"
                                     class="text-[11px] font-bold text-emerald-700 hover:text-white transition px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 border border-emerald-200/60 flex items-center gap-1"
-                                    title="ออกใบเสนอราคา ใบเสร็จรับเงิน หรือใบส่งสินค้า">
+                                    title="ส่งรายการประวัติการซื้อไปยัง quotation.html เพื่อออกใบเสนอราคา">
                                     🧾 ออกเอกสาร
                                 </button>
                                 <button onclick="openDocumentModal('${item.id}')"
@@ -12415,6 +12406,72 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 `;
             }).join('');
         }
+
+        // ส่งข้อมูลประวัติการซื้อของบริษัทไปยัง quotation.html โดยไม่เปลี่ยนข้อมูลเดิมใน Firebase
+        window.openQuotationFromCustomer = function(customerId) {
+            try {
+                const customer = (Array.isArray(allDeliveries) ? allDeliveries : []).find(item => String(item.id) === String(customerId));
+                if (!customer) {
+                    showToast('ไม่พบข้อมูลบริษัท/ประวัติการซื้อ กรุณารอสักครู่แล้วลองใหม่', 'error');
+                    return;
+                }
+                const companyName = String(customer.companyName || customer.customerName || '').trim();
+                const companyKey = normalizeCompanyProductKey(customer.companyKey || customer.companyName || '');
+                const sourceItems = Array.isArray(customer.subItems) ? customer.subItems : [];
+                const items = sourceItems.map(sub => {
+                    const raw = String(sub.text || '').trim();
+                    const qtyMatch = raw.match(/\s*x\s*(\d+)\s*$/i);
+                    const qty = qtyMatch ? Math.max(1, parseInt(qtyMatch[1], 10)) : 1;
+                    let nameAndPrice = raw.replace(/\s*x\s*\d+\s*$/i, '').trim();
+                    const priceMatch = nameAndPrice.match(/\(\s*([\d,]+(?:\.\d+)?)\s*บาท\s*\)$/i);
+                    const embeddedPrice = priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : NaN;
+                    let name = nameAndPrice.replace(/\s*\(\s*[\d,]+(?:\.\d+)?\s*บาท\s*\)\s*$/i, '').trim();
+                    const linkedProduct = (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).find(p =>
+                        String(p.id) === String(sub.companyProductId || '') &&
+                        normalizeCompanyProductKey(p.companyKey || p.companyName || '') === companyKey
+                    ) || (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).find(p =>
+                        normalizeCompanyProductKey(p.companyKey || p.companyName || '') === companyKey &&
+                        normalizeCompanyProductName(p.name) === normalizeCompanyProductName(name)
+                    );
+                    const price = Number.isFinite(embeddedPrice) ? embeddedPrice : Number(linkedProduct?.price ?? sub.price ?? 0) || 0;
+                    return {
+                        desc: name || raw,
+                        model: String(sub.productCode || sub.code || ''),
+                        qty,
+                        unit: String(linkedProduct?.unit || sub.unit || ''),
+                        price
+                    };
+                }).filter(item => item.desc);
+
+                const payload = {
+                    version: 1,
+                    source: 'company-directory-purchase-history',
+                    createdAt: new Date().toISOString(),
+                    customerId: String(customer.id),
+                    companyName,
+                    customerName: companyName,
+                    address: String(customer.address || customer.custAddress || customer.shippingAddress || ''),
+                    phone: String(customer.phone || customer.tel || ''),
+                    taxNo: String(customer.taxNo || customer.customerTaxNo || customer.taxId || ''),
+                    items
+                };
+                if (!items.length) {
+                    showToast('ประวัติการซื้อนี้ยังไม่มีรายการสินค้าให้ส่งไปออกเอกสาร', 'error');
+                    return;
+                }
+                localStorage.setItem('company_purchase_quotation_payload', JSON.stringify(payload));
+                const targetUrl = new URL('quotation.html', window.location.href);
+                targetUrl.searchParams.set('source', 'company-purchase-history');
+                const win = window.open(targetUrl.href, '_blank');
+                if (!win) {
+                    // หากเบราว์เซอร์บล็อกแท็บใหม่ ให้เปิดในแท็บปัจจุบันแทน เพื่อไม่ทำข้อมูลที่เลือกหาย
+                    window.location.href = targetUrl.href;
+                }
+            } catch (err) {
+                console.error('openQuotationFromCustomer:', err);
+                showToast('ส่งรายการไป quotation.html ไม่สำเร็จ: ' + (err.message || 'กรุณาลองใหม่'), 'error');
+            }
+        };
 
         // ==================== PDF / PRINT DOCUMENT GENERATOR ====================
         let currentDocumentCustomerId = null;
@@ -12586,33 +12643,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
             return { subtotal, discountPercent, discountAmount, taxable, vatPercent, vatAmount, grandTotal };
         }
 
-        // ดึงข้อมูลบริษัทสำหรับเอกสาร โดยใช้ที่อยู่ที่ผู้ใช้บันทึกไว้จริง
-        // หากเอกสาร/ประวัติล่าสุดไม่มีที่อยู่ ให้ค้นหารายการอื่นของบริษัทเดียวกันเป็นข้อมูลสำรอง
-        function resolveDocumentCompanyData(customer) {
-            const companyName = String(customer?.companyName || '').trim();
-            const sameCompany = (Array.isArray(allDeliveries) ? allDeliveries : []).filter(item =>
-                item && String(item.companyName || '').trim().toLocaleLowerCase() === companyName.toLocaleLowerCase()
-            );
-            const firstValue = (...values) => {
-                for (const value of values) {
-                    const text = String(value == null ? '' : value).trim();
-                    if (text) return text;
-                }
-                return '';
-            };
-            const addressRecord = sameCompany.find(item => firstValue(item.address, item.customerAddress, item.shippingAddress, item.deliveryAddress));
-            const phoneRecord = sameCompany.find(item => firstValue(item.phone, item.companyPhone));
-            return {
-                ...customer,
-                companyName: firstValue(customer?.companyName),
-                address: firstValue(customer?.address, customer?.customerAddress, customer?.shippingAddress, customer?.deliveryAddress,
-                    addressRecord?.address, addressRecord?.customerAddress, addressRecord?.shippingAddress, addressRecord?.deliveryAddress),
-                phone: firstValue(customer?.phone, customer?.companyPhone, phoneRecord?.phone, phoneRecord?.companyPhone)
-            };
-        }
-
         function buildDocumentHTML(customer, type) {
-            customer = resolveDocumentCompanyData(customer);
             const result = getDocumentItems(customer);
 
             if (result.missing.length && type !== 'delivery') {
@@ -12701,7 +12732,8 @@ document.getElementById('item-input').addEventListener('blur', function() {
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
                         <div style="border:1px solid #bfdbfe;border-radius:10px;padding:11px;background:#f8fbff;min-height:82px;">
                             <div style="font-size:10px;font-weight:700;color:#2563eb;margin-bottom:5px;">ข้อมูลลูกค้า</div>
-                            <div style="font-weight:700;font-size:12px;">${escapeDocumentHTML(customer.companyName || '-')}</div>
+                            <div style="font-weight:700;font-size:12px;">${escapeDocumentHTML(customer.customerName || '-')}</div>
+                            <div style="font-size:10px;margin-top:3px;">${escapeDocumentHTML(customer.companyName || '-')}</div>
                             ${customer.phone ? `<div style="font-size:10px;margin-top:3px;">โทร. ${escapeDocumentHTML(customer.phone)}</div>` : ''}
                             ${buyerTaxId ? `<div style="font-size:10px;margin-top:3px;">เลขประจำตัวผู้เสียภาษี: ${escapeDocumentHTML(buyerTaxId)}</div>` : ''}
                         </div>
@@ -12791,8 +12823,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 const name = String(item.companyName || '').trim();
                 const key = name.toLowerCase().replace(/\s+/g, ' ');
                 const existing = grouped.get(key);
-                const hasAddress = value => !!String(value?.address || value?.customerAddress || value?.shippingAddress || value?.deliveryAddress || '').trim();
-                if (!existing || (hasAddress(item) && !hasAddress(existing)) || (hasAddress(item) === hasAddress(existing) && getTime(item) >= getTime(existing))) grouped.set(key, item);
+                if (!existing || getTime(item) >= getTime(existing)) grouped.set(key, item);
             });
             return Array.from(grouped.values()).sort((a,b) => String(a.companyName || '').localeCompare(String(b.companyName || ''), 'th'));
         }
@@ -12800,11 +12831,11 @@ document.getElementById('item-input').addEventListener('blur', function() {
         function updateDocumentCompanyInfo(customer) {
             const info = document.getElementById('document-company-info');
             if (!info || !customer) return;
-            const resolved = resolveDocumentCompanyData(customer);
-            const company = String(resolved.companyName || 'ไม่ระบุบริษัท').trim();
-            const phone = String(resolved.phone || '').trim();
-            const address = String(resolved.address || '').trim();
-            info.innerHTML = `<div class="font-bold text-indigo-800 truncate">${escapeHTML(company)}</div>${phone ? `<div class="mt-0.5">โทร. ${escapeHTML(phone)}</div>` : ''}<div class="mt-0.5 line-clamp-2">${escapeHTML(address || 'ไม่ระบุที่อยู่')}</div>`;
+            const company = String(customer.companyName || 'ไม่ระบุบริษัท').trim();
+            const customerName = String(customer.customerName || '').trim();
+            const phone = String(customer.phone || '').trim();
+            const address = String(customer.address || '').trim();
+            info.innerHTML = `<div class="font-bold text-indigo-800 truncate">${escapeHTML(company)}</div><div class="mt-0.5">ผู้ติดต่อ: ${escapeHTML(customerName || '-')} ${phone ? `• โทร. ${escapeHTML(phone)}` : ''}</div><div class="mt-0.5 line-clamp-2">${escapeHTML(address || 'ไม่ระบุที่อยู่')}</div>`;
         }
 
         function populateDocumentCompanySelect(selectedId = '') {
