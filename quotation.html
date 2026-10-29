@@ -1,0 +1,1714 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ใบเสนอราคา - บริษัท เค แอล สเตชั่นเนอรี่ จำกัด</title>
+    <!-- Google Fonts: Sarabun & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --primary-dark: #4338ca;
+            --primary-light: #e0e7ff;
+            --secondary-color: #1e293b;
+            --border-color: #cbd5e1;
+            --bg-light: #f8fafc;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --shadow-subtle: 0 10px 30px -5px rgba(79, 70, 229, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            --radius-box: 16px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f6f8fb 0%, #eef2f7 100%);
+            color: var(--secondary-color);
+            margin: 0;
+            padding: 30px 15px 60px 15px;
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* Toast Notification Styling */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-notification {
+            background: #ffffff;
+            color: var(--secondary-color);
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border-left: 5px solid var(--success-color);
+            animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), fadeOut 0.3s ease 2.7s forwards;
+            max-width: 350px;
+        }
+
+        .toast-notification.error {
+            border-left-color: var(--danger-color);
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* Sticky Action Toolbar (No Print) */
+        .toolbar {
+            position: sticky;
+            top: 20px;
+            z-index: 1000;
+            max-width: 900px;
+            margin: 0 auto 30px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(12px);
+            padding: 14px 28px;
+            border-radius: var(--radius-box);
+            box-shadow: 0 15px 35px -5px rgba(79, 70, 229, 0.12), 0 5px 15px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .toolbar-title {
+            font-weight: 700; 
+            color: var(--primary-color); 
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .toolbar-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-action {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .btn-action:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(79, 70, 229, 0.4);
+            filter: brightness(1.05);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), #059669);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        .btn-success:hover {
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        /* Container & Page Layout for Print */
+        .page-sheet {
+            max-width: 900px;
+            margin: 0 auto 35px auto;
+            background: #ffffff;
+            padding: 40px;
+            box-shadow: var(--shadow-subtle);
+            border-radius: var(--radius-box);
+            position: relative;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        /* Header Section */
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 18px;
+            margin-bottom: 18px;
+        }
+
+        .header-left {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+        }
+
+        .logo-container img {
+            width: 75px;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .shop-info-box .company-name {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .shop-info-box .address-text, 
+        .shop-info-box .tax-text {
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .title-box {
+            text-align: right;
+        }
+
+        .title-main {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--primary-color);
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+
+        .title-sub {
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 2px;
+        }
+
+        /* Top Info Grid */
+        .top-info {
+            width: 100%;
+            margin-bottom: 18px;
+            border-collapse: collapse;
+        }
+
+        .top-info td {
+            vertical-align: top;
+            padding: 6px;
+        }
+		/* 📌 ปรับสัดส่วนให้ฝั่งซ้ายกว้างขึ้นเพื่อรองรับที่อยู่ยาวๆ */
+        .top-info td:first-child {
+            width: 55% !important;
+        }
+        .top-info td:last-child {
+            width: 45% !important;
+        }
+		/* ขยายความกว้างและปรับขนาดตัวอักษรช่องเลขที่ (No.) ให้พอดีไม่ถูกตัด */
+.no-date-box .info-row input[data-field="billNo"] {
+    font-size: 11.5px !important;
+    letter-spacing: -0.3px;
+}
+        .customer-info-box {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 6px 10px !important;
+            border-radius: 12px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.01);
+        }
+.no-date-box .info-row input[data-field="billNo"] {
+    font-size: 11px !important;
+    letter-spacing: -0.5px; /* ลดช่องไฟระหว่างตัวอักษรเล็กน้อย */
+}
+        .no-date-box {
+            background-color: var(--primary-light);
+            border: 1px solid #c7d2fe;
+            padding: 14px;
+            border-radius: 12px;
+            box-shadow: inset 0 2px 4px rgba(79, 70, 229, 0.02);
+        }
+		/* ตรวจสอบให้แน่ใจว่า .customer-info-box และช่อง textarea ด้านในมีคุณสมบัตินี้ครับ */
+.customer-info-box .inline-textarea {
+    width: 100%;
+    box-sizing: border-box; /* ป้องกันไม่ให้ padding ดันให้กล่องกว้างเกิน 100% */
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: pre-wrap !important;
+}
+        .info-row {
+            margin-bottom: 4px;
+            display: flex;
+            align-items: baseline;
+        }
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 600;
+            color: #475569;
+            min-width: 110px;
+            font-size: 11.5px;
+        }
+
+        .inline-input {
+            border: none;
+            border-bottom: 1.5px dashed var(--border-color);
+            outline: none;
+            font-family: inherit;
+            font-size: inherit;
+            padding: 3px 6px;
+            color: var(--secondary-color);
+            background: transparent;
+            transition: all 0.25s ease;
+        }
+
+        .inline-input:focus {
+            border-bottom: 1.5px solid var(--primary-color);
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 2px 5px rgba(79, 70, 229, 0.08);
+        }
+
+/* 📌 แก้ไข CSS ของ .inline-textarea ให้รองรับการขยายความสูงอัตโนมัติ */
+.inline-textarea {
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    outline: none;
+    font-family: inherit;
+    font-size: inherit;
+    padding: 3px 6px;
+    resize: none; /* ปิดการลากขยายมุมขวาล่าง */
+    width: 100%;
+    background: #fff;
+    transition: all 0.25s ease;
+    
+    /* 🛑 [จุดที่ต้องแก้] ลบ height: 45px; และ overflow: hidden; ออก */
+    /* height: 45px; */
+    /* overflow: hidden; */
+    
+    /* ✅ [จุดที่ต้องเพิ่ม] เพิ่ม min-height เพื่อให้มีพื้นที่ขั้นต่ำ */
+    min-height: 28px; 
+    
+    /* ✅ [จุดที่ต้องเพิ่ม] บังคับให้ขยายความสูงอัตโนมัติเมื่อข้อความเยอะขึ้น */
+    height: auto; 
+    
+    /* ✅ [จุดที่ต้องเพิ่ม] ซ่อน scrollbar ตลอดเวลา */
+    overflow-y: hidden; 
+	/* ✅ เพิ่มคำสั่งบังคับตัดคำป้องกันข้อความล้น */
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: pre-wrap !important;
+}
+
+/* 📌 ปรับ CSS ตอนพิมพ์ให้สอดคล้องกัน */
+@media print {
+    .inline-textarea {
+        /* ✅ ซ่อน border ตอนพิมพ์ (ถ้าต้องการให้ดูเนียนเหมือนกระดาษ) */
+        border: none !important; 
+        padding: 2px 4px !important;
+        /* ✅ ให้ความสูงอัตโนมัติตอนพิมพ์ด้วย */
+        height: auto !important; 
+    }
+}
+
+/* 📌 เฉพาะช่องที่อยู่ลูกค้า: ให้ใช้ความสูงที่ JS คำนวณไว้ตอนพิมพ์ */
+@media print {
+    .inline-textarea[data-field="custAddress"] {
+        min-height: 22px !important;
+        overflow: visible !important;
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-wrap: anywhere !important;
+    }
+}
+
+        /* Table Styling */
+        .table-responsive-wrapper {
+            margin-bottom: 15px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .data-table th, .data-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+			vertical-align: middle !important;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            color: #334155;
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+            letter-spacing: 0.3px;
+        }
+
+        .item-desc {
+            display: block;
+            width: 100%;
+            min-width: 0;
+            min-height: 22px;
+            height: 22px;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            resize: none;
+            margin: 0;
+            padding: 0;
+            font-family: inherit;
+            font-size: inherit;
+            line-height: 1.4;
+            background: transparent;
+            overflow: hidden;
+            white-space: pre-wrap !important;
+            word-break: normal !important;
+            overflow-wrap: anywhere !important;
+        }
+
+        /* ให้รายการสั้นอยู่กึ่งกลางแนวตั้งของแถวจริง
+           และให้รายการยาวขยายตามความสูงของข้อความ */
+        .item-row > td:nth-child(2) {
+            vertical-align: middle !important;
+            overflow: visible;
+        }
+
+        @media print {
+            .data-table th, .data-table td {
+                border: 1px solid var(--border-color);
+                padding: 2px 5px !important;
+                vertical-align: middle !important;
+            }
+
+            /* ไม่บังคับ height:auto เพราะจะทับความสูงที่ JS คำนวณไว้ */
+            .item-desc {
+                min-height: 22px !important;
+                border: none !important;
+                background: transparent !important;
+                display: block !important;
+                overflow: hidden !important;
+                white-space: pre-wrap !important;
+                word-break: normal !important;
+                overflow-wrap: anywhere !important;
+            }
+        }
+
+        .sku-input, .qty, .price, .unit-input {
+            width: 100%;
+            border: none;
+            outline: none;
+            text-align: inherit;
+            font-family: inherit;
+            font-size: inherit;
+            background: transparent;
+        }
+
+        .qty, .price {
+            text-align: right !important;
+        }
+
+        .sku-input, .unit-input {
+            text-align: center !important;
+        }
+
+        .btn-del {
+            background-color: #fee2e2;
+            color: var(--danger-color);
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-del:hover {
+            background-color: var(--danger-color);
+            color: white;
+            transform: scale(1.05);
+        }
+
+        /* Footer & Summary Table */
+        .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 18px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .footer-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .footer-total-label {
+            background-color: var(--bg-light);
+            font-weight: 600;
+            color: #475569;
+        }
+
+        /* Signature Section */
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            gap: 25px;
+            page-break-inside: avoid;
+        }
+
+        .sig-box {
+            flex: 1;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            padding: 18px 15px;
+            border-radius: 12px;
+            background-color: #f8fafc;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+        }
+
+        .sig-line {
+            border-bottom: 1.5px dotted #94a3b8;
+            margin: 35px 15px 10px 15px;
+        }
+
+        .sig-name-input {
+            border: none;
+            border-bottom: 1.5px dashed var(--border-color);
+            text-align: center;
+            width: 90%;
+            outline: none;
+            font-family: inherit;
+            margin-bottom: 6px;
+            font-size: 12px;
+            padding-bottom: 2px;
+        }
+
+        .sig-text {
+            font-size: 12px;
+            color: #334155;
+            font-weight: 700;
+        }
+
+        .sig-date {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 6px;
+        }
+
+        .sig-date-input {
+            border: none;
+            border-bottom: 1.5px dashed var(--border-color);
+            text-align: center;
+            width: 110px;
+            outline: none;
+            font-family: inherit;
+        }
+
+        /* Dynamic Pages Container for Print Pagination */
+        #print-pages-container {
+            display: flex;
+            flex-direction: column;
+            gap: 35px;
+        }
+
+        /* Print Settings */
+        @media print {
+            @page {
+                size: A4;
+                margin: 5mm; /* ลดขอบกระดาษสำหรับการพิมพ์ */
+            }
+            body {
+                background-color: #ffffff;
+                padding: 0;
+                font-size: 11px; /* ลดขนาดฟอนต์ลงเล็กน้อยเพื่อให้พอดีหน้า */
+                line-height: 1.3;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .toolbar, .no-print, #toast-container {
+                display: none !important;
+            }
+            .page-sheet {
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 auto !important;
+                background: #ffffff;
+                padding: 8px 14px !important; /* ลด padding ด้านใน */
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                border: none !important;
+                page-break-after: always;
+            }
+            .header-section {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                border-bottom: 1.5px solid #f1f5f9;
+                padding-bottom: 4px;
+                margin-bottom: 4px;
+            }
+            .logo-container img {
+                width: 55px !important; /* ย่อขนาดโลโก้ลงตอนพิมพ์ */
+            }
+            .shop-info-box .company-name {
+                font-size: 13px;
+            }
+            .shop-info-box .address-text, .shop-info-box .tax-text {
+                font-size: 10px;
+            }
+            .title-main {
+                font-size: 18px;
+            }
+            .top-info {
+                width: 100%;
+                margin-bottom: 6px;
+                border-collapse: collapse;
+            }
+            .customer-info-box, .no-date-box {
+                padding: 6px 8px !important;
+                border-radius: 8px;
+            }
+            .info-row {
+                margin-bottom: 4px;
+            }
+            .table-responsive-wrapper {
+                margin-bottom: 6px;
+                border-radius: 6px;
+                border: 1px solid var(--border-color);
+            }
+            .data-table th, .data-table td {
+                border: 1px solid var(--border-color);
+                padding: 2px 5px !important; /* บีบช่องตารางให้แคบลงป้องกันล้นหน้า */
+                font-size: 11px;
+            }
+            .footer-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 6px;
+            }
+            .footer-table td {
+                padding: 2px 6px !important;
+                font-size: 11px;
+            }
+            .signature-section {
+                display: flex;
+                justify-content: space-between;
+                margin-top: 8px !important;
+                gap: 15px;
+                page-break-inside: avoid;
+            }
+            .sig-box {
+                flex: 1;
+                text-align: center;
+                border: 1px solid var(--border-color);
+                padding: 6px 8px !important;
+                border-radius: 8px;
+                background-color: #f8fafc;
+            }
+            .sig-line {
+                border-bottom: 1.5px dotted #94a3b8;
+                margin: 25px 10px 4px 10px !important; /* ลดระยะห่างลายเซ็น */
+            }
+        }
+		
+		@media print {
+    /* ซ่อน placeholder เฉพาะตอนพิมพ์ */
+    .sig-name-input::placeholder,
+    .sig-date-input::placeholder {
+        color: transparent !important;	
+    }
+    @media print {
+    .inline-input::placeholder {
+        color: transparent !important;
+    }
+}
+    /* (ทางเลือกเพิ่มเติม) ปิดกรอบ input ตอนพิมพ์ให้ดูเนียนตาเหมือนกระดาษเอกสาร */
+    .sig-name-input,
+    .sig-date-input {
+        border: none !important;
+        background: transparent !important;
+        text-align: center;
+    }
+	input::placeholder,
+    textarea::placeholder {
+        color: transparent !important;
+        -webkit-text-fill-color: transparent !important;
+    }
+}
+
+
+    </style>
+</head>
+<body>
+
+<!-- พื้นที่แสดงแจ้งเตือน Toast Notification -->
+<div id="toast-container"></div>
+
+<!-- แถบเครื่องมือควบคุมแบบลอยเด่น (Compact Glassmorphic Sticky Toolbar) -->
+<style>
+  .modern-toolbar {
+    position: sticky;
+    top: 15px;
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 16px; /* ลด padding ลงเพื่อให้แถบบางและกะทัดรัดขึ้น */
+    margin: 10px auto;
+    max-width: 90%;
+    background: rgba(255, 255, 255, 0.35); /* เพิ่มความโปร่งใสให้มองทะลุผ่านได้มากขึ้น */
+    backdrop-filter: blur(12px) saturate(180%); /* ลดความเบลอเล็กน้อยเพื่อให้เห็นฉากหลังชัดขึ้น */
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 99px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08); /* ลดเงาให้ดูเบาตา ไม่เกะกะ */
+  }
+
+  .toolbar-group {
+    display: flex;
+    align-items: center;
+    gap: 10px; /* ลดช่องว่างระหว่างปุ่ม */
+  }
+
+  .icon-btn {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px; /* ลดขนาดปุ่มให้เล็กลงกำลังดี (จาก 56px เหลือ 40px) */
+    height: 40px;
+    border-radius: 50%;
+    border: none;
+    outline: none;
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+  }
+
+  .icon-btn svg {
+    width: 20px; /* ปรับขนาดไอคอนให้พอดีกับปุ่ม */
+    height: 20px;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .icon-btn:hover {
+    transform: translateY(-3px) scale(1.05);
+    box-shadow: 0 8px 15px -2px rgba(0, 0, 0, 0.15);
+  }
+
+  .icon-btn:active {
+    transform: translateY(0) scale(0.95);
+  }
+
+  /* Tooltip บอกชื่อปุ่มเมื่อชี้ */
+  .icon-btn::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%) scale(0.8);
+    opacity: 0;
+    pointer-events: none;
+    background: rgba(15, 23, 42, 0.85);
+    color: #fff;
+    font-size: 11px; /* ลดขนาดตัวอักษร tooltip เล็กน้อย */
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(4px);
+  }
+
+  .icon-btn:hover::after {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+
+  /* Color Schemes - Vibrant & Bold (ปรับความโปร่งใสของสีปุ่มเล็กน้อยเพื่อให้กลมกลืน) */
+  .btn-home {
+    background: rgba(74, 20, 140, 0.85);
+    color: #ffffff;
+    border: 1px solid rgba(124, 77, 255, 0.4);
+  }
+  .btn-home:hover {
+    background: rgba(106, 27, 154, 0.95);
+  }
+
+  .btn-add {
+    background: rgba(233, 30, 99, 0.85);
+    color: #ffffff;
+    border: 1px solid rgba(255, 64, 129, 0.4);
+  }
+  .btn-add:hover {
+    background: rgba(240, 98, 146, 0.95);
+  }
+
+  .btn-print {
+    background: rgba(46, 125, 50, 0.85);
+    color: #ffffff;
+    border: 1px solid rgba(102, 187, 106, 0.4);
+  }
+  .btn-print:hover {
+    background: rgba(67, 160, 71, 0.95);
+  }
+  /* ปรับสัดส่วนตารางข้อมูลด้านบนให้ฝั่งซ้ายกว้างขึ้นเพื่อรองรับชื่อยาวๆ */
+.top-info td:first-child {
+    width: 68% !important;
+}
+.top-info td:last-child {
+    width: 32% !important;
+}
+
+/* ตั้งค่าให้ textarea และช่องกรอกข้อมูลตัดคำอัตโนมัติเมื่อพิมพ์ */
+@media print {
+    .inline-textarea, .inline-input, textarea.meta-field {
+        white-space: pre-wrap !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        width: 100% !important;
+        height: auto !important;
+    }
+}
+.footer-table td:first-child {
+    width: %;
+}
+.footer-table td.footer-total-label {
+    width: 25%;
+    white-space: nowrap;
+}
+</style>
+
+<div class="modern-toolbar no-print">
+  <div class="toolbar-group">
+    <a href="index.html" class="icon-btn btn-home" data-tooltip="หน้าแรก">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+      </svg>
+    </a>
+  </div>
+  
+  <div class="toolbar-group">
+    <button class="icon-btn btn-add" onclick="addRow()" data-tooltip="เพิ่มรายการสินค้า">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+    </button>
+    
+    <button class="icon-btn btn-print" onclick="window.print()" data-tooltip="พิมพ์ / บันทึก PDF">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231a1.125 1.125 0 01-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-19.163 0C1.837 7.441 1 8.375 1 9.456v6.294A2.25 2.25 0 003.25 18h1.091m16.5 0v-6.75A2.25 2.25 0 0018.591 9H5.409A2.25 2.25 0 003.15 11.25V18" />
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- พื้นที่แสดงหน้าเอกสารทั้งหมด -->
+<div id="print-pages-container"></div>
+
+<script>
+    // 📌 ฟังก์ชันสำหรับแสดง Notification (Toast) ลอยมุมขวาบน
+    function showToast(message, isError = false) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${isError ? 'error' : ''}`;
+        toast.innerHTML = `
+            <span style="font-size: 16px;">${isError ? '❌' : '✅'}</span>
+            <span>${message}</span>
+        `;
+
+        container.appendChild(toast);
+
+        // เอาออกจาก DOM หลังจากแอนิเมชันจบ (3 วินาที)
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    }
+
+    function initRealtimeMasterData() {
+        console.log("Realtime Master Data initialized.");
+    }
+
+const urlParams = new URLSearchParams(window.location.search);
+const paramTaxNo = urlParams.get('taxNo'); // 📌 เพิ่มการรับค่าเลขผู้เสียภาษี
+const paramBillNo = urlParams.get('billNo');
+const paramBookNo = urlParams.get('bookNo');
+const paramSalesName = urlParams.get('salesName');
+const paramBillDate = urlParams.get('billDate');
+
+const today = new Date();
+const day = String(today.getDate()).padStart(2, '0');
+const month = String(today.getMonth() + 1).padStart(2, '0');
+const year = today.getFullYear();
+const currentDateFormatted = `${day}/${month}/${year}`;
+
+const autoBillNo = paramBillNo || `QT${year}${month}001`;
+
+let docMeta = {
+    custName: "",
+    custAddress: "",
+    custTaxNo: paramTaxNo ? decodeURIComponent(paramTaxNo) : "", // 📌 นำค่ามาใส่ในตัวแปรเก็บข้อมูล
+    quotSubject: "",
+    quotEnclose: "-",
+    bookNo: paramBookNo || "-",
+    billNo: autoBillNo,          
+    billDate: paramBillDate ? decodeURIComponent(paramBillDate) : currentDateFormatted,
+    remarkText: "ราคานี้ยังไม่รวมภาษีมูลค่าเพิ่ม / ยืนราคา 30 วัน",
+    discountRate: 0,
+    sigCustomerName: "",
+    sigCustomerDate: "",
+    sigSalesName: paramSalesName ? decodeURIComponent(paramSalesName) : "", 
+    sigSalesDate: currentDateFormatted
+};
+
+    let itemsData = [
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 }
+    ];
+
+    const ITEMS_PER_PAGE = 15; 
+
+    function renderDocument() {
+        const container = document.getElementById("print-pages-container");
+        container.innerHTML = "";
+
+        const totalPages = Math.ceil(itemsData.length / ITEMS_PER_PAGE) || 1;
+
+        for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+            const startIdx = pageIdx * ITEMS_PER_PAGE;
+            const endIdx = Math.min(startIdx + ITEMS_PER_PAGE, itemsData.length);
+            const pageItems = itemsData.slice(startIdx, endIdx);
+            const isLastPage = (pageIdx === totalPages - 1);
+
+            const pageDiv = document.createElement("div");
+            pageDiv.className = "page-sheet";
+            pageDiv.setAttribute("data-page-index", pageIdx);
+            pageDiv.setAttribute("data-is-last", isLastPage ? "true" : "false");
+
+            let pageHTML = `
+                <div class="header-section">
+                    <div class="header-left">
+                        <div class="logo-container">
+                            <img src="logo.png" alt="KL Logo" onerror="this.style.display='none'">
+                        </div>
+                        <div class="shop-info-box">
+                            <div class="company-name">บริษัท เค แอล สเตชั่นเนอรี่ จำกัด (สำนักงานใหญ่)</div>
+                            <div class="address-text">873, 875 ถนนสุขุมวิท 105 แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260</div>
+                            <div class="address-text">โทร. 0-2748-6788 | เลขประจำตัวผู้เสียภาษี: 0105544005337</div>
+                        </div>
+                    </div>
+                    <div class="title-box">
+                        <div class="title-main">ใบเสนอราคา</div>
+                        <div class="title-sub">QUOTATION</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 600;">หน้าที่ ${pageIdx + 1} / ${totalPages}</div>
+                    </div>
+                </div>
+
+                <table class="top-info">
+                    <tr>
+                        <td style="width: 58%;">
+                            <div class="customer-info-box">
+							
+                                <div class="info-row no-print" style="margin-bottom: 10px;">
+                                    <span class="info-label" style="color: var(--primary-color);">🔍 เลือกลูกค้า:</span>
+                                    <select id="customerSelect" class="inline-input customerSelect" style="width: 180px; font-weight: 600;" onchange="selectCustomer(this)">
+                                        <option value="">-- เลือกลูกค้า --</option>
+                                    </select>
+                                </div>
+								
+                                <div class="info-row" style="align-items: flex-start; margin-top: 6px;">
+									<span class="info-label">นามลูกค้า (Attention):</span>
+									<textarea class="inline-textarea meta-field" data-field="custName" placeholder="ชื่อบริษัท/ลูกค้า..." style="min-height: 32px;">${docMeta.custName}</textarea>
+								</div>
+								
+                                <div class="info-row" style="align-items: flex-start; margin-top: 6px;">
+                                    <span class="info-label">ที่อยู่ (Address):</span>
+                                    <textarea class="inline-textarea meta-field" data-field="custAddress" placeholder="ที่อยู่ลูกค้า...">${docMeta.custAddress}</textarea>
+                                </div>
+								
+								<div class="info-row" style="margin-top: 6px;">
+									<span class="info-label">เลขผู้เสียภาษี:</span>
+									<input type="text" class="inline-input meta-field" data-field="custTaxNo" style="flex:1;" value="${docMeta.custTaxNo}" placeholder="เลขประจำตัวผู้เสียภาษี...">
+									</div>
+								
+                                <div class="info-row" style="margin-top: 6px;">
+                                    <span class="info-label">เรื่อง (Subject):</span>
+                                    <input type="text" class="inline-input meta-field" data-field="quotSubject" style="flex:1;" value="${docMeta.quotSubject}" placeholder="หัวข้อเรื่อง...">
+                                </div>
+								
+                                <div class="info-row" style="margin-top: 6px;">
+                                    <span class="info-label">สิ่งที่ส่งมาด้วย:</span>
+                                    <input type="text" class="inline-input meta-field" data-field="quotEnclose" style="flex:1;" value="${docMeta.quotEnclose}">
+                                </div>
+								
+                            </div>
+                        </td>
+                        <td style="width: 42%; padding-left: 10px;">
+                            <div class="no-date-box">
+                                <div class="info-row no-print" style="margin-bottom: 8px;">
+                                    <span class="info-label" style="color: var(--primary-color); min-width: 90px;">🔍 ค้นหาบิล:</span>
+                                    <input type="text" id="searchOldBillNo" class="inline-input" style="width: 90px;" placeholder="เลขที่บิล">
+                                    <button class="btn-action" style="padding: 2px 6px; font-size: 10px;" onclick="loadDataByBillNo()">ดึงรายการบิล</button>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label" style="min-width: 95px;">เล่มที่ (Book No.):</span>
+                                    <input type="text" class="inline-input meta-field" data-field="bookNo" style="flex:1;" value="${docMeta.bookNo}">
+                                </div>
+                                <div class="info-row" style="margin-top: 6px;">
+                                    <span class="info-label" style="min-width: 95px;">เลขที่ (No.):</span>
+                                    <input type="text" class="inline-input meta-field" data-field="billNo" style="flex:1; font-weight: 700; color: var(--primary-color);" value="${docMeta.billNo}">
+                                </div>
+                                <div class="info-row" style="margin-top: 6px;">
+                                    <span class="info-label" style="min-width: 95px;">วันที่ (Date):</span>
+                                    <input type="text" class="inline-input meta-field" data-field="billDate" style="flex:1;" value="${docMeta.billDate}">
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <div class="table-responsive-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">ลำดับ</th>
+                                <th style="width: 37%;">รายการสินค้า / รายละเอียด (Description)</th>
+                                <th style="width: 10%;">แบบรุ่น (Model)</th>
+                                <th style="width: 8%;">จำนวน (Qty)</th>
+                                <th style="width: 8%;">หน่วย (Unit)</th>
+                                <th style="width: 12%;">ราคา/หน่วย (Unit Price)</th>
+                                <th style="width: 13%;">จำนวนเงิน (Amount)</th>
+                                <th class="no-print" style="width: 6%;">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            if (pageItems.length === 0) {
+                pageHTML += `<tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">ไม่มีรายการสินค้าในหน้านี้</td></tr>`;
+            } else pageItems.forEach((item, idx) => {
+    const actualIndex = startIdx + idx;
+    
+    // 📌 แปลงค่าราคาและจำนวนให้เป็นตัวเลข เพื่อป้องกัน Error .toFixed()
+    const itemPrice = Number(item.price || item.unitPrice || 0);
+    const itemQty = Number(item.qty || 0);
+    const itemAmount = itemQty * itemPrice;
+
+    pageHTML += `
+        <tr class="item-row">
+            <td style="text-align: center; font-weight: 600;">${actualIndex + 1}</td>
+            <td><textarea class="item-desc" placeholder="ระบุชื่อสินค้าหรือรายละเอียด..." oninput="updateItemData(${actualIndex}, 'desc', this.value)">${item.desc || item.name || ""}</textarea></td>
+            <td><input type="text" class="sku-input" placeholder="-" value="${item.model || ""}" oninput="updateItemData(${actualIndex}, 'model', this.value)"></td>
+            <td><input type="text" class="qty" placeholder="1" value="${item.qty || 1}" oninput="updateItemData(${actualIndex}, 'qty', this.value)"></td>
+            <td><input type="text" class="unit-input" placeholder="ชิ้น" value="${item.unit || ""}" oninput="updateItemData(${actualIndex}, 'unit', this.value)"></td>
+            <td><input type="text" class="price" placeholder="0.00" value="${itemPrice.toFixed(2)}" oninput="updateItemData(${actualIndex}, 'price', this.value)"></td>
+            <td class="amount" style="text-align: right; font-weight: 600;">${itemAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+            <td class="no-print" style="text-align: center;"><button class="btn-del" onclick="removeRow(${actualIndex})">ลบ</button></td>
+        </tr>
+    `;
+});
+
+            pageHTML += `
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- เพิ่มข้อความแจ้งเตือนเมื่อยังมีหน้าถัดไป -->
+                ${!isLastPage ? `
+                    <div style="text-align: right; font-size: 11px; color: var(--primary-color); font-style: italic; margin-bottom: 8px; font-weight: 600;">
+                        (มีรายการต่อในหน้าถัดไป ➔ หน้า ${pageIdx + 2})
+                    </div>
+                ` : ''}
+
+                <table class="footer-table">
+                    <tr>
+                        <td rowspan="5" style="width: 50%; vertical-align: middle; text-align: center; background-color: var(--bg-light);">
+                            <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">(จำนวนเงินรวมตัวอักษร)</div>
+                            <div class="textAmount" style="font-size: 14px; color: var(--primary-color); font-weight: 700;">ศูนย์บาทถ้วน</div>
+                        </td>
+                        <td class="footer-total-label" style="text-align: center;">รวมเงิน (Sub Total)</td>
+                        <td class="subTotal" style="width: 25%; text-align: right; font-weight: 600;">0.00</td>
+                    </tr>
+                    <tr>
+    <td class="footer-total-label" style="text-align: center; white-space: nowrap;">
+        <div style="display: inline-flex; align-items: center; justify-content: center; gap: 2px;">
+            ส่วนลด (<input type="text" class="discountRate" style="width: 35px; text-align: center; border: none; background: transparent; outline: none;" value="${docMeta.discountRate}" oninput="updateMeta('discountRate', this.value); calculateTotals()">%)
+        </div>
+    </td>
+    <td style="text-align: right; padding-right: 12px;"><input type="text" class="discountAmount" style="width: 100%; text-align: right; font-weight: 700; color: var(--danger-color); border: none; background: transparent; outline: none;" value="0.00" readonly></td>
+</tr>
+                    <tr>
+                        <td class="footer-total-label" style="color: var(--primary-color); text-align: center;">รวมราคาสินค้าสุทธิ (Net Total)</td>
+                        <td class="netTotal" style="font-weight: 600; text-align: right;">0.00</td>
+                    </tr>
+                    <tr>
+                        <td class="footer-total-label" style="text-align: center;">ภาษีมูลค่าเพิ่ม VAT 7%</td>
+                        <td class="vatAmount" style="text-align: right;">0.00</td>
+                    </tr>
+                    <tr>
+                        <td class="footer-total-label" style="background-color: var(--primary-light); color: var(--primary-color); font-weight: 700; text-align: center;">จำนวนเงินรวมทั้งสิ้น (Grand Total)</td>
+                        <td class="grandTotal" style="background-color: #c7d2fe; color: var(--primary-dark); font-size: 15px; text-align: right; font-weight: 700;">0.00</td>
+                    </tr>
+                </table>
+
+                <div style="margin-bottom: 15px; font-size: 12px; color: #475569; display: flex; align-items: flex-start; gap: 6px;">
+    <strong style="white-space: nowrap; padding-top: 4px;">หมายเหตุ :</strong> 
+    <textarea class="inline-textarea meta-field" data-field="remarkText" style="flex: 1;" placeholder="ระบุเงื่อนไขหรือหมายเหตุเพิ่มเติม (ถ้ามี)">${docMeta.remarkText}</textarea>
+</div>
+
+                <div class="signature-section">
+                    <div class="sig-box">
+                        <div class="sig-line"></div>
+                        <input type="text" class="sig-name-input meta-field" data-field="sigCustomerName" placeholder="(พิมพ์ชื่อ-นามสกุล ลูกค้า)" value="${docMeta.sigCustomerName}">
+                        <div class="sig-text">ผู้อนุมัติสั่งซื้อ / ลูกค้า (Approved)</div>
+                        <div class="sig-date">วันที่: <input type="text" class="sig-date-input meta-field" data-field="sigCustomerDate" placeholder="วว/ดด/ปปปป" value="${docMeta.sigCustomerDate}"></div>
+                    </div>
+                    <div class="sig-box">
+    <div class="sig-line"></div>
+    <input type="text" class="sig-name-input meta-field" data-field="sigSalesName" placeholder="(ชื่อผู้เสนอราคา)" value="${docMeta.sigSalesName}">
+    <div class="sig-text">ผู้เสนอราคา (Sales Department)</div>
+    <div class="sig-date">วันที่: <input type="text" class="sig-date-input meta-field" data-field="sigSalesDate" style="flex:1;" value="${docMeta.sigSalesDate}"></div>
+</div>
+                </div>
+            `;
+
+            pageDiv.innerHTML = pageHTML;
+            container.appendChild(pageDiv);
+        }
+
+        document.querySelectorAll('.meta-field').forEach(input => {
+            input.addEventListener('input', function() {
+                const field = this.getAttribute('data-field');
+                docMeta[field] = this.value;
+                document.querySelectorAll(`.meta-field[data-field="${field}"]`).forEach(el => {
+                    if (el !== this) el.value = this.value;
+                });
+            });
+        });
+
+        calculateTotals();
+    }
+
+    function updateMeta(field, value) {
+        docMeta[field] = value;
+    }
+
+    function updateItemData(index, field, value) {
+        itemsData[index][field] = value;
+        if (field === 'qty' || field === 'price') {
+            calculateTotals();
+        }
+    }
+
+    function addRow() {
+        itemsData.push({ desc: "", model: "", qty: 1, unit: "", price: 0.00 });
+        renderDocument();
+    }
+
+    function removeRow(index) {
+        itemsData.splice(index, 1);
+        renderDocument();
+    }
+
+    function calculateTotals() {
+        let subTotal = 0;
+
+        itemsData.forEach((item) => {
+            const qty = parseFloat(String(item.qty).replace(/,/g, '')) || 0;
+            const price = parseFloat(String(item.price).replace(/,/g, '')) || 0;
+            subTotal += (qty * price);
+        });
+
+        let discountRate = parseFloat(docMeta.discountRate);
+        let discountAmount = 0;
+
+        if (isNaN(discountRate) || discountRate <= 0) {
+            discountRate = 0;
+            discountAmount = 0;
+        } else {
+            discountAmount = (subTotal * discountRate) / 100;
+        }
+
+        let netTotal = subTotal - discountAmount;
+        if (netTotal < 0) netTotal = 0;
+
+        let vatAmount = netTotal * 0.07;
+        let grandTotal = netTotal + vatAmount;
+        let thaiTextStr = arabicToThaiText(grandTotal);
+
+        const pageSheets = document.querySelectorAll(".page-sheet");
+        const totalPages = pageSheets.length;
+
+        pageSheets.forEach((sheet) => {
+            const isLast = sheet.getAttribute("data-is-last") === "true";
+
+            const displaySubTotal = (totalPages === 1 || isLast) ? subTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayDiscount = (totalPages === 1 || isLast) ? discountAmount.toFixed(2) : "0.00";
+            const displayNetTotal = (totalPages === 1 || isLast) ? netTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayVat     = (totalPages === 1 || isLast) ? vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayGrand   = (totalPages === 1 || isLast) ? grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayThaiText = (totalPages === 1 || isLast) ? thaiTextStr : "ศูนย์บาทถ้วน";
+
+            const subTotalEl = sheet.querySelector(".subTotal");
+            const discountRateEl = sheet.querySelector(".discountRate");
+            const discountAmountEl = sheet.querySelector(".discountAmount");
+            const netTotalEl = sheet.querySelector(".netTotal");
+            const vatAmountEl = sheet.querySelector(".vatAmount");
+            const grandTotalEl = sheet.querySelector(".grandTotal");
+            const textAmountEl = sheet.querySelector(".textAmount");
+
+            if (subTotalEl) subTotalEl.textContent = displaySubTotal;
+            if (discountRateEl) discountRateEl.value = discountRate;
+            if (discountAmountEl) discountAmountEl.value = displayDiscount;
+            if (netTotalEl) netTotalEl.textContent = displayNetTotal;
+            if (vatAmountEl) vatAmountEl.textContent = displayVat;
+            if (grandTotalEl) grandTotalEl.textContent = displayGrand;
+            if (textAmountEl) textAmountEl.textContent = displayThaiText;
+        });
+
+        const rows = document.querySelectorAll(".item-row");
+        rows.forEach((row, idx) => {
+            if (itemsData[idx]) {
+                const q = parseFloat(String(itemsData[idx].qty).replace(/,/g, '')) || 0;
+                const p = parseFloat(String(itemsData[idx].price).replace(/,/g, '')) || 0;
+                const amtCell = row.querySelector(".amount");
+                if (amtCell) {
+                    amtCell.textContent = (q * p).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+            }
+        });
+    }
+
+    function arabicToThaiText(amount) {
+        if (amount === 0) return "ศูนย์บาทถ้วน";
+        const arabicNumber = amount.toFixed(2);
+        const splitNum = arabicNumber.split(".");
+        let integerPart = splitNum[0];
+        let decimalPart = splitNum[1];
+
+        let thaiText = convertIntegerToThai(integerPart) + "บาท";
+        if (decimalPart === "00") {
+            thaiText += "ถ้วน";
+        } else {
+            thaiText += convertIntegerToThai(decimalPart) + "สตางค์";
+        }
+        return thaiText;
+    }
+
+    function convertIntegerToThai(numStr) {
+        const thaiNums = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
+        const thaiUnits = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"];
+        let result = "";
+        let len = numStr.length;
+
+        for (let i = 0; i < len; i++) {
+            let digit = parseInt(numStr[i]);
+            let pos = len - i - 1;
+
+            if (digit !== 0) {
+                if (pos === 1 && digit === 1) {
+                    result += "สิบ";
+                } else if (pos === 1 && digit === 2) {
+                    result += "ยี่สิบ";
+                } else if (pos === 0 && digit === 1 && len > 1 && parseInt(numStr[len - 2]) !== 0) {
+                    result += "เอ็ด";
+                } else {
+                    result += thaiNums[digit] + thaiUnits[pos % 6];
+                }
+            }
+        }
+        return result;
+    }
+
+    let allCustomersData = []; 
+
+    function updateCustomerDropdownUI(customers) {
+        allCustomersData = customers; 
+        let select = document.getElementById('customerSelect');
+        if (!select) return;
+
+        let currentSelected = select.value;
+        select.innerHTML = '<option value="">-- เลือกลูกค้า/บริษัท --</option>';
+
+        customers.forEach((c) => {
+            let custName = '';
+            if (typeof c === 'string') {
+                custName = c;
+            } else if (c) {
+                custName = c.name || c.customerName || c.companyName || '';
+            }
+
+            if (custName) {
+                let opt = document.createElement('option');
+                opt.value = custName; 
+                opt.innerText = custName;
+                select.appendChild(opt);
+            }
+        });
+
+        if (currentSelected) {
+            select.value = currentSelected;
+        }
+    }
+
+    function loadCustomerDropdown() {
+        let localCustomers = JSON.parse(localStorage.getItem('saved_quot_customers') || '[]');
+        if (localCustomers.length > 0) {
+            updateCustomerDropdownUI(localCustomers);
+        }
+        initRealtimeMasterData();
+    }
+
+    async function autoLoadBillDataOnStartup(billNo, bookNo) {
+        try {
+            let searchInput = document.getElementById('searchOldBillNo');
+            if (searchInput) searchInput.value = billNo;
+
+            await loadDataByBillNo(billNo, true); // ส่งธงว่าเป็นโหลดอัตโนมัติ
+
+            if (bookNo) {
+                docMeta.bookNo = bookNo;
+                let bookInput = document.querySelector('.meta-field[data-field="bookNo"]');
+                if (bookInput) bookInput.value = bookNo;
+            }
+        } catch (error) {
+            console.warn("⚠️ ไม่สามารถโหลดข้อมูลอัตโนมัติได้:", error);
+        }
+    }
+
+    async function loadDataByBillNo(targetBillNo, isAuto = false) {
+        const bNo = (typeof targetBillNo === 'string' ? targetBillNo : null) || document.getElementById("searchOldBillNo")?.value || "";
+        const trimmedBNo = bNo.trim();
+
+        if (!trimmedBNo) {
+            showToast("กรุณากรอกเลขที่บิลที่ต้องการค้นหา", true);
+            return;
+        }
+
+        let foundBill = null;
+
+        try {
+            if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length > 0) {
+                const db = firebase.firestore();
+                const docRef = await db.collection("quotations").doc(trimmedBNo).get();
+                if (docRef.exists) {
+                    foundBill = docRef.data();
+                }
+            }
+        } catch (error) {
+            console.warn("⚠️ ไม่สามารถดึงข้อมูลจาก Cloud ได้:", error);
+        }
+
+        if (!foundBill) {
+            let savedBills = [];
+            const source1 = localStorage.getItem('saved_quotations');
+            const source2 = localStorage.getItem('saved_quot_purchases');
+
+            if (source1) {
+                try { savedBills = savedBills.concat(JSON.parse(source1)); } catch(e){}
+            }
+            if (source2) {
+                try { savedBills = savedBills.concat(JSON.parse(source2)); } catch(e){}
+            }
+
+            foundBill = savedBills.find(b => {
+                let currentBillNo = (b.billNo || b.quotationNo || '').toString().trim();
+                return currentBillNo === trimmedBNo;
+            });
+        }
+
+if (foundBill) {
+    docMeta.custName = foundBill.custName || foundBill.customerName || "";
+    docMeta.custAddress = foundBill.custAddress || foundBill.address || "";
+	docMeta.custTaxNo = foundBill.custTaxNo || foundBill.customerTaxNo || foundBill.taxNo || foundBill.tax || "";
+    docMeta.quotSubject = foundBill.quotSubject || foundBill.subject || "";
+    docMeta.quotEnclose = foundBill.quotEnclose || foundBill.enclose || "-";
+    docMeta.bookNo = foundBill.bookNo || "-";
+    docMeta.billNo = foundBill.billNo || foundBill.quotationNo || autoBillNo;
+    
+    // 📌 ดึงวันที่
+    docMeta.billDate = foundBill.billDate || foundBill.date || currentDateFormatted;
+    
+    docMeta.discountRate = foundBill.discountRate || foundBill.discount || 0;
+    docMeta.remarkText = foundBill.remarkText || foundBill.remark || "";
+    docMeta.sigSalesName = foundBill.sigSalesName || foundBill.salesName || sessionStorage.getItem('temp_sales_name') || "";
+    docMeta.sigSalesDate = foundBill.sigSalesDate || foundBill.salesDate || foundBill.billDate || currentDateFormatted;
+    
+    // 📌 ดึงข้อมูลสินค้า (Items) จากบิลเก่ามาแสดง
+    if (foundBill.items && Array.isArray(foundBill.items)) {
+        itemsData = foundBill.items;
+    } else if (foundBill.itemsData && Array.isArray(foundBill.itemsData)) {
+        itemsData = foundBill.itemsData;
+    }
+
+    if (typeof renderDocument === 'function') {
+        renderDocument();
+    }
+    
+    // อัปเดตช่อง Input วันที่เอกสาร
+    let dateInput = document.querySelector('.meta-field[data-field="billDate"]') || document.getElementById('billDate');
+    if (dateInput) {
+        dateInput.value = docMeta.billDate;
+    }
+
+    // อัปเดตช่อง Input วันที่ผู้เสนอราคา
+    let salesDateInput = document.querySelector('.meta-field[data-field="sigSalesDate"]') || document.getElementById('sigSalesDate');
+    if (salesDateInput) {
+        salesDateInput.value = docMeta.sigSalesDate;
+    }
+
+    showToast(`ดึงข้อมูลใบเสนอราคาเลขที่ ${trimmedBNo} สำเร็จ!`);
+}
+		else {
+            if (!isAuto) {
+                showToast("ไม่พบข้อมูลเลขที่ใบเสนอราคานี้ในระบบ", true);
+            }
+        }
+    }
+
+    window.onload = function() {
+    calculateTotals();
+    loadCustomerDropdown();
+    renderDocument(); 
+    
+    let dateField = document.getElementById('billDate');
+    let sigSalesDate = document.getElementById('sigSalesDate');
+    let billNoField = document.getElementById('billNo');
+    
+    let d = new Date();
+    let day = String(d.getDate()).padStart(2, '0');
+    let month = String(d.getMonth() + 1).padStart(2, '0');
+    let year = d.getFullYear() + 543;
+    let currentDateStr = `${day}/${month}/${year}`;
+
+    // 🔍 เช็คว่ามี URL Parameter 'billNo' ส่งมาหรือไม่ เพื่อป้องกันการทับวันที่ของบิลเก่า
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasBillNoParam = urlParams.has('billNo');
+
+    // ถ้าไม่มีการส่ง billNo มาทาง URL ถึงค่อยเซ็ตเป็นวันที่ปัจจุบัน
+    if (!hasBillNoParam) {
+        if(!dateField || !dateField.value) docMeta.billDate = currentDateStr;
+        if(!sigSalesDate || !sigSalesDate.value) docMeta.sigSalesDate = currentDateStr;
+    }
+
+    if (billNoField && !billNoField.value) {
+        let purchases = JSON.parse(localStorage.getItem('saved_quot_purchases') || '[]');
+        if (purchases.length > 0) {
+            let latestBill = purchases[purchases.length - 1];
+            if (latestBill && latestBill.billNo) {
+                 billNoField.value = latestBill.billNo;
+                 docMeta.billNo = latestBill.billNo;
+            }
+        }
+    }
+    
+    renderDocument();
+};
+    
+	
+// ฟังก์ชันช่วยแปลงวันที่ให้เป็น YYYY-MM-DD สำหรับ input type="date"
+    function formatToInputDate(dateStr) {
+        if (!dateStr) return "";
+        // ถ้าเป็นรูปแบบ ISO อยู่แล้ว (เช่น 2026-06-05T00:00:00.000Z) ตัดเอาเฉพาะ 10 ตัวแรก
+        if (dateStr.includes('T')) {
+            return dateStr.split('T')[0];
+        }
+        // ถ้าเป็นรูปแบบไทยหรือสากลแบบอื่น ลองแปลงด้วย Date object
+        let d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+            let year = d.getFullYear();
+            let month = String(d.getMonth() + 1).padStart(2, '0');
+            let day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+        return dateStr;
+    }
+
+    // อัปเดตค่าลงใน UI input พร้อมแปลง Format ให้ถูกต้อง
+    let dateInput = document.querySelector('.meta-field[data-field="billDate"]') || document.getElementById('billDate');
+    if (dateInput) {
+        dateInput.value = formatToInputDate(docMeta.billDate);
+    }
+
+    let sigDateInput = document.querySelector('.meta-field[data-field="sigSalesDate"]') || document.getElementById('sigSalesDate');
+    if (sigDateInput) {
+        sigDateInput.value = formatToInputDate(docMeta.sigSalesDate);
+    }	
+	
+	
+    function selectCustomer(selectElement) {
+    const selectedName = selectElement.value;
+    
+    let foundCustomer = null;
+    if (typeof allCustomersData !== 'undefined' && Array.isArray(allCustomersData)) {
+        foundCustomer = allCustomersData.find(c => {
+            let cName = typeof c === 'string' ? c : (c.name || c.customerName || c.companyName || '');
+            return cName === selectedName;
+        });
+    }
+
+    let custNameValue = "";
+    let custAddressValue = "";
+    let custTaxNoValue = ""; // 📌 เพิ่มตัวแปรเก็บเลขผู้เสียภาษี
+    let custItems = null;
+
+    if (foundCustomer && typeof foundCustomer === 'object') {
+        custNameValue = foundCustomer.name || foundCustomer.customerName || foundCustomer.companyName || selectedName;
+        custAddressValue = foundCustomer.address || foundCustomer.custAddress || '';
+        custTaxNoValue = foundCustomer.taxNo || foundCustomer.customerTaxNo || foundCustomer.tax || ''; // 📌 รองรับชื่อคีย์ที่หลากหลาย
+        custItems = foundCustomer.items || null;
+    } else {
+        custNameValue = selectedName;
+        custAddressValue = "";
+        custTaxNoValue = "";
+    }
+
+    docMeta.custName = custNameValue;
+    docMeta.custAddress = custAddressValue;
+    docMeta.custTaxNo = custTaxNoValue; // 📌 อัปเดตค่าลงใน state หลัก
+
+    if (custItems && Array.isArray(custItems) && custItems.length > 0) {
+        itemsData = custItems;
+    }
+
+    renderDocument();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const billNoParam = urlParams.get('billNo');
+    const bookNoParam = urlParams.get('bookNo');
+    const salesNameParam = urlParams.get('salesName'); 
+    const autoPrint = urlParams.get('autoPrint'); 
+
+    // 1. เก็บชื่อผู้เสนอราคาที่ส่งมาผ่าน URL สำรองไว้ในตัวแปรหรือ sessionStorage ก่อน
+    if (salesNameParam) {
+        const decodedSalesName = decodeURIComponent(salesNameParam);
+        sessionStorage.setItem('temp_sales_name', decodedSalesName);
+        
+        // ลองใส่รอบแรกทันที
+        let salesNameInput = document.getElementById('sigSalesName');
+        if (salesNameInput) {
+            salesNameInput.value = decodedSalesName;
+        }
+    }
+
+    // 2. จัดการเรื่องเลขที่บิลและเล่มที่
+    if (billNoParam) {
+        const cleanBillNo = billNoParam.replace(/^:/, '').trim();
+        const cleanBookNo = bookNoParam ? bookNoParam.replace(/^:/, '').trim() : '';
+
+        let searchInput = document.getElementById('searchOldBillNo');
+        if (searchInput) searchInput.value = cleanBillNo;
+
+        // เรียกฟังก์ชันโหลดข้อมูลบิลเดิมของคุณ
+        if (typeof autoLoadBillDataOnStartup === 'function') {
+            autoLoadBillDataOnStartup(cleanBillNo, cleanBookNo);
+        }
+    }
+
+    // 3. ป้องกันข้อมูลบิลเก่ามาทับชื่อผู้เสนอราคา ให้บังคับยัดชื่อซ้ำอีกครั้งหลังผ่านไป 0.5 วินาที (รอให้โหลดข้อมูลเสร็จ)
+    setTimeout(() => {
+        let savedSalesName = sessionStorage.getItem('temp_sales_name') || (salesNameParam ? decodeURIComponent(salesNameParam) : '');
+        if (savedSalesName) {
+            let salesNameInput = document.getElementById('sigSalesName');
+            if (salesNameInput) {
+                salesNameInput.value = savedSalesName;
+            }
+        }
+    }, 500);
+
+    // 4. คำสั่งพิมพ์อัตโนมัติ (หน่วงเวลาเพิ่มนิดหน่อยเพื่อให้ข้อมูลและชื่อมาครบก่อนพิมพ์)
+    if (autoPrint === 'true') {
+        setTimeout(() => {
+            window.print();
+        }, 1200);
+    }
+
+    // รับรายการจาก Company Directory / ประวัติการซื้อที่ส่งผ่าน localStorage
+    // ใช้เฉพาะเมื่อเปิดจากปุ่ม "🧾 ออกเอกสาร" เพื่อไม่กระทบการเปิดใบเสนอราคาแบบเดิม
+    if (urlParams.get('source') === 'company-purchase-history') {
+        try {
+            const rawPayload = localStorage.getItem('company_purchase_quotation_payload');
+            if (rawPayload) {
+                const payload = JSON.parse(rawPayload);
+                if (payload && payload.source === 'company-directory-purchase-history' && Array.isArray(payload.items)) {
+                    docMeta.custName = String(payload.companyName || payload.customerName || '');
+                    docMeta.custAddress = String(payload.address || '');
+                    docMeta.custTaxNo = String(payload.taxNo || '');
+                    docMeta.quotSubject = 'เสนอราคาสินค้า';
+                    // แปลง schema จากประวัติการซื้อเป็น schema ที่ quotation.html ใช้โดยตรง
+                    itemsData = payload.items.map(item => ({
+                        desc: String(item.desc || item.name || ''),
+                        model: String(item.model || item.code || ''),
+                        qty: Math.max(1, Number(item.qty) || 1),
+                        unit: String(item.unit || ''),
+                        price: Math.max(0, Number(item.price) || 0)
+                    })).filter(item => item.desc.trim());
+                    if (!itemsData.length) {
+                        itemsData = [{ desc: '', model: '', qty: 1, unit: '', price: 0 }];
+                    }
+                    renderDocument();
+                    // อัปเดตช่องข้อมูลลูกค้าให้ตรงกับข้อมูลบริษัทที่ส่งมา
+                    document.querySelectorAll('.meta-field[data-field="custName"]').forEach(el => el.value = docMeta.custName);
+                    document.querySelectorAll('.meta-field[data-field="custAddress"]').forEach(el => el.value = docMeta.custAddress);
+                    document.querySelectorAll('.meta-field[data-field="custTaxNo"]').forEach(el => el.value = docMeta.custTaxNo);
+                    document.querySelectorAll('.meta-field[data-field="quotSubject"]').forEach(el => el.value = docMeta.quotSubject);
+                    if (typeof adjustAllItemDescriptions === 'function') adjustAllItemDescriptions();
+                    if (typeof adjustCustomerAddressHeight === 'function') adjustCustomerAddressHeight();
+                    localStorage.removeItem('company_purchase_quotation_payload');
+                    if (typeof showToast === 'function') showToast(`รับรายการจากประวัติการซื้อแล้ว ${itemsData.length} รายการ`);
+                }
+            }
+        } catch (err) {
+            console.error('นำเข้ารายการจากประวัติการซื้อไม่สำเร็จ:', err);
+            alert('ไม่สามารถนำรายการสินค้าจากประวัติการซื้อมาแสดงได้ กรุณากลับไปหน้า Company Directory แล้วลองใหม่');
+        }
+    }
+});
+
+	// 5. เมื่อหน้าต่างพิมพ์ถูกปิดลง (ไม่ว่าจะกดพิมพ์สำเร็จหรือกดยกเลิก) จะเปลี่ยนหน้าไปที่ index.html ทันที
+ window.matchMedia('print').addEventListener('change', function(mql) {
+    if (!mql.matches) {
+      window.location.href = 'index.html';
+    }
+ });
+ 
+ function adjustTextareaHeight(ta) {
+        if (!ta) return;
+
+        // รีเซ็ตเป็นความสูงขั้นต่ำก่อนคำนวณ เพื่อให้รองรับการลบข้อความด้วย
+        ta.style.height = '22px';
+
+        // ใช้ scrollHeight เพื่อให้กล่องขยายครบทุกบรรทัดตามความกว้างจริงของช่อง
+        const contentHeight = Math.max(22, ta.scrollHeight);
+        ta.style.height = contentHeight + 'px';
+    }
+
+    function adjustAllItemDescriptions() {
+        document.querySelectorAll('textarea.item-desc').forEach(function(ta) {
+            adjustTextareaHeight(ta);
+        });
+    }
+
+    // 📌 เฉพาะช่อง Address: ขยายตามความยาวจริงของที่อยู่ลูกค้า
+    function adjustCustomerAddressHeight() {
+        document.querySelectorAll('textarea[data-field="custAddress"]').forEach(function(ta) {
+            ta.style.height = 'auto';
+            const contentHeight = Math.max(22, ta.scrollHeight);
+            ta.style.height = contentHeight + 'px';
+        });
+    }
+
+    window.addEventListener('load', function() {
+        document.querySelectorAll('textarea.item-desc').forEach(function(ta) {
+            adjustTextareaHeight(ta);
+        });
+        adjustCustomerAddressHeight();
+    });
+
+    document.addEventListener('input', function(e) {
+        if (!e.target) return;
+
+        if (e.target.matches('textarea.item-desc')) {
+            adjustTextareaHeight(e.target);
+        } else if (e.target.matches('textarea[data-field="custAddress"]')) {
+            adjustCustomerAddressHeight();
+        } else if (e.target.matches('textarea.inline-textarea, textarea.meta-field')) {
+            e.target.style.height = 'auto';
+            e.target.style.height = Math.max(22, e.target.scrollHeight) + 'px';
+        }
+    });
+
+    // เมื่อความกว้างตารางเปลี่ยน ต้องคำนวณใหม่ เพราะจำนวนบรรทัดอาจเปลี่ยน
+    window.addEventListener('resize', function() {
+        requestAnimationFrame(adjustAllItemDescriptions);
+    });
+
+    // คำนวณอีกครั้งก่อนพิมพ์ เพื่อให้หน้าจอและ PDF ใช้ความสูงเดียวกัน
+    window.addEventListener('beforeprint', function() {
+        adjustAllItemDescriptions();
+        adjustCustomerAddressHeight();
+        // บังคับใช้ความสูงที่คำนวณแล้วเฉพาะ Address เพื่อไม่ให้ CSS print ย่อกลับ
+        document.querySelectorAll('textarea[data-field="custAddress"]').forEach(function(ta) {
+            const contentHeight = Math.max(22, ta.scrollHeight);
+            ta.style.setProperty('height', contentHeight + 'px', 'important');
+        });
+    });
+
+    window.addEventListener('afterprint', function() {
+        document.querySelectorAll('textarea[data-field="custAddress"]').forEach(function(ta) {
+            ta.style.removeProperty('height');
+        });
+        requestAnimationFrame(function() {
+            adjustAllItemDescriptions();
+            adjustCustomerAddressHeight();
+        });
+    });
+
+    // หลัง render รายการใหม่ ให้รอ layout เสร็จก่อนคำนวณความสูง
+    const originalRenderDocument = renderDocument;
+    renderDocument = function() {
+        originalRenderDocument();
+        requestAnimationFrame(function() {
+            adjustAllItemDescriptions();
+            adjustCustomerAddressHeight();
+            requestAnimationFrame(function() {
+                adjustAllItemDescriptions();
+                adjustCustomerAddressHeight();
+            });
+        });
+    };
+
+</script>
+
+</body>
+</html>
