@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบเช็คการจัดส่งสินค้าและฐานข้อมูลลูกค้า</title>
+    <link rel="icon" href="data:," />
     <style id="tailwind-production-css">
 /*! tailwindcss v4.1.10 | MIT License | https://tailwindcss.com */
 @layer properties;
@@ -7466,6 +7467,7 @@ body > header{z-index:900 !important}
 
         let pendingItems = []; 
         let allDeliveries = [];
+        let deliveriesListenerReady = false;
         let allProducts = []; 
         // ราคาสินค้าเฉพาะบริษัท แยกออกจากราคามาตรฐานใน Manage Stock
         let allCompanyProducts = [];
@@ -11026,6 +11028,7 @@ function getCompanyPriceHistory(companyName, productName) {
                         const itemsList = Array.isArray(data.subItems) ? data.subItems : [];
                         allDeliveries.push({ id: doc.id, ...data, subItems: itemsList });
                     });
+                    deliveriesListenerReady = true;
                     if (typeof window.renderCustomerOverview === 'function') {
                         window.renderCustomerOverview(document.getElementById('overview-search-input')?.value || '');
                     }
@@ -11862,6 +11865,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
         // คงรหัสชุดบันทึกเดิมไว้เมื่อเกิดข้อผิดพลาด เพื่อให้การลองใหม่ไม่เพิ่มรายการซ้ำ
         let pendingDeliverySubmissionId = null;
         let pendingDeliverySubmissionSignature = null;
+        let pendingDeliverySubmissionCreatedAt = null;
         let pendingNewDeliveryDocRef = null;
 
         // ใช้รหัสเอกสารคงที่สำหรับลูกค้าใหม่ของผู้ใช้คนเดิม ป้องกันการสร้างเอกสารลูกค้าซ้ำ
@@ -11937,6 +11941,7 @@ document.getElementById('item-input').addEventListener('blur', function() {
             if (!pendingDeliverySubmissionId || pendingDeliverySubmissionSignature !== submissionSignature) {
                 pendingDeliverySubmissionId = 'batch_' + (window.crypto?.randomUUID?.() || (Date.now().toString(36) + Math.random().toString(36).slice(2)));
                 pendingDeliverySubmissionSignature = submissionSignature;
+                pendingDeliverySubmissionCreatedAt = new Date().toISOString();
                 pendingNewDeliveryDocRef = getStableNewDeliveryDocRef(currentAuthUser.uid, customerName);
             }
             const submissionId = pendingDeliverySubmissionId;
@@ -11947,76 +11952,53 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 totalProfit: item.totalProfit !== undefined ? item.totalProfit : null,
                 dueDate: item.dueDate || '',
                 status: 'pending',
-                createdAt: new Date().toISOString()
+                // เวลาคงที่ต่อ submission เพื่อให้ arrayUnion ป้องกันชุดเดิมซ้ำได้เมื่อกดลองใหม่
+                createdAt: pendingDeliverySubmissionCreatedAt || new Date().toISOString()
             }));
 
             submitBtn.disabled = true;
             submitBtn.innerHTML = `<svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> กำลังบันทึก...`;
 
             try {
-                let snapshot;
-                if (currentUserProfile?.role === 'admin') {
-                    snapshot = await db.collection('deliveries')
-                        .where('customerName', '==', customerName)
-                        .get();
-                } else {
-                    const scopedSnapshot = await db.collection('deliveries')
-                        .where('ownerUid', '==', currentAuthUser.uid)
-                        .get();
-                    const matchingDocs = [];
-                    scopedSnapshot.forEach(doc => {
-                        const data = doc.data() || {};
-                        if (String(data.customerName || '').trim() === customerName) matchingDocs.push(doc);
-                    });
-                    snapshot = { empty: matchingDocs.length === 0, docs: matchingDocs };
+                // ใช้ Listener ที่มีอยู่แล้วเพื่อค้นหาลูกค้า ไม่ Query deliveries ซ้ำระหว่างกดบันทึก
+                // ใช้ set(..., {merge:true}) + arrayUnion แทน transaction.get เพื่อตัด BatchGet ของเอกสารเป้าหมาย
+                // submissionId และ createdAt คงที่เมื่อกดลองใหม่ ทำให้ arrayUnion ไม่เพิ่มชุดเดิมซ้ำ
+                if (!deliveriesListenerReady) {
+                    throw new Error('deliveries-listener-not-ready');
                 }
-
-                const targetDocRef = !snapshot.empty ? snapshot.docs[0].ref : pendingNewDeliveryDocRef;
-                let alreadySaved = false;
-                await db.runTransaction(async (transaction) => {
-                    const currentDoc = await transaction.get(targetDocRef);
-                    if (currentDoc.exists) {
-                        const docData = currentDoc.data() || {};
-                        const existingItems = Array.isArray(docData.subItems) ? docData.subItems : [];
-                        // ถ้า Firestore บันทึกสำเร็จแล้วแต่การตอบกลับขาดหาย การลองใหม่จะไม่เพิ่มชุดเดิมซ้ำ
-                        if (existingItems.some(item => item && item.submissionId === submissionId)) {
-                            alreadySaved = true;
-                            return;
-                        }
-                        const stableCompanyKey = docData.companyKey || normalizeCompanyProductKey(docData.companyName || companyName);
-                        transaction.update(targetDocRef, {
-                            subItems: existingItems.concat(newSubItemsObjs),
-                            companyName: companyName || docData.companyName || '',
-                            companyKey: stableCompanyKey,
-                            district: companyDistrict || docData.district || '',
-                            phone: phone || docData.phone || '',
-                            address: address || docData.address || '',
-                            lineIds: [...new Set([...(Array.isArray(docData.lineIds) ? docData.lineIds : []), ...lineIds])],
-                            customerNotes: Array.isArray(docData.customerNotes) ? docData.customerNotes : [],
-                            purchaseHistory: Array.isArray(docData.purchaseHistory) ? docData.purchaseHistory : [],
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    } else {
-                        transaction.set(targetDocRef, {
-                            customerName,
-                            companyName,
-                            companyKey: normalizeCompanyProductKey(companyName),
-                            district: companyDistrict,
-                            phone,
-                            address,
-                            lineIds,
-                            subItems: newSubItemsObjs,
-                            customerNotes: [],
-                            purchaseHistory: [],
-                            ownerUid: currentAuthUser.uid,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    }
+                const matchedCustomer = allDeliveries.find(item => {
+                    if (String(item.customerName || '').trim() !== customerName) return false;
+                    return currentUserProfile?.role === 'admin' || item.ownerUid === currentAuthUser.uid;
                 });
+                const isNewCustomer = !matchedCustomer;
+                const targetDocRef = matchedCustomer
+                    ? db.collection('deliveries').doc(matchedCustomer.id)
+                    : pendingNewDeliveryDocRef;
+                const cachedCustomer = matchedCustomer || {};
+                const writeData = {
+                    customerName,
+                    companyName: companyName || cachedCustomer.companyName || '',
+                    companyKey: cachedCustomer.companyKey || normalizeCompanyProductKey(companyName || cachedCustomer.companyName || ''),
+                    district: companyDistrict || cachedCustomer.district || '',
+                    phone: phone || cachedCustomer.phone || '',
+                    address: address || cachedCustomer.address || '',
+                    subItems: firebase.firestore.FieldValue.arrayUnion(...newSubItemsObjs),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+                // Merge Line ID แบบเพิ่มรายการ โดยไม่อ่านเอกสารจากเซิร์ฟเวอร์ก่อน
+                if (lineIds.length) {
+                    writeData.lineIds = firebase.firestore.FieldValue.arrayUnion(...lineIds);
+                }
+                if (isNewCustomer) {
+                    writeData.ownerUid = currentAuthUser.uid;
+                    writeData.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                    // ไม่เขียนทับ customerNotes/purchaseHistory ที่อาจมีอยู่ หากเอกสารเดิมยังไม่อยู่ใน cache
+                }
+                await targetDocRef.set(writeData, { merge: true });
 
-                showToast(alreadySaved ? 'ข้อมูลชุดนี้บันทึกแล้ว ไม่ได้เพิ่มซ้ำ' : (!snapshot.empty
-                    ? `เพิ่ม ${pendingItems.length} รายการให้ "${customerName}" เรียบร้อย`
-                    : 'บันทึกข้อมูลสำเร็จเรียบร้อย'), 'success');
+                showToast(isNewCustomer
+                    ? 'บันทึกข้อมูลลูกค้าและรายการจัดส่งสำเร็จ (ป้องกันรายการซ้ำแล้ว)'
+                    : `ส่งคำขอบันทึก ${pendingItems.length} รายการให้ "${customerName}" สำเร็จ (ป้องกันรายการซ้ำแล้ว)`, 'success');
 
                 // ล้างข้อมูลและรหัสชุดบันทึกเฉพาะเมื่อ Transaction สำเร็จเท่านั้น
                 deliveryForm.reset();
@@ -12024,13 +12006,22 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 pendingLineIds = [];
                 pendingDeliverySubmissionId = null;
                 pendingDeliverySubmissionSignature = null;
+                pendingDeliverySubmissionCreatedAt = null;
                 pendingNewDeliveryDocRef = null;
                 renderLineIdTags();
                 renderPendingItems();
             } catch (err) {
                 console.error('บันทึกข้อมูลไม่สำเร็จ:', err);
                 // คงรายการในฟอร์มและรหัสชุดบันทึกไว้ เพื่อให้ลองใหม่โดยไม่สร้างรายการซ้ำ
-                showToast('บันทึกไม่สำเร็จหรือยังไม่ได้รับการยืนยัน ข้อมูลยังอยู่ในฟอร์ม กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่', 'error');
+                const errorCode = String(err?.code || '');
+                const errorMessage = String(err?.message || '');
+                if (errorCode.includes('resource-exhausted') || /quota exceeded|resource exhausted/i.test(errorMessage)) {
+                    showToast('Firestore ปฏิเสธคำขอเพราะโควตาหรือขีดจำกัดคำขอถึงเกณฑ์แล้ว ข้อมูลยังอยู่ในฟอร์ม อย่ากดซ้ำหลายครั้ง ให้ตรวจ Firestore Usage / Quotas และ Billing ก่อนลองใหม่', 'error');
+                } else if (errorMessage === 'deliveries-listener-not-ready') {
+                    showToast('กำลังโหลดข้อมูลลูกค้าจาก Firebase กรุณารอสักครู่แล้วกดบันทึกอีกครั้ง', 'warning');
+                } else {
+                    showToast('บันทึกไม่สำเร็จหรือยังไม่ได้รับการยืนยัน ข้อมูลยังอยู่ในฟอร์ม กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่', 'error');
+                }
             } finally {
                 submitBtn.disabled = false;
                 submitBtn.innerHTML = '<span>บันทึกข้อมูลทั้งหมด</span>';
