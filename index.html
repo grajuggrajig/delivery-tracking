@@ -6037,6 +6037,55 @@ body > header{z-index:900 !important}
 }
 </style>
 
+
+<style id="company-add-history-readable-text">
+/* เพิ่มขนาดตัวอักษรเฉพาะรายการสินค้าในหน้าต่าง 🧾 ออกเอกสาร/เพิ่มเข้าประวัติ */
+#company-add-history-modal #company-add-history-products {
+    font-size: 16px;
+    line-height: 1.6;
+}
+#company-add-history-modal #company-add-history-products > div {
+    padding: 14px 16px;
+    gap: 12px;
+}
+#company-add-history-modal #company-add-history-products .company-add-history-check {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 20px;
+}
+#company-add-history-modal #company-add-history-products .text-sm.font-bold {
+    font-size: 17px;
+    line-height: 1.55;
+}
+#company-add-history-modal #company-add-history-products .text-\[11px\] {
+    font-size: 14px;
+    line-height: 1.55;
+}
+#company-add-history-modal #company-add-history-products .company-add-history-qty {
+    font-size: 16px;
+    min-height: 38px;
+}
+#company-add-history-modal #company-add-history-products label {
+    font-size: 13px;
+    gap: 8px;
+}
+#company-add-history-modal #company-add-history-search,
+#company-add-history-modal #company-add-history-customer {
+    font-size: 16px;
+}
+@media (max-width: 640px) {
+    #company-add-history-modal #company-add-history-products > div {
+        padding: 12px;
+        gap: 9px;
+    }
+    #company-add-history-modal #company-add-history-products .text-sm.font-bold {
+        font-size: 16px;
+    }
+    #company-add-history-modal #company-add-history-products .text-\[11px\] {
+        font-size: 13px;
+    }
+}
+</style>
 </head>
 <body class="auth-pending bg-[#f0f4f8] text-slate-800 h-screen overflow-hidden flex flex-col justify-between pb-2 md:pb-0">
 
@@ -9028,14 +9077,14 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0 flex-wrap">
                     <button type="button" id="print-company-products-btn"
-                        class="w-full sm:w-auto px-3 py-2 text-emerald-700 hover:text-white hover:bg-emerald-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-emerald-200 bg-white shadow-2xs"
+                        class="w-full sm:w-auto px-3 py-2 text-emerald-800 bg-emerald-100 hover:text-white hover:bg-emerald-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-emerald-200 shadow-2xs"
                         title="พิมพ์รายการสินค้าทั้งหมดของบริษัทนี้">
                         🖨️ พิมพ์หน้านี้
                     </button>
                     <button type="button" id="add-company-products-to-history-btn"
-                        class="w-full sm:w-auto px-3 py-2 text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 shadow-sm"
+                        class="w-full sm:w-auto px-3 py-2 text-sky-800 bg-sky-100 hover:text-white hover:bg-sky-600 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 border border-sky-200 shadow-2xs"
                         title="เลือกสินค้าและเพิ่มเข้าประวัติการซื้อ เพื่อออกเอกสาร">
-                        ＋ เพิ่มรายการสินค้าเข้าประวัติ / ออกบิล
+                        🧾 ออกเอกสาร
                     </button>
     ${currentUserProfile?.role === 'admin' ? `<button type="button" id="open-product-retirement-btn"
         class="p-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs shadow-sm transition flex items-center justify-center"
@@ -12737,10 +12786,6 @@ document.getElementById('item-input').addEventListener('blur', function() {
                             <div style="height:28px;border-bottom:1px solid #94a3b8;"></div>
                             <div style="margin-top:6px;">${type === 'quotation' ? 'ผู้เสนอราคา / ผู้อนุมัติ' : `ผู้รับสินค้า${receiver ? `: ${escapeDocumentHTML(receiver)}` : ' / ลูกค้า'}`}</div>
                         </div>
-                    </div>
-
-                    <div style="margin-top:30px;text-align:center;font-size:8px;color:#94a3b8;">
-                        เอกสารสร้างจากระบบ Delivery Tracking & CRM • ${escapeDocumentHTML(documentCompany.name)}
                     </div>
                 </div>
             `;
