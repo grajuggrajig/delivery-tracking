@@ -12332,9 +12332,9 @@ document.getElementById('item-input').addEventListener('blur', function() {
                                     title="ดูประวัติสินค้าทั้งหมดที่บริษัทนี้เคยซื้อ">
                                     📦 ดูสินค้าทั้งหมด <span class="ml-0.5 px-1.5 py-0.5 rounded-full bg-white text-sky-700 border border-sky-200 font-bold">${companyProductCount}</span>
                                 </button>
-                                <button onclick="openDocumentModal('${item.id}')"
+                                <button onclick="openQuotationFromCustomer('${item.id}')"
                                     class="text-[11px] font-bold text-emerald-700 hover:text-white transition px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 border border-emerald-200/60 flex items-center gap-1"
-                                    title="ออกใบเสนอราคา ใบเสร็จรับเงิน หรือใบส่งสินค้า">
+                                    title="ส่งรายการประวัติการซื้อไปยัง quotation.html เพื่อออกใบเสนอราคา">
                                     🧾 ออกเอกสาร
                                 </button>
                                 <button onclick="openDocumentModal('${item.id}')"
@@ -12406,6 +12406,72 @@ document.getElementById('item-input').addEventListener('blur', function() {
                 `;
             }).join('');
         }
+
+        // ส่งข้อมูลประวัติการซื้อของบริษัทไปยัง quotation.html โดยไม่เปลี่ยนข้อมูลเดิมใน Firebase
+        window.openQuotationFromCustomer = function(customerId) {
+            try {
+                const customer = (Array.isArray(allDeliveries) ? allDeliveries : []).find(item => String(item.id) === String(customerId));
+                if (!customer) {
+                    showToast('ไม่พบข้อมูลบริษัท/ประวัติการซื้อ กรุณารอสักครู่แล้วลองใหม่', 'error');
+                    return;
+                }
+                const companyName = String(customer.companyName || customer.customerName || '').trim();
+                const companyKey = normalizeCompanyProductKey(customer.companyKey || customer.companyName || '');
+                const sourceItems = Array.isArray(customer.subItems) ? customer.subItems : [];
+                const items = sourceItems.map(sub => {
+                    const raw = String(sub.text || '').trim();
+                    const qtyMatch = raw.match(/\s*x\s*(\d+)\s*$/i);
+                    const qty = qtyMatch ? Math.max(1, parseInt(qtyMatch[1], 10)) : 1;
+                    let nameAndPrice = raw.replace(/\s*x\s*\d+\s*$/i, '').trim();
+                    const priceMatch = nameAndPrice.match(/\(\s*([\d,]+(?:\.\d+)?)\s*บาท\s*\)$/i);
+                    const embeddedPrice = priceMatch ? Number(priceMatch[1].replace(/,/g, '')) : NaN;
+                    let name = nameAndPrice.replace(/\s*\(\s*[\d,]+(?:\.\d+)?\s*บาท\s*\)\s*$/i, '').trim();
+                    const linkedProduct = (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).find(p =>
+                        String(p.id) === String(sub.companyProductId || '') &&
+                        normalizeCompanyProductKey(p.companyKey || p.companyName || '') === companyKey
+                    ) || (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).find(p =>
+                        normalizeCompanyProductKey(p.companyKey || p.companyName || '') === companyKey &&
+                        normalizeCompanyProductName(p.name) === normalizeCompanyProductName(name)
+                    );
+                    const price = Number.isFinite(embeddedPrice) ? embeddedPrice : Number(linkedProduct?.price ?? sub.price ?? 0) || 0;
+                    return {
+                        desc: name || raw,
+                        model: String(sub.productCode || sub.code || ''),
+                        qty,
+                        unit: String(linkedProduct?.unit || sub.unit || ''),
+                        price
+                    };
+                }).filter(item => item.desc);
+
+                const payload = {
+                    version: 1,
+                    source: 'company-directory-purchase-history',
+                    createdAt: new Date().toISOString(),
+                    customerId: String(customer.id),
+                    companyName,
+                    customerName: companyName,
+                    address: String(customer.address || customer.custAddress || customer.shippingAddress || ''),
+                    phone: String(customer.phone || customer.tel || ''),
+                    taxNo: String(customer.taxNo || customer.customerTaxNo || customer.taxId || ''),
+                    items
+                };
+                if (!items.length) {
+                    showToast('ประวัติการซื้อนี้ยังไม่มีรายการสินค้าให้ส่งไปออกเอกสาร', 'error');
+                    return;
+                }
+                localStorage.setItem('company_purchase_quotation_payload', JSON.stringify(payload));
+                const targetUrl = new URL('quotation.html', window.location.href);
+                targetUrl.searchParams.set('source', 'company-purchase-history');
+                const win = window.open(targetUrl.href, '_blank');
+                if (!win) {
+                    // หากเบราว์เซอร์บล็อกแท็บใหม่ ให้เปิดในแท็บปัจจุบันแทน เพื่อไม่ทำข้อมูลที่เลือกหาย
+                    window.location.href = targetUrl.href;
+                }
+            } catch (err) {
+                console.error('openQuotationFromCustomer:', err);
+                showToast('ส่งรายการไป quotation.html ไม่สำเร็จ: ' + (err.message || 'กรุณาลองใหม่'), 'error');
+            }
+        };
 
         // ==================== PDF / PRINT DOCUMENT GENERATOR ====================
         let currentDocumentCustomerId = null;
