@@ -4087,6 +4087,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style id="premium-classic-ui">
 /* =========================================================
@@ -7769,8 +7770,8 @@ function showCompanyAllHistory(companyName, stableCompanyKey = '') {
             customerInfo = item.customerName;
             const currentItems = Array.isArray(item.subItems) ? item.subItems : [];
             const archivedItems = Array.isArray(item.purchaseHistory) ? item.purchaseHistory : [];
-            allPurchasedItems.push(...archivedItems.map(sub => ({ text: sub.text, dueDate: sub.dueDate || 'ไม่ระบุวันที่', status: 'completed', totalProfit: sub.totalProfit })));
-            allPurchasedItems.push(...currentItems.map(sub => ({ text: sub.text, dueDate: sub.dueDate || 'ไม่ระบุวันที่', status: sub.status || 'pending', totalProfit: sub.totalProfit })));
+            allPurchasedItems.push(...archivedItems.map((sub, subItemIndex) => ({ text: sub.text, dueDate: sub.dueDate || 'ไม่ระบุวันที่', status: 'completed', totalProfit: sub.totalProfit, companyProductId: sub.companyProductId || '', imageUrl: sub.imageUrl || '', deliveryId: item.id, historyField: 'purchaseHistory', subItemId: sub.id || '', subItemIndex })));
+            allPurchasedItems.push(...currentItems.map((sub, subItemIndex) => ({ text: sub.text, dueDate: sub.dueDate || 'ไม่ระบุวันที่', status: sub.status || 'pending', totalProfit: sub.totalProfit, companyProductId: sub.companyProductId || '', imageUrl: sub.imageUrl || '', deliveryId: item.id, historyField: 'subItems', subItemId: sub.id || '', subItemIndex })));
         }
     });
 
@@ -8468,17 +8469,24 @@ async function requireAdminPasswordForDelete(actionLabel = 'ยืนยัน�
             if (!password) { error.textContent = 'กรุณากรอกรหัสผ่าน Admin'; error.classList.remove('hidden'); input.focus(); return; }
             confirmBtn.disabled = true; cancelBtn.disabled = true; confirmBtn.textContent = 'กำลังตรวจสอบ...'; error.classList.add('hidden');
             try {
-                const latestProfileSnap = await db.collection('users').doc(currentAuthUser.uid).get();
+                // ใช้ Firebase user ปัจจุบันโดยตรง ป้องกันตัวแปร currentAuthUser ค้างจาก auth state ก่อนหน้า
+                const authUser = auth.currentUser || currentAuthUser;
+                if (!authUser || !authUser.uid || authUser.uid !== currentAuthUser.uid || !authUser.email) {
+                    throw new Error('ADMIN_AUTH_SESSION_INVALID');
+                }
+                const latestProfileSnap = await db.collection('users').doc(authUser.uid).get();
                 const latestProfile = latestProfileSnap.exists ? latestProfileSnap.data() : null;
                 if (!latestProfile || latestProfile.role !== 'admin' || latestProfile.active === false) throw new Error('ADMIN_ACCESS_REVOKED');
-                const credential = firebase.auth.EmailAuthProvider.credential(currentAuthUser.email, password);
-                await currentAuthUser.reauthenticateWithCredential(credential);
+                // ต้องยืนยันกับอีเมล Firebase ของ session นี้เท่านั้น ห้ามใช้ username ที่ผู้ใช้กรอกแทนอีเมล
+                const credential = firebase.auth.EmailAuthProvider.credential(authUser.email, password);
+                await authUser.reauthenticateWithCredential(credential);
                 input.value = '';
                 finish(true);
             } catch (err) {
                 console.error('Admin delete password verification failed:', err);
                 confirmBtn.disabled = false; cancelBtn.disabled = false; confirmBtn.textContent = 'ยืนยันรหัสผ่าน'; input.value = ''; input.focus();
-                error.textContent = err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential' ? 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่' : err.message === 'ADMIN_ACCESS_REVOKED' ? 'บัญชีนี้ไม่มีสิทธิ์ Admin แล้ว' : 'ตรวจสอบรหัสผ่านไม่สำเร็จ กรุณาตรวจสอบรหัสผ่านแล้วลองอีกครั้ง';
+                const invalidPassword = ['auth/wrong-password', 'auth/invalid-credential', 'auth/invalid-login-credentials'].includes(err.code);
+                error.textContent = invalidPassword ? 'รหัสผ่านไม่ถูกต้องสำหรับบัญชี Admin ที่เข้าสู่ระบบอยู่ กรุณาตรวจสอบรหัสผ่านแล้วลองใหม่' : err.message === 'ADMIN_ACCESS_REVOKED' ? 'บัญชีนี้ไม่มีสิทธิ์ Admin แล้ว' : err.message === 'ADMIN_AUTH_SESSION_INVALID' ? 'เซสชันบัญชีไม่ตรงกัน กรุณาออกจากระบบแล้วเข้าสู่ระบบใหม่' : 'ตรวจสอบรหัสผ่านไม่สำเร็จ กรุณาตรวจสอบบัญชีและลองอีกครั้ง';
                 error.classList.remove('hidden');
             }
         });
@@ -8935,9 +8943,12 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
     container.innerHTML = products.map((p, index) => `
         <div class="grid grid-cols-[34px_minmax(0,1fr)_105px_120px_115px] items-center gap-2 px-3.5 py-2.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs">
             <span class="text-[11px] text-sky-600 font-bold text-center">#${index + 1}</span>
-            <div class="min-w-0">
-                <div class="company-product-name-rich text-xs font-bold text-slate-800 break-words">📦 ${sanitizeCompanyProductNameHtml(p.nameHtml) || escapeHTML(p.name)}${p.unit ? ` <span class="font-extrabold text-violet-600">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
-                <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[10px] leading-4"><span class="text-slate-400">เชื่อมกับ Manage Stock${p.stockProductId ? ' ✓' : ''}</span><span class="text-indigo-500 whitespace-nowrap">🗓️ อัปเดตราคา: ${escapeHTML(formatCompanyProductUpdateDate(p))}</span></div>
+            <div class="min-w-0 flex items-center gap-2">
+                ${p.imageUrl ? `<button type="button" class="shrink-0 relative group" onclick="openCompanyProductImageViewer(${safeInlineArg(p.imageUrl)}, ${safeInlineArg(p.name)})" title="🔍 ดูรูปภาพสินค้า"><img src="${escapeHTML(p.imageUrl)}" alt="${escapeHTML(p.name)}" loading="lazy" class="w-14 h-14 object-cover rounded-xl border border-slate-200 bg-slate-50"><span class="absolute inset-0 flex items-center justify-center rounded-xl bg-slate-900/0 group-hover:bg-slate-900/35 text-white opacity-0 group-hover:opacity-100 transition">🔍</span></button>` : `<div class="w-14 h-14 shrink-0 rounded-xl border border-dashed border-slate-200 bg-slate-50 flex items-center justify-center text-xl" title="ยังไม่มีรูปภาพ">📦</div>`}
+                <div class="min-w-0">
+                    <div class="company-product-name-rich text-xs font-bold text-slate-800 break-words">${sanitizeCompanyProductNameHtml(p.nameHtml) || escapeHTML(p.name)}${p.unit ? ` <span class="font-extrabold text-violet-600">/ ${escapeHTML(p.unit)}</span>` : ''}</div>
+                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0 text-[10px] leading-4"><span class="text-slate-400">เชื่อมกับ Manage Stock${p.stockProductId ? ' ✓' : ''}</span><span class="text-indigo-500 whitespace-nowrap">🗓️ อัปเดตราคา: ${escapeHTML(formatCompanyProductUpdateDate(p))}</span></div>
+                </div>
             </div>
             <div class="text-right">
                 <div class="text-[10px] text-slate-400">ต้นทุน</div>
@@ -9023,6 +9034,172 @@ function printCompanyProducts(companyName, stableCompanyKey = '', customerName =
         <\/script>
         </body></html>`);
     printWindow.document.close();
+}
+
+
+// รูปภาพสินค้า Company Directory: อัปโหลดแบบเลือกได้/ข้ามได้ และผูก URL กับ companyProducts รายการเดิม
+function openCompanyProductImageViewer(imageUrl, productName = '') {
+    if (!imageUrl) { showToast('สินค้านี้ยังไม่มีรูปภาพ', 'info'); return; }
+    const old = document.getElementById('company-product-image-viewer');
+    if (old) old.remove();
+    const modal = document.createElement('div');
+    modal.id = 'company-product-image-viewer';
+    modal.className = 'fixed inset-0 flex items-center justify-center p-4';
+    modal.style.cssText = 'z-index:2147483000;background:rgba(2,6,23,.82);backdrop-filter:blur(5px)';
+    modal.innerHTML = `<div class="relative bg-white rounded-2xl p-3 shadow-2xl max-w-4xl max-h-[92vh] w-full flex flex-col gap-2">
+        <div class="flex items-center justify-between gap-3"><div class="font-bold text-sm text-slate-800 truncate">${escapeHTML(productName || 'รูปภาพสินค้า')}</div><button type="button" data-image-viewer-close class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-rose-100 text-slate-700 font-bold">✕</button></div>
+        <img src="${escapeHTML(imageUrl)}" alt="${escapeHTML(productName || 'รูปภาพสินค้า')}" class="max-h-[78vh] w-full object-contain rounded-xl bg-slate-50">
+    </div>`;
+    document.body.appendChild(modal);
+    modal.querySelector('[data-image-viewer-close]').addEventListener('click', () => modal.remove());
+    modal.addEventListener('click', e => { if (e.target === modal) e.preventDefault(); });
+}
+
+async function promptCompanyProductImageUpload(product, companyName, historyTarget = null) {
+    if (!product?.id && !historyTarget?.deliveryId) {
+        showToast('ไม่พบรหัสสินค้า/รายการประวัติสำหรับผูกรูปภาพ', 'warning');
+        return;
+    }
+    const old = document.getElementById('company-product-image-upload-modal');
+    if (old) old.remove();
+    const modal = document.createElement('div');
+    modal.id = 'company-product-image-upload-modal';
+    modal.className = 'fixed inset-0 flex items-center justify-center p-4';
+    modal.style.cssText = 'z-index:2147482000;background:rgba(15,23,42,.68);backdrop-filter:blur(5px)';
+    modal.innerHTML = `<div class="bg-white rounded-3xl shadow-2xl border border-indigo-100 w-full max-w-lg overflow-hidden">
+        <div class="px-5 py-4 text-white bg-gradient-to-r from-indigo-700 via-blue-600 to-violet-600 flex items-center justify-between gap-3">
+            <div><div class="font-extrabold text-base">📷 เพิ่มรูปภาพสินค้า</div><div class="text-xs text-white/85 mt-1">สินค้า: ${escapeHTML(product.name || '')}</div></div>
+            <button type="button" data-upload-skip class="w-9 h-9 rounded-xl bg-white/15 hover:bg-white/25 font-bold">✕</button>
+        </div>
+        <div class="p-5 space-y-3">
+            <p class="text-sm text-slate-600">เลือกรูปภาพเพื่อแสดงในรายการสินค้าและประวัติการซื้อ หรือกดยกเลิกเพื่อข้ามขั้นตอนนี้ได้</p>
+            <input id="company-product-image-file" type="file" accept="image/*" class="block w-full text-sm text-slate-600 file:mr-3 file:px-3 file:py-2 file:rounded-lg file:border-0 file:bg-indigo-50 file:text-indigo-700 file:font-bold">
+            <div id="company-product-image-preview-wrap" class="hidden rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
+                <img id="company-product-image-preview" class="max-h-64 mx-auto object-contain rounded-xl" alt="ตัวอย่างรูปสินค้า">
+                <div class="text-xs text-slate-500 mt-2">ตัวอย่างรูปภาพ</div>
+            </div>
+            <div id="company-product-image-upload-error" class="hidden text-xs text-rose-700 bg-rose-50 border border-rose-200 rounded-xl p-3"></div>
+        </div>
+        <div class="px-5 py-4 border-t border-slate-100 flex flex-wrap justify-end gap-2">
+            <button type="button" data-upload-skip class="px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold">ยกเลิก / ข้ามขั้นตอน</button>
+            <button type="button" id="company-product-image-upload-save" disabled class="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-40 text-white text-sm font-extrabold">☁️ อัปโหลดและบันทึกภาพ</button>
+        </div>
+    </div>`;
+    document.body.appendChild(modal);
+    const fileInput = modal.querySelector('#company-product-image-file');
+    const previewWrap = modal.querySelector('#company-product-image-preview-wrap');
+    const preview = modal.querySelector('#company-product-image-preview');
+    const saveBtn = modal.querySelector('#company-product-image-upload-save');
+    const errorBox = modal.querySelector('#company-product-image-upload-error');
+    let selectedFile = null;
+    let previewUrl = '';
+    const close = () => { if (previewUrl) URL.revokeObjectURL(previewUrl); modal.remove(); };
+    modal.querySelectorAll('[data-upload-skip]').forEach(btn => btn.addEventListener('click', close));
+    modal.addEventListener('click', e => { if (e.target === modal) e.preventDefault(); });
+    fileInput.addEventListener('change', () => {
+        selectedFile = fileInput.files?.[0] || null;
+        errorBox.classList.add('hidden');
+        if (previewUrl) URL.revokeObjectURL(previewUrl);
+        previewUrl = '';
+        if (!selectedFile) { previewWrap.classList.add('hidden'); saveBtn.disabled = true; return; }
+        if (!selectedFile.type.startsWith('image/')) {
+            selectedFile = null; fileInput.value = ''; saveBtn.disabled = true;
+            errorBox.textContent = 'กรุณาเลือกไฟล์รูปภาพเท่านั้น'; errorBox.classList.remove('hidden'); return;
+        }
+        if (selectedFile.size > 5 * 1024 * 1024) {
+            selectedFile = null; fileInput.value = ''; saveBtn.disabled = true;
+            errorBox.textContent = 'รูปภาพต้องมีขนาดไม่เกิน 5 MB'; errorBox.classList.remove('hidden'); return;
+        }
+        previewUrl = URL.createObjectURL(selectedFile);
+        preview.src = previewUrl; previewWrap.classList.remove('hidden'); saveBtn.disabled = false;
+    });
+    saveBtn.addEventListener('click', async () => {
+        if (!selectedFile || saveBtn.disabled) return;
+        if (!firebase.storage || typeof firebase.storage !== 'function') {
+            errorBox.textContent = 'ไม่พบ Firebase Storage SDK กรุณาตรวจสอบการโหลด firebase-storage-compat.js'; errorBox.classList.remove('hidden'); return;
+        }
+        // Firebase Storage ไม่สามารถรับ upload จากหน้าเว็บที่เปิดด้วย file:// ได้อย่างถูกต้อง
+        // เพราะ browser จะส่ง Origin: null และ preflight จะถูก CORS ปฏิเสธ
+        if (window.location.protocol === 'file:' || window.location.origin === 'null') {
+            errorBox.textContent = 'ไม่สามารถอัปโหลดจากไฟล์ที่เปิดในเครื่องโดยตรงได้ (Origin: null) กรุณาเปิดหน้านี้ผ่านเว็บไซต์ HTTPS เช่น GitHub Pages หรือผ่าน localhost แล้วลองอัปโหลดอีกครั้ง ข้อมูลสินค้าได้บันทึกแล้วและสามารถกดยกเลิกเพื่อข้ามรูปภาพได้';
+            errorBox.classList.remove('hidden');
+            return;
+        }
+        saveBtn.disabled = true; saveBtn.textContent = 'กำลังอัปโหลด...';
+        try {
+            const safeFileName = String(selectedFile.name || 'product-image').replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80);
+            const storageOwnerId = product?.id || `${historyTarget.deliveryId}_${historyTarget.subItemId || historyTarget.subItemIndex}`;
+            const path = `company-product-photos/${storageOwnerId}/${Date.now()}_${safeFileName}`;
+            const storageRef = firebase.storage().ref().child(path);
+            const snapshot = await storageRef.put(selectedFile, { contentType: selectedFile.type, customMetadata: { companyProductId: String(product?.id || ''), deliveryId: String(historyTarget?.deliveryId || ''), companyName: String(companyName || '') } });
+            const imageUrl = await snapshot.ref.getDownloadURL();
+
+            // ถ้ารายการเดิมเชื่อมกับ Company Product ให้บันทึกรูปที่สินค้ากลางด้วย
+            if (product?.id) {
+                await db.collection('companyProducts').doc(String(product.id)).update({
+                    imageUrl, imageStoragePath: path,
+                    imageUpdatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                product.imageUrl = imageUrl; product.imageStoragePath = path;
+                const local = (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).find(p => String(p.id) === String(product.id));
+                if (local) { local.imageUrl = imageUrl; local.imageStoragePath = path; }
+            }
+
+            // รองรับประวัติเดิมที่เคยบันทึกไว้ก่อนเพิ่มระบบรูปภาพ
+            if (historyTarget?.deliveryId) {
+                const deliveryRef = db.collection('deliveries').doc(String(historyTarget.deliveryId));
+                await db.runTransaction(async tx => {
+                    const snap = await tx.get(deliveryRef);
+                    if (!snap.exists) throw new Error('ไม่พบเอกสารประวัติการซื้อเดิม');
+                    const data = snap.data() || {};
+                    const field = historyTarget.historyField === 'purchaseHistory' ? 'purchaseHistory' : 'subItems';
+                    const records = Array.isArray(data[field]) ? data[field].slice() : [];
+                    let at = historyTarget.subItemId ? records.findIndex(x => String(x.id || '') === String(historyTarget.subItemId)) : -1;
+                    if (at < 0) at = Number(historyTarget.subItemIndex);
+                    if (!Number.isInteger(at) || at < 0 || at >= records.length) throw new Error('ไม่พบรายการสินค้าที่ต้องการแนบรูป อาจมีการเปลี่ยนแปลงข้อมูลแล้ว กรุณาปิดและเปิดประวัติใหม่');
+                    records[at] = { ...records[at], imageUrl, imageStoragePath: path, imageUpdatedAt: new Date().toISOString() };
+                    tx.update(deliveryRef, { [field]: records, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                });
+                if (historyTarget.item) { historyTarget.item.imageUrl = imageUrl; historyTarget.item.imageStoragePath = path; }
+            }
+
+            invalidateCompanyCatalogCache();
+            const search = document.getElementById('company-specific-product-search');
+            renderCompanyProductCatalog(companyName, search?.value || '', document.getElementById('company-all-history-modal')?.dataset.companyKey || '');
+            if (typeof historyTarget?.onSaved === 'function') historyTarget.onSaved();
+            showToast('อัปโหลดและบันทึกรูปภาพสินค้าเรียบร้อยแล้ว', 'success');
+            close();
+        } catch (err) {
+            console.error('Company product image upload failed:', err);
+            const storageReason = err.code === 'storage/unauthorized'
+                ? 'บัญชีนี้ไม่มีสิทธิ์เขียน Firebase Storage กรุณาตรวจสอบ Storage Rules'
+                : err.code === 'storage/canceled'
+                    ? 'ยกเลิกการอัปโหลดแล้ว'
+                    : (err.message || 'กรุณาตรวจสอบ Storage Rules และ CORS ของ Firebase Storage');
+            errorBox.textContent = `อัปโหลดรูปภาพไม่สำเร็จ: ${storageReason}`;
+            errorBox.classList.remove('hidden');
+            saveBtn.disabled = false; saveBtn.textContent = '☁️ อัปโหลดและบันทึกภาพ';
+        }
+    });
+}
+
+async function findSavedCompanyProductForImage(companyName, stableCompanyKey, productName) {
+    const companyKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
+    let found = (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).filter(p =>
+        normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
+        normalizeCompanyProductName(p.name) === normalizeCompanyProductName(productName) &&
+        String(p.ownerUid || '') === String(currentAuthUser?.uid || '')
+    );
+    if (found.length === 1) return found[0];
+    try {
+        const snap = await db.collection('companyProducts').where('companyKey', '==', companyKey).get();
+        const docs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter(p =>
+            normalizeCompanyProductName(p.name) === normalizeCompanyProductName(productName) &&
+            String(p.ownerUid || '') === String(currentAuthUser?.uid || '')
+        );
+        if (docs.length === 1) return docs[0];
+    } catch (err) { console.warn('Could not resolve saved company product for image upload:', err); }
+    return null;
 }
 
 function showCompanyHistoryModal(companyName, customerName, items, stableCompanyKey = '') {
@@ -9355,8 +9532,15 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                 highlightedText = highlightedText.replace(regex, `<mark class="bg-amber-200 text-slate-900 rounded px-0.5">$1</mark>`);
             }
 
+            const linkedProduct = (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).find(p =>
+                (item.companyProductId && String(p.id) === String(item.companyProductId)) ||
+                (!item.companyProductId && normalizeCompanyProductKey(p.companyKey || p.companyName) === normalizeCompanyProductKey(stableCompanyKey || companyName) && normalizeCompanyProductName(p.name) === normalizeCompanyProductName(String(item.text || '').replace(/\s*\([\d,.]+\s*บาท\).*$/i, '').replace(/\s*x\s*\d+\s*$/i, '')))
+            );
+            const historyImageUrl = item.imageUrl || linkedProduct?.imageUrl || '';
             return `
                 <div class="history-item-row flex items-center justify-between p-3.5 bg-white border border-sky-100 hover:border-sky-300 rounded-2xl shadow-2xs transition-all text-xs gap-3 min-w-0 max-w-full overflow-hidden">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                    ${historyImageUrl ? `<button type="button" class="shrink-0 relative group" onclick="openCompanyProductImageViewer(${safeInlineArg(historyImageUrl)}, ${safeInlineArg(item.text || 'รูปภาพสินค้า')})" title="🔍 ดูรูปภาพสินค้า"><img src="${escapeHTML(historyImageUrl)}" loading="lazy" alt="รูปสินค้า" class="w-14 h-14 object-cover rounded-xl border border-slate-200"><span class="absolute inset-0 flex items-center justify-center rounded-xl bg-slate-900/0 group-hover:bg-slate-900/30 text-white opacity-0 group-hover:opacity-100">🔍</span></button>` : `<button type="button" data-history-upload-index="${items.indexOf(item)}" class="w-14 h-14 shrink-0 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-dashed border-indigo-300 flex flex-col items-center justify-center text-indigo-700 text-[10px] font-bold" title="เพิ่มรูปภาพให้รายการประวัติเดิม"><span class="text-xl leading-5">📷</span><span>เพิ่มรูป</span></button>`}
                     <div class="history-item-main space-y-1 pr-2 min-w-0 max-w-full">
                         <div class="font-bold text-slate-900 text-[13px] leading-relaxed break-words overflow-wrap-anywhere">
                             <span class="text-sky-600 font-extrabold mr-1">#${index + 1}</span> ${highlightedText} ${profitText}
@@ -9365,11 +9549,31 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                             <span class="flex-shrink-0">📅 วันที่นัด/บันทึก:</span> <span class="text-slate-700 font-semibold break-words">${escapeHTML(item.dueDate || 'ไม่ระบุวันที่')}</span>
                         </div>
                     </div>
+                    </div>
                     <div class="history-item-status flex-shrink-0 max-w-full">${statusBadge}</div>
                 </div>
             `;
         }).join('');
     };
+
+    // แนบรูปให้รายการประวัติการซื้อเดิมที่ยังไม่มีภาพได้จากปุ่ม 📷 เพิ่มรูป
+    container.addEventListener('click', async (event) => {
+        const uploadButton = event.target.closest('[data-history-upload-index]');
+        if (!uploadButton) return;
+        const itemIndex = Number(uploadButton.dataset.historyUploadIndex);
+        const historyItem = Number.isInteger(itemIndex) ? items[itemIndex] : null;
+        if (!historyItem?.deliveryId) { showToast('ไม่พบข้อมูลอ้างอิงของรายการประวัตินี้ กรุณารีเฟรชหน้าแล้วลองใหม่', 'warning'); return; }
+        const linkedProduct = (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).find(p =>
+            (historyItem.companyProductId && String(p.id) === String(historyItem.companyProductId)) ||
+            (!historyItem.companyProductId && normalizeCompanyProductKey(p.companyKey || p.companyName) === normalizeCompanyProductKey(stableCompanyKey || companyName) && normalizeCompanyProductName(p.name) === normalizeCompanyProductName(String(historyItem.text || '').replace(/\s*\([\d,.]+\s*บาท\).*$/i, '').replace(/\s*x\s*\d+\s*$/i, '')))
+        );
+        const uploadProduct = linkedProduct || { id: '', name: String(historyItem.text || 'สินค้าในประวัติ') };
+        await promptCompanyProductImageUpload(uploadProduct, companyName, {
+            deliveryId: historyItem.deliveryId, historyField: historyItem.historyField,
+            subItemId: historyItem.subItemId, subItemIndex: historyItem.subItemIndex, item: historyItem,
+            onSaved: () => renderItems(searchInput?.value || '')
+        });
+    });
 
     saveCompanyProductBtn.addEventListener('click', async () => {
         if (saveCompanyProductBtn.disabled) return;
@@ -9392,6 +9596,11 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             cancelCompanyProductEdit();
             renderCompanyProductCatalog(companyName, companyProductSearch.value, stableCompanyKey);
             companyProductName.focus();
+            if (!editId) {
+                const savedProduct = await findSavedCompanyProductForImage(companyName, stableCompanyKey, name);
+                if (savedProduct) await promptCompanyProductImageUpload(savedProduct, companyName);
+                else showToast('บันทึกสินค้าเรียบร้อยแล้ว แต่ไม่สามารถระบุรายการเพื่อแนบรูปได้', 'warning');
+            }
         } else {
             saveCompanyProductBtn.textContent = editId ? '💾 บันทึกการแก้ไข' : '＋ เพิ่ม / บันทึกราคา';
         }
@@ -9667,6 +9876,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             const price = Number(p.price) || 0;
             return `<div class="flex items-center gap-3 p-3 rounded-xl border ${selected ? 'border-indigo-300 bg-indigo-50/60' : 'border-slate-200 bg-white'}">
                 <input type="checkbox" class="company-add-history-check w-4 h-4 accent-indigo-600" data-product-id="${escapeHTML(id)}" ${selected ? 'checked' : ''} aria-label="เลือก ${escapeHTML(p.name)}">
+                ${p.imageUrl ? `<button type="button" class="shrink-0" onclick="openCompanyProductImageViewer(${safeInlineArg(p.imageUrl)}, ${safeInlineArg(p.name)})" title="🔍 ดูรูปภาพสินค้า"><img src="${escapeHTML(p.imageUrl)}" loading="lazy" alt="${escapeHTML(p.name)}" class="w-14 h-14 object-cover rounded-xl border border-slate-200"></button>` : `<div class="w-14 h-14 shrink-0 rounded-xl bg-slate-50 border border-dashed border-slate-200 flex items-center justify-center">📦</div>`}
                 <div class="flex-1 min-w-0"><div class="text-sm font-bold text-slate-800 break-words">${escapeHTML(p.name)}</div><div class="text-[11px] text-slate-500 mt-0.5">ราคาขายบริษัทนี้: <b class="text-sky-700">${price.toLocaleString('th-TH')} บาท</b>${p.unit ? ' · หน่วย ' + escapeHTML(p.unit) : ''}</div></div>
                 <label class="text-[10px] text-slate-500 flex items-center gap-1">จำนวน <input type="number" min="1" step="1" value="${qty}" data-qty-product-id="${escapeHTML(id)}" class="company-add-history-qty w-20 px-2 py-1.5 border border-slate-200 rounded-lg text-sm text-right" ${selected ? '' : 'disabled'}></label>
             </div>`;
@@ -9736,7 +9946,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             const price = Number(p.price);
             if (!Number.isFinite(price) || price < 0) throw new Error(`ราคาสินค้าไม่ถูกต้อง: ${p.name}`);
             const safeName = String(p.name || '').trim();
-            return { id: `${batchId}_${i}`, submissionId: batchId, text: `${safeName} (${price.toLocaleString('en-US', {useGrouping:false, maximumFractionDigits:2})} บาท) x ${qty}`, dueDate: '', status: 'pending', totalProfit: (price - (Number(p.cost) || 0)) * qty, createdAt: now, source: 'company-directory', companyProductId: p.id };
+            return { id: `${batchId}_${i}`, submissionId: batchId, text: `${safeName} (${price.toLocaleString('en-US', {useGrouping:false, maximumFractionDigits:2})} บาท) x ${qty}`, dueDate: '', status: 'pending', totalProfit: (price - (Number(p.cost) || 0)) * qty, createdAt: now, source: 'company-directory', companyProductId: p.id, imageUrl: p.imageUrl || '' };
         });
         addHistorySaveBtn.disabled = true; addHistorySaveBtn.textContent = 'กำลังบันทึก...';
         try {
