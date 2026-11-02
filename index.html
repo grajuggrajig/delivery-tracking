@@ -8058,16 +8058,11 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
 
     const companyKey = normalizeCompanyProductKey(stableCompanyKey || cleanCompany);
     const normalizedName = normalizeCompanyProductName(cleanName);
-    const duplicateNameKey = normalizeProductDuplicateKey(cleanName);
-
-    // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน
+    // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน (ไม่ยุบรหัส #1/#01)
     const duplicate = allCompanyProducts.find(p =>
         p.id !== editId &&
         normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
-        (
-            normalizeCompanyProductName(p.name) === normalizedName ||
-            normalizeProductDuplicateKey(p.name) === duplicateNameKey
-        )
+        isSameCompanyProductName(p.name, cleanName)
     );
     if (duplicate) {
         showToast(`⚠️ สินค้า "${duplicate.name || cleanName}" มีอยู่แล้วในบริษัทนี้`, 'warning');
@@ -8249,8 +8244,35 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
 }
 
 
+/* อ่าน companyProducts ล่าสุดจาก Firestore ก่อนตรวจซ้ำ/นำเข้า
+   ใช้ scope เดียวกับ listener เดิม เพื่อไม่ข้ามขอบเขต ownerUid ของพนักงาน */
+async function refreshCompanyProductsForCompanyActions() {
+    if (!currentAuthUser?.uid || !currentUserProfile) {
+        throw new Error('ยังไม่พบผู้ใช้ที่เข้าสู่ระบบ');
+    }
+    let ref = db.collection('companyProducts');
+    if (currentUserProfile.role !== 'admin') {
+        ref = ref.where('ownerUid', '==', currentAuthUser.uid);
+    }
+    const snapshot = await ref.get();
+    const fresh = [];
+    snapshot.forEach(doc => fresh.push({ id: doc.id, ...(doc.data() || {}) }));
+    allCompanyProducts = fresh;
+    if (typeof invalidateCompanyCatalogCache === 'function') invalidateCompanyCatalogCache();
+    if (typeof rebuildStockLinkedCompanyCache === 'function') rebuildStockLinkedCompanyCache();
+    return fresh;
+}
+
+function isSameCompanyProductName(a, b) {
+    // ใช้ชื่อที่ตัดช่องว่างส่วนเกิน/ไม่สนตัวพิมพ์เล็กใหญ่เท่านั้น
+    // ไม่ยุบรหัส #1 กับ #01 หรือเครื่องหมาย / - เพื่อไม่รวมสินค้าคนละรหัสเข้าด้วยกัน
+    return normalizeCompanyProductName(a) === normalizeCompanyProductName(b);
+}
+
 /* เพิ่มสินค้าใหม่ให้หลายบริษัทที่เลือก โดยคงรายการและราคาของบริษัทเดิมไว้ */
-window.openAddCompanyProductToOthers = function(sourceCompanyName, sourceCompanyKey) {
+window.openAddCompanyProductToOthers = async function(sourceCompanyName, sourceCompanyKey) {
+    try { await refreshCompanyProductsForCompanyActions(); }
+    catch (err) { console.error('load network company list:', err); showToast('โหลดรายการบริษัทล่าสุดจาก Server ไม่สำเร็จ', 'error'); return; }
     const prior = document.getElementById('add-company-product-network-modal');
     if (prior) prior.remove();
     const names = new Map();
@@ -8311,12 +8333,21 @@ window.openAddCompanyProductToOthers = function(sourceCompanyName, sourceCompany
         const btn=modal.querySelector('#network-company-confirm');btn.disabled=true;btn.textContent='กำลังบันทึก...';
         let added=0,skipped=0,failed=0;
         const nameHtml=editor?.innerHTML||'';
+        try {
+            await refreshCompanyProductsForCompanyActions();
+        } catch (refreshError) {
+            console.error('refresh before network add:', refreshError);
+            btn.disabled=false; btn.textContent='＋ เพิ่มให้บริษัทที่เลือก';
+            showToast('ตรวจสอบรายการล่าสุดจาก Server ไม่สำเร็จ จึงหยุดการเพิ่มเพื่อป้องกันข้อมูลซ้ำ', 'error');
+            return;
+        }
         for(const company of selected){
-            const dup=(Array.isArray(allCompanyProducts)?allCompanyProducts:[]).some(p=>
-                normalizeCompanyProductKey(p.companyKey||p.companyName)===normalizeCompanyProductKey(company)&&
-                (normalizeCompanyProductName(p.name)===normalizeCompanyProductName(name)||normalizeProductDuplicateKey(p.name)===normalizeProductDuplicateKey(name)));
+            const targetKey=normalizeCompanyProductKey(company);
+            const dup=allCompanyProducts.some(p=>
+                normalizeCompanyProductKey(p.companyKey||p.companyName)===targetKey &&
+                isSameCompanyProductName(p.name,name));
             if(dup){skipped++;continue;}
-            if(await saveCompanyProduct(company,name,cost,price,unit,'',normalizeCompanyProductKey(company),nameHtml))added++;else failed++;
+            if(await saveCompanyProduct(company,name,cost,price,unit,'',targetKey,nameHtml))added++;else failed++;
         }
         modal.remove();
         showToast(added?`เพิ่มสินค้าให้ ${added} บริษัทสำเร็จ${skipped?` • ข้ามรายการซ้ำ ${skipped} บริษัท`:''}${failed?` • ไม่สำเร็จ ${failed} บริษัท`:''}`:`ไม่มีบริษัทที่เพิ่มได้${skipped?` • ข้ามรายการซ้ำ ${skipped} บริษัท`:''}${failed?` • ไม่สำเร็จ ${failed} บริษัท`:''}`,added?(failed?'warning':'success'):(failed?'error':'info'));
@@ -9462,7 +9493,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         });
         const selectable = companyImportSourceProducts.filter(p => !allCompanyProducts.some(target =>
             normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(stableCompanyKey || companyName) &&
-            normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
+            isSameCompanyProductName(target.name, p.name)
         ));
         const allVisibleSelected = selectable.length > 0 && selectable.every(p => companyImportSelectedIds.has(p.id));
         if (companyImportSelectAllBtn) companyImportSelectAllBtn.textContent = allVisibleSelected ? '☐ ยกเลิกเลือกทั้งหมด' : '☑️ เลือกทั้งหมด';
@@ -9486,7 +9517,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             const checked = companyImportSelectedIds.has(p.id);
             const alreadyExists = allCompanyProducts.some(target =>
                 normalizeCompanyProductKey(target.companyKey || target.companyName) === normalizeCompanyProductKey(stableCompanyKey || companyName) &&
-                normalizeCompanyProductName(target.name) === normalizeCompanyProductName(p.name)
+                isSameCompanyProductName(target.name, p.name)
             );
             return `
                 <label class="flex items-center gap-3 p-3 rounded-2xl border ${alreadyExists ? 'border-amber-200 bg-amber-50/50' : 'border-slate-100 bg-white hover:border-indigo-200 hover:bg-indigo-50/30'} transition cursor-pointer">
@@ -9518,14 +9549,27 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         const selected = companyImportSourceProducts.filter(p => companyImportSelectedIds.has(p.id));
         if (!selected.length) { showToast('กรุณาเลือกสินค้าที่ต้องการนำเข้า', 'info'); return; }
 
-        const targetKey = normalizeCompanyProductKey(companyName);
+        // ใช้ stableCompanyKey แบบเดียวกับหน้ารายการและการแสดงผล ไม่ใช้ชื่อแสดงผลอย่างเดียว
+        const targetKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
         const sourceKey = companyImportSourceSelect?.value ? decodeURIComponent(companyImportSourceSelect.value) : '';
         const sourceName = selected[0]?.companyName || '';
-        const existingTargetProductNames = new Set(allCompanyProducts
+        companyImportConfirmBtn.disabled = true;
+        companyImportConfirmBtn.textContent = 'กำลังตรวจสอบข้อมูลล่าสุด...';
+        let freshProducts;
+        try {
+            freshProducts = await refreshCompanyProductsForCompanyActions();
+        } catch (refreshError) {
+            console.error('refresh before company import:', refreshError);
+            showToast('ตรวจสอบรายการสินค้าล่าสุดจาก Server ไม่สำเร็จ จึงหยุดนำเข้าเพื่อป้องกันข้อมูลซ้ำ', 'error');
+            companyImportConfirmBtn.disabled = false;
+            companyImportConfirmBtn.textContent = '⬇️ นำเข้ารายการ';
+            return;
+        }
+        const existingTargetProductNames = freshProducts
             .filter(target => normalizeCompanyProductKey(target.companyKey || target.companyName) === targetKey)
-            .map(target => normalizeCompanyProductName(target.name)));
+            .map(target => normalizeCompanyProductName(target.name));
         const importable = selected.filter(sourceProduct =>
-            !existingTargetProductNames.has(normalizeCompanyProductName(sourceProduct.name))
+            !existingTargetProductNames.includes(normalizeCompanyProductName(sourceProduct.name))
         );
 
         if (!importable.length) {
@@ -9540,8 +9584,12 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             let batch = db.batch();
             let batchCount = 0;
             let importedCount = 0;
+            const namesQueued = new Set(existingTargetProductNames);
 
             for (const sourceProduct of importable) {
+                const importNameKey = normalizeCompanyProductName(sourceProduct.name);
+                if (namesQueued.has(importNameKey)) continue;
+                namesQueued.add(importNameKey);
                 let stockProductId = sourceProduct.stockProductId || '';
                 if (!stockProductId) {
                     const stockProduct = await ensureProductInStandardStock(sourceProduct.name, Number(sourceProduct.cost) || 0, Number(sourceProduct.price) || 0);
@@ -9578,6 +9626,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             if (batchCount > 0) await batch.commit();
 
             companyImportSelectedIds.clear();
+            await refreshCompanyProductsForCompanyActions();
             renderCompanyProductCatalog(companyName, companyProductSearch?.value || '', stableCompanyKey);
             renderCompanyImportProducts(companyImportSearch?.value || '');
             showToast(`นำเข้าสินค้าจาก "${sourceName}" สำเร็จ ${importedCount} รายการ โดยใช้ราคาเริ่มต้นจากบริษัทต้นทาง`, 'success');
@@ -9590,14 +9639,22 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         }
     }
 
-    document.getElementById('open-company-import-btn')?.addEventListener('click', () => {
-        renderCompanyImportSources();
-        if (companyImportSourceSelect) companyImportSourceSelect.value = '';
-        if (companyImportSearch) companyImportSearch.value = '';
-        companyImportSelectedIds.clear();
-        companyImportSourceProducts = [];
+    document.getElementById('open-company-import-btn')?.addEventListener('click', async () => {
         if (companyImportModal) { companyImportModal.classList.remove('hidden'); companyImportModal.classList.add('flex'); }
-        renderCompanyImportProducts('');
+        if (companyImportProductsContainer) companyImportProductsContainer.innerHTML = '<div class="text-center py-8 text-slate-400 text-xs">กำลังโหลดรายการล่าสุดจาก Server...</div>';
+        try {
+            await refreshCompanyProductsForCompanyActions();
+            renderCompanyImportSources();
+            if (companyImportSourceSelect) companyImportSourceSelect.value = '';
+            if (companyImportSearch) companyImportSearch.value = '';
+            companyImportSelectedIds.clear();
+            companyImportSourceProducts = [];
+            renderCompanyImportProducts('');
+        } catch (err) {
+            console.error('load company import sources:', err);
+            if (companyImportProductsContainer) companyImportProductsContainer.innerHTML = '<div class="text-center py-8 text-rose-500 text-xs">โหลดข้อมูลบริษัทจาก Server ไม่สำเร็จ กรุณาลองใหม่</div>';
+            showToast('ไม่สามารถโหลดรายการบริษัทล่าสุดได้', 'error');
+        }
     });
 
     closeCompanyImportBtn?.addEventListener('click', closeCompanyImportModal);
