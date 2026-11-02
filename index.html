@@ -8070,7 +8070,7 @@ function setupCompanyProductNameFormatting() {
 }
 setupCompanyProductNameFormatting();
 
-async function saveCompanyProduct(companyName, name, cost, price, unit = '', editId = '', stableCompanyKey = '', nameHtml = '') {
+async function saveCompanyProduct(companyName, name, cost, price, unit = '', editId = '', stableCompanyKey = '', nameHtml = '', updateLinkedCompanies = false) {
     const cleanCompany = String(companyName || '').trim();
     const cleanName = String(name || '').trim();
     const numericCost = Number(cost) || 0;
@@ -8141,6 +8141,69 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
 
         if (editId) {
             const oldProduct = editingCompanyProduct;
+
+            // ตัวเลือกซิงก์รายการที่ใช้สินค้ากลางเดียวกัน: กระจายชื่อ ต้นทุน ราคาขาย และหน่วย
+            // ไปยังเอกสาร companyProducts ทุกบริษัทที่ผูก stockProductId เดียวกันเท่านั้น
+            if (updateLinkedCompanies) {
+                const linkedRows = stockProduct?.id
+                    ? allCompanyProducts.filter(p => String(p.stockProductId || '') === String(stockProduct.id))
+                    : [oldProduct];
+                if (linkedRows.length < 2) {
+                    showToast('ไม่พบรายการบริษัทอื่นที่เชื่อมโยงกับสินค้านี้ จึงบันทึกเฉพาะบริษัทปัจจุบัน', 'info');
+                    updateLinkedCompanies = false;
+                } else {
+                    // ตรวจชื่อซ้ำแยกเป็นรายบริษัทก่อนเขียน เพื่อไม่รวม/เขียนทับสินค้าคนละรายการ
+                    const linkedIds = new Set(linkedRows.map(p => String(p.id)));
+                    const conflict = allCompanyProducts.find(p =>
+                        !linkedIds.has(String(p.id)) &&
+                        linkedRows.some(linked =>
+                            normalizeCompanyProductKey(p.companyKey || p.companyName) === normalizeCompanyProductKey(linked.companyKey || linked.companyName)
+                        ) &&
+                        isSameCompanyProductName(p.name, cleanName)
+                    );
+                    if (conflict) {
+                        showToast(`ไม่สามารถอัปเดตทุกบริษัทได้: บริษัท ${conflict.companyName || ''} มีสินค้า "${conflict.name}" อยู่แล้ว`, 'warning');
+                        return false;
+                    }
+
+                    if (currentUserProfile?.role === 'admin' && stockProduct?.id &&
+                        (String(oldProduct.name || '').trim() !== cleanName ||
+                         String(stockProduct.unit || '').trim() !== cleanUnit)) {
+                        await db.collection('products').doc(stockProduct.id).update({
+                            name: cleanName,
+                            unit: cleanUnit,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        stockProduct.name = cleanName;
+                        stockProduct.unit = cleanUnit;
+                    }
+
+                    for (let i = 0; i < linkedRows.length; i += 450) {
+                        const batch = db.batch();
+                        linkedRows.slice(i, i + 450).forEach(cp => {
+                            batch.update(db.collection('companyProducts').doc(cp.id), {
+                                name: cleanName,
+                                nameHtml: sanitizeCompanyProductNameHtml(nameHtml),
+                                cost: numericCost,
+                                price: numericPrice,
+                                unit: cleanUnit,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                        });
+                        await batch.commit();
+                    }
+                    linkedRows.forEach(cp => {
+                        cp.name = cleanName;
+                        cp.nameHtml = sanitizeCompanyProductNameHtml(nameHtml);
+                        cp.cost = numericCost;
+                        cp.price = numericPrice;
+                        cp.unit = cleanUnit;
+                    });
+                    invalidateCompanyCatalogCache();
+                    showToast(`อัปเดตสินค้า ${cleanName} ให้ ${linkedRows.length} บริษัทที่เชื่อมโยงสำเร็จ`, 'success');
+                    return true;
+                }
+            }
 
             // เมื่อแก้ชื่อสินค้าเดิมของบริษัท เช่น #1 เป็น #01
             // ให้แก้ชื่อสินค้ามาตรฐานที่เชื่อมอยู่แทนการสร้างสินค้าใหม่
@@ -8370,6 +8433,20 @@ window.editCompanyProduct = function(id) {
     priceInput.value = Number(product.price) || 0;
     if (unitInput) unitInput.value = product.unit || '';
 
+    const linkedWrap = document.getElementById('company-product-update-linked-wrap');
+    const linkedCheckbox = document.getElementById('company-product-update-linked');
+    const linkedCompanyCount = document.getElementById('company-product-linked-company-count');
+    const linkedRecordCount = document.getElementById('company-product-linked-record-count');
+    const linkedStockId = String(product.stockProductId || '').trim();
+    const linkedRows = linkedStockId
+        ? allCompanyProducts.filter(p => String(p.stockProductId || '') === linkedStockId)
+        : [product];
+    const linkedCompanies = new Set(linkedRows.map(p => normalizeCompanyProductKey(p.companyKey || p.companyName)).filter(Boolean));
+    if (linkedWrap) linkedWrap.classList.toggle('hidden', linkedRows.length < 2 || linkedCompanies.size < 2);
+    if (linkedCheckbox) linkedCheckbox.checked = false;
+    if (linkedCompanyCount) linkedCompanyCount.textContent = String(linkedCompanies.size);
+    if (linkedRecordCount) linkedRecordCount.textContent = String(linkedRows.length);
+
     saveBtn.textContent = '💾 บันทึกการแก้ไข';
     saveBtn.classList.remove('bg-sky-600', 'hover:bg-sky-700');
     saveBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
@@ -8393,6 +8470,10 @@ window.cancelCompanyProductEdit = function() {
     if (costInput) costInput.value = '';
     if (priceInput) priceInput.value = '';
     if (unitInput) unitInput.value = '';
+    const linkedWrap = document.getElementById('company-product-update-linked-wrap');
+    const linkedCheckbox = document.getElementById('company-product-update-linked');
+    if (linkedWrap) linkedWrap.classList.add('hidden');
+    if (linkedCheckbox) linkedCheckbox.checked = false;
 
     if (saveBtn) {
         saveBtn.textContent = '＋ เพิ่ม / บันทึกราคา';
@@ -9152,6 +9233,15 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                         title="ยกเลิกการแก้ไข">ยกเลิก</button>
                 </div>
                 <p class="sm:col-span-6 text-[11px] text-slate-500">การแก้ไขครั้งนี้มีผลเฉพาะบริษัทที่เลือกอยู่ บริษัทอื่นจะคงชื่อสินค้า ต้นทุน ราคาขาย และหน่วยเดิม</p>
+                <div id="company-product-update-linked-wrap" class="sm:col-span-6 hidden rounded-xl border border-indigo-200 bg-indigo-50/70 px-3 py-2.5">
+                    <label for="company-product-update-linked" class="flex items-start gap-2.5 cursor-pointer">
+                        <input id="company-product-update-linked" type="checkbox" class="mt-0.5 h-4 w-4 accent-indigo-600 flex-shrink-0">
+                        <span class="min-w-0">
+                            <span class="block text-xs font-extrabold text-indigo-900">☑ อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง (<span id="company-product-linked-company-count">0</span> บริษัท)</span>
+                            <span class="block mt-1 text-[11px] text-indigo-700">ระบบพบรายการที่เชื่อมโยง <b id="company-product-linked-record-count">0</b> รายการ ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกันเมื่อเลือกช่องนี้</span>
+                        </span>
+                    </label>
+                </div>
             </div>
 
             <div class="flex flex-col sm:flex-row items-center gap-2 pt-1">
@@ -9377,7 +9467,8 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         saveCompanyProductBtn.textContent = 'กำลังบันทึก...';
 
         const nameHtml = companyProductName.innerHTML || '';
-        const ok = await saveCompanyProduct(companyName, name, cost, price, unit, editId, stableCompanyKey, nameHtml);
+        const updateLinkedCompanies = !!document.getElementById('company-product-update-linked')?.checked;
+        const ok = await saveCompanyProduct(companyName, name, cost, price, unit, editId, stableCompanyKey, nameHtml, updateLinkedCompanies);
 
         saveCompanyProductBtn.disabled = false;
 
