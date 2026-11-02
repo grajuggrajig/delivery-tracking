@@ -7570,12 +7570,13 @@ function checkCompanyItemHistory() {
 function getCompanyPriceHistory(companyName, productName) {
     if (!companyName) return null;
     let foundPrice = null;
-    const targetCompany = companyName.trim().toLowerCase();
-    const cleanSearchKeyword = productName.replace(/\s*\(.*?\)/g, '').replace(/\s*x\s*\d+$/, '').trim().toLowerCase();
+    const targetCompany = normalizeCompanyProductKey(companyName);
+    const cleanSearchKeyword = String(productName || '').normalize('NFKC').replace(/\s*\(.*?\)/g, '').replace(/\s*x\s*\d+$/, '').trim().toLowerCase();
+    if (!targetCompany) return null;
 
     allDeliveries.forEach(item => {
-        const itemCompany = item.companyName ? item.companyName.trim().toLowerCase() : '';
-        if (itemCompany === targetCompany || itemCompany.includes(targetCompany) || targetCompany.includes(itemCompany)) {
+        const itemCompany = normalizeCompanyProductKey(item.companyName || '');
+        if (itemCompany && itemCompany === targetCompany) {
             const archived = Array.isArray(item.purchaseHistory) ? item.purchaseHistory : [];
             const current = Array.isArray(item.subItems) ? item.subItems : [];
             [...archived, ...current].forEach(sub => {
@@ -7778,7 +7779,36 @@ function showCompanyAllHistory(companyName, stableCompanyKey = '') {
 }
 
 function normalizeCompanyProductKey(value) {
-    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    // ชื่อบริษัทเป็นคีย์เดียวกันแม้มี/ไม่มีช่องว่างหลังคำว่า "บริษัท"
+    // ไม่ตัดคำทางกฎหมายอื่น และไม่แก้ไขค่าชื่อจริงที่จัดเก็บใน Firestore
+    return String(value || '')
+        .normalize('NFKC')
+        .trim()
+        .toLocaleLowerCase('th-TH')
+        .replace(/^บริษัท\s*/u, '')
+        .replace(/\s+/g, ' ')
+        .trim();
+}
+
+// ใช้ชื่อแสดงผลแบบมาตรฐาน โดยให้ชื่อที่มีคำนำหน้า "บริษัท" มาก่อน
+function canonicalCompanyDisplayName(value) {
+    const name = String(value || '').normalize('NFKC').trim().replace(/\s+/g, ' ');
+    if (!name) return '';
+    return /^บริษัท(?:\s|(?=\S))/u.test(name)
+        ? name.replace(/^บริษัท\s*/u, 'บริษัท ')
+        : name;
+}
+
+function preferCompanyDisplayName(currentName, candidateName) {
+    const current = canonicalCompanyDisplayName(currentName);
+    const candidate = canonicalCompanyDisplayName(candidateName);
+    if (!current) return candidate;
+    if (!candidate) return current;
+    const currentHasPrefix = /^บริษัท\s/u.test(current);
+    const candidateHasPrefix = /^บริษัท\s/u.test(candidate);
+    if (candidateHasPrefix && !currentHasPrefix) return candidate;
+    // เมื่อทั้งคู่มี/ไม่มีคำนำหน้า ให้เลือกรูปแบบที่มีข้อมูลชื่อยาวกว่า
+    return candidate.length > current.length ? candidate : current;
 }
 
 function normalizeCompanyProductName(value) {
@@ -8098,20 +8128,15 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
             stockProduct = await ensureProductInStandardStock(cleanName, 0, 0, cleanUnit);
         }
 
-        // ซิงก์ราคาขายและหน่วยกลับไปยังสินค้ามาตรฐาน เฉพาะเมื่อผู้ใช้เป็น Admin
-        // รายการ companyProducts ของบริษัทอื่นจะไม่ถูกแก้ไขในขั้นตอนนี้
-        if (currentUserProfile?.role === 'admin' && stockProduct?.id) {
-            const stockPrice = Number(stockProduct.price);
-            if (!Number.isFinite(stockPrice) || Math.abs(stockPrice - numericPrice) >= 0.000001 ||
-                String(stockProduct.unit || '').trim() !== cleanUnit) {
-                await db.collection('products').doc(stockProduct.id).update({
-                    price: numericPrice,
-                    unit: cleanUnit,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                stockProduct.price = numericPrice;
-                stockProduct.unit = cleanUnit;
-            }
+        // ราคาขายของบริษัทต้องแยกจากราคามาตรฐานใน Manage Stock เสมอ
+        // ซิงก์เฉพาะหน่วยไปยังสินค้ากลางได้ แต่ห้ามนำราคาของบริษัทไปเขียนทับราคากลาง
+        if (currentUserProfile?.role === 'admin' && stockProduct?.id &&
+            String(stockProduct.unit || '').trim() !== cleanUnit) {
+            await db.collection('products').doc(stockProduct.id).update({
+                unit: cleanUnit,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            stockProduct.unit = cleanUnit;
         }
 
         if (editId) {
@@ -8165,44 +8190,10 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
                 stockProductId: (stockProduct && stockProduct.id) || oldProduct.stockProductId || '',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            // ไม่เติม ownerUid ให้ข้อมูลเก่าโดยอัตโนมัติ เพราะยังยืนยันเจ้าของเดิมไม่ได้
-            // หากผู้ใช้เลือกอัปเดตทุกบริษัทที่เชื่อมกับสินค้านี้ ให้ซิงก์เฉพาะรายการบริษัท
-            // ที่ผูกกับ stockProductId เดียวกัน โดยคง companyKey/companyName และ ownerUid ของแต่ละรายการ
-            const bulkToggle = document.getElementById('company-product-update-linked-toggle');
-            const linkedIds = bulkToggle?.checked
-                ? (String(bulkToggle.dataset.linkedIds || '').split(',').filter(Boolean).length
-                    ? String(bulkToggle.dataset.linkedIds).split(',').filter(Boolean)
-                    : allCompanyProducts.filter(p => {
-                        if (oldProduct.stockProductId && p.stockProductId) return String(p.stockProductId) === String(oldProduct.stockProductId);
-                        return normalizeCompanyProductName(p.name) === normalizeCompanyProductName(oldProduct.name);
-                    }).map(p => p.id))
-                : [];
-            if (linkedIds.length > 1) {
-                for (let i = 0; i < linkedIds.length; i += 450) {
-                    const batch = db.batch();
-                    linkedIds.slice(i, i + 450).forEach(linkedId => {
-                        batch.update(db.collection('companyProducts').doc(linkedId), {
-                            name: cleanName,
-                            nameHtml: sanitizeCompanyProductNameHtml(nameHtml),
-                            cost: numericCost,
-                            price: numericPrice,
-                            unit: cleanUnit,
-                            stockProductId: oldProduct.stockProductId,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
-                    await batch.commit();
-                }
-                allCompanyProducts.filter(p => linkedIds.includes(p.id)).forEach(p => {
-                    p.name = cleanName; p.nameHtml = sanitizeCompanyProductNameHtml(nameHtml);
-                    p.cost = numericCost; p.price = numericPrice; p.unit = cleanUnit;
-                });
-                showToast(`อัปเดต "${cleanName}" ให้ ${linkedIds.length} บริษัทที่เชื่อมโยงแล้ว`, 'success');
-            } else {
-                await db.collection('companyProducts').doc(editId).update(updatePayload);
-                showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ แล้ว`, 'success');
-            }
-            if (bulkToggle) bulkToggle.checked = false;
+            // แก้ไขเฉพาะเอกสารของบริษัทที่กำลังเปิดอยู่เท่านั้น
+            // ไม่กระจายชื่อ ต้นทุน ราคาขาย หรือหน่วยไปยังบริษัทอื่นที่ใช้สินค้ากลางร่วมกัน
+            await db.collection('companyProducts').doc(editId).update(updatePayload);
+            showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ แล้ว`, 'success');
             return true;
         }
 
@@ -8276,12 +8267,13 @@ window.openAddCompanyProductToOthers = async function(sourceCompanyName, sourceC
     const prior = document.getElementById('add-company-product-network-modal');
     if (prior) prior.remove();
     const names = new Map();
-    (typeof getUniqueCompanyList === 'function' ? getUniqueCompanyList() : []).forEach(n => {
-        n = String(n || '').trim(); if (n) names.set(normalizeCompanyProductKey(n), n);
-    });
-    (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).forEach(p => {
-        const n = String(p.companyName || '').trim(); if (n) names.set(normalizeCompanyProductKey(n), n);
-    });
+    const addNetworkCompany = value => {
+        const n = canonicalCompanyDisplayName(value);
+        const key = normalizeCompanyProductKey(n);
+        if (key && n) names.set(key, preferCompanyDisplayName(names.get(key), n));
+    };
+    (typeof getUniqueCompanyList === 'function' ? getUniqueCompanyList() : []).forEach(addNetworkCompany);
+    (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).forEach(p => addNetworkCompany(p.companyName));
     const sourceKey = normalizeCompanyProductKey(sourceCompanyKey || sourceCompanyName);
     const targets = [...names.entries()].filter(([k]) => k !== sourceKey).map(([,n]) => n).sort((a,b)=>a.localeCompare(b,'th'));
     const modal = document.createElement('div');
@@ -8373,29 +8365,6 @@ window.editCompanyProduct = function(id) {
     if (!nameInput || !costInput || !priceInput || !saveBtn) return;
 
     if (editIdInput) editIdInput.value = product.id;
-    const linkedToggle = document.getElementById('company-product-update-linked-toggle');
-    const linkedWrap = document.getElementById('company-product-update-linked-wrap');
-    // ข้อมูลเก่าบางรายการอาจยังไม่มี stockProductId จึงใช้ชื่อสินค้าที่ปรับช่องว่างแล้ว
-    // เป็นตัวช่วยค้นหารายการที่เชื่อมโยง โดยจะแก้หลายบริษัทก็ต่อเมื่อผู้ใช้ติ๊กยืนยันเอง
-    const productLinkKey = normalizeCompanyProductName(product.name);
-    const linkedProducts = allCompanyProducts.filter(p => {
-        if (product.stockProductId && p.stockProductId) {
-            return String(p.stockProductId) === String(product.stockProductId);
-        }
-        return productLinkKey && normalizeCompanyProductName(p.name) === productLinkKey;
-    });
-    const linkedCount = Math.max(1, linkedProducts.length);
-    if (linkedToggle) {
-        linkedToggle.checked = false;
-        linkedToggle.dataset.linkedIds = linkedProducts.map(p => p.id).join(',');
-        linkedToggle.dataset.linkedStockId = String(product.stockProductId || '');
-        linkedToggle.dataset.linkedName = productLinkKey;
-    }
-    if (linkedWrap) linkedWrap.classList.toggle('hidden', linkedCount < 2);
-    if (linkedWrap) {
-        const span = linkedWrap.querySelector('span');
-        if (span) span.innerHTML = `<strong>☑ อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง (${linkedCount} บริษัท)</strong><br>ระบบพบรายการที่เชื่อมโยง ${linkedCount} รายการ ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกันเมื่อเลือกช่องนี้`;
-    }
     nameInput.innerHTML = sanitizeCompanyProductNameHtml(product.nameHtml) || escapeHTML(product.name || '');
     costInput.value = Number(product.cost) || 0;
     priceInput.value = Number(product.price) || 0;
@@ -8420,10 +8389,6 @@ window.cancelCompanyProductEdit = function() {
     const cancelBtn = document.getElementById('cancel-company-product-edit');
 
     if (editIdInput) editIdInput.value = '';
-    const linkedToggle = document.getElementById('company-product-update-linked-toggle');
-    const linkedWrap = document.getElementById('company-product-update-linked-wrap');
-    if (linkedToggle) linkedToggle.checked = false;
-    if (linkedWrap) linkedWrap.classList.add('hidden');
     if (nameInput) nameInput.innerHTML = '';
     if (costInput) costInput.value = '';
     if (priceInput) priceInput.value = '';
@@ -9186,10 +9151,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                         class="hidden px-2 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-bold transition"
                         title="ยกเลิกการแก้ไข">ยกเลิก</button>
                 </div>
-                <label id="company-product-update-linked-wrap" class="hidden sm:col-span-6 flex items-start gap-2 rounded-xl border-2 border-indigo-300 bg-indigo-50 px-3 py-3 text-xs font-medium text-indigo-950 shadow-sm">
-                    <input id="company-product-update-linked-toggle" type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-indigo-600">
-                    <span><strong>อัปเดตรายการนี้ให้ทุกบริษัทที่เชื่อมโยง</strong><br>ใช้ชื่อสินค้า ต้นทุน ราคาขาย และหน่วยชุดเดียวกัน เฉพาะเมื่อเลือกช่องนี้เท่านั้น</span>
-                </label>
+                <p class="sm:col-span-6 text-[11px] text-slate-500">การแก้ไขครั้งนี้มีผลเฉพาะบริษัทที่เลือกอยู่ บริษัทอื่นจะคงชื่อสินค้า ต้นทุน ราคาขาย และหน่วยเดิม</p>
             </div>
 
             <div class="flex flex-col sm:flex-row items-center gap-2 pt-1">
@@ -9465,14 +9427,16 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 
     function renderCompanyImportSources() {
         if (!companyImportSourceSelect) return;
-        const targetKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
+        // รายชื่อใน Dropdown จัดกลุ่มด้วยชื่อบริษัทที่ปรับรูปแบบแล้ว
+        // ไม่ใช้ companyKey เป็นตัวจัดกลุ่ม เพราะข้อมูลเก่าอาจมี key ต่างกันแต่เป็นบริษัทเดียวกัน
+        const targetNameKey = normalizeCompanyProductKey(companyName);
         const sourceMap = new Map();
 
         allCompanyProducts.forEach(p => {
-            const name = String(p.companyName || '').trim();
-            const key = normalizeCompanyProductKey(p.companyKey || name);
-            if (!key || key === targetKey || !name) return;
-            if (!sourceMap.has(key)) sourceMap.set(key, name);
+            const name = canonicalCompanyDisplayName(p.companyName);
+            const key = normalizeCompanyProductKey(name);
+            if (!key || key === targetNameKey || !name) return;
+            sourceMap.set(key, preferCompanyDisplayName(sourceMap.get(key), name));
         });
 
         const sources = [...sourceMap.entries()].sort((a, b) => a[1].localeCompare(b[1], 'th'));
@@ -9551,7 +9515,6 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 
         // ใช้ stableCompanyKey แบบเดียวกับหน้ารายการและการแสดงผล ไม่ใช้ชื่อแสดงผลอย่างเดียว
         const targetKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
-        const sourceKey = companyImportSourceSelect?.value ? decodeURIComponent(companyImportSourceSelect.value) : '';
         const sourceName = selected[0]?.companyName || '';
         companyImportConfirmBtn.disabled = true;
         companyImportConfirmBtn.textContent = 'กำลังตรวจสอบข้อมูลล่าสุด...';
@@ -9592,7 +9555,9 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                 namesQueued.add(importNameKey);
                 let stockProductId = sourceProduct.stockProductId || '';
                 if (!stockProductId) {
-                    const stockProduct = await ensureProductInStandardStock(sourceProduct.name, Number(sourceProduct.cost) || 0, Number(sourceProduct.price) || 0);
+                    // สร้างเฉพาะตัวเชื่อมสินค้ามาตรฐานด้วยราคา 0
+                    // ห้ามคัดลอกราคาของบริษัทต้นทางไปเป็นราคากลางใน products
+                    const stockProduct = await ensureProductInStandardStock(sourceProduct.name, 0, 0, sourceProduct.unit || '');
                     stockProductId = stockProduct?.id || '';
                 }
 
@@ -9605,7 +9570,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                     cost: Number(sourceProduct.cost) || 0,
                     price: Number(sourceProduct.price) || 0,
                     stockProductId,
-                    sourceCompanyKey: sourceKey || normalizeCompanyProductKey(sourceProduct.companyName),
+                    sourceCompanyKey: sourceProduct.companyKey || normalizeCompanyProductKey(sourceProduct.companyName),
                     sourceCompanyName: String(sourceProduct.companyName || sourceName || '').trim(),
                     sourceCompanyProductId: sourceProduct.id,
                     importedFromCompany: true,
@@ -9663,11 +9628,12 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
     companyImportModal?.addEventListener('click', e => { if (e.target === companyImportModal) e.preventDefault(); });
 
     companyImportSourceSelect?.addEventListener('change', e => {
-        const sourceKey = e.target.value ? decodeURIComponent(e.target.value) : '';
+        const sourceNameKey = e.target.value ? decodeURIComponent(e.target.value) : '';
         companyImportSelectedIds.clear();
-        companyImportSourceProducts = allCompanyProducts.filter(p => normalizeCompanyProductKey(p.companyKey || p.companyName) === sourceKey)
-            .slice().sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
-        const sourceName = companyImportSourceProducts[0]?.companyName || '';
+        companyImportSourceProducts = allCompanyProducts.filter(p =>
+            normalizeCompanyProductKey(p.companyName || '') === sourceNameKey
+        ).slice().sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
+        const sourceName = canonicalCompanyDisplayName(companyImportSourceProducts[0]?.companyName || '');
         const info = document.getElementById('company-import-source-info');
         if (info) info.textContent = sourceName ? `บริษัทต้นทาง: ${sourceName} • พบ ${companyImportSourceProducts.length} รายการ` : 'เมื่อเลือกบริษัทต้นทาง ระบบจะแสดงสินค้าที่บริษัทนั้นมีอยู่';
         renderCompanyImportProducts(companyImportSearch?.value || '');
@@ -9854,31 +9820,6 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 		
 		
 // ฟังก์ชันค้นหาประวัติราคาของบริษัทแบบยืดหยุ่น รองรับการเทียบชื่อสินค้าบางส่วน
-function getCompanyPriceHistory(companyName, productName) {
-    if (!companyName) return null;
-    let foundPrice = null;
-    const targetCompany = companyName.trim().toLowerCase();
-    const cleanSearchKeyword = productName.replace(/\s*\(.*?\)/g, '').replace(/\s*x\s*\d+$/, '').trim().toLowerCase();
-
-    allDeliveries.forEach(item => {
-        const itemCompany = item.companyName ? item.companyName.trim().toLowerCase() : '';
-        if (itemCompany === targetCompany || itemCompany.includes(targetCompany) || targetCompany.includes(itemCompany)) {
-            const archived = Array.isArray(item.purchaseHistory) ? item.purchaseHistory : [];
-            const current = Array.isArray(item.subItems) ? item.subItems : [];
-            [...archived, ...current].forEach(sub => {
-                const subTextLower = String(sub.text || '').toLowerCase();
-                if (!cleanSearchKeyword || subTextLower.includes(cleanSearchKeyword) || cleanSearchKeyword.includes(subTextLower.split(' x ')[0])) {
-                    foundPrice = sub;
-                }
-            });
-        }
-    });
-    return foundPrice;
-}
-
-		
-		
-
         function openCustomerModal() {
             customerModal.classList.remove('hidden');
             setTimeout(() => {
@@ -10948,39 +10889,17 @@ function getCompanyPriceHistory(companyName, productName) {
             }
 
             try {
-                const batch = db.batch();
-                batch.update(db.collection('companyProducts').doc(companyProductId), {
+                // บันทึกเฉพาะราคาของบริษัทนี้ ไม่เขียนทับราคามาตรฐานใน products
+                await db.collection('companyProducts').doc(companyProductId).update({
                     price,
                     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
 
-                // ใช้ stockProductId ที่ผูกไว้เท่านั้น ป้องกันการอัปเดตสินค้าชื่อคล้ายกัน
-                // และไม่แก้ราคาเฉพาะบริษัทอื่น
-                const linkedStock = product.stockProductId
-                    ? allProducts.find(item => String(item.id) === String(product.stockProductId))
-                    : null;
-                const linkedStockId = String(product.stockProductId || '').trim();
-                const syncStandardPrice = currentUserProfile?.role === 'admin' && !!linkedStockId;
-                if (syncStandardPrice) {
-                    batch.update(db.collection('products').doc(linkedStockId), {
-                        price,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                }
-
-                await batch.commit();
-
                 product.price = price;
                 product.updatedAt = new Date();
-                if (syncStandardPrice && linkedStock) linkedStock.price = price;
-
-                // บังคับสร้างดัชนีเรียงใหม่ เพราะอาร์เรย์ allProducts ถูกแก้ไขในที่เดิม
-                sortedStockProductsSource = null;
                 renderStockTable(stockSearchBox?.value || '');
                 showToast(
-                    syncStandardPrice
-                        ? `บันทึกราคาบริษัทและซิงก์ Manage Stock แล้ว (${product.companyName || 'บริษัทที่เลือก'})`
-                        : `บันทึกราคาของบริษัท "${product.companyName || 'ที่เลือก'}" สำเร็จ`,
+                    `บันทึกราคาของบริษัท "${product.companyName || 'ที่เลือก'}" สำเร็จ (ราคาสต็อกมาตรฐานไม่เปลี่ยนแปลง)`,
                     'success'
                 );
             } catch (err) {
@@ -10989,54 +10908,8 @@ function getCompanyPriceHistory(companyName, productName) {
             }
         };
 
-        // ป้องกันการยิงอัปเดตซ้ำระหว่าง Firestore snapshots ที่เข้ามาต่อเนื่อง
-        const standardPriceRepairInFlight = new Set();
-        function repairZeroStandardPricesFromLinkedCompanies() {
-            if (currentUserProfile?.role !== 'admin' || !Array.isArray(allProducts) ||
-                !Array.isArray(allCompanyProducts) || !allProducts.length || !allCompanyProducts.length) return;
-
-            const linkedByStockId = new Map();
-            allCompanyProducts.forEach(companyProduct => {
-                const stockId = String(companyProduct.stockProductId || '').trim();
-                const companyPrice = Number(companyProduct.price);
-                if (!stockId || !Number.isFinite(companyPrice) || companyPrice <= 0) return;
-                if (!linkedByStockId.has(stockId)) linkedByStockId.set(stockId, []);
-                linkedByStockId.get(stockId).push(companyPrice);
-            });
-
-            allProducts.forEach(stockProduct => {
-                const stockId = String(stockProduct.id || '').trim();
-                const currentPrice = Number(stockProduct.price);
-                if (!stockId || (Number.isFinite(currentPrice) && currentPrice > 0) ||
-                    standardPriceRepairInFlight.has(stockId)) return;
-
-                const prices = linkedByStockId.get(stockId);
-                if (!prices || !prices.length) return;
-
-                // เติมราคาได้เมื่อราคาบริษัทที่เชื่อมอยู่เหมือนกันทั้งหมดเท่านั้น
-                // หากราคาต่างกัน ให้คง 0 ไว้เพื่อไม่ทำให้ราคาของบริษัทอื่นปะปนกัน
-                const agreedPrice = prices[0];
-                const pricesAgree = prices.every(price => Math.abs(price - agreedPrice) < 0.000001);
-                if (!pricesAgree || agreedPrice <= 0) return;
-
-                standardPriceRepairInFlight.add(stockId);
-                db.collection('products').doc(stockId).update({
-                    price: agreedPrice,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                }).then(() => {
-                    const liveProduct = allProducts.find(item => String(item.id) === stockId);
-                    if (liveProduct && !(Number(liveProduct.price) > 0)) liveProduct.price = agreedPrice;
-                    sortedStockProductsSource = null;
-                    if (stockModal && !stockModal.classList.contains('hidden')) {
-                        renderStockTable(stockSearchBox?.value || '');
-                    }
-                }).catch(error => {
-                    console.warn('Auto-repair zero standard price skipped:', stockId, error);
-                }).finally(() => {
-                    standardPriceRepairInFlight.delete(stockId);
-                });
-            });
-        }
+        // ราคามาตรฐานใน products แยกจากราคาของแต่ละบริษัท
+        // ไม่มีการซ่อมหรือคัดลอกราคาบริษัทกลับไปเขียนทับราคามาตรฐานอัตโนมัติ
 
         let sortedStockProductsSource = null;
         let sortedStockProductsCache = [];
@@ -11235,12 +11108,6 @@ function getCompanyPriceHistory(companyName, productName) {
                         allCompanyProducts.push({ id: doc.id, ...doc.data() });
                     });
                     rebuildStockLinkedCompanyCache();
-
-                    // ซ่อมข้อมูลราคามาตรฐานที่เป็น 0 เฉพาะกรณีที่มีราคาบริษัทที่เชื่อมด้วย
-                    // Stock Product ID ตรงกัน และราคาบวกของทุกรายการที่เชื่อมโยงตรงกันทั้งหมด
-                    // ห้ามเลือก/เขียนทับด้วยราคาบริษัทใดบริษัทหนึ่ง หากแต่ละบริษัทมีราคาต่างกัน
-                    // และให้ Admin เป็นผู้เขียน products ตามสิทธิ์เดิมเท่านั้น
-                    repairZeroStandardPricesFromLinkedCompanies();
 
                     const historyModal = document.getElementById('company-all-history-modal');
                     if (historyModal) {
@@ -11612,17 +11479,18 @@ function getCompanyPriceHistory(companyName, productName) {
             const price = parseFloat(priceInput ? priceInput.value : 0);
             const unit = unitInput ? unitInput.value.trim() : '';
 
-            if (!name || isNaN(price) || price <= 0) {
+            if (!name || !Number.isFinite(price) || price <= 0) {
                 showToast('กรุณากรอกชื่อสินค้าและราคาขายให้ถูกต้อง', 'error');
                 return;
             }
 
             try {
-                const stockProduct = await ensureProductInStandardStock(name, cost, price, unit);
-
                 const currentCompany = document.getElementById('company-name').value.trim();
+                let companyProduct = null;
                 let effectivePrice = price;
                 let effectiveCost = cost;
+
+                // ตรวจราคาบริษัทก่อนสร้างสินค้าในสต็อก เพื่อไม่ให้เกิดรายการสต็อกลอย
                 if (currentCompany) {
                     const matches = getCompanySpecificProductMatches(currentCompany, name);
                     if (matches.length !== 1) {
@@ -11632,14 +11500,42 @@ function getCompanyPriceHistory(companyName, productName) {
                             'warning');
                         return;
                     }
-                    const companyProduct = matches[0];
+
+                    companyProduct = matches[0];
                     effectivePrice = Number(companyProduct.price);
                     effectiveCost = Number(companyProduct.cost) || 0;
                     if (!Number.isFinite(effectivePrice) || effectivePrice <= 0) {
                         showToast(`⚠️ ราคาของ "${name}" สำหรับบริษัทที่เลือกไม่ถูกต้อง`, 'warning');
                         return;
                     }
-                } else {
+                }
+
+                // เมื่อเลือกบริษัท ให้คงราคามาตรฐานเดิมไว้ หรือสร้างสินค้าเชื่อมด้วยราคา 0
+                // เมื่อไม่ได้เลือกบริษัท จึงใช้ต้นทุน/ราคาที่กรอกเป็นข้อมูลของสต็อกมาตรฐาน
+                let stockProduct = companyProduct?.stockProductId
+                    ? allProducts.find(p => String(p.id) === String(companyProduct.stockProductId)) || null
+                    : null;
+
+                if (!stockProduct) {
+                    stockProduct = await ensureProductInStandardStock(
+                        name,
+                        currentCompany ? 0 : cost,
+                        currentCompany ? 0 : price,
+                        unit
+                    );
+                }
+
+                // ผูกเอกสารราคาบริษัทกับสินค้ามาตรฐานที่พบ/สร้างได้ โดยไม่แก้ราคาบริษัทอื่น
+                if (currentCompany && companyProduct && stockProduct?.id &&
+                    String(companyProduct.stockProductId || '') !== String(stockProduct.id)) {
+                    await db.collection('companyProducts').doc(companyProduct.id).update({
+                        stockProductId: stockProduct.id,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    companyProduct.stockProductId = stockProduct.id;
+                }
+
+                if (!currentCompany) {
                     showToast('บันทึกสินค้าลงสต็อกสำเร็จ', 'success');
                 }
                 closeSuggestionModal();
@@ -11772,29 +11668,16 @@ function getCompanyPriceHistory(companyName, productName) {
 		// ฟังก์ชันดึงรายชื่อบริษัทที่ไม่ซ้ำกันจากฐานข้อมูลทั้งหมด
 function getUniqueCompanyList() {
     const companies = new Map();
-    const source = Array.isArray(allDeliveries) ? allDeliveries : [];
-    source.forEach(item => {
-        const name = String(item?.companyName || '').trim();
-        if (!name) return;
-        const key = name.toLocaleLowerCase('th-TH');
-        if (!companies.has(key)) companies.set(key, name);
-    });
-    return Array.from(companies.values());
+    const addCompany = value => {
+        const name = canonicalCompanyDisplayName(value);
+        const key = normalizeCompanyProductKey(name);
+        if (!key || !name) return;
+        companies.set(key, preferCompanyDisplayName(companies.get(key), name));
+    };
+    (Array.isArray(allDeliveries) ? allDeliveries : []).forEach(item => addCompany(item?.companyName));
+    (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).forEach(item => addCompany(item?.companyName));
+    return Array.from(companies.values()).sort((a, b) => a.localeCompare(b, 'th'));
 }
-
-// ตัวอย่างฟังก์ชันเมื่อผู้ใช้เลือกบริษัทและพิมพ์ชื่อสินค้า
-document.getElementById('item-input').addEventListener('blur', function() {
-    const currentCompany = document.getElementById('company-name').value.trim();
-    const currentItemText = this.value.trim();
-
-    if (currentCompany && currentItemText) {
-        const history = getCompanyPriceHistory(currentCompany, currentItemText);
-        if (history) {
-            showToast(`พบประวัติเดิม: "${currentCompany}" เคยซื้อสินค้านี้แล้ว`, 'info');
-            // คุณสามารถนำค่าราคาจากประวัติมาเติมให้อัตโนมัติได้ที่นี่
-        }
-    }
-});
 
         function renderPendingItems() {
             if (pendingItems.length === 0) {
@@ -13402,25 +13285,44 @@ document.getElementById('item-input').addEventListener('blur', function() {
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
 
-                    // รองรับข้อมูลเก่าที่ companyProducts ยังผูกด้วยชื่อบริษัทเดิม
+                    // ซิงก์ชื่อบริษัทใน Company Directory เฉพาะสินค้าของบริษัทเดิม
+                    // Admin ตรวจได้ทุกเอกสาร ส่วน User ต้องจำกัด query ด้วย ownerUid
+                    // แบ่ง Batch เป็นชุดไม่เกิน 450 รายการ เพื่อไม่ชนเพดาน Firestore
+                    const oldCompanyNameKey = normalizeCompanyProductKey(targetData.companyName || currentCompany);
                     const oldCompanyKey = normalizeCompanyProductKey(targetData.companyKey || targetData.companyName || currentCompany);
-                    if (oldCompanyKey && oldCompanyKey !== stableCompanyKey) {
-                        const productSnapshot = await db.collection('companyProducts').get();
+                    const stableCompanyKeyNormalized = normalizeCompanyProductKey(stableCompanyKey);
+                    const companyProductsRef = db.collection('companyProducts');
+                    const companyProductsQuery = currentUserProfile?.role === 'admin'
+                        ? companyProductsRef
+                        : companyProductsRef.where('ownerUid', '==', currentAuthUser.uid);
+                    const productSnapshot = await companyProductsQuery.get();
+                    const matchingCompanyProductRefs = [];
+                    productSnapshot.forEach(productDoc => {
+                        const productData = productDoc.data() || {};
+                        // แม้ Admin จะมองเห็นทุกคน ก็แก้เฉพาะรายการของเจ้าของเอกสารบริษัทที่กำลังแก้
+                        // เอกสารเก่าที่ไม่มี ownerUid จะไม่ถูกเหมารวมกับข้อมูลของผู้ใช้อื่น
+                        if (targetData.ownerUid &&
+                            String(productData.ownerUid || '') !== String(targetData.ownerUid)) return;
+                        if (!targetData.ownerUid && productData.ownerUid) return;
+
+                        const productKey = normalizeCompanyProductKey(productData.companyKey || '');
+                        const productNameKey = normalizeCompanyProductKey(productData.companyName || '');
+                        if ((oldCompanyKey && productKey === oldCompanyKey) ||
+                            (stableCompanyKeyNormalized && productKey === stableCompanyKeyNormalized) ||
+                            (oldCompanyNameKey && productNameKey === oldCompanyNameKey)) {
+                            matchingCompanyProductRefs.push(productDoc.ref);
+                        }
+                    });
+                    for (let i = 0; i < matchingCompanyProductRefs.length; i += 450) {
                         const batch = db.batch();
-                        let productUpdates = 0;
-                        productSnapshot.forEach(productDoc => {
-                            const productData = productDoc.data() || {};
-                            const productKey = normalizeCompanyProductKey(productData.companyKey || productData.companyName);
-                            if (productKey === oldCompanyKey) {
-                                batch.update(productDoc.ref, {
-                                    companyKey: stableCompanyKey,
-                                    companyName: newCompany,
-                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                                });
-                                productUpdates++;
-                            }
+                        matchingCompanyProductRefs.slice(i, i + 450).forEach(productRef => {
+                            batch.update(productRef, {
+                                companyKey: stableCompanyKey,
+                                companyName: newCompany,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
                         });
-                        if (productUpdates > 0) await batch.commit();
+                        await batch.commit();
                     }
 
                     showToast('แก้ไขชื่อบริษัทสำเร็จ และรักษารายการสินค้าเดิมไว้แล้ว', 'success');
