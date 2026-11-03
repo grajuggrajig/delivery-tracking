@@ -8576,17 +8576,69 @@ async function requireAdminPasswordForDelete(actionLabel = 'ยืนยัน�
 }
 
 async function deleteCompanyProduct(id, name, companyName) {
+    if (currentUserProfile?.role !== 'admin' || !currentAuthUser?.uid) {
+        showToast('เฉพาะ Admin เท่านั้นที่ลบสินค้าและจัดการสต็อกหลักได้', 'error');
+        return;
+    }
+
     showConfirmModal(
-        'ลบสินค้าเฉพาะบริษัท',
-        `ต้องการลบ "${name}" ออกจากรายการสินค้าของบริษัท "${companyName}" ใช่หรือไม่?\n\nสินค้ามาตรฐานใน Manage Stock จะไม่ถูกลบ`,
+        'ลบสินค้าบริษัทและตรวจสอบสต็อกหลัก',
+        `ต้องการลบ "${name}" ออกจากรายการสินค้าของบริษัท "${companyName}" ใช่หรือไม่?\n\nระบบจะตรวจสอบสินค้ากลางที่ผูกด้วย Stock Product ID ให้ด้วย\n• หากยังเชื่อมกับบริษัทอื่น จะลบเฉพาะรายการบริษัทนี้\n• หากเป็นการเชื่อมโยงบริษัทสุดท้าย ระบบจะลบสินค้ากลางได้ต่อเมื่อไม่มีสต็อกคงเหลือและไม่มีประวัติอ้างอิง\n• หากพบประวัติ/ยอดคงเหลือ/ข้อมูลไม่ชัดเจน ระบบจะคงสินค้ากลางไว้เพื่อป้องกันข้อมูลสูญหาย`,
         async () => {
-            if (!(await requireAdminPasswordForDelete(`ลบสินค้า ${name} จากบริษัท ${companyName}`))) return;
+            if (!(await requireAdminPasswordForDelete(`ลบสินค้า ${name} จากบริษัท ${companyName} และตรวจสอบสต็อกหลัก`))) return;
             try {
-                await db.collection('companyProducts').doc(id).delete();
-                showToast(`ลบ "${name}" จากรายการของบริษัทแล้ว`, 'success');
+                // อ่านข้อมูลล่าสุดจาก Firestore ก่อนตัดสินใจ ไม่ใช้ snapshot ที่อาจล้าสมัย
+                const [companySnap, stockSnap, deliverySnap, sourceSnap] = await Promise.all([
+                    db.collection('companyProducts').get(),
+                    db.collection('products').get(),
+                    db.collection('deliveries').get(),
+                    db.collection('companyProducts').doc(id).get()
+                ]);
+                if (!sourceSnap.exists) {
+                    showToast('ไม่พบรายการบริษัทนี้แล้ว อาจถูกลบไปก่อนหน้านี้', 'warning');
+                    return;
+                }
+                const source = { id: sourceSnap.id, ...sourceSnap.data() };
+                const companyRows = companySnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const stockRows = stockSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                const deliveryRows = deliverySnap.docs.map(doc => doc.data());
+                const stockId = String(source.stockProductId || '').trim();
+                const stockProduct = stockId ? stockRows.find(p => String(p.id) === stockId) : null;
+                const otherExactLinks = stockId ? companyRows.filter(p =>
+                    String(p.id) !== String(id) && String(p.stockProductId || '').trim() === stockId
+                ) : [];
+                let removeStock = false;
+                let stockKeepReason = '';
+
+                if (stockId && stockProduct && otherExactLinks.length === 0) {
+                    const retirement = productRetirementClassify(source, companyRows, stockRows, deliveryRows);
+                    const safeRow = retirement.safe.some(row => String(row.id) === String(id));
+                    if (safeRow && !retirement.blocked.length && !retirement.review.length) {
+                        removeStock = true;
+                    } else {
+                        stockKeepReason = retirement.blocked.map(row => row.reason).concat(retirement.review.map(row => row.reason)).filter(Boolean).join(' • ')
+                            || 'ระบบไม่สามารถยืนยันความปลอดภัยในการลบสินค้ากลางได้';
+                    }
+                } else if (!stockId || !stockProduct) {
+                    stockKeepReason = 'ไม่มี Stock Product ID ที่ยืนยันได้ หรือไม่พบสินค้ากลางตามรหัสนี้';
+                } else {
+                    stockKeepReason = `สินค้ากลางยังเชื่อมกับบริษัทอื่นอีก ${otherExactLinks.length} บริษัท`;
+                }
+
+                // หากจะลบสินค้ากลาง ให้ลบ companyProducts และ products ใน Batch เดียวกัน
+                const batch = db.batch();
+                batch.delete(db.collection('companyProducts').doc(id));
+                if (removeStock) batch.delete(db.collection('products').doc(stockId));
+                await batch.commit();
+
+                if (removeStock) {
+                    showToast(`ลบ "${name}" จากบริษัทและสต็อกหลักแล้ว`, 'success');
+                } else {
+                    showToast(`ลบ "${name}" จากบริษัทแล้ว • คงสินค้าในสต็อกหลักไว้: ${stockKeepReason}`, 'success');
+                }
             } catch (err) {
-                console.error(err);
-                showToast('ไม่สามารถลบสินค้าของบริษัทได้', 'error');
+                console.error('deleteCompanyProduct failed:', err);
+                showToast('ไม่สามารถลบสินค้าได้ กรุณาตรวจสอบสิทธิ์และการเชื่อมต่อ', 'error');
             }
         }
     );
@@ -10992,17 +11044,67 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             }
 
             try {
-                // บันทึกเฉพาะราคาของบริษัทนี้ ไม่เขียนทับราคามาตรฐานใน products
-                await db.collection('companyProducts').doc(companyProductId).update({
+                const serverTimestamp = firebase.firestore.FieldValue.serverTimestamp();
+                const companyProductRef = db.collection('companyProducts').doc(companyProductId);
+
+                // ค้นหาสินค้าหลักใน products ที่เชื่อมกับรายการบริษัทนี้
+                // ใช้ stockProductId เป็นตัวอ้างอิงหลัก เพื่อไม่ให้จับคู่สินค้าชื่อคล้ายกันผิดรายการ
+                let standardStockProduct = null;
+                const linkedStockId = String(product.stockProductId || '').trim();
+
+                if (linkedStockId) {
+                    standardStockProduct = allProducts.find(p =>
+                        String(p.id || '').trim() === linkedStockId
+                    ) || null;
+                }
+
+                // รองรับข้อมูล companyProducts รุ่นเก่าที่ไม่มี stockProductId:
+                // ใช้ชื่อสินค้า + หน่วยที่ตรงกันแบบ normalized และต้องพบเพียง 1 รายการเท่านั้น
+                if (!standardStockProduct) {
+                    const productNameKey = normalizeCompanyProductName(product.name || '');
+                    const productUnitKey = String(product.unit || '').trim().toLowerCase();
+                    const matchingStandardProducts = allProducts.filter(p =>
+                        normalizeCompanyProductName(p.name || '') === productNameKey &&
+                        String(p.unit || '').trim().toLowerCase() === productUnitKey
+                    );
+                    if (matchingStandardProducts.length === 1) {
+                        standardStockProduct = matchingStandardProducts[0];
+                    }
+                }
+
+                // บันทึกราคาบริษัท และ (เฉพาะ Admin) ซิงก์ราคาขายไปยัง products หลัก
+                // ใช้ batch เพื่อให้การบันทึกทั้งสองจุดสำเร็จ/ล้มเหลวพร้อมกัน
+                const batch = db.batch();
+                batch.update(companyProductRef, {
                     price,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    updatedAt: serverTimestamp
                 });
+
+                const canSyncStandardStockPrice = currentUserProfile?.role === 'admin';
+                if (canSyncStandardStockPrice && standardStockProduct?.id) {
+                    batch.update(db.collection('products').doc(standardStockProduct.id), {
+                        price,
+                        updatedAt: serverTimestamp
+                    });
+                }
+
+                await batch.commit();
 
                 product.price = price;
                 product.updatedAt = new Date();
+
+                if (canSyncStandardStockPrice && standardStockProduct) {
+                    standardStockProduct.price = price;
+                    standardStockProduct.updatedAt = new Date();
+                }
+
                 renderStockTable(stockSearchBox?.value || '');
                 showToast(
-                    `บันทึกราคาของบริษัท "${product.companyName || 'ที่เลือก'}" สำเร็จ (ราคาสต็อกมาตรฐานไม่เปลี่ยนแปลง)`,
+                    canSyncStandardStockPrice && standardStockProduct
+                        ? `บันทึกราคาบริษัท "${product.companyName || 'ที่เลือก'}" และซิงก์ราคาขายในสต็อกหลักสำเร็จ`
+                        : canSyncStandardStockPrice
+                            ? `บันทึกราคาบริษัท "${product.companyName || 'ที่เลือก'}" สำเร็จ แต่ไม่พบสินค้าหลักที่เชื่อมโยง จึงไม่ได้ซิงก์ราคา`
+                            : `บันทึกราคาบริษัท "${product.companyName || 'ที่เลือก'}" สำเร็จ (การซิงก์ราคาสต็อกหลักทำได้เฉพาะ Admin)`,
                     'success'
                 );
             } catch (err) {
