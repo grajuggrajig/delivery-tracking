@@ -13578,9 +13578,15 @@ function getUniqueCompanyList() {
                 } catch (err) {
                     console.error('แก้ไขชื่อบริษัทและย้ายรายการสินค้าไม่สำเร็จ:', err);
                     showToast(`ไม่สามารถเปลี่ยนชื่อบริษัทได้: ${err.message || 'กรุณาตรวจสอบสิทธิ์ Firestore'}`, 'error');
-                    if (confirmButton) { confirmButton.disabled = false; confirmButton.textContent = 'บันทึกการแก้ไข'; }
+                } finally {
+                    // คืนสถานะปุ่มเสมอ เพื่อให้กดบันทึกซ้ำได้โดยไม่ต้องรีเฟรชหน้า
+                    const activeConfirmButton = modal.querySelector('#edit-company-confirm');
+                    if (activeConfirmButton && !modal.classList.contains('hidden')) {
+                        activeConfirmButton.disabled = false;
+                        activeConfirmButton.textContent = 'บันทึกการแก้ไข';
+                    }
                 }
-            }, { once: true });
+            });
 
             btnCancel.addEventListener('click', closeModal, { once: true });
         };
