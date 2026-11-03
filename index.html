@@ -8088,6 +8088,7 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
 
     const companyKey = normalizeCompanyProductKey(stableCompanyKey || cleanCompany);
     const normalizedName = normalizeCompanyProductName(cleanName);
+    
     // ตรวจซ้ำก่อนบันทึกจริง: บริษัทเดียวกัน + ชื่อสินค้าเดียวกัน (ไม่ยุบรหัส #1/#01)
     const duplicate = allCompanyProducts.find(p =>
         p.id !== editId &&
@@ -8100,59 +8101,64 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
     }
 
     try {
-        // สินค้ามาตรฐานใช้ข้อมูลราคาแยกจากราคาประจำบริษัท
-        // หากยังไม่มีสินค้าใน products ให้สร้างรายการมาตรฐานโดยไม่คัดลอกราคาของบริษัท
-        // หากมีอยู่แล้ว จะคงต้นทุน/ราคามาตรฐานเดิมไว้ (ซิงก์เฉพาะหน่วยตามฟังก์ชันเดิม)
-        // โหมดแก้ไขต้องยึดสินค้ากลางที่รายการเดิมผูกอยู่เป็นหลัก
-        // ห้ามค้น/สร้างสินค้ากลางจากชื่อใหม่ (#001 -> #002) เพราะจะเหลือ #001 แล้วเพิ่ม #002 ซ้ำ
         let stockProduct = null;
         const editingCompanyProduct = editId
             ? allCompanyProducts.find(p => String(p.id) === String(editId))
             : null;
+            
         if (editId && !editingCompanyProduct) {
             showToast('ไม่พบข้อมูลสินค้าที่ต้องการแก้ไข', 'info');
             return false;
         }
+
+        // ค้นหา Stock กลางที่เชื่อมโยงอยู่
         if (editingCompanyProduct) {
             const linkedStockId = String(editingCompanyProduct.stockProductId || '').trim();
             stockProduct = linkedStockId
                 ? allProducts.find(p => String(p.id) === linkedStockId) || null
                 : null;
-            // ข้อมูลเก่าที่ไม่มี stockProductId ให้ใช้รายการเดิมที่ตรงชื่อเท่านั้น
             if (!stockProduct) {
                 stockProduct = allProducts.find(p =>
                     normalizeCompanyProductName(p.name) === normalizeCompanyProductName(editingCompanyProduct.name)
                 ) || null;
             }
         } else {
-            stockProduct = await ensureProductInStandardStock(cleanName, 0, 0, cleanUnit);
+            // ไม่ว่าจะเพิ่มใหม่หรือแก้ไข ให้เรียกผ่าน ensureProductInStandardStock เพื่อซิงก์กับสต็อกกลางเสมอ
+			stockProduct = await ensureProductInStandardStock(cleanName, numericCost, numericPrice, cleanUnit);
         }
 
-        // ราคาขายของบริษัทต้องแยกจากราคามาตรฐานใน Manage Stock เสมอ
-        // ซิงก์เฉพาะหน่วยไปยังสินค้ากลางได้ แต่ห้ามนำราคาของบริษัทไปเขียนทับราคากลาง
-        if (currentUserProfile?.role === 'admin' && stockProduct?.id &&
-            String(stockProduct.unit || '').trim() !== cleanUnit) {
+        // =========================================================================
+        // 1. อัปเดตราคากลางในสต็อกอัตโนมัติ (Manage Stock) ให้ตรงกันแบบเรียลไทม์ทันที
+        // =========================================================================
+        if (stockProduct?.id) {
             await db.collection('products').doc(stockProduct.id).update({
+                name: cleanName,
+                cost: numericCost,
+                price: numericPrice,
                 unit: cleanUnit,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+            // อัปเดตค่าในตัวแปร Local State ทันทีเพื่อให้หน้าจอ Stock Management อัปเดตตาม
+            stockProduct.name = cleanName;
+            stockProduct.cost = numericCost;
+            stockProduct.price = numericPrice;
             stockProduct.unit = cleanUnit;
         }
 
+        // กรณีแก้ไขข้อมูลเดิม (Edit Mode)
         if (editId) {
             const oldProduct = editingCompanyProduct;
 
-            // ตัวเลือกซิงก์รายการที่ใช้สินค้ากลางเดียวกัน: กระจายชื่อ ต้นทุน ราคาขาย และหน่วย
-            // ไปยังเอกสาร companyProducts ทุกบริษัทที่ผูก stockProductId เดียวกันเท่านั้น
+            // ตัวเลือกซิงก์รายการที่ใช้สินค้ากลางเดียวกัน (ทุกบริษัทที่ผูกกับ Stock ตัวนี้)
             if (updateLinkedCompanies) {
                 const linkedRows = stockProduct?.id
                     ? allCompanyProducts.filter(p => String(p.stockProductId || '') === String(stockProduct.id))
                     : [oldProduct];
+                    
                 if (linkedRows.length < 2) {
                     showToast('ไม่พบรายการบริษัทอื่นที่เชื่อมโยงกับสินค้านี้ จึงบันทึกเฉพาะบริษัทปัจจุบัน', 'info');
                     updateLinkedCompanies = false;
                 } else {
-                    // ตรวจชื่อซ้ำแยกเป็นรายบริษัทก่อนเขียน เพื่อไม่รวม/เขียนทับสินค้าคนละรายการ
                     const linkedIds = new Set(linkedRows.map(p => String(p.id)));
                     const conflict = allCompanyProducts.find(p =>
                         !linkedIds.has(String(p.id)) &&
@@ -8166,18 +8172,6 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
                         return false;
                     }
 
-                    if (currentUserProfile?.role === 'admin' && stockProduct?.id &&
-                        (String(oldProduct.name || '').trim() !== cleanName ||
-                         String(stockProduct.unit || '').trim() !== cleanUnit)) {
-                        await db.collection('products').doc(stockProduct.id).update({
-                            name: cleanName,
-                            unit: cleanUnit,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        stockProduct.name = cleanName;
-                        stockProduct.unit = cleanUnit;
-                    }
-
                     for (let i = 0; i < linkedRows.length; i += 450) {
                         const batch = db.batch();
                         linkedRows.slice(i, i + 450).forEach(cp => {
@@ -8187,61 +8181,29 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
                                 cost: numericCost,
                                 price: numericPrice,
                                 unit: cleanUnit,
+                                stockProductId: stockProduct ? stockProduct.id : (cp.stockProductId || ''),
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                             });
                         });
                         await batch.commit();
                     }
+                    
                     linkedRows.forEach(cp => {
                         cp.name = cleanName;
                         cp.nameHtml = sanitizeCompanyProductNameHtml(nameHtml);
                         cp.cost = numericCost;
                         cp.price = numericPrice;
                         cp.unit = cleanUnit;
+                        if (stockProduct?.id) cp.stockProductId = stockProduct.id;
                     });
+                    
                     invalidateCompanyCatalogCache();
-                    showToast(`อัปเดตสินค้า ${cleanName} ให้ ${linkedRows.length} บริษัทที่เชื่อมโยงสำเร็จ`, 'success');
+                    showToast(`อัปเดตสินค้า ${cleanName} ให้ ${linkedRows.length} บริษัทและอัปเดตสต็อกกลางสำเร็จ`, 'success');
                     return true;
                 }
             }
 
-            // เมื่อแก้ชื่อสินค้าเดิมของบริษัท เช่น #1 เป็น #01
-            // ให้แก้ชื่อสินค้ามาตรฐานที่เชื่อมอยู่แทนการสร้างสินค้าใหม่
-            // โดยไม่เปลี่ยนต้นทุน/ราคามาตรฐาน และไม่แตะราคาขายเฉพาะบริษัท
-            if (currentUserProfile?.role === 'admin' && stockProduct?.id &&
-                String(oldProduct.name || '').trim() !== cleanName) {
-                await db.collection('products').doc(stockProduct.id).update({
-                    name: cleanName,
-                    unit: cleanUnit,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                stockProduct.name = cleanName;
-                stockProduct.unit = cleanUnit;
-
-                // อัปเดตชื่อในรายการบริษัทที่ผูกกับสินค้าเดียวกันเท่านั้น
-                // คง price และ cost ของแต่ละบริษัทไว้ตามเดิม
-                const linkedForRename = allCompanyProducts.filter(p =>
-                    String(p.stockProductId || '') === String(stockProduct.id)
-                );
-                for (let i = 0; i < linkedForRename.length; i += 450) {
-                    const batch = db.batch();
-                    linkedForRename.slice(i, i + 450).forEach(cp => {
-                        batch.update(db.collection('companyProducts').doc(cp.id), {
-                            name: cleanName,
-                            nameHtml: '',
-                            unit: cleanUnit,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                    });
-                    await batch.commit();
-                }
-                linkedForRename.forEach(cp => {
-                    cp.name = cleanName;
-                    cp.nameHtml = '';
-                    cp.unit = cleanUnit;
-                });
-            }
-
+            // อัปเดตเฉพาะบริษัทปัจจุบันกรณีไม่เลือกซิงก์ข้ามบริษัท
             const updatePayload = {
                 companyKey,
                 companyName: cleanCompany,
@@ -8253,13 +8215,26 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
                 stockProductId: (stockProduct && stockProduct.id) || oldProduct.stockProductId || '',
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
-            // แก้ไขเฉพาะเอกสารของบริษัทที่กำลังเปิดอยู่เท่านั้น
-            // ไม่กระจายชื่อ ต้นทุน ราคาขาย หรือหน่วยไปยังบริษัทอื่นที่ใช้สินค้ากลางร่วมกัน
+            
             await db.collection('companyProducts').doc(editId).update(updatePayload);
-            showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ แล้ว`, 'success');
+            
+            // อัปเดต Local State ของบริษัทนี้ด้วย
+            if (editingCompanyProduct) {
+                editingCompanyProduct.companyKey = companyKey;
+                editingCompanyProduct.companyName = cleanCompany;
+                editingCompanyProduct.name = cleanName;
+                editingCompanyProduct.nameHtml = sanitizeCompanyProductNameHtml(nameHtml);
+                editingCompanyProduct.cost = numericCost;
+                editingCompanyProduct.price = numericPrice;
+                editingCompanyProduct.unit = cleanUnit;
+                if (stockProduct?.id) editingCompanyProduct.stockProductId = stockProduct.id;
+            }
+
+            showToast(`แก้ไข "${cleanName}" และบันทึกราคา ${money(numericPrice)} ฿ พร้อมซิงก์สต็อกกลางแล้ว`, 'success');
             return true;
         }
 
+        // กรณีสร้างสินค้าใหม่ (New Entry)
         const existing = allCompanyProducts.find(p =>
             String(p.ownerUid || '') === String(currentAuthUser?.uid || '') &&
             normalizeCompanyProductKey(p.companyKey || p.companyName) === companyKey &&
@@ -8281,14 +8256,28 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
 
         if (existing && existing.id) {
             await db.collection('companyProducts').doc(existing.id).update(payload);
+            // อัปเดต Local State
+            existing.companyKey = companyKey;
+            existing.companyName = cleanCompany;
+            existing.name = cleanName;
+            existing.nameHtml = sanitizeCompanyProductNameHtml(nameHtml);
+            existing.cost = numericCost;
+            existing.price = numericPrice;
+            existing.unit = cleanUnit;
+            if (stockProduct?.id) existing.stockProductId = stockProduct.id;
         } else {
-            await db.collection('companyProducts').add({
+            const docRef = await db.collection('companyProducts').add({
                 ...payload,
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
+            // เพิ่มลงใน Local Array ทันทีเพื่อให้ข้อมูลซิงก์โดยไม่ต้องรีเฟรชหน้าจอ
+            allCompanyProducts.push({
+                id: docRef.id,
+                ...payload
+            });
         }
 
-        showToast(`บันทึก "${cleanName}" ในราคาของบริษัท "${cleanCompany}" แล้ว`, 'success');
+        showToast(`บันทึก "${cleanName}" ในราคาของบริษัท "${cleanCompany}" และอัปเดตสต็อกกลางแล้ว`, 'success');
         return true;
     } catch (err) {
         console.error('saveCompanyProduct:', err);
@@ -8296,7 +8285,6 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
         return false;
     }
 }
-
 
 /* อ่าน companyProducts ล่าสุดจาก Firestore ก่อนตรวจซ้ำ/นำเข้า
    ใช้ scope เดียวกับ listener เดิม เพื่อไม่ข้ามขอบเขต ownerUid ของพนักงาน */
