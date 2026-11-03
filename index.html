@@ -7919,71 +7919,95 @@ async function ensureCompanyProductFromStock(companyName, stockProduct, stableCo
 }
 
 async function ensureProductInStandardStock(name, cost, price, unit = '') {
-    const normalized = normalizeCompanyProductName(name);
-    const duplicateNameKey = normalizeProductDuplicateKey(name);
+    const cleanName = String(name || '').trim();
+    const numericCost = Number(cost) || 0;
+    const numericPrice = Number(price) || 0;
+    const cleanUnit = String(unit || '').trim();
 
+    if (!cleanName) return null;
+
+    const normalized = normalizeCompanyProductName(cleanName);
+    const duplicateNameKey = normalizeProductDuplicateKey(cleanName);
+
+    // 1. ค้นหาจากอาเรย์ในเครื่อง (allProducts) ก่อนตามโค้ดเดิม
     let stockProduct = allProducts.find(p =>
         normalizeCompanyProductName(p.name) === normalized ||
         normalizeProductDuplicateKey(p.name) === duplicateNameKey
     );
 
-    // ถ้ามีสินค้าเดียวกันใน Manage Stock อยู่แล้ว จะไม่สร้าง products ซ้ำ
-    // แต่ต้องซิงก์ "หน่วย" จาก Company Directory มายัง Stock Management
-    // เพื่อให้เมื่อแก้ไขหน่วย เช่น "แพ็ค" แล้ว Stock Management แสดงตรงกัน
-    // รวมกรณีชื่อถูกเว้นวรรค/คั่นเครื่องหมายต่างกัน เช่น
-    // "ดินสอปากกา" กับ "ดินสอ ปากกา"
+    // 2. ถ้าไม่เจอในอาเรย์ ให้ลอง Query ค้นหาตรงจาก Firestore (db.collection('products')) เพื่อความชัวร์
+    if (!stockProduct && currentUserProfile?.role === 'admin') {
+        try {
+            const querySnapshot = await db.collection('products')
+                .where('name', '==', cleanName)
+                .limit(1)
+                .get();
+            
+            if (!querySnapshot.empty) {
+                const doc = querySnapshot.docs[0];
+                stockProduct = { id: doc.id, ...doc.data() };
+            }
+        } catch (err) {
+            console.error("Error querying product from Firestore:", err);
+        }
+    }
+
+    // ถ้ามีสินค้าเดียวกันอยู่ในระบบแล้ว
     if (stockProduct) {
-        const cleanName = String(name || '').trim();
-        const cleanUnit = String(unit || '').trim();
         const currentUnit = String(stockProduct.unit || '').trim();
         const currentName = String(stockProduct.name || '').trim();
         const shouldRenameEquivalentCode = currentName !== cleanName &&
             normalizeProductDuplicateKey(currentName) === normalizeProductDuplicateKey(cleanName);
 
-        // ผู้ใช้ทั่วไปอ่านสินค้ากลางได้ แต่ห้ามเขียน/เปลี่ยนชื่อหรือหน่วยใน products
-        // Admin สามารถเปลี่ยนชื่อรหัสที่เทียบเท่ากัน (เช่น #1 -> #01)
-        // บนรายการเดิม เพื่อไม่สร้างสินค้าใหม่ซ้ำ และคงต้นทุน/ราคามาตรฐานเดิมไว้
-        if (currentUserProfile?.role === 'admin' && stockProduct.id &&
-            (currentUnit !== cleanUnit || shouldRenameEquivalentCode)) {
+        // Admin สามารถอัปเดตราคา, ต้นทุน, หน่วย หรือเปลี่ยนชื่อรหัสที่เทียบเท่ากันได้
+        if (currentUserProfile?.role === 'admin' && stockProduct.id) {
             const updateData = {
+                cost: numericCost,
+                price: numericPrice,
                 unit: cleanUnit,
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
             if (shouldRenameEquivalentCode) updateData.name = cleanName;
+
             await db.collection('products').doc(stockProduct.id).update(updateData);
-            if (shouldRenameEquivalentCode) stockProduct.name = cleanName;
+            
+            // อัปเดตค่ากลับเข้าตัวแปร local object
+            stockProduct.cost = numericCost;
+            stockProduct.price = numericPrice;
             stockProduct.unit = cleanUnit;
+            if (shouldRenameEquivalentCode) stockProduct.name = cleanName;
         }
 
         return stockProduct;
     }
 
-    // หากเป็นผู้ใช้ทั่วไปและยังไม่มีสินค้ากลางที่ตรงกัน ให้บันทึกเฉพาะ
-    // companyProducts ของบริษัทแทน ไม่สร้างรายการ products กลาง
+    // หากเป็นผู้ใช้ทั่วไปและยังไม่มีสินค้ากลางที่ตรงกัน ให้บันทึกเฉพาะ companyProducts แทน
     if (currentUserProfile?.role !== 'admin') {
         return {
             id: '',
-            name: name.trim(),
-            cost: Number(cost) || 0,
-            price: Number(price) || 0,
-            unit: String(unit || '').trim()
+            name: cleanName,
+            cost: numericCost,
+            price: numericPrice,
+            unit: cleanUnit
         };
     }
 
+    // 3. ถ้าไม่พบข้อมูลทั้งในอาเรย์และในฐานข้อมูล ให้สร้างใหม่ (add)
     const ref = await db.collection('products').add({
-        name: name.trim(),
-        cost: Number(cost) || 0,
-        price: Number(price) || 0,
-        unit: String(unit || '').trim(),
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        name: cleanName,
+        cost: numericCost,
+        price: numericPrice,
+        unit: cleanUnit,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
     return {
         id: ref.id,
-        name: name.trim(),
-        cost: Number(cost) || 0,
-        price: Number(price) || 0,
-        unit: String(unit || '').trim()
+        name: cleanName,
+        cost: numericCost,
+        price: numericPrice,
+        unit: cleanUnit
     };
 }
 
