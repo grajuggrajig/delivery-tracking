@@ -13455,86 +13455,130 @@ function getUniqueCompanyList() {
             const closeModal = () => {
                 modal.classList.add('opacity-0');
                 modalContent.classList.add('scale-95');
-                setTimeout(() => {
-                    modal.classList.add('hidden');
-                }, 300);
+                setTimeout(() => { modal.classList.add('hidden'); }, 300);
                 btnConfirm.replaceWith(btnConfirm.cloneNode(true));
                 btnCancel.replaceWith(btnCancel.cloneNode(true));
             };
 
             btnConfirm.addEventListener('click', async () => {
-                const newCompany = inputField.value.trim();
+                const newCompany = String(inputField.value || '').trim().replace(/\s+/g, ' ');
                 const newDistrict = districtField ? districtField.value.trim() : '';
-
                 if (!newCompany) {
                     showToast('กรุณากรอกชื่อบริษัท', 'error');
                     return;
                 }
 
+                const confirmButton = modal.querySelector('#edit-company-confirm');
+                if (confirmButton) { confirmButton.disabled = true; confirmButton.textContent = 'กำลังอัปเดตบริษัทและรายการสินค้า...'; }
+
                 try {
+                    // อ่านเอกสารต้นทางล่าสุด เพื่อใช้ระบุขอบเขตบริษัทและเจ้าของข้อมูลอย่างถูกต้อง
                     const targetRef = db.collection('deliveries').doc(docId);
                     const targetSnap = await targetRef.get();
-                    if (!targetSnap.exists) {
-                        showToast('ไม่พบข้อมูลบริษัทที่ต้องการแก้ไข', 'error');
-                        return;
-                    }
+                    if (!targetSnap.exists) throw new Error('ไม่พบข้อมูลบริษัทที่ต้องการแก้ไข');
 
                     const targetData = targetSnap.data() || {};
-                    // companyKey เป็นตัวระบุบริษัทแบบคงที่ ไม่เปลี่ยนตามชื่อที่แสดง
-                    const stableCompanyKey = targetData.companyKey || normalizeCompanyProductKey(targetData.companyName || currentCompany);
+                    const oldNameKey = normalizeCompanyProductKey(targetData.companyName || currentCompany);
+                    const oldKey = normalizeCompanyProductKey(targetData.companyKey || targetData.companyName || currentCompany);
+                    const newCompanyKey = normalizeCompanyProductKey(newCompany);
+                    if (!newCompanyKey) throw new Error('ชื่อบริษัทใหม่ไม่ถูกต้อง');
 
-                    await targetRef.update({
-                        companyName: newCompany,
-                        companyKey: stableCompanyKey,
-                        district: newDistrict,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
+                    // อ่าน deliveries และ companyProducts ในขอบเขตเจ้าของข้อมูลเดียวกัน
+                    // Admin อ่านได้ทั้งหมดแต่จะอัปเดตเฉพาะ ownerUid เดียวกับเอกสารต้นทางเท่านั้น
+                    let deliveryRef = db.collection('deliveries');
+                    let companyProductsRef = db.collection('companyProducts');
+                    if (currentUserProfile?.role !== 'admin') {
+                        deliveryRef = deliveryRef.where('ownerUid', '==', currentAuthUser.uid);
+                        companyProductsRef = companyProductsRef.where('ownerUid', '==', currentAuthUser.uid);
+                    }
+                    const [deliverySnapshot, productSnapshot] = await Promise.all([
+                        deliveryRef.get(),
+                        companyProductsRef.get()
+                    ]);
 
-                    // ซิงก์ชื่อบริษัทใน Company Directory เฉพาะสินค้าของบริษัทเดิม
-                    // Admin ตรวจได้ทุกเอกสาร ส่วน User ต้องจำกัด query ด้วย ownerUid
-                    // แบ่ง Batch เป็นชุดไม่เกิน 450 รายการ เพื่อไม่ชนเพดาน Firestore
-                    const oldCompanyNameKey = normalizeCompanyProductKey(targetData.companyName || currentCompany);
-                    const oldCompanyKey = normalizeCompanyProductKey(targetData.companyKey || targetData.companyName || currentCompany);
-                    const stableCompanyKeyNormalized = normalizeCompanyProductKey(stableCompanyKey);
-                    const companyProductsRef = db.collection('companyProducts');
-                    const companyProductsQuery = currentUserProfile?.role === 'admin'
-                        ? companyProductsRef
-                        : companyProductsRef.where('ownerUid', '==', currentAuthUser.uid);
-                    const productSnapshot = await companyProductsQuery.get();
-                    const matchingCompanyProductRefs = [];
-                    productSnapshot.forEach(productDoc => {
-                        const productData = productDoc.data() || {};
-                        // แม้ Admin จะมองเห็นทุกคน ก็แก้เฉพาะรายการของเจ้าของเอกสารบริษัทที่กำลังแก้
-                        // เอกสารเก่าที่ไม่มี ownerUid จะไม่ถูกเหมารวมกับข้อมูลของผู้ใช้อื่น
-                        if (targetData.ownerUid &&
-                            String(productData.ownerUid || '') !== String(targetData.ownerUid)) return;
-                        if (!targetData.ownerUid && productData.ownerUid) return;
+                    const belongsToSameOwner = data => {
+                        if (targetData.ownerUid) return String(data.ownerUid || '') === String(targetData.ownerUid);
+                        return !data.ownerUid;
+                    };
+                    const belongsToOldCompany = data => {
+                        if (!belongsToSameOwner(data)) return false;
+                        const rowNameKey = normalizeCompanyProductKey(data.companyName || '');
+                        const rowCompanyKey = normalizeCompanyProductKey(data.companyKey || '');
+                        return (!!oldKey && rowCompanyKey === oldKey) || (!!oldNameKey && rowNameKey === oldNameKey);
+                    };
 
-                        const productKey = normalizeCompanyProductKey(productData.companyKey || '');
-                        const productNameKey = normalizeCompanyProductKey(productData.companyName || '');
-                        if ((oldCompanyKey && productKey === oldCompanyKey) ||
-                            (stableCompanyKeyNormalized && productKey === stableCompanyKeyNormalized) ||
-                            (oldCompanyNameKey && productNameKey === oldCompanyNameKey)) {
-                            matchingCompanyProductRefs.push(productDoc.ref);
+                    // เปลี่ยนชื่อและ companyKey ของทุกเอกสารลูกค้าภายใต้บริษัทเดิม
+                    // ทำให้ลูกค้าหลายรายของบริษัทเดียวกันไม่เหลือชื่อเก่าค้างอยู่
+                    const deliveryUpdates = new Map();
+                    deliverySnapshot.forEach(doc => {
+                        const data = doc.data() || {};
+                        if (belongsToOldCompany(data)) {
+                            deliveryUpdates.set(doc.ref.path, { ref: doc.ref, payload: {
+                                companyName: newCompany,
+                                companyKey: newCompanyKey,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            }});
                         }
                     });
-                    for (let i = 0; i < matchingCompanyProductRefs.length; i += 450) {
-                        const batch = db.batch();
-                        matchingCompanyProductRefs.slice(i, i + 450).forEach(productRef => {
-                            batch.update(productRef, {
-                                companyKey: stableCompanyKey,
+                    // เก็บการแก้ไขเขตของเอกสารที่ผู้ใช้กดแก้ไว้ด้วย
+                    deliveryUpdates.set(targetRef.path, { ref: targetRef, payload: {
+                        companyName: newCompany,
+                        companyKey: newCompanyKey,
+                        district: newDistrict,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    }});
+
+                    // ย้ายสินค้าทุกชิ้นจากชื่อ/คีย์บริษัทเดิมไปยังชื่อใหม่ โดยไม่สร้างหรือลบเอกสารสินค้า
+                    const productUpdates = [];
+                    productSnapshot.forEach(doc => {
+                        const data = doc.data() || {};
+                        if (belongsToOldCompany(data)) {
+                            productUpdates.push({ ref: doc.ref, payload: {
                                 companyName: newCompany,
+                                companyKey: newCompanyKey,
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                        });
+                            }});
+                        }
+                    });
+
+                    const operations = [...deliveryUpdates.values(), ...productUpdates];
+                    for (let i = 0; i < operations.length; i += 450) {
+                        const batch = db.batch();
+                        operations.slice(i, i + 450).forEach(op => batch.update(op.ref, op.payload));
                         await batch.commit();
                     }
 
-                    showToast('แก้ไขชื่อบริษัทสำเร็จ และรักษารายการสินค้าเดิมไว้แล้ว', 'success');
+                    // อัปเดตข้อมูลในหน่วยความจำทันที ไม่ต้องรอ reload และคงประวัติซื้อขาย/จัดส่งทั้งหมดไว้
+                    if (Array.isArray(allDeliveries)) {
+                        allDeliveries.forEach(item => {
+                            if (belongsToOldCompany(item) || String(item.id || '') === String(docId)) {
+                                item.companyName = newCompany;
+                                item.companyKey = newCompanyKey;
+                                if (String(item.id || '') === String(docId)) item.district = newDistrict;
+                            }
+                        });
+                    }
+                    if (Array.isArray(allCompanyProducts)) {
+                        allCompanyProducts.forEach(product => {
+                            if (belongsToOldCompany(product)) {
+                                product.companyName = newCompany;
+                                product.companyKey = newCompanyKey;
+                            }
+                        });
+                    }
+                    if (typeof invalidateCompanyCatalogCache === 'function') invalidateCompanyCatalogCache();
+                    if (typeof rebuildStockLinkedCompanyCache === 'function') rebuildStockLinkedCompanyCache();
+                    if (typeof renderList === 'function') renderList(allDeliveries);
+                    if (typeof refreshCompanyProductsForCompanyActions === 'function') {
+                        try { await refreshCompanyProductsForCompanyActions(); } catch (refreshError) { console.warn('refresh after company rename:', refreshError); }
+                    }
+
+                    showToast(`เปลี่ยนชื่อบริษัทเป็น "${newCompany}" สำเร็จ • อัปเดตข้อมูลบริษัท ${deliveryUpdates.size} รายการ และย้ายสินค้าประจำบริษัท ${productUpdates.length} รายการแล้ว`, 'success');
                     closeModal();
                 } catch (err) {
-                    console.error('แก้ไขชื่อบริษัทไม่สำเร็จ:', err);
-                    showToast('ไม่สามารถแก้ไขข้อมูลบริษัทได้', 'error');
+                    console.error('แก้ไขชื่อบริษัทและย้ายรายการสินค้าไม่สำเร็จ:', err);
+                    showToast(`ไม่สามารถเปลี่ยนชื่อบริษัทได้: ${err.message || 'กรุณาตรวจสอบสิทธิ์ Firestore'}`, 'error');
+                    if (confirmButton) { confirmButton.disabled = false; confirmButton.textContent = 'บันทึกการแก้ไข'; }
                 }
             }, { once: true });
 
