@@ -14842,10 +14842,19 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
         (item.createdAt?.toMillis ? item.createdAt.toMillis() : 0);
       const existingTime=existing?._overviewTime || 0;
       if(!existing || itemTime >= existingTime){
+        // เก็บเลขเขตจากข้อมูลเดิมไว้ หากรายการล่าสุดไม่ได้ระบุ district
+        // เพื่อไม่ให้เลขเขตหายเมื่อมีการเพิ่ม/แก้ไขที่อยู่ในภายหลัง
         rows.set(key,{...item,_overviewCompany:company,_overviewKey:key,_overviewTime:itemTime,
+          district: String(item.district || existing?.district || '').trim(),
           customerPhoto:item.customerPhoto || existing?.customerPhoto || ''});
-      }else if(item.customerPhoto && !existing.customerPhoto){
-        existing.customerPhoto=item.customerPhoto;
+      }else{
+        // เติมข้อมูลที่อาจมีเฉพาะในรายการเก่า โดยไม่เขียนทับข้อมูลล่าสุด
+        if(item.customerPhoto && !existing.customerPhoto){
+          existing.customerPhoto=item.customerPhoto;
+        }
+        if(!String(existing.district || '').trim() && String(item.district || '').trim()){
+          existing.district=String(item.district).trim();
+        }
       }
     });
     return Array.from(rows.values()).sort((a,b)=>
@@ -14934,7 +14943,8 @@ document.getElementById('save-reminder-btn').addEventListener('click', () => {
           </div>
           <div class="customer-overview-name">${escapeHTML(customer)}</div>
           ${phone ? `<div class="customer-overview-line"><span>☎️</span><span>${escapeHTML(phone)}</span></div>` : ''}
-          ${address ? `<div class="customer-overview-line"><span>📍</span><span>${escapeHTML(address)}</span></div>` : (district ? `<div class="customer-overview-line"><span>📍</span><span>เขต ${escapeHTML(district)}</span></div>` : '')}
+          ${district ? `<div class="customer-overview-line"><span>📍</span><span>เขต ${escapeHTML(district)}</span></div>` : ''}
+          ${address ? `<div class="customer-overview-line"><span>🏠</span><span>${escapeHTML(address)}</span></div>` : ''}
           <span class="customer-overview-contact-count">${customerCount > 1 ? `ผู้ติดต่อ ${customerCount} คน` : 'ข้อมูลลูกค้า'}</span>
         </article>`;
     }).join('')}</div>`;
