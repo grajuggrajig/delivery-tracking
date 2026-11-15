@@ -287,13 +287,11 @@
                             <template x-for="emp in employees" :key="'he'+emp.id"><option :value="String(emp.id)" x-text="emp.name"></option></template>
                         </select>
                         <select x-model="historyStatus" @change="prepareHistory()" class="text-xs border border-slate-300 rounded-lg px-3 py-2 bg-white outline-none focus:border-indigo-500">
-                            <option value="all">ทุกสถานะ</option>
-                            <option value="✓">✓ มาปกติ</option>
-                            <option value="S">S มาสาย</option>
+                            <option value="all">ขาด / ลา / มาสาย</option>
+                            <option value="A">A ขาดงาน</option>
                             <option value="P">P ลากิจ</option>
                             <option value="Sick">Sick ลาป่วย</option>
-                            <option value="A">A ขาดงาน</option>
-                            <option value="H">H วันหยุด</option>
+                            <option value="S">S มาสาย</option>
                         </select>
                     </div>
                 </div>
@@ -315,7 +313,7 @@
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div class="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <div class="text-sm font-bold text-slate-800">รายการประวัติ <span class="text-indigo-600" x-text="filteredHistory.length"></span> รายการ</div>
-                    <button @click="exportHistoryCSV()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3.5 py-2 rounded-lg shadow transition">⬇ Export ประวัติ CSV</button>
+                    <button @click="printHistoryPage()" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium px-3.5 py-2 rounded-lg shadow transition">🖨️ พิมพ์หน้านี้</button>
                 </div>
                 <div class="overflow-auto max-h-[620px]">
                     <table class="w-full text-left border-collapse whitespace-nowrap">
@@ -798,6 +796,11 @@
                         const day = Number(parts[3]);
                         const status = this.attendanceRecords[key];
                         if (!year || !month || !day || !status) return;
+
+                        // แสดงเฉพาะประวัติ ขาด / ลา / มาสาย เท่านั้น
+                        // ไม่แสดง ✓ มาปกติ และ H วันหยุด โดยไม่แก้ไขข้อมูลใน Firestore
+                        if (!['A', 'P', 'Sick', 'S'].includes(status)) return;
+
                         if (yearFilter && year !== yearFilter) return;
                         if (monthFilter && month !== monthFilter) return;
                         if (empFilter && empId !== empFilter) return;
@@ -875,6 +878,158 @@
                     const url = URL.createObjectURL(blob);
                     const a = document.createElement('a'); a.href=url; a.download=`Attendance_History_${this.historyYear}_${this.historyMonth}_${this.historyEmployee}.csv`;
                     document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+                },
+
+
+                printHistoryPage() {
+                    // แปลงอักขระพิเศษก่อนนำข้อมูลไปแสดงในเอกสารพิมพ์
+                    // ประกาศภายในเมธอดเพื่อไม่พึ่งพาฟังก์ชัน global ที่ไม่มีในไฟล์นี้
+                    const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g, char => ({
+                        '&': '&amp;',
+                        '<': '&lt;',
+                        '>': '&gt;',
+                        '"': '&quot;',
+                        "'": '&#39;'
+                    }[char]));
+
+                    if (!this.filteredHistory || !this.filteredHistory.length) {
+                        showToast('ไม่มีข้อมูลประวัติสำหรับพิมพ์', 'info');
+                        return;
+                    }
+
+                    const yearFilter = this.historyYear === 'all' ? null : Number(this.historyYear);
+                    const monthFilter = this.historyMonth === 'all' ? null : Number(this.historyMonth);
+                    const empFilter = this.historyEmployee === 'all' ? null : String(this.historyEmployee);
+                    const selectedEmployees = this.employees.filter(emp => !empFilter || String(emp.id) === empFilter);
+
+                    let workdaysValue = '—';
+                    let lateValue = this.filteredHistory.filter(r => r.status === 'S').length;
+                    let actualValue = '—';
+                    let personalValue = this.filteredHistory.filter(r => r.status === 'P').length;
+                    let sickValue = this.filteredHistory.filter(r => r.status === 'Sick').length;
+                    let absentValue = this.filteredHistory.filter(r => r.status === 'A').length;
+
+                    // เมื่อเลือกปีและเดือน ให้ใช้สูตรสรุปเดียวกับรายงานประจำช่วงเวลา
+                    // โดยคำนวณจากพนักงานที่เลือก (หรือพนักงานทั้งหมด)
+                    if (yearFilter && monthFilter) {
+                        const stats = selectedEmployees.map(emp =>
+                            this.getEmployeeStatsForRange(emp.id, yearFilter, monthFilter)
+                        );
+                        const sum = key => stats.reduce((total, item) => total + (Number(item[key]) || 0), 0);
+                        workdaysValue = this.getWorkdaysForRange(yearFilter, monthFilter);
+                        lateValue = sum('late');
+                        actualValue = sum('actual');
+                        personalValue = sum('personal');
+                        sickValue = sum('sick');
+                        absentValue = sum('absent');
+                    }
+
+                    const cards = [
+                        ['วันทำงานบริษัท (จ.-ส.)', workdaysValue, '#4338ca'],
+                        ['มาสาย S', lateValue, '#d97706'],
+                        ['ปฏิบัติงานจริง', actualValue, '#334155'],
+                        ['ลากิจ P', personalValue, '#2563eb'],
+                        ['ลาป่วย Sick', sickValue, '#9333ea'],
+                        ['ขาดงาน A', absentValue, '#e11d48']
+                    ];
+
+                    const cardsHTML = cards.map(card => `
+                        <div class="card">
+                            <div class="label">${escapeHTML(String(card[0]))}</div>
+                            <div class="value" style="color:${card[2]}">${escapeHTML(String(card[1]))}</div>
+                        </div>
+                    `).join('');
+
+                    const rowsHTML = this.filteredHistory.map(row => `
+                        <tr>
+                            <td>${escapeHTML(`${row.day}/${row.month}/${row.year + 543}`)}</td>
+                            <td>${escapeHTML('EMP' + String(row.employeeNo || '').padStart(3, '0'))}</td>
+                            <td>${escapeHTML(String(row.name || ''))}</td>
+                            <td>${escapeHTML(String(row.position || '-'))}</td>
+                            <td class="status">${escapeHTML(String(this.statusLabel(row.status)))}</td>
+                        </tr>
+                    `).join('');
+
+                    const monthName = monthFilter ? this.months[monthFilter - 1] : 'ทุกเดือน';
+                    const yearName = yearFilter ? `พ.ศ. ${yearFilter + 543}` : 'ทุกปี';
+                    const employeeName = empFilter
+                        ? (selectedEmployees[0]?.name || this.filteredHistory[0]?.name || 'พนักงานที่เลือก')
+                        : 'พนักงานทั้งหมด';
+                    const statusName = this.historyStatus === 'all' ? 'ขาด / ลา / มาสาย' : this.statusLabel(this.historyStatus);
+
+                    const printWindow = window.open('', '_blank', 'width=1100,height=800');
+                    if (!printWindow) {
+                        showToast('เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาต Pop-up สำหรับเว็บไซต์นี้', 'warning');
+                        return;
+                    }
+
+                    printWindow.document.open();
+                    printWindow.document.write(`<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ประวัติการลงเวลาย้อนหลัง</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}body{font-family:'Sarabun',Tahoma,sans-serif;color:#1e293b;margin:0;padding:22px;font-size:12px}
+h1{text-align:center;font-size:22px;margin:0 0 5px;color:#312e81}
+.subtitle{text-align:center;color:#475569;margin:0 0 18px;font-size:12px}
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:18px}
+.card{border:1px solid #cbd5e1;border-radius:9px;padding:12px 14px;break-inside:avoid}
+.label{font-size:11px;color:#64748b}.value{font-size:23px;font-weight:700;margin-top:4px}
+table{width:100%;border-collapse:collapse}thead{display:table-header-group}
+th{background:#312e81;color:#fff;padding:9px 7px;border:1px solid #cbd5e1;text-align:left}
+td{padding:8px 7px;border:1px solid #cbd5e1}tbody tr:nth-child(even){background:#f8fafc}
+.status{text-align:center;font-weight:600}.toolbar{text-align:right;margin-bottom:12px}
+.toolbar button{border:1px solid #94a3b8;border-radius:7px;padding:7px 14px;background:#f8fafc;cursor:pointer;font:600 12px Sarabun}
+@page{size:A4 portrait;margin:12mm}
+@media print{body{padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}.no-print{display:none!important}.cards{grid-template-columns:repeat(3,minmax(0,1fr))}tr{break-inside:avoid}}
+</style>
+</head>
+<body>
+<div class="toolbar no-print"><button onclick="window.print()">พิมพ์หน้านี้</button></div>
+<h1>🕘 ประวัติการลงเวลาย้อนหลัง</h1>
+<div class="subtitle">${escapeHTML(employeeName)} • ${escapeHTML(monthName)} ${escapeHTML(yearName)} • สถานะ: ${escapeHTML(statusName)}</div>
+<div class="cards">${cardsHTML}</div>
+<table>
+<thead><tr><th>วันที่</th><th>รหัสพนักงาน</th><th>ชื่อ - นามสกุล</th><th>ตำแหน่ง</th><th style="text-align:center">สถานะ</th></tr></thead>
+<tbody>${rowsHTML || '<tr><td colspan="5" style="text-align:center">ไม่พบข้อมูล</td></tr>'}</tbody>
+</table>
+<script>
+(function(){
+  let finished = false;
+  const returnToOriginalPage = () => {
+    if (finished) return;
+    finished = true;
+    try {
+      if (window.opener && !window.opener.closed) {
+        window.opener.focus();
+      }
+    } catch(e) {}
+    try { window.close(); } catch(e) {}
+  };
+  // afterprint fires after both successful printing and cancelling the dialog.
+  window.addEventListener('afterprint', returnToOriginalPage);
+  // Some browsers do not fire afterprint consistently when the dialog is cancelled.
+  window.addEventListener('focus', function onReturnFocus() {
+    if (finished) return;
+    setTimeout(() => {
+      if (document.visibilityState === 'visible' && !document.hasFocus()) {
+        returnToOriginalPage();
+      }
+    }, 250);
+  }, { once: true });
+  window.addEventListener('load', () => {
+    window.focus();
+    setTimeout(() => { try { window.print(); } catch(e) { returnToOriginalPage(); } }, 300);
+  });
+})();
+<\/script>
+</body>
+</html>`);
+                    printWindow.document.close();
+                    printWindow.focus();
                 },
 
                 getPeriodLabel() {
