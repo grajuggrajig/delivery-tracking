@@ -710,17 +710,10 @@
 
                     const workdays = this.getWorkdaysForRange(year, month, startDay, end);
 
-                    // ขาดงานคำนวณอัตโนมัติจากวันทำงานสุทธิ
-                    // โดยไม่นับวันหยุด H และไม่นับวันที่มีสถานะ ✓ / S / P / Sick ซ้ำ
-                    const recordedWorked = normal + late;
-                    const balanceAbsent = Math.max(
-                        0,
-                        workdays - personal - sick - recordedWorked
-                    );
-
-                    const absent = this.isPeriodComplete(year, month, startDay, end)
-                        ? Math.max(explicitAbsent, balanceAbsent)
-                        : explicitAbsent;
+                    // ขาดงานนับเฉพาะวันที่มีการบันทึกสถานะ A อย่างชัดเจนเท่านั้น
+                    // วันที่ไม่มีข้อมูลบันทึก (null) ห้ามนำไปเหมารวมเป็นขาดงาน
+                    // เพื่อป้องกันยอดขาดงานย้อนหลังสูงเกินจริง
+                    const absent = explicitAbsent;
 
                     // ปฏิบัติงานจริง = วันทำงานสุทธิ - ลากิจ - ลาป่วย - ขาดงาน
                     const actual = Math.max(
