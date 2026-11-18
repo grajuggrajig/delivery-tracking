@@ -404,6 +404,12 @@
             background-color: var(--danger-color);
             color: white;
         }
+        .btn-del:disabled {
+            background-color: #f1f5f9;
+            color: #94a3b8;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
 
         /* Footer & Summary Table */
         .footer-table {
@@ -499,7 +505,10 @@
         .po-load-modal.show { display:flex; }
         .po-load-panel { width:min(620px,100%); max-height:80vh; overflow:auto; background:#fff; border-radius:16px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
         .po-saved-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid #e2e8f0; }
+        .po-saved-row .actions { display: flex; gap: 8px; align-items: center; }
         .po-saved-row button { border:0; border-radius:8px; padding:7px 12px; background:#0f766e; color:#fff; cursor:pointer; font-family:inherit; }
+        .po-saved-row button.btn-danger-row { background:#ef4444; }
+
         /* Print Settings */
         @media print {
             @page {
@@ -646,6 +655,7 @@
     const poDb = firebase.firestore();
     let poCurrentUser = null;
     let poSaving = false;
+    let poCurrentRecordId = null;
     poAuth.onAuthStateChanged(user => { poCurrentUser = user || null; });
     function getPurchaseOrderDocId(poNo, uid) {
         return `${uid}_${encodeURIComponent(String(poNo || '').trim()).replace(/\\./g, '%2E')}`;
@@ -676,16 +686,8 @@
         sigApprovedDate: ""
     };
 
+    // กำหนดค่าเริ่มต้นให้มีเพียง 1 รายการเท่านั้น
     let itemsData = [
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
-        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
         { desc: "", model: "", qty: 1, unit: "", price: 0.00 }
     ];
 
@@ -822,6 +824,9 @@
                     const itemPrice = Number(item.price || 0);
                     const itemQty = Number(item.qty || 0);
                     const itemAmount = itemQty * itemPrice;
+                    
+                    // เงื่อนไข: หากมีรายการเหลือเพียง 1 รายการ จะไม่อนุญาตให้ลบ (ปิดการใช้งานปุ่มลบ)
+                    const isOnlyOneRow = itemsData.length <= 1;
 
                     pageHTML += `
                         <tr class="item-row" data-item-index="${actualIndex}">
@@ -832,7 +837,7 @@
                             <td><input type="text" class="unit-input" placeholder="ชิ้น" value="${item.unit || ""}" oninput="updateItemData(${actualIndex}, 'unit', this.value)"></td>
                             <td><input type="text" class="price" placeholder="0.00" value="${itemPrice.toFixed(2)}" oninput="updateItemData(${actualIndex}, 'price', this.value)"></td>
                             <td class="amount" style="text-align: right; font-weight: 600;">${itemAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                            <td class="no-print" style="text-align: center;"><button class="btn-del" onclick="removeRow(${actualIndex})">ลบ</button></td>
+                            <td class="no-print" style="text-align: center;"><button class="btn-del" ${isOnlyOneRow ? 'disabled title="ต้องมีรายการสินค้าอย่างน้อย 1 รายการ"' : ''} onclick="removeRow(${actualIndex})">ลบ</button></td>
                         </tr>
                     `;
                 });
@@ -962,6 +967,11 @@
     }
 
     function removeRow(index) {
+        // ป้องกันไม่ให้ลบจนหมดตาราง (ต้องเหลืออย่างน้อย 1 รายการเสมอ)
+        if (itemsData.length <= 1) {
+            showToast("ต้องมีรายการสินค้าอย่างน้อย 1 รายการ ไม่สามารถลบได้", true);
+            return;
+        }
         itemsData.splice(index, 1);
         renderDocument();
     }
@@ -1137,7 +1147,7 @@
         } finally { poSaving = false; }
     }
 
-        async function openSavedPurchaseOrders() {
+    async function openSavedPurchaseOrders() {
         const modal = document.getElementById('po-load-modal');
         const list = document.getElementById('po-saved-list');
         modal.classList.add('show');
@@ -1156,9 +1166,20 @@
                 const detail = document.createElement('div'); detail.style.cssText = 'font-size:11px;color:#64748b;margin-top:3px;';
                 detail.textContent = `ผู้ขาย: ${(record.docMeta && record.docMeta.vendorName) || '-'} · ${(record.itemsData || []).length} รายการ`;
                 info.append(name, detail);
-                const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'เปิดแก้ไข';
-                btn.addEventListener('click', () => loadPurchaseOrderRecord(record));
-                row.append(info, btn); list.appendChild(row);
+                
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'actions';
+                
+                const btnOpen = document.createElement('button'); btnOpen.type = 'button'; btnOpen.textContent = 'เปิดแก้ไข';
+                btnOpen.addEventListener('click', () => loadPurchaseOrderRecord(record));
+                
+                // 📂 เพิ่มปุ่มลบรายการออนไลน์ในหน้าต่างจัดการใบสั่งซื้อ
+                const btnDelete = document.createElement('button'); btnDelete.type = 'button'; btnDelete.className = 'btn-danger-row'; btnDelete.textContent = 'ลบ';
+                btnDelete.addEventListener('click', () => deletePurchaseOrderRecord(record.id, record.poNo));
+                
+                actionsDiv.append(btnOpen, btnDelete);
+                row.append(info, actionsDiv); 
+                list.appendChild(row);
             });
         } catch (error) {
             console.error('Purchase Order online load failed:', error);
@@ -1166,9 +1187,22 @@
         }
     }
 
+    async function deletePurchaseOrderRecord(docId, poNo) {
+        if (!confirm(`คุณต้องการลบใบสั่งซื้อเลขที่ "${poNo || docId}" จากระบบออนไลน์ใช่หรือไม่?`)) return;
+        try {
+            await poDb.collection('purchaseOrders').doc(docId).delete();
+            showToast(`ลบใบสั่งซื้อ ${poNo || ''} สำเร็จ`);
+            openSavedPurchaseOrders(); // รีเฟรชรายการในโมดอล
+        } catch (error) {
+            console.error('Delete online purchase order failed:', error);
+            showToast('ลบรายการไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', true);
+        }
+    }
+
     function loadPurchaseOrderRecord(record) {
         if (!record || !record.docMeta || !Array.isArray(record.itemsData)) { showToast('รูปแบบข้อมูลใบสั่งซื้อไม่ถูกต้อง', true); return; }
         if (!confirm(`ต้องการเปิดใบสั่งซื้อ ${record.poNo || ''} เพื่อแก้ไขหรือไม่? ข้อมูลบนหน้าปัจจุบันจะถูกแทนที่`)) return;
+        poCurrentRecordId = record.id;
         docMeta = { ...docMeta, ...record.docMeta };
         itemsData = record.itemsData.map(item => ({ desc:'', model:'', qty:1, unit:'', price:0, ...item }));
         closeSavedPurchaseOrders();
