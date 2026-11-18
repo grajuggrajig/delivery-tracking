@@ -658,7 +658,7 @@
     let poCurrentRecordId = null;
     poAuth.onAuthStateChanged(user => { poCurrentUser = user || null; });
     function getPurchaseOrderDocId(poNo, uid) {
-        return `${uid}_${encodeURIComponent(String(poNo || '').trim()).replace(/\\./g, '%2E')}`;
+        return `${uid}_${encodeURIComponent(String(poNo || '').trim()).replace(/\./g, '%2E')}`;
     }
 
 
@@ -1099,6 +1099,32 @@
         ).map(item => ({ ...item }));
     }
 
+    // ฟังก์ชันสร้างเลข PO ถัดไปอัตโนมัติจากฐานข้อมูล
+    async function generateNextPoNo() {
+        if (!poCurrentUser) return `PO${yearAD}${month}001`;
+        try {
+            const snapshot = await poDb.collection('purchaseOrders').where('ownerUid', '==', poCurrentUser.uid).get();
+            let maxSeq = 0;
+            const prefix = `PO${yearAD}${month}`;
+            snapshot.docs.forEach(doc => {
+                const data = doc.data();
+                const pNo = data.poNo || (data.docMeta && data.docMeta.poNo) || '';
+                if (pNo.startsWith(prefix)) {
+                    const seqStr = pNo.slice(prefix.length);
+                    const seq = parseInt(seqStr, 10);
+                    if (!isNaN(seq) && seq > maxSeq) {
+                        maxSeq = seq;
+                    }
+                }
+            });
+            const nextSeq = String(maxSeq + 1).padStart(3, '0');
+            return `${prefix}${nextSeq}`;
+        } catch (e) {
+            console.error("Error generating PO No:", e);
+            return `PO${yearAD}${month}001`;
+        }
+    }
+
     async function savePurchaseOrderOnline(saveAsNew = false) {
         if (poSaving) return;
         if (!poCurrentUser) { showToast("กรุณาเข้าสู่ระบบจากหน้า CRM ก่อนบันทึกออนไลน์", true); return; }
@@ -1107,11 +1133,18 @@
             showToast("ไม่สามารถบันทึกได้ เนื่องจากยังไม่มีรายการสินค้า กรุณาเพิ่มชื่อสินค้าหรือรายละเอียดอย่างน้อย 1 รายการ", true);
             return;
         }
-        const poNo = String(docMeta.poNo || '').trim();
-        if (!poNo) { showToast("กรุณาระบุเลขที่ใบสั่งซื้อ (PO No.) ก่อนบันทึก", true); return; }
 
         try {
             poSaving = true;
+            let poNo = String(docMeta.poNo || '').trim();
+
+            // รันเลข PO อัตโนมัติเมื่อกดบันทึก (กรณีสร้างเอกสารใหม่หรือบันทึกเป็นใหม่)
+            if (saveAsNew || !poCurrentRecordId || !poNo || poNo === autoPoNo) {
+                poNo = await generateNextPoNo();
+                docMeta.poNo = poNo;
+                document.querySelectorAll('.meta-field[data-field="poNo"]').forEach(el => { el.value = poNo; });
+            }
+
             let docId;
             if (saveAsNew) {
                 docId = `${poCurrentUser.uid}_new_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
