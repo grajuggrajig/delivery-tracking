@@ -492,6 +492,14 @@
             gap: 35px;
         }
 
+        .add-row-floating-wrap { position:sticky; bottom:14px; z-index:900; display:flex; justify-content:flex-end; margin:10px 0 18px; pointer-events:none; }
+        .add-row-floating { pointer-events:auto; display:inline-flex; align-items:center; gap:8px; border:0; border-radius:999px; padding:11px 19px; color:#fff; background:linear-gradient(135deg,#e91e63,#be185d); box-shadow:0 8px 22px rgba(190,24,93,.28); font-family:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+        .add-row-floating:hover { transform:translateY(-2px); filter:brightness(1.05); }
+        .po-load-modal { position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; padding:18px; background:rgba(15,23,42,.55); }
+        .po-load-modal.show { display:flex; }
+        .po-load-panel { width:min(620px,100%); max-height:80vh; overflow:auto; background:#fff; border-radius:16px; padding:20px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+        .po-saved-row { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px 4px; border-bottom:1px solid #e2e8f0; }
+        .po-saved-row button { border:0; border-radius:8px; padding:7px 12px; background:#0f766e; color:#fff; cursor:pointer; font-family:inherit; }
         /* Print Settings */
         @media print {
             @page {
@@ -504,7 +512,7 @@
                 font-size: 11px;
                 line-height: 1.3;
             }
-            .modern-toolbar, .no-print, #toast-container {
+            .modern-toolbar, .no-print, #toast-container, .add-row-floating-wrap, .po-load-modal {
                 display: none !important;
             }
             .page-sheet {
@@ -554,6 +562,15 @@
 <body>
 
 <div id="toast-container"></div>
+<div id="po-load-modal" class="po-load-modal no-print" role="dialog" aria-modal="true" aria-labelledby="po-load-title">
+  <div class="po-load-panel">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:12px;">
+      <h3 id="po-load-title" style="margin:0;color:#115e59;font-size:17px;">📂 ใบสั่งซื้อที่บันทึกออนไลน์</h3>
+      <button type="button" onclick="closeSavedPurchaseOrders()" style="border:0;background:#f1f5f9;border-radius:8px;padding:7px 11px;cursor:pointer;">ปิด ✕</button>
+    </div>
+    <div id="po-saved-list"><div style="padding:18px;text-align:center;color:#64748b;">กำลังโหลดข้อมูล...</div></div>
+  </div>
+</div>
 
 <!-- แถบเครื่องมือด้านบน -->
 <div class="modern-toolbar no-print">
@@ -566,10 +583,14 @@
   </div>
   
   <div class="toolbar-group">
-    <button class="icon-btn btn-add" onclick="addRow()" data-tooltip="เพิ่มรายการสั่งซื้อ">
-      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-      </svg>
+    <button class="icon-btn btn-add" onclick="savePurchaseOrderOnline()" data-tooltip="บันทึกใบสั่งซื้อออนไลน์" aria-label="บันทึกใบสั่งซื้อออนไลน์">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M5 4.5h12l2.5 2.5v12.5H4.5v-15H5Z M8 4.5v5h8v-5 M8 19.5v-6h8v6" /></svg>
+    </button>
+    <button class="icon-btn" style="background:#7c3aed;color:#fff;" onclick="savePurchaseOrderOnline(true)" data-tooltip="Save New - บันทึกเป็นใบสั่งซื้อใหม่" aria-label="Save New">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" /></svg>
+    </button>
+    <button class="icon-btn" style="background:#2563eb;color:#fff;" onclick="openSavedPurchaseOrders()" data-tooltip="เรียกดู / แก้ไขใบสั่งซื้อที่บันทึกไว้" aria-label="เรียกดูใบสั่งซื้อ">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5.5h16M4 12h16M4 18.5h16" /></svg>
     </button>
     
     <button class="icon-btn btn-print" onclick="window.print()" data-tooltip="พิมพ์ / บันทึก PDF">
@@ -583,6 +604,9 @@
 <!-- พื้นที่แสดงหน้าเอกสาร -->
 <div id="print-pages-container"></div>
 
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 <script>
     function showToast(message, isError = false) {
         const container = document.getElementById('toast-container');
@@ -607,6 +631,26 @@
     const currentDateFormatted = `${day}/${month}/${yearBE}`;
 
     const autoPoNo = urlParams.get('poNo') || `PO${yearAD}${month}001`;
+
+    // Firebase โปรเจกต์เดียวกับ CRM ใช้ session การเข้าสู่ระบบเดิม
+    const poFirebaseConfig = {
+        apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+        authDomain: "delivery-tracking-2313a.firebaseapp.com",
+        projectId: "delivery-tracking-2313a",
+        storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+        messagingSenderId: "631670801383",
+        appId: "1:631670801383:web:e720570af97bad7011f342"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(poFirebaseConfig);
+    const poAuth = firebase.auth();
+    const poDb = firebase.firestore();
+    let poCurrentUser = null;
+    let poSaving = false;
+    poAuth.onAuthStateChanged(user => { poCurrentUser = user || null; });
+    function getPurchaseOrderDocId(poNo, uid) {
+        return `${uid}_${encodeURIComponent(String(poNo || '').trim()).replace(/\\./g, '%2E')}`;
+    }
+
 
     // ข้อมูลหลักของใบสั่งซื้อ (Purchase Order)
     let docMeta = {
@@ -798,6 +842,12 @@
                         </tbody>
                     </table>
                 </div>
+
+                ${isLastPage ? `
+                    <div class="add-row-floating-wrap no-print">
+                        <button type="button" class="add-row-floating" onclick="addRow()"><span style="font-size:18px;line-height:1;">＋</span> เพิ่มรายการสั่งซื้อ</button>
+                    </div>
+                ` : ''}
 
                 ${!isLastPage ? `
                     <div style="text-align: right; font-size: 11px; color: var(--primary-color); font-style: italic; margin-bottom: 8px; font-weight: 600;">
@@ -1033,6 +1083,100 @@
         return result;
     }
 
+    function getValidPurchaseOrderItems() {
+        return (itemsData || []).filter(item =>
+            !!(String(item.desc || '').trim() || String(item.model || '').trim() || String(item.unit || '').trim())
+        ).map(item => ({ ...item }));
+    }
+
+    async function savePurchaseOrderOnline(saveAsNew = false) {
+        if (poSaving) return;
+        if (!poCurrentUser) { showToast("กรุณาเข้าสู่ระบบจากหน้า CRM ก่อนบันทึกออนไลน์", true); return; }
+        const validItems = getValidPurchaseOrderItems();
+        if (!validItems.length) {
+            showToast("ไม่สามารถบันทึกได้ เนื่องจากยังไม่มีรายการสินค้า กรุณาเพิ่มชื่อสินค้าหรือรายละเอียดอย่างน้อย 1 รายการ", true);
+            return;
+        }
+        const poNo = String(docMeta.poNo || '').trim();
+        if (!poNo) { showToast("กรุณาระบุเลขที่ใบสั่งซื้อ (PO No.) ก่อนบันทึก", true); return; }
+
+        try {
+            poSaving = true;
+            let docId;
+            if (saveAsNew) {
+                docId = `${poCurrentUser.uid}_new_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            } else if (poCurrentRecordId) {
+                docId = poCurrentRecordId;
+            } else {
+                docId = getPurchaseOrderDocId(poNo, poCurrentUser.uid);
+            }
+            const payload = {
+                poNo, ownerUid: poCurrentUser.uid,
+                docMeta: JSON.parse(JSON.stringify(docMeta)),
+                itemsData: JSON.parse(JSON.stringify(validItems)),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAtClient: new Date().toISOString()
+            };
+            if (saveAsNew) {
+                await poDb.collection('purchaseOrders').doc(docId).set({
+                    ...payload,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAtClient: new Date().toISOString()
+                });
+                showToast(`Save New: สร้างใบสั่งซื้อ ${poNo} เป็นเอกสารใหม่เรียบร้อยแล้ว (ไม่ทับบิลเดิม)`);
+            } else {
+                await poDb.collection('purchaseOrders').doc(docId).set(payload, { merge: true });
+                showToast(`บันทึกใบสั่งซื้อ ${poNo} ออนไลน์เรียบร้อยแล้ว`);
+            }
+            poCurrentRecordId = docId;
+            itemsData = validItems;
+            renderDocument();
+        } catch (error) {
+            console.error('Purchase Order online save failed:', error);
+            showToast("บันทึกออนไลน์ไม่สำเร็จ กรุณาตรวจสอบการเชื่อมต่อหรือสิทธิ์ Firestore", true);
+        } finally { poSaving = false; }
+    }
+
+        async function openSavedPurchaseOrders() {
+        const modal = document.getElementById('po-load-modal');
+        const list = document.getElementById('po-saved-list');
+        modal.classList.add('show');
+        list.textContent = 'กำลังโหลดข้อมูลจาก Firebase...';
+        if (!poCurrentUser) { list.textContent = 'กรุณาเข้าสู่ระบบจากหน้า CRM ก่อนเรียกดูใบสั่งซื้อ'; return; }
+        try {
+            const snapshot = await poDb.collection('purchaseOrders').where('ownerUid', '==', poCurrentUser.uid).get();
+            const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            records.sort((a,b) => String(b.updatedAtClient || '').localeCompare(String(a.updatedAtClient || '')));
+            list.innerHTML = '';
+            if (!records.length) { list.textContent = 'ยังไม่มีใบสั่งซื้อที่บันทึกไว้'; return; }
+            records.forEach(record => {
+                const row = document.createElement('div'); row.className = 'po-saved-row';
+                const info = document.createElement('div');
+                const name = document.createElement('strong'); name.textContent = record.poNo || '(ไม่มีเลขที่ PO)';
+                const detail = document.createElement('div'); detail.style.cssText = 'font-size:11px;color:#64748b;margin-top:3px;';
+                detail.textContent = `ผู้ขาย: ${(record.docMeta && record.docMeta.vendorName) || '-'} · ${(record.itemsData || []).length} รายการ`;
+                info.append(name, detail);
+                const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'เปิดแก้ไข';
+                btn.addEventListener('click', () => loadPurchaseOrderRecord(record));
+                row.append(info, btn); list.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Purchase Order online load failed:', error);
+            list.textContent = 'โหลดข้อมูลไม่สำเร็จ กรุณาตรวจสอบสิทธิ์ Firestore และการเชื่อมต่อ';
+        }
+    }
+
+    function loadPurchaseOrderRecord(record) {
+        if (!record || !record.docMeta || !Array.isArray(record.itemsData)) { showToast('รูปแบบข้อมูลใบสั่งซื้อไม่ถูกต้อง', true); return; }
+        if (!confirm(`ต้องการเปิดใบสั่งซื้อ ${record.poNo || ''} เพื่อแก้ไขหรือไม่? ข้อมูลบนหน้าปัจจุบันจะถูกแทนที่`)) return;
+        docMeta = { ...docMeta, ...record.docMeta };
+        itemsData = record.itemsData.map(item => ({ desc:'', model:'', qty:1, unit:'', price:0, ...item }));
+        closeSavedPurchaseOrders();
+        renderDocument();
+        showToast(`เปิดใบสั่งซื้อ ${record.poNo || ''} เรียบร้อยแล้ว สามารถแก้ไขและบันทึกทับ หรือกด Save New เพื่อสร้างบิลใหม่ได้`);
+    }
+    function closeSavedPurchaseOrders() { document.getElementById('po-load-modal').classList.remove('show'); }
+
     // โหลดรายชื่อผู้ขาย (Vendor) จาก localStorage (ถ้ามีเก็บไว้ในระบบ)
     let allVendorsData = [];
     function loadVendorDropdown() {
@@ -1126,6 +1270,45 @@
 
     window.addEventListener('resize', adjustAllTextareas);
     window.addEventListener('beforeprint', adjustAllTextareas);
+
+    // ก่อนพิมพ์ ซ่อนแถวสินค้าที่ว่างและเรียงเลขลำดับใหม่
+    let poPrintRowState = [];
+    window.addEventListener('beforeprint', function() {
+        poPrintRowState = [];
+        document.querySelectorAll('.page-sheet').forEach(sheet => {
+            const wrapper = sheet.querySelector('.table-responsive-wrapper');
+            const rows = Array.from(sheet.querySelectorAll('tbody .item-row'));
+            let visibleCount = 0;
+            rows.forEach(row => {
+                const desc = (row.querySelector('.item-desc')?.value || '').trim();
+                const model = (row.querySelector('.sku-input')?.value || '').trim();
+                const unit = (row.querySelector('.unit-input')?.value || '').trim();
+                const filled = !!(desc || model || unit);
+                poPrintRowState.push({ row, display: row.style.display, number: row.cells[0]?.textContent });
+                if (!filled) row.style.display = 'none';
+                else {
+                    visibleCount++;
+                    if (row.cells[0]) row.cells[0].textContent = String(visibleCount);
+                }
+            });
+            if (wrapper && visibleCount === 0) {
+                wrapper.dataset.poWasEmpty = 'true';
+                wrapper.style.display = 'none';
+            }
+        });
+    });
+    window.addEventListener('afterprint', function() {
+        poPrintRowState.forEach(state => {
+            state.row.style.display = state.display;
+            if (state.row.cells[0]) state.row.cells[0].textContent = state.number;
+        });
+        document.querySelectorAll('.table-responsive-wrapper[data-po-was-empty="true"]').forEach(wrapper => {
+            wrapper.style.display = '';
+            delete wrapper.dataset.poWasEmpty;
+        });
+        poPrintRowState = [];
+    });
+
 
     window.onload = function() {
         renderDocument();
