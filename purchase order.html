@@ -152,6 +152,7 @@
 
         .btn-home { background: rgba(74, 20, 140, 0.85); color: #ffffff; }
         .btn-add { background: rgba(233, 30, 99, 0.85); color: #ffffff; }
+        .btn-clear { background: #f59e0b; color: #ffffff; }
         .btn-print { background: rgba(15, 118, 110, 0.9); color: #ffffff; }
 
         .btn-action {
@@ -600,6 +601,9 @@
     </button>
     <button class="icon-btn" style="background:#2563eb;color:#fff;" onclick="openSavedPurchaseOrders()" data-tooltip="เรียกดู / แก้ไขใบสั่งซื้อที่บันทึกไว้" aria-label="เรียกดูใบสั่งซื้อ">
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 5.5h16M4 12h16M4 18.5h16" /></svg>
+    </button>
+    <button class="icon-btn btn-clear" onclick="clearPurchaseOrder(true)" data-tooltip="เคลียร์รายการทั้งหมด" aria-label="เคลียร์รายการ">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
     </button>
     
     <button class="icon-btn btn-print" onclick="window.print()" data-tooltip="พิมพ์ / บันทึก PDF">
@@ -1099,6 +1103,40 @@
         ).map(item => ({ ...item }));
     }
 
+    // ฟังก์ชันเคลียร์รายการทั้งหมดเพื่อเริ่มการสั่งซื้อใหม่
+    async function clearPurchaseOrder(askConfirm = false) {
+        if (askConfirm && !confirm("คุณต้องการเคลียร์รายการทั้งหมดเพื่อเริ่มการสั่งซื้อใหม่ใช่หรือไม่?")) return;
+        poCurrentRecordId = null;
+        const nextPoNo = await generateNextPoNo();
+        docMeta = {
+            vendorName: "",
+            vendorAddress: "",
+            vendorTaxNo: "",
+            vendorContact: "",
+            vendorTel: "",
+            poNo: nextPoNo,
+            poDate: currentDateFormatted,
+            refQuotationNo: "-",
+            creditTerm: "",
+            deliveryDate: "-",
+            deliveryAddress: "บริษัท เค แอล สเตชั่นเนอรี่ จำกัด 873, 875 ถนนสุขุมวิท 105 แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260",
+            remarkText: "1. กรุณาระบุเลขที่ใบสั่งซื้อ (PO No.) ในใบส่งของและใบกำกับภาษีทุกครั้ง\n2. การส่งมอบสินค้าถือว่าสมบูรณ์เมื่อผ่านการตรวจรับจากแผนกคลังสินค้าเรียบร้อยแล้ว",
+            discountRate: 0,
+            vatType: "exclude",
+            sigPreparedName: "",
+            sigPreparedDate: currentDateFormatted,
+            sigCheckedName: "",
+            sigCheckedDate: "",
+            sigApprovedName: "",
+            sigApprovedDate: ""
+        };
+        itemsData = [
+            { desc: "", model: "", qty: 1, unit: "", price: 0.00 }
+        ];
+        renderDocument();
+        showToast("เคลียร์รายการเรียบร้อยแล้ว พร้อมเริ่มการสั่งซื้อใหม่");
+    }
+
     // ฟังก์ชันสร้างเลข PO ถัดไปอัตโนมัติจากฐานข้อมูล
     async function generateNextPoNo() {
         if (!poCurrentUser) return `PO${yearAD}${month}001`;
@@ -1374,6 +1412,8 @@
             delete wrapper.dataset.poWasEmpty;
         });
         poPrintRowState = [];
+        // เคลียร์รายการอัตโนมัติหลังพิมพ์สำเร็จเพื่อเริ่มการสั่งซื้อครั้งใหม่
+        clearPurchaseOrder(false);
     });
 
 
