@@ -1,1 +1,1136 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ใบสั่งซื้อ (Purchase Order) - บริษัท เค แอล สเตชั่นเนอรี่ จำกัด</title>
+    <!-- Google Fonts: Sarabun & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #0f766e;       /* ปรับโทนสีเป็น Teal เข้ม สุภาพสำหรับเอกสารจัดซื้อ */
+            --primary-dark: #115e59;
+            --primary-light: #ccfbf1;
+            --secondary-color: #1e293b;
+            --border-color: #cbd5e1;
+            --bg-light: #f8fafc;
+            --success-color: #10b981;
+            --danger-color: #ef4444;
+            --shadow-subtle: 0 10px 30px -5px rgba(15, 118, 110, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            --radius-box: 16px;
+        }
 
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Sarabun', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f6f8fb 0%, #eef2f7 100%);
+            color: var(--secondary-color);
+            margin: 0;
+            padding: 30px 15px 60px 15px;
+            font-size: 13px;
+            line-height: 1.5;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        /* Toast Notification Styling */
+        #toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast-notification {
+            background: #ffffff;
+            color: var(--secondary-color);
+            padding: 12px 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            font-weight: 600;
+            border-left: 5px solid var(--success-color);
+            animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), fadeOut 0.3s ease 2.7s forwards;
+            max-width: 350px;
+        }
+
+        .toast-notification.error {
+            border-left-color: var(--danger-color);
+        }
+
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateY(-10px); }
+        }
+
+        /* Modern Sticky Toolbar */
+        .modern-toolbar {
+            position: sticky;
+            top: 15px;
+            z-index: 1000;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            margin: 10px auto 25px auto;
+            max-width: 900px;
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(12px) saturate(180%);
+            -webkit-backdrop-filter: blur(12px) saturate(180%);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 99px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+        }
+
+        .toolbar-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            outline: none;
+            cursor: pointer;
+            text-decoration: none;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+        }
+
+        .icon-btn svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .icon-btn:hover {
+            transform: translateY(-3px) scale(1.05);
+            box-shadow: 0 8px 15px -2px rgba(0, 0, 0, 0.15);
+        }
+
+        .icon-btn::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: -35px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.8);
+            opacity: 0;
+            pointer-events: none;
+            background: rgba(15, 23, 42, 0.85);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 4px 8px;
+            border-radius: 6px;
+            white-space: nowrap;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:hover::after {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+
+        .btn-home { background: rgba(74, 20, 140, 0.85); color: #ffffff; }
+        .btn-add { background: rgba(233, 30, 99, 0.85); color: #ffffff; }
+        .btn-print { background: rgba(15, 118, 110, 0.9); color: #ffffff; }
+
+        .btn-action {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+            color: white;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-family: inherit;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-action:hover { filter: brightness(1.1); }
+
+        /* Container & Page Layout */
+        .page-sheet {
+            max-width: 900px;
+            margin: 0 auto 35px auto;
+            background: #ffffff;
+            padding: 40px;
+            box-shadow: var(--shadow-subtle);
+            border-radius: var(--radius-box);
+            position: relative;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+
+        /* Header Section */
+        .header-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 18px;
+            margin-bottom: 18px;
+        }
+
+        .header-left {
+            display: flex;
+            gap: 18px;
+            align-items: flex-start;
+        }
+
+        .logo-container img {
+            width: 75px;
+            height: auto;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+
+        .shop-info-box .company-name {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--primary-dark);
+            margin-bottom: 4px;
+        }
+
+        .shop-info-box .address-text {
+            color: #64748b;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        .title-box {
+            text-align: right;
+        }
+
+        .title-main {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary-color);
+            letter-spacing: 0.5px;
+            line-height: 1.2;
+        }
+
+        .title-sub {
+            font-size: 11px;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            margin-top: 2px;
+        }
+
+        /* Top Info Grid */
+        .top-info {
+            width: 100%;
+            margin-bottom: 18px;
+            border-collapse: collapse;
+        }
+
+        .top-info td {
+            vertical-align: top;
+            padding: 4px;
+        }
+
+        .top-info td:first-child { width: 58%; }
+        .top-info td:last-child { width: 42%; }
+
+        .vendor-info-box {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            padding: 10px 12px;
+            border-radius: 12px;
+        }
+
+        .po-meta-box {
+            background-color: var(--primary-light);
+            border: 1px solid #99f6e4;
+            padding: 12px 14px;
+            border-radius: 12px;
+        }
+
+        .info-row {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: baseline;
+        }
+        .info-row:last-child { margin-bottom: 0; }
+
+        .info-label {
+            font-weight: 600;
+            color: #475569;
+            min-width: 115px;
+            font-size: 11.5px;
+        }
+
+        .inline-input {
+            border: none;
+            border-bottom: 1.5px dashed var(--border-color);
+            outline: none;
+            font-family: inherit;
+            font-size: inherit;
+            padding: 2px 6px;
+            color: var(--secondary-color);
+            background: transparent;
+            transition: all 0.25s ease;
+        }
+
+        .inline-input:focus {
+            border-bottom: 1.5px solid var(--primary-color);
+            background-color: #fff;
+            border-radius: 4px;
+        }
+
+        .inline-textarea {
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            outline: none;
+            font-family: inherit;
+            font-size: inherit;
+            padding: 3px 6px;
+            resize: none;
+            width: 100%;
+            background: #fff;
+            min-height: 26px;
+            height: auto;
+            overflow-y: hidden;
+            word-break: break-word !important;
+            overflow-wrap: break-word !important;
+            white-space: pre-wrap !important;
+        }
+
+        /* Delivery Box (สถานที่จัดส่งสำหรับใบสั่งซื้อ) */
+        .delivery-box {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 10px;
+            padding: 8px 12px;
+            margin-bottom: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Table Styling */
+        .table-responsive-wrapper {
+            margin-bottom: 15px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        .data-table th, .data-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px 10px;
+            vertical-align: middle !important;
+        }
+
+        .data-table th {
+            background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+            color: #334155;
+            text-align: center;
+            font-weight: 700;
+            font-size: 12px;
+        }
+
+        .item-desc {
+            display: block;
+            width: 100%;
+            min-height: 22px;
+            height: 22px;
+            box-sizing: border-box;
+            border: none;
+            outline: none;
+            resize: none;
+            margin: 0;
+            padding: 0;
+            font-family: inherit;
+            font-size: inherit;
+            line-height: 1.4;
+            background: transparent;
+            overflow: hidden;
+            white-space: pre-wrap !important;
+            overflow-wrap: anywhere !important;
+        }
+
+        .sku-input, .qty, .price, .unit-input {
+            width: 100%;
+            border: none;
+            outline: none;
+            font-family: inherit;
+            font-size: inherit;
+            background: transparent;
+        }
+
+        .qty, .price { text-align: right !important; }
+        .sku-input, .unit-input { text-align: center !important; }
+
+        .btn-del {
+            background-color: #fee2e2;
+            color: var(--danger-color);
+            border: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-del:hover {
+            background-color: var(--danger-color);
+            color: white;
+        }
+
+        /* Footer & Summary Table */
+        .footer-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .footer-table td {
+            border: 1px solid var(--border-color);
+            padding: 7px 12px;
+            font-size: 12px;
+        }
+
+        .footer-total-label {
+            background-color: var(--bg-light);
+            font-weight: 600;
+            color: #475569;
+            width: 25%;
+            white-space: nowrap;
+        }
+
+        /* Signature Section (3 ช่องสำหรับใบสั่งซื้อ: ผู้จัดทำ / ผู้ตรวจสอบ / ผู้อนุมัติสั่งซื้อ) */
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 15px;
+            page-break-inside: avoid;
+        }
+
+        .sig-box {
+            flex: 1;
+            text-align: center;
+            border: 1px solid var(--border-color);
+            padding: 14px 10px;
+            border-radius: 12px;
+            background-color: #f8fafc;
+        }
+
+        .sig-line {
+            border-bottom: 1.5px dotted #94a3b8;
+            margin: 32px 12px 8px 12px;
+        }
+
+        .sig-name-input {
+            border: none;
+            border-bottom: 1.5px dashed var(--border-color);
+            text-align: center;
+            width: 90%;
+            outline: none;
+            font-family: inherit;
+            margin-bottom: 4px;
+            font-size: 12px;
+            background: transparent;
+        }
+
+        .sig-text {
+            font-size: 11.5px;
+            color: #334155;
+            font-weight: 700;
+        }
+
+        .sig-date {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .sig-date-input {
+            border: none;
+            border-bottom: 1.5px dashed var(--border-color);
+            text-align: center;
+            width: 95px;
+            outline: none;
+            font-family: inherit;
+            background: transparent;
+        }
+
+        #print-pages-container {
+            display: flex;
+            flex-direction: column;
+            gap: 35px;
+        }
+
+        /* Print Settings */
+        @media print {
+            @page {
+                size: A4;
+                margin: 5mm;
+            }
+            body {
+                background-color: #ffffff;
+                padding: 0;
+                font-size: 11px;
+                line-height: 1.3;
+            }
+            .modern-toolbar, .no-print, #toast-container {
+                display: none !important;
+            }
+            .page-sheet {
+                max-width: 100% !important;
+                width: 100% !important;
+                margin: 0 auto !important;
+                padding: 8px 14px !important;
+                box-shadow: none !important;
+                border-radius: 0 !important;
+                border: none !important;
+                page-break-after: always;
+            }
+            .header-section {
+                padding-bottom: 4px;
+                margin-bottom: 6px;
+            }
+            .logo-container img { width: 55px !important; }
+            .shop-info-box .company-name { font-size: 13px; }
+            .shop-info-box .address-text { font-size: 10px; }
+            .title-main { font-size: 18px; }
+            .top-info { margin-bottom: 6px; }
+            .vendor-info-box, .po-meta-box { padding: 6px 8px !important; border-radius: 8px; }
+            .delivery-box { padding: 5px 8px !important; margin-bottom: 6px; border-radius: 6px; }
+            .info-row { margin-bottom: 3px; }
+            .inline-textarea {
+                border: none !important;
+                padding: 1px 4px !important;
+                height: auto !important;
+            }
+            .data-table th, .data-table td {
+                padding: 2px 5px !important;
+                font-size: 11px;
+            }
+            .footer-table { margin-bottom: 6px; }
+            .footer-table td { padding: 2px 6px !important; font-size: 11px; }
+            .signature-section { margin-top: 8px !important; gap: 10px; }
+            .sig-box { padding: 6px 6px !important; border-radius: 8px; }
+            .sig-line { margin: 22px 8px 4px 8px !important; }
+            .sig-name-input, .sig-date-input { border: none !important; }
+            input::placeholder, textarea::placeholder {
+                color: transparent !important;
+                -webkit-text-fill-color: transparent !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<!-- แถบเครื่องมือด้านบน -->
+<div class="modern-toolbar no-print">
+  <div class="toolbar-group">
+    <a href="index.html" class="icon-btn btn-home" data-tooltip="หน้าแรก">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+      </svg>
+    </a>
+  </div>
+  
+  <div class="toolbar-group">
+    <button class="icon-btn btn-add" onclick="addRow()" data-tooltip="เพิ่มรายการสั่งซื้อ">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+      </svg>
+    </button>
+    
+    <button class="icon-btn btn-print" onclick="window.print()" data-tooltip="พิมพ์ / บันทึก PDF">
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231a1.125 1.125 0 01-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-19.163 0C1.837 7.441 1 8.375 1 9.456v6.294A2.25 2.25 0 003.25 18h1.091m16.5 0v-6.75A2.25 2.25 0 0018.591 9H5.409A2.25 2.25 0 003.15 11.25V18" />
+      </svg>
+    </button>
+  </div>
+</div>
+
+<!-- พื้นที่แสดงหน้าเอกสาร -->
+<div id="print-pages-container"></div>
+
+<script>
+    function showToast(message, isError = false) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = `toast-notification ${isError ? 'error' : ''}`;
+        toast.innerHTML = `
+            <span style="font-size: 16px;">${isError ? '❌' : '✅'}</span>
+            <span>${message}</span>
+        `;
+        container.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const today = new Date();
+    const day = String(today.getDate()).padStart(2, '0');
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const yearAD = today.getFullYear();
+    const yearBE = yearAD + 543;
+    const currentDateFormatted = `${day}/${month}/${yearBE}`;
+
+    const autoPoNo = urlParams.get('poNo') || `PO${yearAD}${month}001`;
+
+    // ข้อมูลหลักของใบสั่งซื้อ (Purchase Order)
+    let docMeta = {
+        vendorName: "",
+        vendorAddress: "",
+        vendorTaxNo: "",
+        vendorContact: "",
+        vendorTel: "",
+        poNo: autoPoNo,
+        poDate: currentDateFormatted,
+        refQuotationNo: urlParams.get('refQuotationNo') || "-",
+        creditTerm: "เครดิต 30 วัน",
+        deliveryDate: "-",
+        deliveryAddress: "บริษัท เค แอล สเตชั่นเนอรี่ จำกัด 873, 875 ถนนสุขุมวิท 105 แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260",
+        remarkText: "1. กรุณาระบุเลขที่ใบสั่งซื้อ (PO No.) ในใบส่งของและใบกำกับภาษีทุกครั้ง\n2. การส่งมอบสินค้าถือว่าสมบูรณ์เมื่อผ่านการตรวจรับจากแผนกคลังสินค้าเรียบร้อยแล้ว",
+        discountRate: 0,
+        vatType: "exclude", // 'exclude' = แยก VAT 7%, 'none' = ไม่มี VAT
+        sigPreparedName: "",
+        sigPreparedDate: currentDateFormatted,
+        sigCheckedName: "",
+        sigCheckedDate: "",
+        sigApprovedName: "",
+        sigApprovedDate: ""
+    };
+
+    let itemsData = [
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 },
+        { desc: "", model: "", qty: 1, unit: "", price: 0.00 }
+    ];
+
+    const ITEMS_PER_PAGE = 14;
+
+    function renderDocument() {
+        const container = document.getElementById("print-pages-container");
+        container.innerHTML = "";
+
+        const totalPages = Math.ceil(itemsData.length / ITEMS_PER_PAGE) || 1;
+
+        for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
+            const startIdx = pageIdx * ITEMS_PER_PAGE;
+            const endIdx = Math.min(startIdx + ITEMS_PER_PAGE, itemsData.length);
+            const pageItems = itemsData.slice(startIdx, endIdx);
+            const isLastPage = (pageIdx === totalPages - 1);
+
+            const pageDiv = document.createElement("div");
+            pageDiv.className = "page-sheet";
+            pageDiv.setAttribute("data-page-index", pageIdx);
+            pageDiv.setAttribute("data-is-last", isLastPage ? "true" : "false");
+
+            let pageHTML = `
+                <!-- ส่วนหัวบริษัทผู้สั่งซื้อ -->
+                <div class="header-section">
+                    <div class="header-left">
+                        <div class="logo-container">
+                            <img src="logo.png" alt="KL Logo" onerror="this.style.display='none'">
+                        </div>
+                        <div class="shop-info-box">
+                            <div class="company-name">บริษัท เค แอล สเตชั่นเนอรี่ จำกัด (สำนักงานใหญ่)</div>
+                            <div class="address-text">873, 875 ถนนสุขุมวิท 105 แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260</div>
+                            <div class="address-text">โทร. 0-2748-6788 | เลขประจำตัวผู้เสียภาษี: 0105544005337</div>
+                        </div>
+                    </div>
+                    <div class="title-box">
+                        <div class="title-main">ใบสั่งซื้อ</div>
+                        <div class="title-sub">PURCHASE ORDER</div>
+                        <div style="font-size: 11px; color: #64748b; margin-top: 4px; font-weight: 600;">หน้าที่ ${pageIdx + 1} / ${totalPages}</div>
+                    </div>
+                </div>
+
+                <!-- ข้อมูลผู้ขาย (Vendor) และรายละเอียดใบสั่งซื้อ -->
+                <table class="top-info">
+                    <tr>
+                        <td>
+                            <div class="vendor-info-box">
+                                <div class="info-row no-print" style="margin-bottom: 8px;">
+                                    <span class="info-label" style="color: var(--primary-color);">🔍 เลือกผู้ขาย:</span>
+                                    <select class="inline-input vendorSelect" style="width: 200px; font-weight: 600;" onchange="selectVendor(this)">
+                                        <option value="">-- เลือกผู้ขาย / ซัพพลายเออร์ --</option>
+                                    </select>
+                                </div>
+                                <div class="info-row" style="align-items: flex-start;">
+                                    <span class="info-label">ผู้ขาย (Vendor):</span>
+                                    <textarea class="inline-textarea meta-field" data-field="vendorName" placeholder="ชื่อบริษัทผู้ขาย / ร้านค้า..." style="min-height: 28px;">${docMeta.vendorName}</textarea>
+                                </div>
+                                <div class="info-row" style="align-items: flex-start; margin-top: 5px;">
+                                    <span class="info-label">ที่อยู่ (Address):</span>
+                                    <textarea class="inline-textarea meta-field" data-field="vendorAddress" placeholder="ที่อยู่ผู้ขาย...">${docMeta.vendorAddress}</textarea>
+                                </div>
+                                <div class="info-row" style="margin-top: 5px;">
+                                    <span class="info-label">เลขผู้เสียภาษี:</span>
+                                    <input type="text" class="inline-input meta-field" data-field="vendorTaxNo" style="flex:1;" value="${docMeta.vendorTaxNo}" placeholder="เลขประจำตัวผู้เสียภาษีผู้ขาย...">
+                                </div>
+                                <div class="info-row" style="margin-top: 5px; gap: 8px;">
+                                    <span class="info-label">ผู้ติดต่อ / โทร:</span>
+                                    <input type="text" class="inline-input meta-field" data-field="vendorContact" style="width: 45%;" value="${docMeta.vendorContact}" placeholder="ชื่อผู้ติดต่อ">
+                                    <input type="text" class="inline-input meta-field" data-field="vendorTel" style="flex: 1;" value="${docMeta.vendorTel}" placeholder="เบอร์โทรศัพท์">
+                                </div>
+                            </div>
+                        </td>
+                        <td style="padding-left: 10px;">
+                            <div class="po-meta-box">
+                                <div class="info-row no-print" style="margin-bottom: 8px;">
+                                    <span class="info-label" style="color: var(--primary-color); min-width: 105px;">📄 ดึงจากใบเสนอราคา:</span>
+                                    <input type="text" class="inline-input searchQuotationInput" style="width: 95px;" placeholder="เลขที่ QT">
+                                    <button class="btn-action" style="font-size: 10px;" onclick="importFromQuotation(this)">ดึงรายการ</button>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label" style="min-width: 110px;">เลขที่ใบสั่งซื้อ (PO No.):</span>
+                                    <input type="text" class="inline-input meta-field" data-field="poNo" style="flex:1; font-weight: 700; color: var(--primary-dark);" value="${docMeta.poNo}">
+                                </div>
+                                <div class="info-row" style="margin-top: 5px;">
+                                    <span class="info-label" style="min-width: 110px;">วันที่สั่งซื้อ (Date):</span>
+                                    <input type="text" class="inline-input meta-field" data-field="poDate" style="flex:1;" value="${docMeta.poDate}">
+                                </div>
+                                <div class="info-row" style="margin-top: 5px;">
+                                    <span class="info-label" style="min-width: 110px;">อ้างอิงใบเสนอราคา:</span>
+                                    <input type="text" class="inline-input meta-field" data-field="refQuotationNo" style="flex:1;" value="${docMeta.refQuotationNo}" placeholder="เลขที่ใบเสนอราคา">
+                                </div>
+                                <div class="info-row" style="margin-top: 5px;">
+                                    <span class="info-label" style="min-width: 110px;">เงื่อนไขชำระเงิน:</span>
+                                    <input type="text" class="inline-input meta-field" data-field="creditTerm" style="flex:1;" value="${docMeta.creditTerm}" placeholder="เช่น เครดิต 30 วัน / เงินสด">
+                                </div>
+                                <div class="info-row" style="margin-top: 5px;">
+                                    <span class="info-label" style="min-width: 110px;">กำหนดส่งมอบ:</span>
+                                    <input type="text" class="inline-input meta-field" data-field="deliveryDate" style="flex:1;" value="${docMeta.deliveryDate}" placeholder="วว/ดด/ปปปป">
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- สถานที่จัดส่งสินค้า -->
+                <div class="delivery-box">
+                    <span style="font-weight: 700; color: var(--primary-dark); font-size: 11.5px; white-space: nowrap;">📍 สถานที่ส่งมอบสินค้า (Ship To):</span>
+                    <input type="text" class="inline-input meta-field" data-field="deliveryAddress" style="flex: 1; font-size: 11.5px;" value="${docMeta.deliveryAddress}">
+                </div>
+
+                <!-- ตารางรายการสินค้า -->
+                <div class="table-responsive-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 6%;">ลำดับ</th>
+                                <th style="width: 37%;">รายการสินค้า / รายละเอียด (Description)</th>
+                                <th style="width: 11%;">รหัส/รุ่น (Code)</th>
+                                <th style="width: 8%;">จำนวน (Qty)</th>
+                                <th style="width: 8%;">หน่วย (Unit)</th>
+                                <th style="width: 12%;">ราคา/หน่วย (Unit Price)</th>
+                                <th style="width: 12%;">จำนวนเงิน (Amount)</th>
+                                <th class="no-print" style="width: 6%;">จัดการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            if (pageItems.length === 0) {
+                pageHTML += `<tr><td colspan="8" style="text-align: center; color: #94a3b8; padding: 20px;">ไม่มีรายการสินค้าในหน้านี้</td></tr>`;
+            } else {
+                pageItems.forEach((item, idx) => {
+                    const actualIndex = startIdx + idx;
+                    const itemPrice = Number(item.price || 0);
+                    const itemQty = Number(item.qty || 0);
+                    const itemAmount = itemQty * itemPrice;
+
+                    pageHTML += `
+                        <tr class="item-row" data-item-index="${actualIndex}">
+                            <td style="text-align: center; font-weight: 600;">${actualIndex + 1}</td>
+                            <td><textarea class="item-desc" placeholder="ระบุชื่อสินค้าหรือรายละเอียด..." oninput="updateItemData(${actualIndex}, 'desc', this.value)">${item.desc || ""}</textarea></td>
+                            <td><input type="text" class="sku-input" placeholder="-" value="${item.model || ""}" oninput="updateItemData(${actualIndex}, 'model', this.value)"></td>
+                            <td><input type="text" class="qty" placeholder="1" value="${item.qty}" oninput="updateItemData(${actualIndex}, 'qty', this.value)"></td>
+                            <td><input type="text" class="unit-input" placeholder="ชิ้น" value="${item.unit || ""}" oninput="updateItemData(${actualIndex}, 'unit', this.value)"></td>
+                            <td><input type="text" class="price" placeholder="0.00" value="${itemPrice.toFixed(2)}" oninput="updateItemData(${actualIndex}, 'price', this.value)"></td>
+                            <td class="amount" style="text-align: right; font-weight: 600;">${itemAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                            <td class="no-print" style="text-align: center;"><button class="btn-del" onclick="removeRow(${actualIndex})">ลบ</button></td>
+                        </tr>
+                    `;
+                });
+            }
+
+            pageHTML += `
+                        </tbody>
+                    </table>
+                </div>
+
+                ${!isLastPage ? `
+                    <div style="text-align: right; font-size: 11px; color: var(--primary-color); font-style: italic; margin-bottom: 8px; font-weight: 600;">
+                        (มีรายการต่อในหน้าถัดไป ➔ หน้า ${pageIdx + 2})
+                    </div>
+                ` : ''}
+
+                <!-- ตารางสรุปยอดเงิน -->
+                <table class="footer-table">
+                    <tr>
+                        <td rowspan="5" style="width: 50%; vertical-align: middle; text-align: center; background-color: var(--bg-light);">
+                            <div style="font-size: 11px; color: #64748b; margin-bottom: 4px;">(จำนวนเงินรวมตัวอักษร)</div>
+                            <div class="textAmount" style="font-size: 14px; color: var(--primary-color); font-weight: 700;">ศูนย์บาทถ้วน</div>
+                            <div class="no-print" style="margin-top: 8px; font-size: 11px; color: #475569;">
+                                ประเภทภาษี: 
+                                <select onchange="updateMeta('vatType', this.value); calculateTotals();" style="border-radius: 4px; border: 1px solid #cbd5e1; padding: 2px 4px; font-family: inherit;">
+                                    <option value="exclude" ${docMeta.vatType === 'exclude' ? 'selected' : ''}>แยก VAT 7%</option>
+                                    <option value="none" ${docMeta.vatType === 'none' ? 'selected' : ''}>ไม่มี VAT (0%)</option>
+                                </select>
+                            </div>
+                        </td>
+                        <td class="footer-total-label" style="text-align: center;">รวมเงิน (Sub Total)</td>
+                        <td class="subTotal" style="width: 25%; text-align: right; font-weight: 600;">0.00</td>
+                    </tr>
+                    <tr>
+                        <td class="footer-total-label" style="text-align: center;">
+                            <div style="display: inline-flex; align-items: center; justify-content: center; gap: 2px;">
+                                ส่วนลด (<input type="text" class="discountRate" style="width: 35px; text-align: center; border: none; border-bottom: 1px dashed #94a3b8; background: transparent; outline: none;" value="${docMeta.discountRate}" oninput="updateMeta('discountRate', this.value); calculateTotals()">%)
+                            </div>
+                        </td>
+                        <td style="text-align: right; padding-right: 12px;">
+                            <input type="text" class="discountAmount" style="width: 100%; text-align: right; font-weight: 700; color: var(--danger-color); border: none; background: transparent; outline: none;" value="0.00" readonly>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="footer-total-label" style="color: var(--primary-color); text-align: center;">รวมราคาสินค้าสุทธิ (Net Total)</td>
+                        <td class="netTotal" style="font-weight: 600; text-align: right;">0.00</td>
+                    </tr>
+                    <tr>
+                        <td class="footer-total-label" style="text-align: center;">ภาษีมูลค่าเพิ่ม VAT 7%</td>
+                        <td class="vatAmount" style="text-align: right;">0.00</td>
+                    </tr>
+                    <tr>
+                        <td class="footer-total-label" style="background-color: var(--primary-light); color: var(--primary-dark); font-weight: 700; text-align: center;">จำนวนเงินรวมทั้งสิ้น (Grand Total)</td>
+                        <td class="grandTotal" style="background-color: #99f6e4; color: var(--primary-dark); font-size: 15px; text-align: right; font-weight: 700;">0.00</td>
+                    </tr>
+                </table>
+
+                <!-- หมายเหตุและเงื่อนไขการสั่งซื้อ -->
+                <div style="margin-bottom: 12px; font-size: 12px; color: #475569; display: flex; align-items: flex-start; gap: 6px;">
+                    <strong style="white-space: nowrap; padding-top: 4px;">เงื่อนไข / หมายเหตุ :</strong> 
+                    <textarea class="inline-textarea meta-field" data-field="remarkText" style="flex: 1;" placeholder="ระบุเงื่อนไขการสั่งซื้อหรือหมายเหตุเพิ่มเติม...">${docMeta.remarkText}</textarea>
+                </div>
+
+                <!-- ส่วนลงนาม 3 ช่องมาตรฐานใบสั่งซื้อ -->
+                <div class="signature-section">
+                    <div class="sig-box">
+                        <div class="sig-line"></div>
+                        <input type="text" class="sig-name-input meta-field" data-field="sigPreparedName" placeholder="(ชื่อ-นามสกุล เจ้าหน้าที่จัดซื้อ)" value="${docMeta.sigPreparedName}">
+                        <div class="sig-text">ผู้จัดทำใบสั่งซื้อ (Prepared By)</div>
+                        <div class="sig-date">วันที่: <input type="text" class="sig-date-input meta-field" data-field="sigPreparedDate" value="${docMeta.sigPreparedDate}"></div>
+                    </div>
+                    <div class="sig-box">
+                        <div class="sig-line"></div>
+                        <input type="text" class="sig-name-input meta-field" data-field="sigCheckedName" placeholder="(ชื่อ-นามสกุล ผู้ตรวจสอบ)" value="${docMeta.sigCheckedName}">
+                        <div class="sig-text">ผู้ตรวจสอบ / หัวหน้าแผนก (Checked By)</div>
+                        <div class="sig-date">วันที่: <input type="text" class="sig-date-input meta-field" data-field="sigCheckedDate" placeholder="วว/ดด/ปปปป" value="${docMeta.sigCheckedDate}"></div>
+                    </div>
+                    <div class="sig-box">
+                        <div class="sig-line"></div>
+                        <input type="text" class="sig-name-input meta-field" data-field="sigApprovedName" placeholder="(ชื่อ-นามสกุล ผู้มีอำนาจลงนาม)" value="${docMeta.sigApprovedName}">
+                        <div class="sig-text">ผู้อนุมัติสั่งซื้อ (Authorized Signature)</div>
+                        <div class="sig-date">วันที่: <input type="text" class="sig-date-input meta-field" data-field="sigApprovedDate" placeholder="วว/ดด/ปปปป" value="${docMeta.sigApprovedDate}"></div>
+                    </div>
+                </div>
+            `;
+
+            pageDiv.innerHTML = pageHTML;
+            container.appendChild(pageDiv);
+        }
+
+        // ซิงค์ข้อมูล meta-field ทุกหน้าเมื่อมีหลายหน้า
+        document.querySelectorAll('.meta-field').forEach(input => {
+            input.addEventListener('input', function() {
+                const field = this.getAttribute('data-field');
+                docMeta[field] = this.value;
+                document.querySelectorAll(`.meta-field[data-field="${field}"]`).forEach(el => {
+                    if (el !== this) el.value = this.value;
+                });
+            });
+        });
+
+        loadVendorDropdown();
+        calculateTotals();
+        adjustAllTextareas();
+    }
+
+    function updateMeta(field, value) {
+        docMeta[field] = value;
+    }
+
+    function updateItemData(index, field, value) {
+        itemsData[index][field] = value;
+        if (field === 'qty' || field === 'price') {
+            calculateTotals();
+        }
+    }
+
+    function addRow() {
+        itemsData.push({ desc: "", model: "", qty: 1, unit: "", price: 0.00 });
+        renderDocument();
+    }
+
+    function removeRow(index) {
+        itemsData.splice(index, 1);
+        renderDocument();
+    }
+
+    // ฟังก์ชันคำนวณยอดเงินทั้งหมดตามรูปแบบต้นฉบับ
+    function calculateTotals() {
+        let subTotal = 0;
+
+        itemsData.forEach((item) => {
+            const qty = parseFloat(String(item.qty).replace(/,/g, '')) || 0;
+            const price = parseFloat(String(item.price).replace(/,/g, '')) || 0;
+            subTotal += (qty * price);
+        });
+
+        let discountRate = parseFloat(docMeta.discountRate);
+        let discountAmount = 0;
+
+        if (isNaN(discountRate) || discountRate <= 0) {
+            discountRate = 0;
+            discountAmount = 0;
+        } else {
+            discountAmount = (subTotal * discountRate) / 100;
+        }
+
+        let netTotal = subTotal - discountAmount;
+        if (netTotal < 0) netTotal = 0;
+
+        let vatAmount = (docMeta.vatType === 'none') ? 0 : (netTotal * 0.07);
+        let grandTotal = netTotal + vatAmount;
+        let thaiTextStr = arabicToThaiText(grandTotal);
+
+        const pageSheets = document.querySelectorAll(".page-sheet");
+        const totalPages = pageSheets.length;
+
+        pageSheets.forEach((sheet) => {
+            const isLast = sheet.getAttribute("data-is-last") === "true";
+
+            const displaySubTotal = (totalPages === 1 || isLast) ? subTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayDiscount = (totalPages === 1 || isLast) ? discountAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayNetTotal = (totalPages === 1 || isLast) ? netTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayVat      = (totalPages === 1 || isLast) ? vatAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayGrand    = (totalPages === 1 || isLast) ? grandTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+            const displayThaiText = (totalPages === 1 || isLast) ? thaiTextStr : "ศูนย์บาทถ้วน";
+
+            const subTotalEl = sheet.querySelector(".subTotal");
+            const discountRateEl = sheet.querySelector(".discountRate");
+            const discountAmountEl = sheet.querySelector(".discountAmount");
+            const netTotalEl = sheet.querySelector(".netTotal");
+            const vatAmountEl = sheet.querySelector(".vatAmount");
+            const grandTotalEl = sheet.querySelector(".grandTotal");
+            const textAmountEl = sheet.querySelector(".textAmount");
+
+            if (subTotalEl) subTotalEl.textContent = displaySubTotal;
+            if (discountRateEl) discountRateEl.value = discountRate;
+            if (discountAmountEl) discountAmountEl.value = displayDiscount;
+            if (netTotalEl) netTotalEl.textContent = displayNetTotal;
+            if (vatAmountEl) vatAmountEl.textContent = displayVat;
+            if (grandTotalEl) grandTotalEl.textContent = displayGrand;
+            if (textAmountEl) textAmountEl.textContent = displayThaiText;
+        });
+
+        // อัปเดตยอดรวมรายบรรทัด
+        document.querySelectorAll(".item-row").forEach((row) => {
+            const idx = parseInt(row.getAttribute("data-item-index"), 10);
+            if (!isNaN(idx) && itemsData[idx]) {
+                const q = parseFloat(String(itemsData[idx].qty).replace(/,/g, '')) || 0;
+                const p = parseFloat(String(itemsData[idx].price).replace(/,/g, '')) || 0;
+                const amtCell = row.querySelector(".amount");
+                if (amtCell) {
+                    amtCell.textContent = (q * p).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
+            }
+        });
+    }
+
+    // แปลงตัวเลขเป็นคำอ่านภาษาไทย (รองรับหลักล้านขึ้นไป)
+    function arabicToThaiText(amount) {
+        if (!amount || amount === 0) return "ศูนย์บาทถ้วน";
+        const arabicNumber = amount.toFixed(2);
+        const splitNum = arabicNumber.split(".");
+        let integerPart = splitNum[0];
+        let decimalPart = splitNum[1];
+
+        let thaiText = convertIntegerToThai(integerPart) + "บาท";
+        if (decimalPart === "00") {
+            thaiText += "ถ้วน";
+        } else {
+            thaiText += convertIntegerToThai(decimalPart) + "สตางค์";
+        }
+        return thaiText;
+    }
+
+    function convertIntegerToThai(numStr) {
+        const thaiNums = ["ศูนย์", "หนึ่ง", "สอง", "สาม", "สี่", "ห้า", "หก", "เจ็ด", "แปด", "เก้า"];
+        const thaiUnits = ["", "สิบ", "ร้อย", "พัน", "หมื่น", "แสน", "ล้าน"];
+        let result = "";
+        let len = numStr.length;
+
+        for (let i = 0; i < len; i++) {
+            let digit = parseInt(numStr[i], 10);
+            let pos = len - i - 1;
+            let unitIndex = pos % 6;
+
+            if (digit !== 0) {
+                if (unitIndex === 1 && digit === 1) {
+                    result += "สิบ";
+                } else if (unitIndex === 1 && digit === 2) {
+                    result += "ยี่สิบ";
+                } else if (unitIndex === 0 && digit === 1 && len > 1 && parseInt(numStr[len - 2], 10) !== 0) {
+                    result += "เอ็ด";
+                } else {
+                    result += thaiNums[digit] + thaiUnits[unitIndex];
+                }
+            }
+            if (pos > 0 && unitIndex === 0) {
+                result += "ล้าน";
+            }
+        }
+        return result;
+    }
+
+    // โหลดรายชื่อผู้ขาย (Vendor) จาก localStorage (ถ้ามีเก็บไว้ในระบบ)
+    let allVendorsData = [];
+    function loadVendorDropdown() {
+        const localVendors = JSON.parse(localStorage.getItem('saved_po_vendors') || localStorage.getItem('saved_quot_customers') || '[]');
+        allVendorsData = localVendors;
+        document.querySelectorAll('.vendorSelect').forEach(select => {
+            select.innerHTML = '<option value="">-- เลือกผู้ขาย / ซัพพลายเออร์ --</option>';
+            localVendors.forEach(v => {
+                const name = typeof v === 'string' ? v : (v.name || v.vendorName || v.companyName || '');
+                if (name) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    select.appendChild(opt);
+                }
+            });
+        });
+    }
+
+    function selectVendor(selectEl) {
+        const selectedName = selectEl.value;
+        const found = allVendorsData.find(v => {
+            const name = typeof v === 'string' ? v : (v.name || v.vendorName || v.companyName || '');
+            return name === selectedName;
+        });
+
+        if (found && typeof found === 'object') {
+            docMeta.vendorName = found.name || found.vendorName || found.companyName || selectedName;
+            docMeta.vendorAddress = found.address || found.vendorAddress || '';
+            docMeta.vendorTaxNo = found.taxNo || found.tax || '';
+            docMeta.vendorContact = found.contact || '';
+            docMeta.vendorTel = found.tel || found.phone || '';
+        } else {
+            docMeta.vendorName = selectedName;
+        }
+        renderDocument();
+    }
+
+    // ดึงรายการสินค้าจากเลขที่ใบเสนอราคา (Quotation) ใน localStorage มาออกใบสั่งซื้อ
+    function importFromQuotation(btnEl) {
+        const box = btnEl.closest('.po-meta-box');
+        const qNo = (box?.querySelector('.searchQuotationInput')?.value || '').trim();
+        if (!qNo) {
+            showToast("กรุณากรอกเลขที่ใบเสนอราคาที่ต้องการดึงข้อมูล", true);
+            return;
+        }
+
+        let savedBills = [];
+        try { savedBills = savedBills.concat(JSON.parse(localStorage.getItem('saved_quotations') || '[]')); } catch(e){}
+        try { savedBills = savedBills.concat(JSON.parse(localStorage.getItem('saved_quot_purchases') || '[]')); } catch(e){}
+
+        const found = savedBills.find(b => String(b.billNo || b.quotationNo || '').trim() === qNo);
+        if (found) {
+            docMeta.refQuotationNo = qNo;
+            docMeta.discountRate = found.discountRate || found.discount || 0;
+            const rawItems = found.items || found.itemsData || [];
+            if (rawItems.length > 0) {
+                itemsData = rawItems.map(item => ({
+                    desc: item.desc || item.name || "",
+                    model: item.model || "",
+                    qty: Number(item.qty) || 1,
+                    unit: item.unit || "",
+                    price: Number(item.price || item.unitPrice) || 0
+                }));
+            }
+            renderDocument();
+            showToast(`นำเข้ารายการจากใบเสนอราคา ${qNo} เรียบร้อยแล้ว`);
+        } else {
+            showToast(`ไม่พบข้อมูลใบเสนอราคาเลขที่ ${qNo}`, true);
+        }
+    }
+
+    // ปรับความสูง Textarea อัตโนมัติ
+    function adjustTextareaHeight(ta) {
+        if (!ta) return;
+        ta.style.height = '22px';
+        ta.style.height = Math.max(22, ta.scrollHeight) + 'px';
+    }
+
+    function adjustAllTextareas() {
+        requestAnimationFrame(() => {
+            document.querySelectorAll('textarea.item-desc, textarea.inline-textarea').forEach(adjustTextareaHeight);
+        });
+    }
+
+    document.addEventListener('input', function(e) {
+        if (e.target && e.target.matches('textarea')) {
+            adjustTextareaHeight(e.target);
+        }
+    });
+
+    window.addEventListener('resize', adjustAllTextareas);
+    window.addEventListener('beforeprint', adjustAllTextareas);
+
+    window.onload = function() {
+        renderDocument();
+    };
+</script>
+
+</body>
+</html>
