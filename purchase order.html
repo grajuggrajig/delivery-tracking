@@ -643,7 +643,17 @@
     const yearBE = yearAD + 543;
     const currentDateFormatted = `${day}/${month}/${yearBE}`;
 
-    const autoPoNo = urlParams.get('poNo') || `PO${yearAD}${month}001`;
+    // ฟังก์ชันสร้างเลข PO แบบสุ่มป้องกันการคาดเดา (เช่น PO-2026-X8K2M9)
+    function generateRandomPoNo() {
+        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let randomPart = '';
+        for (let i = 0; i < 6; i++) {
+            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return `PO-${yearAD}${month}-${randomPart}`;
+    }
+
+    const autoPoNo = urlParams.get('poNo') || generateRandomPoNo();
 
     // Firebase โปรเจกต์เดียวกับ CRM ใช้ session การเข้าสู่ระบบเดิม
     const poFirebaseConfig = {
@@ -1103,18 +1113,18 @@
         ).map(item => ({ ...item }));
     }
 
-    // ฟังก์ชันเคลียร์รายการทั้งหมดเพื่อเริ่มการสั่งซื้อใหม่
+    // ฟังก์ชันเคลียร์รายการทั้งหมดเพื่อเริ่มการสั่งซื้อใหม่พร้อมสุ่มรหัส PO ใหม่
     async function clearPurchaseOrder(askConfirm = false) {
         if (askConfirm && !confirm("คุณต้องการเคลียร์รายการทั้งหมดเพื่อเริ่มการสั่งซื้อใหม่ใช่หรือไม่?")) return;
         poCurrentRecordId = null;
-        const nextPoNo = await generateNextPoNo();
+        const randomPoNo = generateRandomPoNo();
         docMeta = {
             vendorName: "",
             vendorAddress: "",
             vendorTaxNo: "",
             vendorContact: "",
             vendorTel: "",
-            poNo: nextPoNo,
+            poNo: randomPoNo,
             poDate: currentDateFormatted,
             refQuotationNo: "-",
             creditTerm: "",
@@ -1134,33 +1144,7 @@
             { desc: "", model: "", qty: 1, unit: "", price: 0.00 }
         ];
         renderDocument();
-        showToast("เคลียร์รายการเรียบร้อยแล้ว พร้อมเริ่มการสั่งซื้อใหม่");
-    }
-
-    // ฟังก์ชันสร้างเลข PO ถัดไปอัตโนมัติจากฐานข้อมูล
-    async function generateNextPoNo() {
-        if (!poCurrentUser) return `PO${yearAD}${month}001`;
-        try {
-            const snapshot = await poDb.collection('purchaseOrders').where('ownerUid', '==', poCurrentUser.uid).get();
-            let maxSeq = 0;
-            const prefix = `PO${yearAD}${month}`;
-            snapshot.docs.forEach(doc => {
-                const data = doc.data();
-                const pNo = data.poNo || (data.docMeta && data.docMeta.poNo) || '';
-                if (pNo.startsWith(prefix)) {
-                    const seqStr = pNo.slice(prefix.length);
-                    const seq = parseInt(seqStr, 10);
-                    if (!isNaN(seq) && seq > maxSeq) {
-                        maxSeq = seq;
-                    }
-                }
-            });
-            const nextSeq = String(maxSeq + 1).padStart(3, '0');
-            return `${prefix}${nextSeq}`;
-        } catch (e) {
-            console.error("Error generating PO No:", e);
-            return `PO${yearAD}${month}001`;
-        }
+        showToast("เคลียร์รายการและสุ่มเลข PO ใหม่เรียบร้อยแล้ว");
     }
 
     async function savePurchaseOrderOnline(saveAsNew = false) {
@@ -1176,9 +1160,9 @@
             poSaving = true;
             let poNo = String(docMeta.poNo || '').trim();
 
-            // รันเลข PO อัตโนมัติเมื่อกดบันทึก (กรณีสร้างเอกสารใหม่หรือบันทึกเป็นใหม่)
+            // สุ่มเลข PO ใหม่เมื่อกดบันทึกเป็นบิลใหม่ (Save New) หรือสร้างใหม่
             if (saveAsNew || !poCurrentRecordId || !poNo || poNo === autoPoNo) {
-                poNo = await generateNextPoNo();
+                poNo = generateRandomPoNo();
                 docMeta.poNo = poNo;
                 document.querySelectorAll('.meta-field[data-field="poNo"]').forEach(el => { el.value = poNo; });
             }
@@ -1412,7 +1396,7 @@
             delete wrapper.dataset.poWasEmpty;
         });
         poPrintRowState = [];
-        // เคลียร์รายการอัตโนมัติหลังพิมพ์สำเร็จเพื่อเริ่มการสั่งซื้อครั้งใหม่
+        // เคลียร์รายการและสุ่มเลข PO ใหม่หลังพิมพ์สำเร็จเพื่อเริ่มการสั่งซื้อครั้งใหม่
         clearPurchaseOrder(false);
     });
 
