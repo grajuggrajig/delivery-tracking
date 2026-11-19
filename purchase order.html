@@ -710,14 +710,13 @@
     const yearBE = yearAD + 543;
     const currentDateFormatted = `${day}/${month}/${yearBE}`;
 
-    // ฟังก์ชันสร้างเลข PO แบบสุ่มป้องกันการคาดเดา (เช่น PO-202611-X8K2M9)
+    // ฟังก์ชันสร้างเลข PO เป็นตัวเลขทั้งหมด (เช่น PO-123456789)
     function generateRandomPoNo() {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let randomPart = '';
-        for (let i = 0; i < 6; i++) {
-            randomPart += chars.charAt(Math.floor(Math.random() * chars.length));
+        for (let i = 0; i < 9; i++) {
+            randomPart += Math.floor(Math.random() * 10);
         }
-        return `PO-${yearAD}${month}-${randomPart}`;
+        return `PO-${randomPart}`;
     }
 
     const autoPoNo = urlParams.get('poNo') || generateRandomPoNo();
