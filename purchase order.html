@@ -449,14 +449,79 @@
             flex: 1;
             text-align: center;
             border: 1px solid var(--border-color);
-            padding: 14px 10px;
+            padding: 12px 10px;
             border-radius: 12px;
             background-color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* พื้นที่แสดงรูปภาพลายเซ็นและปุ่มอัปโหลด */
+        .sig-pad-area {
+            width: 100%;
+            height: 62px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            position: relative;
+            margin-bottom: 4px;
+        }
+
+        .sig-preview-img {
+            max-height: 58px;
+            max-width: 170px;
+            object-fit: contain;
+            display: block;
+        }
+
+        .btn-upload-sig {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #ffffff;
+            color: var(--primary-color);
+            border: 1px dashed var(--primary-color);
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 6px;
+        }
+
+        .btn-upload-sig:hover {
+            background: var(--primary-light);
+        }
+
+        .btn-remove-sig {
+            position: absolute;
+            top: 0;
+            right: 4px;
+            background: rgba(239, 68, 68, 0.9);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 11px;
+            line-height: 1;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.15);
+        }
+        .btn-remove-sig:hover {
+            background: #dc2626;
+            transform: scale(1.1);
         }
 
         .sig-line {
+            width: 85%;
             border-bottom: 1.5px dotted #94a3b8;
-            margin: 32px 12px 8px 12px;
+            margin: 0 auto 8px auto;
         }
 
         .sig-name-input {
@@ -522,7 +587,7 @@
                 font-size: 11px;
                 line-height: 1.3;
             }
-            .modern-toolbar, .no-print, #toast-container, .add-row-floating-wrap, .po-load-modal {
+            .modern-toolbar, .no-print, #toast-container, .add-row-floating-wrap, .po-load-modal, .btn-upload-sig, .btn-remove-sig {
                 display: none !important;
             }
             .page-sheet {
@@ -560,7 +625,9 @@
             .footer-table td { padding: 2px 6px !important; font-size: 11px; }
             .signature-section { margin-top: 8px !important; gap: 10px; }
             .sig-box { padding: 6px 6px !important; border-radius: 8px; }
-            .sig-line { margin: 22px 8px 4px 8px !important; }
+            .sig-pad-area { height: 44px; }
+            .sig-preview-img { max-height: 42px; }
+            .sig-line { margin: 0 auto 4px auto !important; }
             .sig-name-input, .sig-date-input { border: none !important; }
             input::placeholder, textarea::placeholder {
                 color: transparent !important;
@@ -643,7 +710,7 @@
     const yearBE = yearAD + 543;
     const currentDateFormatted = `${day}/${month}/${yearBE}`;
 
-    // ฟังก์ชันสร้างเลข PO แบบสุ่มป้องกันการคาดเดา (เช่น PO-2026-X8K2M9)
+    // ฟังก์ชันสร้างเลข PO แบบสุ่มป้องกันการคาดเดา (เช่น PO-202611-X8K2M9)
     function generateRandomPoNo() {
         const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
         let randomPart = '';
@@ -694,10 +761,13 @@
         vatType: "exclude", // 'exclude' = แยก VAT 7%, 'none' = ไม่มี VAT
         sigPreparedName: "",
         sigPreparedDate: currentDateFormatted,
+        sigPreparedImg: "",
         sigCheckedName: "",
         sigCheckedDate: "",
+        sigCheckedImg: "",
         sigApprovedName: "",
-        sigApprovedDate: ""
+        sigApprovedDate: "",
+        sigApprovedImg: ""
     };
 
     // กำหนดค่าเริ่มต้นให้มีเพียง 1 รายการเท่านั้น
@@ -706,6 +776,56 @@
     ];
 
     const ITEMS_PER_PAGE = 14;
+
+    // ฟังก์ชันอัปโหลดและบีบอัดรูปภาพลายเซ็น (รองรับพื้นหลังโปร่งใส PNG)
+    function handleSignatureUpload(field, inputEl) {
+        const file = inputEl.files && inputEl.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            showToast("กรุณาเลือกไฟล์รูปภาพเท่านั้น (PNG, JPG, WebP)", true);
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const maxWidth = 360;
+                const maxHeight = 140;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, width, height);
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // แปลงเป็น PNG เพื่อคงความโปร่งใสของพื้นหลังลายเซ็น
+                const compressedBase64 = canvas.toDataURL('image/png');
+                docMeta[field] = compressedBase64;
+                renderDocument();
+                showToast("อัปโหลดรูปภาพลายเซ็นเรียบร้อยแล้ว");
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    // ฟังก์ชันลบรูปภาพลายเซ็น
+    function removeSignatureImage(field) {
+        docMeta[field] = "";
+        renderDocument();
+        showToast("ลบรูปภาพลายเซ็นเรียบร้อยแล้ว");
+    }
 
     function renderDocument() {
         const container = document.getElementById("print-pages-container");
@@ -921,21 +1041,56 @@
                     <textarea class="inline-textarea meta-field" data-field="remarkText" style="flex: 1;" placeholder="ระบุเงื่อนไขการสั่งซื้อหรือหมายเหตุเพิ่มเติม...">${docMeta.remarkText}</textarea>
                 </div>
 
-                <!-- ส่วนลงนาม 3 ช่องมาตรฐานใบสั่งซื้อ -->
+                <!-- ส่วนลงนาม 3 ช่องมาตรฐานใบสั่งซื้อ รองรับรูปภาพลายเซ็นดิจิทัล -->
                 <div class="signature-section">
                     <div class="sig-box">
+                        <div class="sig-pad-area">
+                            ${docMeta.sigPreparedImg ? `
+                                <img src="${docMeta.sigPreparedImg}" class="sig-preview-img" alt="ลายเซ็นผู้จัดทำ">
+                                <button type="button" class="btn-remove-sig no-print" onclick="removeSignatureImage('sigPreparedImg')" title="ลบรูปภาพลายเซ็น">✕</button>
+                            ` : `
+                                <label class="btn-upload-sig no-print">
+                                    <span>✍️ แนบภาพลายเซ็น</span>
+                                    <input type="file" accept="image/*" style="display:none;" onchange="handleSignatureUpload('sigPreparedImg', this)">
+                                </label>
+                            `}
+                        </div>
                         <div class="sig-line"></div>
                         <input type="text" class="sig-name-input meta-field" data-field="sigPreparedName" placeholder="(ชื่อ-นามสกุล เจ้าหน้าที่จัดซื้อ)" value="${docMeta.sigPreparedName}">
                         <div class="sig-text">ผู้จัดทำใบสั่งซื้อ (Prepared By)</div>
                         <div class="sig-date">วันที่: <input type="text" class="sig-date-input meta-field" data-field="sigPreparedDate" value="${docMeta.sigPreparedDate}"></div>
                     </div>
+
                     <div class="sig-box">
+                        <div class="sig-pad-area">
+                            ${docMeta.sigCheckedImg ? `
+                                <img src="${docMeta.sigCheckedImg}" class="sig-preview-img" alt="ลายเซ็นผู้ตรวจสอบ">
+                                <button type="button" class="btn-remove-sig no-print" onclick="removeSignatureImage('sigCheckedImg')" title="ลบรูปภาพลายเซ็น">✕</button>
+                            ` : `
+                                <label class="btn-upload-sig no-print">
+                                    <span>✍️ แนบภาพลายเซ็น</span>
+                                    <input type="file" accept="image/*" style="display:none;" onchange="handleSignatureUpload('sigCheckedImg', this)">
+                                </label>
+                            `}
+                        </div>
                         <div class="sig-line"></div>
                         <input type="text" class="sig-name-input meta-field" data-field="sigCheckedName" placeholder="(ชื่อ-นามสกุล ผู้ตรวจสอบ)" value="${docMeta.sigCheckedName}">
                         <div class="sig-text">ผู้ตรวจสอบ / หัวหน้าแผนก (Checked By)</div>
                         <div class="sig-date">วันที่: <input type="text" class="sig-date-input meta-field" data-field="sigCheckedDate" placeholder="วว/ดด/ปปปป" value="${docMeta.sigCheckedDate}"></div>
                     </div>
+
                     <div class="sig-box">
+                        <div class="sig-pad-area">
+                            ${docMeta.sigApprovedImg ? `
+                                <img src="${docMeta.sigApprovedImg}" class="sig-preview-img" alt="ลายเซ็นผู้อนุมัติ">
+                                <button type="button" class="btn-remove-sig no-print" onclick="removeSignatureImage('sigApprovedImg')" title="ลบรูปภาพลายเซ็น">✕</button>
+                            ` : `
+                                <label class="btn-upload-sig no-print">
+                                    <span>✍️ แนบภาพลายเซ็น</span>
+                                    <input type="file" accept="image/*" style="display:none;" onchange="handleSignatureUpload('sigApprovedImg', this)">
+                                </label>
+                            `}
+                        </div>
                         <div class="sig-line"></div>
                         <input type="text" class="sig-name-input meta-field" data-field="sigApprovedName" placeholder="(ชื่อ-นามสกุล ผู้มีอำนาจลงนาม)" value="${docMeta.sigApprovedName}">
                         <div class="sig-text">ผู้อนุมัติสั่งซื้อ (Authorized Signature)</div>
@@ -1135,10 +1290,13 @@
             vatType: "exclude",
             sigPreparedName: "",
             sigPreparedDate: currentDateFormatted,
+            sigPreparedImg: "",
             sigCheckedName: "",
             sigCheckedDate: "",
+            sigCheckedImg: "",
             sigApprovedName: "",
-            sigApprovedDate: ""
+            sigApprovedDate: "",
+            sigApprovedImg: ""
         };
         itemsData = [
             { desc: "", model: "", qty: 1, unit: "", price: 0.00 }
@@ -1228,7 +1386,7 @@
                 const btnOpen = document.createElement('button'); btnOpen.type = 'button'; btnOpen.textContent = 'เปิดแก้ไข';
                 btnOpen.addEventListener('click', () => loadPurchaseOrderRecord(record));
                 
-                // 📂 เพิ่มปุ่มลบรายการออนไลน์ในหน้าต่างจัดการใบสั่งซื้อ
+                // เพิ่มปุ่มลบรายการออนไลน์ในหน้าต่างจัดการใบสั่งซื้อ
                 const btnDelete = document.createElement('button'); btnDelete.type = 'button'; btnDelete.className = 'btn-danger-row'; btnDelete.textContent = 'ลบ';
                 btnDelete.addEventListener('click', () => deletePurchaseOrderRecord(record.id, record.poNo));
                 
