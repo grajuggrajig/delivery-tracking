@@ -7986,13 +7986,21 @@ async function ensureProductInStandardStock(name, cost, price, unit = '') {
         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
     });
 
-    return {
+    const createdProduct = {
         id: ref.id,
         name: cleanName,
         cost: numericCost,
         price: numericPrice,
         unit: cleanUnit
     };
+    allProducts.push(createdProduct);
+    sortedStockProductsSource = null;
+    if (typeof rebuildSuggestionProductSearchIndex === 'function') rebuildSuggestionProductSearchIndex();
+    if (typeof rebuildStockLinkedCompanyCache === 'function') rebuildStockLinkedCompanyCache();
+    if (typeof stockModal !== 'undefined' && stockModal && !stockModal.classList.contains('hidden')) {
+        renderStockTable(stockSearchBox?.value || '');
+    }
+    return createdProduct;
 }
 
 function sanitizeCompanyProductNameHtml(html) {
@@ -8286,6 +8294,17 @@ async function saveCompanyProduct(companyName, name, cost, price, unit = '', edi
             });
         }
 
+        // อัปเดตดัชนีค้นหาทั้งสองหน้าทันที ไม่ต้องรอ Firestore listener รอบถัดไป
+        invalidateCompanyCatalogCache();
+        if (typeof rebuildStockLinkedCompanyCache === 'function') rebuildStockLinkedCompanyCache();
+        if (typeof refreshStockCompanyFilter === 'function') refreshStockCompanyFilter(
+            document.getElementById('stock-company-search')?.value || ''
+        );
+        if (typeof renderStockTable === 'function' &&
+            typeof stockModal !== 'undefined' && stockModal &&
+            !stockModal.classList.contains('hidden')) {
+            renderStockTable(document.getElementById('stock-search-box')?.value || '');
+        }
         showToast(`บันทึก "${cleanName}" ในราคาของบริษัท "${cleanCompany}" และอัปเดตสต็อกกลางแล้ว`, 'success');
         return true;
     } catch (err) {
@@ -9045,7 +9064,7 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
     if (!container) return;
 
     const companyKey = normalizeCompanyProductKey(stableCompanyKey || companyName);
-    const keyword = String(filterText || '').trim().toLowerCase();
+    const keyword = normalizeCompanyProductName(String(filterText || '').trim());
 
     // นับสินค้าทั้งหมดของบริษัท ไม่เปลี่ยนตามช่องค้นหา
     // เรียงรายการบริษัทครั้งเดียวก่อนกรอง ช่วยให้พิมพ์ค้นหาต่อเนื่องได้เร็วขึ้น
@@ -10949,6 +10968,27 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                 }
             });
 
+            // รวมบริษัทที่มีรายการใน Company Directory ด้วย แม้ยังไม่มีประวัติ deliveries
+            // เพื่อให้ Stock Management เลือกและค้นหารายการสินค้าของบริษัทนั้นได้ทันที
+            (Array.isArray(allCompanyProducts) ? allCompanyProducts : []).forEach(product => {
+                const name = String(product.companyName || '').trim();
+                const key = normalizeCompanyProductKey(product.companyKey || name);
+                if (!key || !name) return;
+                const timestamp = Math.max(
+                    getTimestampMillis(product.updatedAt),
+                    getTimestampMillis(product.createdAt)
+                );
+                const existing = companyMap.get(key);
+                if (!existing || timestamp >= existing.timestamp) {
+                    companyMap.set(key, {
+                        key,
+                        name,
+                        district: String(existing?.district || '').trim(),
+                        timestamp: Math.max(timestamp, existing?.timestamp || 0)
+                    });
+                }
+            });
+
             return Array.from(companyMap.values()).sort((a, b) => {
                 if (b.timestamp !== a.timestamp) return b.timestamp - a.timestamp;
                 return a.name.localeCompare(b.name, 'th');
@@ -11254,7 +11294,8 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
 
         function renderStockTable(filterText = '') {
             // ไม่ refresh dropdown ทุกครั้งที่พิมพ์ เพราะข้อมูลบริษัทไม่ได้เปลี่ยนตามคำค้น
-            const keyword = String(filterText || '').toLowerCase().trim();
+            const rawKeyword = String(filterText || '').trim();
+            const keyword = normalizeCompanyProductName(rawKeyword);
             const selectedCompanyKey = normalizeCompanyProductKey(stockCompanyFilter?.value || '');
             const badge = document.getElementById('stock-count-badge');
 
@@ -11289,49 +11330,40 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                 stockCompanySource.textContent = '';
             }
 
-            const standardProducts = getSortedStandardStockProducts()
-                .filter(p => String(p.name || '').toLowerCase().includes(keyword));
+            const filtered = getSortedStandardStockProducts()
+                .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
 
-            // ค้นหารายการ Company Directory ที่ยังไม่มีสินค้ากลางเชื่อมโยง
-            // เพื่อให้สินค้าที่พนักงานบันทึกเป็น companyProducts ปรากฏในมุมมอง "ทุกบริษัท"
-            const standardNameUnitKeys = new Set(allProducts.map(p =>
-                normalizeCompanyProductName(p.name) + '::' + String(p.unit || '').trim().toLocaleLowerCase('th')
-            ));
-            const supplementalCompanyProducts = allCompanyProducts
-                .filter(cp => {
-                    const name = String(cp.name || '').trim();
-                    if (!name) return false;
-
-                    const linkedStockId = String(cp.stockProductId || '').trim();
-                    const linkedStockProduct = linkedStockId
-                        ? allProducts.find(stock => String(stock.id || '').trim() === linkedStockId)
-                        : null;
-                    // ถือว่าเชื่อมสมบูรณ์เมื่อ ID มีอยู่จริงและชื่อสินค้าตรงกันเท่านั้น
-                    if (linkedStockProduct &&
-                        normalizeCompanyProductName(linkedStockProduct.name) === normalizeCompanyProductName(name)) return false;
-
-                    const nameUnitKey = normalizeCompanyProductName(name) + '::' +
-                        String(cp.unit || '').trim().toLocaleLowerCase('th');
-                    if (standardNameUnitKeys.has(nameUnitKey)) return false;
-
-                    return !keyword || normalizeCompanyProductName(name).includes(normalizeCompanyProductName(keyword));
-                })
-                .sort((a, b) => String(a.name || '').localeCompare(String(b.name || ''), 'th'));
+            // เมื่อค้นหาในโหมด "ทุกบริษัท / สินค้ามาตรฐาน" ให้ค้น Company Directory
+            // เพิ่มด้วย โดยแสดงเป็นแถวราคาประจำบริษัทแยกจากราคามาตรฐาน ไม่รวม/เขียนทับราคาเข้าด้วยกัน
+            const standardResultIds = new Set(filtered.map(p => String(p.id)));
+            const companySearchMatches = keyword
+                ? allCompanyProducts
+                    .filter(p => normalizeCompanyProductName(p.name).includes(keyword))
+                    .filter(p => !p.stockProductId || !standardResultIds.has(String(p.stockProductId)))
+                    .map(p => ({
+                        id: p.id,
+                        name: String(p.name || '').trim(),
+                        cost: Number(p.cost) || 0,
+                        price: Number(p.price) || 0,
+                        unit: String(p.unit || '').trim(),
+                        companyName: String(p.companyName || '').trim(),
+                        stockProductId: p.stockProductId || ''
+                    }))
+                    .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'))
+                : [];
 
             if (badge) {
-                const totalMatches = standardProducts.length + supplementalCompanyProducts.length;
-                const totalAvailable = allProducts.length + supplementalCompanyProducts.length;
                 badge.textContent = keyword
-                    ? `พบ ${totalMatches} จาก ${totalAvailable} รายการ`
-                    : `${totalAvailable} รายการ`;
+                    ? `พบ ${filtered.length} สต็อกมาตรฐาน + ${companySearchMatches.length} รายการบริษัท`
+                    : `${allProducts.length} รายการ`;
             }
 
-            if (standardProducts.length === 0 && supplementalCompanyProducts.length === 0) {
-                stockTableContainer.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 italic bg-slate-50 rounded-2xl">ไม่พบรายการสินค้าในสต็อกและ Company Directory</div>`;
+            if (filtered.length === 0 && companySearchMatches.length === 0) {
+                stockTableContainer.innerHTML = `<div class="text-center py-6 text-xs text-slate-400 italic bg-slate-50 rounded-2xl">ไม่พบรายการสินค้าในสต็อกหรือ Company Directory</div>`;
                 return;
             }
 
-            const standardRowsHtml = standardProducts.map(p => {
+            const standardRowsHtml = filtered.map(p => {
                 // หน้านี้แสดงเฉพาะต้นทุน/ราคามาตรฐานจาก products เท่านั้น
                 // ห้ามนำราคาจาก companyProducts รายการแรกที่พบมาแสดง เพราะแต่ละบริษัทอาจมีราคาต่างกัน
                 const linkedCompanyProduct = stockCompanyProductByStockId.get(String(p.id)) ||
@@ -11375,29 +11407,10 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
                 `;
             }).join('');
 
-            const supplementalRowsHtml = supplementalCompanyProducts.map(cp => {
-                const cost = Number(cp.cost) || 0;
-                const price = Number(cp.price) || 0;
-                const profit = price - cost;
-                const profitMargin = price > 0 ? ((profit / price) * 100).toFixed(1) : '0.0';
-                const profitClass = profit >= 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700';
-                const profitPrefix = profit >= 0 ? '+' : '';
-                return `
-                    <div class="flex items-center justify-between p-3 bg-indigo-50/40 border border-indigo-100 hover:border-indigo-200 rounded-2xl shadow-2xs transition gap-2">
-                        <div class="truncate min-w-0">
-                            <div class="text-xs font-bold text-slate-800 truncate">📦 ${escapeHTML(cp.name)}${cp.unit ? ` <span class="font-extrabold text-emerald-600">/ ${escapeHTML(cp.unit)}</span>` : ''}</div>
-                            <div class="text-[11px] text-slate-500 flex items-center gap-3 mt-0.5 flex-wrap">
-                                <span>ต้นทุนบริษัท: <strong class="text-slate-700">${cost.toLocaleString()} ฿</strong></span>
-                                <span>ราคาขายบริษัท: <strong class="text-sky-600">${price.toLocaleString()} ฿</strong></span>
-                                <span class="${profitClass} px-2 py-0.5 rounded-md font-semibold">กำไร: ${profitPrefix}${profit.toLocaleString()} ฿ (${profitMargin}%)</span>
-                            </div>
-                            <div class="text-[10px] text-indigo-600 mt-1.5">🏢 Company Directory: ${escapeHTML(cp.companyName || cp.companyKey || 'ไม่ระบุบริษัท')} · ยังไม่มีรายการเชื่อมในสต็อกกลาง</div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-
-            stockTableContainer.innerHTML = standardRowsHtml + supplementalRowsHtml;
+            stockTableContainer.innerHTML = standardRowsHtml +
+                (companySearchMatches.length
+                    ? `<div class="mt-3 mb-2 px-1 text-[11px] font-bold text-indigo-700">🏢 รายการที่พบจาก Company Directory (แสดงราคาของแต่ละบริษัทแยกกัน)</div>${renderCompanySpecificStockRows(companySearchMatches)}`
+                    : '');
         }
 
         window.editStockItem = function(id, name, cost, price, unit = '') {
