@@ -6542,7 +6542,10 @@ body > header{z-index:900 !important}
     </div>
 </form>
             <div class="mb-3 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] gap-2">
-                <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าในสต็อก..." class="w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                <div class="flex items-center gap-2 min-w-0">
+                    <input type="text" id="stock-search-box" placeholder="🔍 ค้นหาสินค้าจากสต็อกและทุกบริษัท..." aria-label="ค้นหาสินค้าจากสต็อกและ Company Directory" class="flex-1 min-w-0 w-full px-3.5 py-2 text-xs border border-slate-200 bg-white rounded-xl focus:outline-none focus:ring-2 focus:ring-sky-400 transition">
+                    <button type="button" id="stock-clear-search-btn" class="flex-shrink-0 px-3 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-xl transition" title="เคลียร์ค่าค้นหาและรีเฟรชรายการ" aria-label="เคลียร์ค่าค้นหา">✕ เคลียร์ค่าค้นหา</button>
+                </div>
                 <div class="flex items-center gap-2 min-w-0">
                     <div class="flex-1 min-w-0 flex flex-col gap-1.5">
                         <input type="search" id="stock-company-search" autocomplete="off"
@@ -7755,7 +7758,15 @@ function normalizeProductDuplicateName(name) {
 
 
 function normalizeCompanyProductName(value) {
-    return String(value || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    return String(value || '').normalize('NFKC').trim().toLocaleLowerCase('th-TH').replace(/\s+/g, ' ');
+}
+
+// ค้นหาสินค้าด้วยทุกคำ (AND search): คำค้นแต่ละคำต้องพบในชื่อสินค้า
+// ใช้ร่วมกันทั้ง products และ companyProducts โดยไม่รวม/แก้ไขข้อมูลหรือราคาของสอง Collection
+function productNameMatchesAllSearchTerms(productName, searchText) {
+    const name = normalizeCompanyProductName(productName);
+    const terms = normalizeCompanyProductName(searchText).split(/[\s]+/).filter(Boolean);
+    return !terms.length || terms.every(term => name.includes(term));
 }
 
 /*
@@ -9071,7 +9082,7 @@ function renderCompanyProductCatalog(companyName, filterText = '', stableCompany
     const companyProducts = getSortedCompanyCatalogForKey(companyKey);
 
     const products = companyProducts
-        .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
+        .filter(p => productNameMatchesAllSearchTerms(p.name, keyword));
 
     if (count) count.textContent = `${companyProducts.length} รายการ`;
 
@@ -10297,6 +10308,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
         const stockSubmitBtn = document.getElementById('stock-submit-btn');
         const stockCancelEditBtn = document.getElementById('stock-cancel-edit');
         const stockSearchBox = document.getElementById('stock-search-box');
+        const stockClearSearchBtn = document.getElementById('stock-clear-search-btn');
         const stockCompanyFilter = document.getElementById('stock-company-filter');
         const stockCompanySearch = document.getElementById('stock-company-search');
         const stockCompanySource = document.getElementById('stock-company-source');
@@ -10893,6 +10905,24 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             }, 100);
         });
 
+        // เคลียร์คำค้นหาและคืนมุมมองเป็นทุกบริษัท/สินค้ามาตรฐาน โดยไม่เปลี่ยนข้อมูลใน Firebase
+        stockClearSearchBtn?.addEventListener('click', () => {
+            if (stockSearchTimer) { clearTimeout(stockSearchTimer); stockSearchTimer = 0; }
+            if (stockSearchFrame) { cancelAnimationFrame(stockSearchFrame); stockSearchFrame = 0; }
+            if (stockSearchBox) stockSearchBox.value = '';
+            if (stockCompanyFilter) stockCompanyFilter.value = '';
+            if (stockCompanySearch) {
+                stockCompanySearch.value = '';
+                stockCompanySearch.classList.add('hidden');
+            }
+            // สร้างดัชนีเชื่อมโยงจาก companyProducts ชุดล่าสุดที่ onSnapshot โหลดไว้
+            // แล้วคืนตัวกรองบริษัทเป็นทุกบริษัทก่อนวาดผลการค้นหาใหม่
+            rebuildStockLinkedCompanyCache();
+            refreshStockCompanyFilter('');
+            renderStockTable('');
+            stockSearchBox?.focus();
+        });
+
         stockCompanyFilter.addEventListener('change', () => {
             renderStockTable(stockSearchBox.value);
         });
@@ -11302,7 +11332,7 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             if (selectedCompanyKey) {
                 const company = getActualCompaniesForStock().find(c => c.key === selectedCompanyKey);
                 const companyProducts = getSelectedCompanyStockProducts(selectedCompanyKey)
-                    .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword))
+                    .filter(p => productNameMatchesAllSearchTerms(p.name, keyword))
                     .sort((a, b) => normalizeCompanyProductName(a.name).localeCompare(normalizeCompanyProductName(b.name), 'th'));
 
                 if (stockCompanySource) {
@@ -11331,15 +11361,14 @@ function showCompanyHistoryModal(companyName, customerName, items, stableCompany
             }
 
             const filtered = getSortedStandardStockProducts()
-                .filter(p => !keyword || normalizeCompanyProductName(p.name).includes(keyword));
+                .filter(p => productNameMatchesAllSearchTerms(p.name, keyword));
 
-            // เมื่อค้นหาในโหมด "ทุกบริษัท / สินค้ามาตรฐาน" ให้ค้น Company Directory
-            // เพิ่มด้วย โดยแสดงเป็นแถวราคาประจำบริษัทแยกจากราคามาตรฐาน ไม่รวม/เขียนทับราคาเข้าด้วยกัน
-            const standardResultIds = new Set(filtered.map(p => String(p.id)));
+            // ค้นหาจากทั้ง products และ companyProducts เป็นแหล่งข้อมูลร่วม
+            // แต่แสดงผลและราคาของแต่ละ Collection แยกจากกัน ไม่รวม/เขียนทับข้อมูล
             const companySearchMatches = keyword
                 ? allCompanyProducts
-                    .filter(p => normalizeCompanyProductName(p.name).includes(keyword))
-                    .filter(p => !p.stockProductId || !standardResultIds.has(String(p.stockProductId)))
+                    .filter(p => productNameMatchesAllSearchTerms(p.name, keyword))
+                    // แสดงราคาของแต่ละบริษัทแยกกันเสมอ แม้สินค้าจะเชื่อมกับ products แล้วก็ตาม
                     .map(p => ({
                         id: p.id,
                         name: String(p.name || '').trim(),
