@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการและค้นหารายการสินค้าของบริษัท | Delivery Tracking</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts: Prompt, Sarabun & Plus Jakarta Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Firebase SDK Compat -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Sarabun', 'Plus Jakarta Sans', 'sans-serif'],
+                        heading: ['Prompt', 'Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif;
+            background-color: #f8fafc;
+            color: #0f172a;
+        }
+        h1, h2, h3, h4, .font-heading {
+            font-family: 'Prompt', 'Plus Jakarta Sans', sans-serif;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        @media print {
+            body { background-color: #ffffff !important; color: #000000 !important; }
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            table { width: 100% !important; border-collapse: collapse !important; font-size: 11px !important; }
+            th, td { border: 1px solid #cbd5e1 !important; padding: 6px 8px !important; }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col antialiased selection:bg-brand-100 selection:text-brand-900">
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none no-print"></div>
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-blue-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20 shrink-0">
+                    <i class="fa-solid fa-boxes-packing text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-heading font-bold text-slate-900 text-base sm:text-lg leading-tight">ฐานข้อมูลสินค้าแยกตามบริษัท</h1>
+                    <p class="text-xs text-slate-500 hidden sm:block">Company Products & Pricing Intelligence • <span class="text-brand-600 font-medium">delivery-tracking-2313a</span></p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div id="db-status-badge" class="hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                    <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                    <span>กำลังเชื่อมต่อ...</span>
+                </div>
+
+                <div id="user-profile-pill" class="hidden items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
+                    <div class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-heading font-bold text-xs" id="user-avatar-initial">U</div>
+                    <div class="hidden sm:block text-left">
+                        <div class="text-xs font-semibold text-slate-800 leading-none" id="user-display-name">ผู้ใช้งาน</div>
+                        <div class="text-[11px] text-slate-500 mt-0.5">
+                            <span id="user-role-badge" class="inline-block px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-medium">user</span>
+                        </div>
+                    </div>
+                    <button onclick="handleLogout()" title="ออกจากระบบ" class="ml-1 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                        <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                    </button>
+                </div>
+
+                <button id="btn-open-login" onclick="openLoginModal()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-medium shadow-sm transition-all">
+                    <i class="fa-solid fa-right-to-bracket"></i>
+                    <span>เข้าสู่ระบบ</span>
+                </button>
+
+                <a href="index (1).html" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium transition-all">
+                    <i class="fa-solid fa-house"></i>
+                    <span class="hidden sm:inline">กลับหน้าหลัก</span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+        <!-- Auth Notice Banner -->
+        <div id="auth-notice-banner" class="hidden bg-gradient-to-r from-brand-50 via-blue-50 to-indigo-50 border border-brand-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm no-print">
+            <div class="flex items-start gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                    <i class="fa-solid fa-shield-halved text-lg"></i>
+                </div>
+                <div>
+                    <h2 class="font-heading font-semibold text-slate-900 text-sm sm:text-base">กรุณาเข้าสู่ระบบเพื่อเข้าถึงข้อมูลบริษัทและสินค้า</h2>
+                    <p class="text-xs sm:text-sm text-slate-600 mt-0.5">ระบบเชื่อมต่อกับฐานข้อมูลหลัก Delivery Tracking (delivery-tracking-2313a)</p>
+                </div>
+            </div>
+            <button onclick="openLoginModal()" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium shadow-sm transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-key"></i>
+                <span>เข้าสู่ระบบตอนนี้</span>
+            </button>
+        </div>
+
+        <!-- Modernized KPI Summary Cards -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center text-brand-300 opacity-60 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-boxes-stacked text-2xl"></i>
+                </div>
+                <p class="text-xs font-heading font-bold text-slate-400 uppercase tracking-wider">รายการสินค้าที่บันทึก</p>
+                <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-total-items">0</h3>
+                <p class="text-xs text-brand-600 font-semibold mt-1.5 flex items-center gap-1">
+                    <i class="fa-solid fa-arrow-trend-up text-[10px]"></i> <span id="kpi-items-sub">ทั้งหมดในระบบ</span>
+                </p>
+            </div>
+            <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-300 opacity-60 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-building text-2xl"></i>
+                </div>
+                <p class="text-xs font-heading font-bold text-slate-400 uppercase tracking-wider">จำนวนบริษัท / ร้านค้า</p>
+                <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-total-companies">0</h3>
+                <p class="text-xs text-slate-500 mt-1.5">เฉลี่ย <span class="font-bold text-slate-700" id="kpi-avg-per-company">0</span> รายการ/บริษัท</p>
+            </div>
+            <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-300 opacity-60 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-tags text-2xl"></i>
+                </div>
+                <p class="text-xs font-heading font-bold text-slate-400 uppercase tracking-wider">ราคาขายเฉลี่ยต่อรายการ</p>
+                <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-avg-price">฿0.00</h3>
+                <p class="text-xs text-slate-500 mt-1.5">รวมทั้งหมด <span class="font-bold text-slate-700" id="kpi-sum-price">฿0.00</span></p>
+            </div>
+            <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-300 opacity-60 group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-chart-line text-2xl"></i>
+                </div>
+                <p class="text-xs font-heading font-bold text-slate-400 uppercase tracking-wider">กำไรเฉลี่ย (Margin)</p>
+                <div class="flex items-baseline gap-2 mt-2">
+                    <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-emerald-600" id="kpi-avg-profit">฿0.00</h3>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" id="kpi-avg-margin-pct">0%</span>
+                </div>
+                <p class="text-xs text-slate-500 mt-1.5">เชื่อมสต็อกกลาง <span class="font-bold text-brand-600" id="kpi-linked-count">0</span> รายการ</p>
+            </div>
+        </section>
+
+        <!-- Search, Filters & Actions -->
+        <section class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4 no-print">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
+                <div class="lg:col-span-5 relative">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ค้นหาด่วน (Real-time Search)</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                        <input type="text" id="search-input" placeholder="ค้นหาชื่อสินค้า, บริษัท, หน่วย, ราคา..." 
+                            class="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
+                        <button id="btn-clear-search" onclick="clearSearchInput()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
+                            <i class="fa-solid fa-circle-xmark text-sm"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-4 relative" id="company-dropdown-container">
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">กรองตามบริษัท / ร้านค้า</label>
+                    <button type="button" id="company-dropdown-btn" onclick="toggleCompanyDropdown()" 
+                        class="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm text-left flex items-center justify-between gap-2 focus:outline-none focus:border-brand-500">
+                        <div class="flex items-center gap-2 truncate">
+                            <i class="fa-solid fa-building text-brand-600 text-xs"></i>
+                            <span id="selected-company-label" class="font-medium text-slate-700 truncate">ทุกบริษัท / ร้านค้า (ทั้งหมด)</span>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform" id="company-dropdown-arrow"></i>
+                    </button>
+
+                    <div id="company-dropdown-menu" class="hidden absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-40 overflow-hidden">
+                        <div class="p-2.5 border-b border-slate-100 bg-slate-50">
+                            <input type="text" id="company-search-filter" placeholder="พิมพ์ค้นหาชื่อบริษัท..." 
+                                class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-brand-500">
+                        </div>
+                        <div id="company-options-list" class="max-h-64 overflow-y-auto divide-y divide-slate-50 p-1"></div>
+                    </div>
+                </div>
+
+                <div class="lg:col-span-3 flex items-end gap-2">
+                    <button onclick="refreshAllData()" title="รีเฟรชข้อมูล" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium">
+                        <i id="refresh-icon" class="fa-solid fa-rotate"></i>
+                    </button>
+                    <button onclick="exportToCSV()" class="flex-1 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>ส่งออก CSV</span>
+                    </button>
+                    <button onclick="printReport()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium" title="พิมพ์รายงาน">
+                        <i class="fa-solid fa-print"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs font-medium text-slate-500">สถานะกำไร:</label>
+                        <select id="filter-profit" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+                            <option value="all">ทั้งหมด</option>
+                            <option value="profit_positive">มีกำไร (> 0 บาท)</option>
+                            <option value="profit_high">กำไรสูง (>= 20%)</option>
+                            <option value="profit_zero_or_loss">ไม่มีกำไร / ขาดทุน (<= 0)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs font-medium text-slate-500">สต็อก:</label>
+                        <select id="filter-stock-link" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+                            <option value="all">ทั้งหมด</option>
+                            <option value="linked">เชื่อมโยงสต็อกกลางแล้ว</option>
+                            <option value="unlinked">ยังไม่เชื่อมโยงสต็อกกลาง</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+                        <button type="button" onclick="setSourceFilter('all')" id="tab-source-all" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-brand-700 shadow-sm">ทั้งหมด (<span id="count-source-all">0</span>)</button>
+                        <button type="button" onclick="setSourceFilter('companyProducts')" id="tab-source-companyProducts" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600">📦 สินค้าบริษัท</button>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-2.5">
+                    <div class="flex items-center gap-1.5">
+                        <label class="text-xs font-medium text-slate-500">เรียงตาม:</label>
+                        <select id="sort-by" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+                            <option value="updated_desc">อัปเดตล่าสุด</option>
+                            <option value="name_asc">ชื่อสินค้า ก - ฮ (A-Z)</option>
+                            <option value="company_asc">ชื่อบริษัท ก - ฮ (A-Z)</option>
+                            <option value="price_desc">ราคาขาย สูงสุด - ต่ำสุด</option>
+                            <option value="price_asc">ราคาขาย ต่ำสุด - สูงสุด</option>
+                        </select>
+                    </div>
+
+                    <!-- Modern Distinct View Mode Toggle Buttons -->
+                    <div class="inline-flex rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/80 shadow-inner">
+                        <button id="btn-view-table" onclick="switchViewMode('table')" class="px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 bg-white text-brand-600 shadow-sm">
+                            <i class="fa-solid fa-table-cells text-xs"></i><span>ตาราง</span>
+                        </button>
+                        <button id="btn-view-grouped" onclick="switchViewMode('grouped')" class="px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-600 hover:text-slate-900">
+                            <i class="fa-solid fa-layer-group text-xs"></i><span>จัดกลุ่มบริษัท</span>
+                        </button>
+                    </div>
+
+                    <button type="button" onclick="openAddEditModal()" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-plus"></i><span>เพิ่มสินค้าบริษัท</span>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Sync Status Bar -->
+        <div id="sync-status-bar" class="bg-slate-800 text-slate-200 rounded-xl px-4 py-2 text-xs flex items-center justify-between shadow-sm no-print">
+            <div class="flex items-center gap-3">
+                <span class="font-semibold text-white flex items-center gap-1.5">
+                    <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    สถานะ Firestore:
+                </span>
+                <span>companyProducts: <strong id="stat-cp-docs" class="text-white">0</strong>รายการ</span>
+            </div>
+            <div id="firestore-error-banner" class="hidden text-rose-300 font-medium"></div>
+        </div>
+
+        <!-- Showing info -->
+        <div class="flex items-center justify-between text-xs text-slate-600 px-1">
+            <div>แสดงผล <strong class="text-slate-900 font-semibold" id="showing-count">0</strong> รายการ จากทั้งหมด <strong class="text-slate-900 font-semibold" id="total-raw-count">0</strong> รายการ</div>
+        </div>
+
+        <!-- Loading & Empty States -->
+        <div id="loading-state" class="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3 shadow-sm">
+            <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
+            </div>
+            <h3 class="font-heading font-semibold text-slate-800 text-base">กำลังโหลดข้อมูลสินค้าและบริษัทจาก Firestore...</h3>
+        </div>
+
+        <div id="empty-state" class="hidden bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3 shadow-sm">
+            <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+                <i class="fa-solid fa-folder-open text-2xl"></i>
+            </div>
+            <h3 class="font-heading font-semibold text-slate-800 text-base">ไม่พบรายการสินค้าที่ตรงกับเงื่อนไข</h3>
+        </div>
+
+        <!-- VIEW 1: TABLE VIEW (Scrollable with max height & sticky header) -->
+        <section id="view-table-container" class="hidden bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="overflow-x-auto max-h-[640px] overflow-y-auto">
+                <table class="w-full text-left border-collapse relative">
+                    <thead>
+                        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-heading font-semibold text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-xs backdrop-blur-md bg-slate-50/95">
+                            <th class="py-3 px-4 w-12 text-center">#</th>
+                            <th class="py-3 px-4 min-w-[320px]">ชื่อสินค้า / รายละเอียดบริษัท</th>
+                            <th class="py-3 px-4 w-24 text-center">หน่วย</th>
+                            <th class="py-3 px-4 w-28 text-right">ต้นทุน</th>
+                            <th class="py-3 px-4 w-32 text-right">ราคาขาย</th>
+                            <th class="py-3 px-4 w-36 text-right">กำไร (บาท / %)</th>
+                            <th class="py-3 px-4 w-32 text-right">อัปเดตล่าสุด</th>
+                            <th class="py-3 px-4 w-20 text-center no-print">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="products-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                </table>
+            </div>
+            <div id="pagination-bar" class="bg-slate-50 border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 no-print">
+                <div class="flex items-center gap-2">
+                    <span>แสดงหน้า <span id="page-current" class="font-semibold text-slate-900">1</span> จาก <span id="page-total" class="font-semibold text-slate-900">1</span></span>
+                    <select id="items-per-page-select" onchange="changeItemsPerPage(this.value)" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-700">
+                        <option value="25">25 รายการ/หน้า</option>
+                        <option value="50" selected>50 รายการ/หน้า</option>
+                        <option value="100">100 รายการ/หน้า</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-1.5" id="pagination-buttons"></div>
+            </div>
+        </section>
+
+        <!-- VIEW 2: GROUPED VIEW (Scrollable container) -->
+        <section id="view-grouped-container" class="hidden space-y-4 max-h-[700px] overflow-y-auto pr-1"></section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-slate-200 py-4 px-4 sm:px-6 lg:px-8 mt-auto no-print">
+        <div class="max-w-7xl mx-auto flex items-center justify-between text-xs text-slate-500">
+            <div>ระบบจัดการและค้นหารายการสินค้าแยกตามบริษัท • Firebase Project: <span class="font-mono text-slate-700">delivery-tracking-2313a</span></div>
+            <div id="footer-sync-time">อัปเดตข้อมูลล่าสุด: -</div>
+        </div>
+    </footer>
+
+    <!-- MODAL 1: LOGIN MODAL -->
+    <div id="login-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden">
+            <div class="bg-gradient-to-br from-brand-600 to-blue-700 p-6 text-white relative">
+                <button onclick="closeLoginModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <h2 class="font-heading text-xl font-bold">เข้าสู่ระบบฐานข้อมูลสินค้า</h2>
+                <p class="text-xs text-brand-100 mt-1">ใช้บัญชีเดียวกับระบบ Delivery Tracking</p>
+            </div>
+            <form id="login-form" onsubmit="handleLoginSubmit(event)" class="p-6 space-y-4">
+                <div id="login-error-box" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                    <span id="login-error-text">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">อีเมล หรือ ชื่อผู้ใช้ (Username)</label>
+                    <input type="text" id="login-username" required placeholder="example@email.com หรือ username" 
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-brand-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่าน (Password)</label>
+                    <input type="password" id="login-password" required placeholder="••••••••" 
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-brand-500">
+                </div>
+                <div class="pt-2 flex items-center gap-2">
+                    <button type="button" onclick="closeLoginModal()" class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium">ยกเลิก</button>
+                    <button type="submit" id="btn-submit-login" class="w-2/3 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-md">เข้าสู่ระบบ</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: PRODUCT DETAIL MODAL -->
+    <div id="detail-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 no-print">
+        <div class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[90vh] flex flex-col">
+            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-start justify-between gap-4">
+                <div>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800" id="modal-company-badge">บริษัท</span>
+                    <h3 class="font-heading text-lg font-bold text-slate-900 mt-1" id="modal-product-title">ชื่อสินค้า</h3>
+                </div>
+                <button onclick="closeDetailModal()" class="w-9 h-9 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 flex items-center justify-center">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-6 flex-1">
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
+                        <span class="text-xs text-slate-500 block">ต้นทุน</span>
+                        <span class="font-heading text-lg font-bold text-slate-800" id="modal-cost">฿0.00</span>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-brand-50 border border-brand-200">
+                        <span class="text-xs text-brand-700 block">ราคาขาย</span>
+                        <span class="font-heading text-lg font-bold text-brand-700" id="modal-price">฿0.00</span>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                        <span class="text-xs text-emerald-700 block">กำไรสุทธิ</span>
+                        <span class="font-heading text-lg font-bold text-emerald-700" id="modal-profit-baht">฿0.00</span>
+                    </div>
+                    <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200">
+                        <span class="text-xs text-amber-700 block">Margin %</span>
+                        <span class="font-heading text-lg font-bold text-amber-700" id="modal-margin-pct">0.0%</span>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end">
+                <button onclick="closeDetailModal()" class="px-5 py-2 rounded-xl bg-slate-800 text-white text-xs font-semibold">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: ADD/EDIT PRODUCT MODAL -->
+    <div id="edit-product-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
+            <div class="px-6 py-4 bg-gradient-to-r from-brand-600 to-blue-600 text-white flex items-center justify-between">
+                <h3 class="font-heading font-bold text-base" id="edit-modal-title">เพิ่มรายการสินค้าประจำบริษัท</h3>
+                <button type="button" onclick="closeAddEditModal()" class="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center text-white"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <form id="edit-product-form" onsubmit="handleSaveCompanyProduct(event)" class="p-6 space-y-4">
+                <input type="hidden" id="edit-doc-id" value="">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อบริษัท / ร้านค้า *</label>
+                    <input type="text" id="edit-company-name" list="company-datalist" required placeholder="ระบุชื่อบริษัท" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    <datalist id="company-datalist"></datalist>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อสินค้า *</label>
+                    <input type="text" id="edit-product-name" required placeholder="ระบุชื่อสินค้า" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                </div>
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ต้นทุน</label>
+                        <input type="number" step="0.01" min="0" id="edit-cost" value="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">ราคาขาย *</label>
+                        <input type="number" step="0.01" min="0" id="edit-price" required value="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">หน่วย</label>
+                        <input type="text" id="edit-unit" value="ชิ้น" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
+                    <button type="button" onclick="closeAddEditModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold">ยกเลิก</button>
+                    <button type="submit" id="btn-save-company-product" class="px-5 py-2 rounded-xl bg-brand-600 text-white text-xs font-semibold shadow-sm">บันทึกข้อมูล</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- FIREBASE & APP SCRIPT -->
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+            authDomain: "delivery-tracking-2313a.firebaseapp.com",
+            projectId: "delivery-tracking-2313a",
+            storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+            messagingSenderId: "631670801383",
+            appId: "1:631670801383:web:e720570af97bad7011f342",
+            measurementId: "G-BB2D5DJH3F"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // App State
+        const state = {
+            currentUser: null,
+            userProfile: null,
+            isAdmin: false,
+            rawCompanyProducts: [],
+            enrichedItems: [],
+            filteredItems: [],
+            companiesSummary: [],
+            selectedCompany: 'ALL',
+            sourceFilter: 'all',
+            viewMode: 'table',
+            currentPage: 1,
+            itemsPerPage: 50,
+            selectedModalItem: null
+        };
+
+        function normalizeText(str) {
+            if (!str) return '';
+            return String(str).normalize('NFKC').replace(/["“”″]/g, 'นิ้ว').replace(/\s+/g, ' ').trim().toLowerCase();
+        }
+
+        function formatCurrency(num) {
+            return new Intl.NumberFormat('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(num) || 0);
+        }
+
+        function formatNumber(num) {
+            return new Intl.NumberFormat('th-TH').format(Number(num) || 0);
+        }
+
+        function parseTimestamp(ts) {
+            if (!ts) return null;
+            if (typeof ts.toDate === 'function') return ts.toDate();
+            if (ts.seconds) return new Date(ts.seconds * 1000);
+            const d = new Date(ts);
+            return isNaN(d.getTime()) ? null : d;
+        }
+
+        function formatThaiDate(dateObj, includeTime = false) {
+            if (!dateObj) return '-';
+            try {
+                const options = { year: 'numeric', month: 'short', day: 'numeric' };
+                if (includeTime) { options.hour = '2-digit'; options.minute = '2-digit'; }
+                return dateObj.toLocaleDateString('th-TH', options);
+            } catch (e) { return '-'; }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const styles = {
+                success: 'bg-emerald-600 text-white',
+                error: 'bg-rose-600 text-white',
+                warning: 'bg-amber-500 text-white',
+                info: 'bg-slate-800 text-white'
+            };
+            toast.className = `flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-lg border text-xs sm:text-sm font-medium ${styles[type] || styles.info}`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3500);
+        }
+
+        function updateConnectionBadge(status, text) {
+            const badge = document.getElementById('db-status-badge');
+            badge.className = `hidden md:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status === 'connected' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}`;
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full ${status === 'connected' ? 'bg-emerald-500' : 'bg-rose-500'}"></span><span>${text}</span>`;
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            state.currentUser = user;
+            updateAuthUI();
+            if (user) {
+                document.getElementById('auth-notice-banner').classList.add('hidden');
+                await fetchCurrentUserProfile(user);
+            }
+            await loadAllCollections();
+        });
+
+        async function fetchCurrentUserProfile(user) {
+            try {
+                const userSnap = await db.collection('users').doc(user.uid).get();
+                if (userSnap.exists) {
+                    state.userProfile = { id: userSnap.id, ...userSnap.data() };
+                } else {
+                    const username = user.email ? user.email.split('@')[0] : 'User';
+                    state.userProfile = { uid: user.uid, email: user.email, username, role: 'user' };
+                }
+                const displayName = state.userProfile.displayName || state.userProfile.username || user.email;
+                document.getElementById('user-display-name').textContent = displayName;
+                document.getElementById('user-avatar-initial').textContent = displayName.charAt(0).toUpperCase();
+                document.getElementById('user-role-badge').textContent = state.userProfile.role.toUpperCase();
+            } catch (e) {
+                console.error("Profile fetch error:", e);
+            }
+        }
+
+        function updateAuthUI() {
+            const loginBtn = document.getElementById('btn-open-login');
+            const profilePill = document.getElementById('user-profile-pill');
+            if (state.currentUser) {
+                loginBtn.classList.add('hidden');
+                profilePill.classList.remove('hidden');
+                profilePill.classList.add('flex');
+            } else {
+                loginBtn.classList.remove('hidden');
+                profilePill.classList.add('hidden');
+                profilePill.classList.remove('flex');
+            }
+        }
+
+        window.openLoginModal = () => document.getElementById('login-modal').classList.remove('hidden');
+        window.closeLoginModal = () => document.getElementById('login-modal').classList.add('hidden');
+
+        window.handleLoginSubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-username').value.trim();
+            const pass = document.getElementById('login-password').value;
+            const fullEmail = email.includes('@') ? email : `${email}@delivery-tracking-2313a.firebaseapp.com`;
+            try {
+                await auth.signInWithEmailAndPassword(fullEmail, pass);
+                closeLoginModal();
+                showToast('เข้าสู่ระบบสำเร็จ', 'success');
+            } catch (err) {
+                document.getElementById('login-error-box').classList.remove('hidden');
+                document.getElementById('login-error-text').textContent = err.message;
+            }
+        };
+
+        window.handleLogout = async () => {
+            await auth.signOut();
+            showToast('ออกจากระบบแล้ว', 'info');
+        };
+
+        async function loadAllCollections() {
+            document.getElementById('loading-state').classList.remove('hidden');
+            try {
+                const cpSnap = await db.collection('companyProducts').get();
+                state.rawCompanyProducts = cpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                document.getElementById('stat-cp-docs').textContent = formatNumber(state.rawCompanyProducts.length);
+                document.getElementById('loading-state').classList.add('hidden');
+                updateConnectionBadge('connected', 'เชื่อมต่อ Firestore แล้ว');
+                rebuildAndRenderAll();
+            } catch (err) {
+                console.error("Firestore loading error:", err);
+                document.getElementById('loading-state').classList.add('hidden');
+                updateConnectionBadge('error', 'ข้อผิดพลาดการเชื่อมต่อ');
+                showToast('ไม่สามารถโหลดข้อมูลจาก Firestore ได้', 'error');
+            }
+        }
+
+        window.refreshAllData = async () => {
+            await loadAllCollections();
+            showToast('รีเฟรชข้อมูลเรียบร้อย', 'success');
+        };
+
+        function rebuildAndRenderAll() {
+            processAndEnrichData();
+            buildCompanyFilterOptions();
+            applyFiltersAndRender();
+            document.getElementById('footer-sync-time').textContent = `อัปเดตข้อมูลล่าสุด: ${formatThaiDate(new Date(), true)}`;
+        }
+
+        function processAndEnrichData() {
+            const combined = state.rawCompanyProducts.map(item => {
+                const plainName = (item.name || item.productName || '(ไม่มีชื่อ)').trim();
+                const companyName = (item.companyName || item.customerName || 'ไม่ระบุบริษัท').trim();
+                const cost = parseFloat(item.cost || 0);
+                const price = parseFloat(item.price || item.sellingPrice || 0);
+                const profit = price - cost;
+                const marginPct = price > 0 ? (profit / price) * 100 : 0;
+                const updatedDate = parseTimestamp(item.updatedAt || item.createdAt) || new Date(0);
+
+                return {
+                    ...item,
+                    _plainName: plainName,
+                    _companyName: companyName,
+                    _unit: item.unit || 'ชิ้น',
+                    _cost: cost,
+                    _price: price,
+                    _profit: profit,
+                    _marginPct: marginPct,
+                    _updatedDate: updatedDate
+                };
+            });
+
+            state.enrichedItems = combined;
+            document.getElementById('count-source-all').textContent = formatNumber(combined.length);
+        }
+
+        window.setSourceFilter = (source) => {
+            state.sourceFilter = source;
+            applyFiltersAndRender();
+        };
+
+        window.switchViewMode = (mode) => {
+            state.viewMode = mode;
+            const btnTable = document.getElementById('btn-view-table');
+            const btnGrouped = document.getElementById('btn-view-grouped');
+            
+            if (mode === 'table') {
+                btnTable.className = 'px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 bg-white text-brand-600 shadow-sm';
+                btnGrouped.className = 'px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
+            } else {
+                btnGrouped.className = 'px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 bg-white text-brand-600 shadow-sm';
+                btnTable.className = 'px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
+            }
+            renderCurrentView();
+        };
+
+        function buildCompanyFilterOptions() {
+            const countMap = new Map();
+            state.enrichedItems.forEach(i => countMap.set(i._companyName, (countMap.get(i._companyName) || 0) + 1));
+            state.companiesSummary = Array.from(countMap.entries()).sort((a, b) => a[0].localeCompare(b[0], 'th'));
+            renderCompanyDropdownList('');
+        }
+
+        function renderCompanyDropdownList(keyword) {
+            const listEl = document.getElementById('company-options-list');
+            const kw = normalizeText(keyword);
+            let html = `<button type="button" onclick="selectCompany('ALL')" class="w-full px-3 py-2 text-left text-xs rounded-xl text-slate-700 hover:bg-slate-50 font-bold">ทุกบริษัท (${state.enrichedItems.length})</button>`;
+            
+            state.companiesSummary.filter(([name]) => normalizeText(name).includes(kw)).forEach(([name, count]) => {
+                html += `<button type="button" onclick="selectCompany('${name.replace(/'/g, "\\'")}')" class="w-full px-3 py-2 text-left text-xs rounded-xl text-slate-700 hover:bg-slate-50 flex justify-between"><span>${name}</span><span class="bg-slate-100 px-2 py-0.5 rounded text-[10px]">${count}</span></button>`;
+            });
+            listEl.innerHTML = html;
+        }
+
+        window.toggleCompanyDropdown = () => {
+            document.getElementById('company-dropdown-menu').classList.toggle('hidden');
+        };
+
+        window.selectCompany = (companyName) => {
+            state.selectedCompany = companyName;
+            document.getElementById('selected-company-label').textContent = companyName === 'ALL' ? 'ทุกบริษัท / ร้านค้า (ทั้งหมด)' : companyName;
+            document.getElementById('company-dropdown-menu').classList.add('hidden');
+            state.currentPage = 1;
+            applyFiltersAndRender();
+        };
+
+        function applyFiltersAndRender() {
+            const keyword = normalizeText(document.getElementById('search-input').value);
+            const profitFilter = document.getElementById('filter-profit').value;
+            const stockFilter = document.getElementById('filter-stock-link').value;
+            const sortBy = document.getElementById('sort-by').value;
+
+            let results = state.enrichedItems.filter(item => {
+                if (state.selectedCompany !== 'ALL' && item._companyName !== state.selectedCompany) return false;
+                if (profitFilter === 'profit_positive' && item._profit <= 0) return false;
+                if (profitFilter === 'profit_high' && item._marginPct < 20) return false;
+                if (profitFilter === 'profit_zero_or_loss' && item._profit > 0) return false;
+                if (keyword) {
+                    const blob = normalizeText(`${item._plainName} ${item._companyName} ${item._price}`);
+                    if (!blob.includes(keyword)) return false;
+                }
+                return true;
+            });
+
+            // Sorting
+            results.sort((a, b) => {
+                if (sortBy === 'name_asc') return a._plainName.localeCompare(b._plainName, 'th');
+                if (sortBy === 'company_asc') return a._companyName.localeCompare(b._companyName, 'th');
+                if (sortBy === 'price_desc') return b._price - a._price;
+                if (sortBy === 'price_asc') return a._price - b._price;
+                return b._updatedDate - a._updatedDate; // updated_desc
+            });
+
+            state.filteredItems = results;
+            document.getElementById('showing-count').textContent = formatNumber(results.length);
+            document.getElementById('total-raw-count').textContent = formatNumber(state.enrichedItems.length);
+            updateKPIs(results);
+            renderCurrentView();
+        }
+
+        document.getElementById('search-input').addEventListener('input', () => { state.currentPage = 1; applyFiltersAndRender(); });
+        document.getElementById('company-search-filter').addEventListener('input', (e) => renderCompanyDropdownList(e.target.value));
+
+        function updateKPIs(items) {
+            const total = items.length;
+            const companies = new Set(items.map(i => i._companyName)).size;
+            let sumPrice = 0, sumProfit = 0, sumMargin = 0;
+            items.forEach(i => { sumPrice += i._price; sumProfit += i._profit; sumMargin += i._marginPct; });
+
+            document.getElementById('kpi-total-items').textContent = formatNumber(total);
+            document.getElementById('kpi-total-companies').textContent = formatNumber(companies);
+            document.getElementById('kpi-avg-per-company').textContent = companies > 0 ? (total / companies).toFixed(1) : '0';
+            document.getElementById('kpi-avg-price').textContent = `฿${formatCurrency(total ? sumPrice / total : 0)}`;
+            document.getElementById('kpi-sum-price').textContent = `฿${formatCurrency(sumPrice)}`;
+            document.getElementById('kpi-avg-profit').textContent = `฿${formatCurrency(total ? sumProfit / total : 0)}`;
+            document.getElementById('kpi-avg-margin-pct').textContent = `${total ? (sumMargin / total).toFixed(1) : 0}%`;
+        }
+
+        function renderCurrentView() {
+            const tableContainer = document.getElementById('view-table-container');
+            const groupedContainer = document.getElementById('view-grouped-container');
+            const emptyState = document.getElementById('empty-state');
+
+            if (state.filteredItems.length === 0) {
+                tableContainer.classList.add('hidden');
+                groupedContainer.classList.add('hidden');
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            emptyState.classList.add('hidden');
+
+            if (state.viewMode === 'table') {
+                groupedContainer.classList.add('hidden');
+                tableContainer.classList.remove('hidden');
+                renderTableView();
+            } else {
+                tableContainer.classList.add('hidden');
+                groupedContainer.classList.remove('hidden');
+                renderGroupedView();
+            }
+        }
+
+        function renderTableView() {
+            const totalPages = Math.ceil(state.filteredItems.length / state.itemsPerPage) || 1;
+            if (state.currentPage > totalPages) state.currentPage = totalPages;
+
+            const startIdx = (state.currentPage - 1) * state.itemsPerPage;
+            const pageItems = state.filteredItems.slice(startIdx, startIdx + state.itemsPerPage);
+
+            const tbody = document.getElementById('products-table-body');
+            tbody.innerHTML = pageItems.map((item, idx) => `
+                <tr class="hover:bg-slate-50/80 transition-colors cursor-pointer border-b border-slate-100" onclick="openDetailModal('${item.id}')">
+                    <td class="py-3 px-4 text-center text-xs text-slate-400 font-mono">${startIdx + idx + 1}</td>
+                    <td class="py-3 px-4">
+                        <div class="font-medium text-slate-900 leading-snug">${item._plainName}</div>
+                        <div class="text-xs text-brand-600 font-medium flex items-center gap-1 mt-0.5">
+                            <i class="fa-solid fa-building text-[10px] text-slate-400"></i>
+                            <span>${item._companyName}</span>
+                        </div>
+                    </td>
+                    <td class="py-3 px-4 text-center text-xs text-slate-600 font-medium">${item._unit}</td>
+                    <td class="py-3 px-4 text-right font-mono text-xs text-slate-500">฿${formatCurrency(item._cost)}</td>
+                    <td class="py-3 px-4 text-right font-mono text-sm font-bold text-slate-800">฿${formatCurrency(item._price)}</td>
+                    <td class="py-3 px-4 text-right font-mono text-xs">
+                        <span class="text-emerald-700 font-semibold">+฿${formatCurrency(item._profit)}</span>
+                        <span class="text-[11px] text-emerald-600 block">(${item._marginPct.toFixed(1)}%)</span>
+                    </td>
+                    <td class="py-3 px-4 text-right text-xs text-slate-500">${formatThaiDate(item._updatedDate)}</td>
+                    <td class="py-3 px-4 text-center">
+                        <button onclick="event.stopPropagation(); openDetailModal('${item.id}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg text-xs font-semibold transition-colors">
+                            ดู
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Update Pagination UI
+            document.getElementById('page-current').textContent = state.currentPage;
+            document.getElementById('page-total').textContent = totalPages;
+
+            const btnContainer = document.getElementById('pagination-buttons');
+            let btnHtml = `
+                <button onclick="changePage(${state.currentPage - 1})" ${state.currentPage === 1 ? 'disabled class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium"'}>ก่อนหน้า</button>
+            `;
+            
+            for (let p = Math.max(1, state.currentPage - 2); p <= Math.min(totalPages, state.currentPage + 2); p++) {
+                btnHtml += `<button onclick="changePage(${p})" class="px-3 py-1.5 rounded-lg border ${p === state.currentPage ? 'bg-brand-600 text-white border-brand-600 font-bold' : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'}">${p}</button>`;
+            }
+
+            btnHtml += `
+                <button onclick="changePage(${state.currentPage + 1})" ${state.currentPage >= totalPages ? 'disabled class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium"'}>ถัดไป</button>
+            `;
+            btnContainer.innerHTML = btnHtml;
+        }
+
+        window.changePage = (p) => {
+            const totalPages = Math.ceil(state.filteredItems.length / state.itemsPerPage) || 1;
+            if (p < 1 || p > totalPages) return;
+            state.currentPage = p;
+            renderTableView();
+            window.scrollTo({ top: 300, behavior: 'smooth' });
+        };
+
+        window.changeItemsPerPage = (val) => {
+            state.itemsPerPage = parseInt(val) || 50;
+            state.currentPage = 1;
+            renderTableView();
+        };
+
+        function renderGroupedView() {
+            const container = document.getElementById('view-grouped-container');
+            const map = new Map();
+            state.filteredItems.forEach(i => {
+                if (!map.has(i._companyName)) map.set(i._companyName, []);
+                map.get(i._companyName).push(i);
+            });
+
+            let html = '';
+            map.forEach((items, company) => {
+                html += `
+                    <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
+                        <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 font-heading font-bold text-slate-800 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md bg-slate-50/95">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-building text-brand-600"></i> ${company}</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs bg-brand-50 text-brand-700 font-semibold">${items.length} รายการ</span>
+                        </div>
+                        <div class="p-3 divide-y divide-slate-100 max-h-[350px] overflow-y-auto">
+                            ${items.map(i => `
+                                <div class="py-2.5 px-3 flex items-center justify-between hover:bg-slate-50 rounded-xl cursor-pointer" onclick="openDetailModal('${i.id}')">
+                                    <div>
+                                        <div class="font-medium text-slate-900 text-sm">${i._plainName}</div>
+                                        <div class="text-xs text-slate-500">หน่วย: ${i._unit} | อัปเดต: ${formatThaiDate(i._updatedDate)}</div>
+                                    </div>
+                                    <div class="text-right font-mono">
+                                        <div class="text-sm font-bold text-slate-900">฿${formatCurrency(i._price)}</div>
+                                        <div class="text-xs text-emerald-600 font-medium">+฿${formatCurrency(i._profit)} (${i._marginPct.toFixed(1)}%)</div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        window.openDetailModal = (id) => {
+            const item = state.enrichedItems.find(i => i.id === id);
+            if (!item) return;
+            state.selectedModalItem = item;
+            document.getElementById('modal-company-badge').textContent = item._companyName;
+            document.getElementById('modal-product-title').textContent = item._plainName;
+            document.getElementById('modal-cost').textContent = `฿${formatCurrency(item._cost)}`;
+            document.getElementById('modal-price').textContent = `฿${formatCurrency(item._price)}`;
+            document.getElementById('modal-profit-baht').textContent = `฿${formatCurrency(item._profit)}`;
+            document.getElementById('modal-margin-pct').textContent = `${item._marginPct.toFixed(1)}%`;
+            document.getElementById('detail-modal').classList.remove('hidden');
+        };
+
+        window.closeDetailModal = () => document.getElementById('detail-modal').classList.add('hidden');
+        window.openAddEditModal = () => document.getElementById('edit-product-modal').classList.remove('hidden');
+        window.closeAddEditModal = () => document.getElementById('edit-product-modal').classList.add('hidden');
+
+        window.handleSaveCompanyProduct = async (e) => {
+            e.preventDefault();
+            const companyName = document.getElementById('edit-company-name').value.trim();
+            const name = document.getElementById('edit-product-name').value.trim();
+            const cost = parseFloat(document.getElementById('edit-cost').value) || 0;
+            const price = parseFloat(document.getElementById('edit-price').value) || 0;
+            const unit = document.getElementById('edit-unit').value.trim() || 'ชิ้น';
+
+            try {
+                await db.collection('companyProducts').add({
+                    companyName,
+                    name,
+                    cost,
+                    price,
+                    unit,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                closeAddEditModal();
+                showToast('บันทึกสินค้าสำเร็จ', 'success');
+                loadAllCollections();
+            } catch (err) {
+                showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error');
+            }
+        };
+
+        window.exportToCSV = () => {
+            let csv = '\uFEFFชื่อบริษัท,ชื่อสินค้า,หน่วย,ต้นทุน,ราคาขาย,กำไร\n';
+            state.filteredItems.forEach(i => {
+                csv += `"${i._companyName}","${i._plainName}","${i._unit}",${i._cost},${i._price},${i._profit}\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'company_products.csv';
+            link.click();
+        };
+
+        window.printReport = () => window.print();
+    </script>
+</body>
+</html>
