@@ -58,7 +58,7 @@
 <div id="login-screen" class="hidden fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-md p-6 sm:p-8 modal-animate">
         <div class="text-center mb-6">
-            <div class="w-14 h-14 bg-sky-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-600/30 mx-auto mb-3">
+            <div class="w-14 h-14 bg-teal-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-600/30 mx-auto mb-3">
                 <i class="fa-solid fa-building-user text-2xl"></i>
             </div>
             <h2 class="text-xl font-bold text-slate-900">เข้าสู่ระบบฐานข้อมูลลูกค้าและบริษัท</h2>
@@ -76,37 +76,34 @@
                 <div class="relative">
                     <i class="fa-solid fa-user absolute left-3.5 top-3 text-slate-400 text-sm"></i>
                     <input type="text" id="login-username" required autocomplete="username" placeholder="ระบุชื่อผู้ใช้งาน เช่น admin"
-                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
                 </div>
             </div>
             <div>
                 <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่าน (Password)</label>
                 <div class="relative">
                     <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-sm"></i>
-                    <!-- เพิ่ม pr-10 เพื่อเว้นพื้นที่ด้านขวาไม่ให้ข้อความทับไอคอนตา -->
                     <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••"
-                        class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
-                    <!-- ปุ่มสำหรับคลิกดู/ซ่อนรหัสผ่าน -->
+                        class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
                     <button type="button" id="toggle-password" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 focus:outline-none">
                         <i class="fa-solid fa-eye text-sm" id="toggle-password-icon"></i>
                     </button>
                 </div>
             </div>
-            <button type="submit" id="btn-login-submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+            <button type="submit" id="btn-login-submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
                 <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
             </button>
         </form>
 
         <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
             <span>ต้องการกลับหน้าหลัก?</span>
-            <a href="index.html" class="text-sky-600 hover:text-sky-700 font-medium inline-flex items-center gap-1">
+            <a href="index.html" class="text-teal-600 hover:text-teal-700 font-medium inline-flex items-center gap-1">
                 ไปที่หน้าหลัก (index.html) <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
             </a>
         </div>
     </div>
 </div>
 
-<!-- JavaScript สำหรับควบคุมการกดดูรหัสผ่าน -->
 <script>
     const togglePasswordBtn = document.getElementById('toggle-password');
     const passwordInput = document.getElementById('login-password');
@@ -114,11 +111,9 @@
 
     if (togglePasswordBtn && passwordInput && togglePasswordIcon) {
         togglePasswordBtn.addEventListener('click', function () {
-            // สลับประเภท input ระหว่าง password กับ text
             const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
             passwordInput.setAttribute('type', type);
 
-            // สลับไอคอนดวงตา (fa-eye <-> fa-eye-slash)
             if (type === 'text') {
                 togglePasswordIcon.classList.remove('fa-eye');
                 togglePasswordIcon.classList.add('fa-eye-slash');
@@ -131,13 +126,13 @@
 </script>
 
     <!-- Top Navigation Header -->
-    <header class="bg-white/90 backdrop-blur-xl border-b border-slate-200/85 sticky top-0 z-40 shadow-xs">
+    <header class="bg-white/90 backdrop-blur-xl border-b border-teal-100 sticky top-0 z-40 shadow-xs">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-20 gap-4">
                 
                 <!-- Brand & System Info -->
                 <div class="flex items-center gap-3.5 min-w-0">
-                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-sky-600 via-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-sky-500/25 shrink-0">
+                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-teal-600 via-emerald-600 to-cyan-600 flex items-center justify-center text-white shadow-md shadow-teal-500/30 shrink-0">
                         <i class="fa-solid fa-building-user text-lg"></i>
                     </div>
                     <div class="min-w-0">
@@ -145,8 +140,8 @@
                             <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none">
                                 ฐานข้อมูลลูกค้าและบริษัท
                             </h1>
-                            <span id="connection-badge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 shadow-2xs">
-                                <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> กำลังตรวจสอบสิทธิ์...
+                            <span id="connection-badge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-2xs">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> กำลังตรวจสอบสิทธิ์...
                             </span>
                         </div>
                         <p class="text-xs text-slate-500 mt-1 truncate hidden sm:block">
@@ -159,81 +154,80 @@
                 <div class="flex items-center gap-2.5 shrink-0 relative">
                     
                     <!-- User Profile Pill -->
-                    <div id="user-profile-pill" class="hidden items-center gap-2.5 px-3 py-1.5 bg-slate-100/80 border border-slate-200/80 rounded-2xl text-xs text-slate-700 shadow-2xs">
-                        <div class="w-6 h-6 rounded-full bg-sky-100 text-sky-600 flex items-center justify-center text-xs shrink-0 font-bold">
+                    <div id="user-profile-pill" class="hidden items-center gap-2.5 px-3 py-1.5 bg-teal-50/70 border border-teal-200/80 rounded-2xl text-xs text-slate-700 shadow-2xs">
+                        <div class="w-6 h-6 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xs shrink-0 font-bold">
                             <i class="fa-solid fa-user"></i>
                         </div>
                         <span id="current-user-name" class="font-semibold max-w-[110px] truncate">-</span>
-                        <span id="current-user-role" class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-600 text-white tracking-wider">USER</span>
+                        <span id="current-user-role" class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-600 text-white tracking-wider">USER</span>
                     </div>
 
                     <!-- Quick Navigation Menu Dropdown -->
                     <div class="relative">
-                        <button onclick="toggleQuickMenu()" id="btn-quick-menu" class="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-slate-100/80 hover:bg-slate-200/80 border border-slate-200/80 rounded-2xl transition-all shadow-2xs group">
-                            <div class="w-5 h-5 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center text-xs group-hover:bg-sky-500 group-hover:text-white transition-colors">
+                        <button onclick="toggleQuickMenu()" id="btn-quick-menu" class="inline-flex items-center gap-2 px-3.5 py-2 text-xs sm:text-sm font-semibold text-teal-800 bg-teal-50/80 hover:bg-teal-100/80 border border-teal-200/80 rounded-2xl transition-all shadow-2xs group">
+                            <div class="w-5 h-5 rounded-lg bg-teal-600 text-white flex items-center justify-center text-xs group-hover:bg-teal-700 transition-colors">
                                 <i class="fa-solid fa-compass"></i>
                             </div>
                             <span class="hidden md:inline">เมนูระบบอื่นๆ</span>
                             <span class="md:hidden">เมนู</span>
-                            <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-slate-600 transition-transform"></i>
+                            <i class="fa-solid fa-chevron-down text-[10px] text-teal-600 group-hover:text-teal-800 transition-transform"></i>
                         </button>
 
                         <!-- Dropdown Menu Box -->
-                        <div id="quick-menu-dropdown" class="hidden absolute right-0 mt-2.5 w-64 bg-white rounded-3xl shadow-2xl border border-slate-200/80 py-2.5 z-50 modal-animate">
+                        <div id="quick-menu-dropdown" class="hidden absolute right-0 mt-2.5 w-64 bg-white/95 backdrop-blur-md rounded-3xl shadow-2xl border border-slate-200/80 py-2.5 z-50 modal-animate">
                             <div class="px-4 py-2 border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                                 ทางลัดระบบงาน
                             </div>
                             <div class="py-1 space-y-0.5">
-							    <a href="customer.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors">
+							    <a href="customer.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-users"></i>
                                     </div>
                                     <span>ฐานข้อมูลลูกค้า (Customer)</span>
                                 </a>
-								<a href="customer_timeline.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors">
+								<a href="customer_timeline.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
 									<div class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
 									<i class="fa-solid fa-clock-rotate-left"></i>
 									</div>
 									<span>ประวัติลูกค้า (Customer_Timeline)</span>
 								</a>
-								
-                                <a href="stock management" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors">
+                                <a href="stock management" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-truck-fast"></i>
                                     </div>
                                     <span>จัดส่งสินค้า (StockManagement)</span>
                                 </a>
-                                <a href="add a new product.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors">
+                                <a href="add a new product.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-square-plus"></i>
                                     </div>
                                     <span>เพิ่มสินค้าใหม่ (Add New Product)</span>
                                 </a>
-                                <a href="employee.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors">
+                                <a href="employee.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-id-badge"></i>
                                     </div>
                                     <span>จัดการพนักงาน (Employee)</span>
                                 </a>
-                                <a href="purchase order.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors">
+                                <a href="purchase order.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-file-invoice-dollar"></i>
                                     </div>
                                     <span>ใบสั่งซื้อ (Purchase Order)</span>
                                 </a>
-                                <a href="quotation.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors">
+                                <a href="quotation.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-file-contract"></i>
                                     </div>
                                     <span>ใบเสนอราคา (Quotation)</span>
                                 </a>
-                                <a href="pdf_manager_ready.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors">
+                                <a href="pdf_manager_ready.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-file-pdf"></i>
                                     </div>
                                     <span>จัดการเอกสาร PDF</span>
                                 </a>
-                                <a href="REM.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-600 transition-colors border-t border-slate-100 mt-1 pt-2">
+                                <a href="REM.html" class="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors border-t border-slate-100 mt-1 pt-2">
                                     <div class="w-7 h-7 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-bell"></i>
                                     </div>
@@ -244,7 +238,7 @@
                     </div>
 
                     <!-- Add Company Button -->
-                    <button onclick="openCompanyModal()" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 hover:from-sky-600 hover:to-indigo-700 rounded-2xl shadow-md shadow-sky-500/20 transition-all hover:scale-[1.02] active:scale-95">
+                    <button onclick="openCompanyModal()" class="inline-flex items-center gap-2 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 rounded-2xl shadow-md shadow-teal-600/25 transition-all hover:scale-[1.02] active:scale-95">
                         <i class="fa-solid fa-plus text-xs"></i>
                         <span class="hidden sm:inline">เพิ่มบริษัท / ลูกค้าใหม่</span>
                         <span class="sm:hidden">เพิ่ม</span>
@@ -265,8 +259,8 @@
         
         <!-- KPI Summary Cards -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-            <div class="bg-white backdrop-blur-sm p-4 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-                <div class="w-11 h-11 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0 shadow-2xs">
+            <div class="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-teal-100/80 shadow-sm flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center shrink-0 shadow-2xs">
                     <i class="fa-solid fa-building text-lg"></i>
                 </div>
                 <div>
@@ -275,7 +269,7 @@
                 </div>
             </div>
             
-            <div class="bg-white backdrop-blur-sm p-4 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+            <div class="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-teal-100/80 shadow-sm flex items-center gap-3.5">
                 <div class="w-11 h-11 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 shadow-2xs">
                     <i class="fa-solid fa-users text-lg"></i>
                 </div>
@@ -285,8 +279,8 @@
                 </div>
             </div>
 
-            <div class="bg-white backdrop-blur-sm p-4 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
-                <div class="w-11 h-11 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 shadow-2xs">
+            <div class="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-teal-100/80 shadow-sm flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center shrink-0 shadow-2xs">
                     <i class="fa-solid fa-receipt text-lg"></i>
                 </div>
                 <div>
@@ -295,7 +289,7 @@
                 </div>
             </div>
 
-            <div class="bg-white backdrop-blur-sm p-4 rounded-3xl border border-slate-200/80 shadow-sm flex items-center gap-3.5">
+            <div class="bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-teal-100/80 shadow-sm flex items-center gap-3.5">
                 <div class="w-11 h-11 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 shadow-2xs">
                     <i class="fa-solid fa-baht-sign text-lg"></i>
                 </div>
@@ -307,12 +301,12 @@
         </div>
 
         <!-- Search & Filter Bar -->
-        <div class="bg-white backdrop-blur-sm p-3.5 sm:p-4 rounded-3xl border border-slate-200/80 shadow-sm mb-6">
+        <div class="bg-white/80 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border border-teal-100/80 shadow-sm mb-6">
             <div class="flex flex-col md:flex-row gap-3">
                 <div class="relative flex-1">
                     <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                     <input type="text" id="search-input" placeholder="ค้นหาชื่อบริษัท, ชื่อลูกค้า, เบอร์โทร, Line ID, อำเภอ/เขต หรือสินค้าที่เคยสั่ง..." 
-                        class="w-full pl-10 pr-9 py-2.5 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none transition-all">
+                        class="w-full pl-10 pr-9 py-2.5 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all">
                     <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
                         <i class="fa-solid fa-circle-xmark"></i>
                     </button>
@@ -321,7 +315,7 @@
                 <div class="flex flex-wrap sm:flex-nowrap items-center gap-2.5">
                     <div class="relative w-full sm:w-48">
                         <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <select id="district-filter" class="w-full pl-8 pr-8 py-2.5 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm text-slate-700 focus:bg-white focus:border-sky-500 outline-none appearance-none cursor-pointer">
+                        <select id="district-filter" class="w-full pl-8 pr-8 py-2.5 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm text-slate-700 focus:bg-white focus:border-teal-500 outline-none appearance-none cursor-pointer">
                             <option value="">ทุกอำเภอ / เขต</option>
                         </select>
                         <i class="fa-solid fa-chevron-down absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
@@ -329,7 +323,7 @@
 
                     <div class="relative w-full sm:w-48">
                         <i class="fa-solid fa-arrow-down-wide-short absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <select id="sort-select" class="w-full pl-8 pr-8 py-2.5 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm text-slate-700 focus:bg-white focus:border-sky-500 outline-none appearance-none cursor-pointer">
+                        <select id="sort-select" class="w-full pl-8 pr-8 py-2.5 bg-slate-50/80 border border-slate-200 rounded-2xl text-sm text-slate-700 focus:bg-white focus:border-teal-500 outline-none appearance-none cursor-pointer">
                             <option value="recent">อัปเดต / สั่งซื้อล่าสุด</option>
                             <option value="name">เรียงตามชื่อบริษัท (ก-ฮ)</option>
                             <option value="contacts">จำนวนลูกค้ามากที่สุด</option>
@@ -343,18 +337,18 @@
 
         <!-- Loading State -->
         <div id="loading-state" class="py-16 text-center">
-            <div class="inline-block w-10 h-10 border-4 border-sky-600 border-t-transparent rounded-full animate-spin mb-3"></div>
+            <div class="inline-block w-10 h-10 border-4 border-teal-600 border-t-transparent rounded-full animate-spin mb-3"></div>
             <p class="text-sm text-slate-500">กำลังโหลดข้อมูลบริษัทและลูกค้าจากระบบจัดส่ง...</p>
         </div>
 
         <!-- Empty State -->
-        <div id="empty-state" class="hidden bg-white rounded-3xl border border-slate-200/80 p-12 text-center shadow-sm">
+        <div id="empty-state" class="hidden bg-white/80 backdrop-blur-md rounded-3xl border border-teal-100/80 p-12 text-center shadow-sm">
             <div class="w-16 h-16 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <i class="fa-solid fa-folder-open text-2xl"></i>
             </div>
             <h3 class="text-base font-semibold text-slate-800 mb-1">ไม่พบข้อมูลบริษัทหรือลูกค้า</h3>
             <p class="text-sm text-slate-500 mb-5">ยังไม่มีข้อมูลในระบบ หรือไม่พบรายการที่ตรงกับคำค้นหาของคุณ</p>
-            <button onclick="openCompanyModal()" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-2xl transition-colors">
+            <button onclick="openCompanyModal()" class="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-2xl transition-colors">
                 <i class="fa-solid fa-plus"></i> เพิ่มข้อมูลบริษัทแรก
             </button>
         </div>
@@ -373,7 +367,7 @@
         <div class="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-2xl overflow-hidden modal-animate my-8">
             <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
                 <div class="flex items-center gap-2.5">
-                    <div class="w-8 h-8 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-2xs">
+                    <div class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-2xs">
                         <i class="fa-solid fa-building"></i>
                     </div>
                     <h2 id="modal-company-title" class="text-base sm:text-lg font-bold text-slate-900">เพิ่มข้อมูลบริษัทใหม่</h2>
@@ -388,7 +382,7 @@
                 <input type="hidden" id="edit-original-company-name">
 
                 <div class="space-y-4">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-sky-600 flex items-center gap-1.5">
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-teal-600 flex items-center gap-1.5">
                         <i class="fa-solid fa-circle-info"></i> ข้อมูลบริษัท / องค์กร
                     </h3>
                     
@@ -396,25 +390,25 @@
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อบริษัท / ร้านค้า <span class="text-rose-500">*</span></label>
                             <input type="text" id="comp-name" required placeholder="เช่น บริษัท เอสซีจี โลจิสติกส์ จำกัด"
-                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
                         </div>
                         <div>
                             <label class="block text-xs font-medium text-slate-700 mb-1">อำเภอ / เขต</label>
                             <input type="text" id="comp-district" placeholder="เช่น เมือง, บางพลี"
-                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-xs font-medium text-slate-700 mb-1">ที่อยู่บริษัท (สถานที่จัดส่งหลัก)</label>
                         <textarea id="comp-address" rows="2" placeholder="ระบุบ้านเลขที่ ถนน ตำบล/แขวง อำเภอ/เขต จังหวัด รหัสไปรษณีย์..."
-                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none resize-none"></textarea>
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none resize-none"></textarea>
                     </div>
 
                     <div>
                         <label class="block text-xs font-medium text-slate-700 mb-1">หมายเหตุบริษัท (เงื่อนไขวางบิล / เวลาเปิดรับสินค้า)</label>
                         <input type="text" id="comp-notes" placeholder="เช่น วางบิลทุกวันที่ 25, รับของ 08:30-16:30 น."
-                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
                     </div>
                 </div>
 
@@ -439,7 +433,7 @@
                     <button type="button" onclick="closeCompanyModal()" class="px-4 py-2.5 text-sm font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 rounded-2xl transition-colors">
                         ยกเลิก
                     </button>
-                    <button type="submit" id="btn-save-company" class="px-5 py-2.5 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-2xl shadow-sm transition-colors flex items-center gap-2">
+                    <button type="submit" id="btn-save-company" class="px-5 py-2.5 text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 rounded-2xl shadow-sm transition-colors flex items-center gap-2">
                         <i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูล
                     </button>
                 </div>
@@ -452,14 +446,14 @@
     <!-- ===================================================================== -->
     <div id="detail-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-4xl overflow-hidden modal-animate my-8 relative">
-            <div class="px-6 py-5 bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 text-white flex items-center justify-between">
+            <div class="px-6 py-5 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 text-white flex items-center justify-between">
                 <div class="flex items-center gap-3.5">
                     <div class="w-11 h-11 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white flex items-center justify-center shadow-xs">
                         <i class="fa-solid fa-building text-lg"></i>
                     </div>
                     <div>
                         <h2 id="detail-comp-name" class="text-base sm:text-lg font-bold leading-tight">ชื่อบริษัท</h2>
-                        <p id="detail-comp-district" class="text-xs text-sky-100 flex items-center gap-1.5 mt-1">
+                        <p id="detail-comp-district" class="text-xs text-teal-100 flex items-center gap-1.5 mt-1">
                             <i class="fa-solid fa-location-dot text-white"></i> <span>อำเภอ/เขต</span>
                         </p>
                     </div>
@@ -513,7 +507,7 @@
                 <div>
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-users text-sky-600"></i>
+                            <i class="fa-solid fa-users text-teal-600"></i>
                             <span>รายชื่อผู้ติดต่อในบริษัท (<span id="detail-contact-count">0</span> คน)</span>
                         </h3>
                     </div>
@@ -526,7 +520,7 @@
                 <div>
                     <div class="flex items-center justify-between mb-3">
                         <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
-                            <i class="fa-solid fa-clock-rotate-left text-purple-600"></i>
+                            <i class="fa-solid fa-clock-rotate-left text-cyan-600"></i>
                             <span>ประวัติบิลจัดส่งและรายการสินค้าที่เคยสั่งซื้อ (<span id="detail-history-count">0</span> บิล)</span>
                         </h3>
                         <span id="detail-total-spent" class="text-xs font-bold px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
@@ -609,7 +603,7 @@
         let currentOpenCompany = null;
 
         const collapsedCards = {};
-        const collapsedSections = {}; // สำหรับเก็บสถานะเปิด/ปิด (+/-) ของแต่ละส่วนในการ์ด
+        const collapsedSections = {};
 
         function toggleQuickMenu() {
             const menu = document.getElementById('quick-menu-dropdown');
@@ -728,7 +722,7 @@
                 roleBadge.textContent = currentUserRole === 'admin' ? 'ADMIN' : 'USER';
                 roleBadge.className = currentUserRole === 'admin'
                     ? 'px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-purple-600 text-white tracking-wider'
-                    : 'px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-sky-600 text-white tracking-wider';
+                    : 'px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-teal-600 text-white tracking-wider';
 
                 document.getElementById('user-profile-pill').classList.remove('hidden');
                 document.getElementById('user-profile-pill').classList.add('flex');
@@ -1125,7 +1119,6 @@
             renderDirectory();
         }
 
-        // ฟังก์ชันสำหรับเปิด/ปิดซ่อนส่วนข้อมูล (ที่อยู่บริษัท / หมายเหตุบริษัท / ผู้ติดต่อเพิ่มเติม)
         function toggleSection(companyName, sectionKey) {
             const mapKey = `${companyName}_${sectionKey}`;
             collapsedSections[mapKey] = !collapsedSections[mapKey];
@@ -1170,6 +1163,9 @@
             }
         }
 
+        // =========================================================================
+        // อัปเดตการ์ดให้เป็นแบบโปร่งแสง (Translucent / Glassmorphism) พร้อมปุ่มใสๆ
+        // =========================================================================
         function renderDirectory() {
             const grid = document.getElementById('directory-grid');
             const emptyState = document.getElementById('empty-state');
@@ -1195,7 +1191,6 @@
                 const notesKey = `${comp.companyName}_notes`;
                 const contactsKey = `${comp.companyName}_contacts`;
 
-                // กำหนดค่าเริ่มต้นให้ "ที่อยู่", "หมายเหตุ", และ "ผู้ติดต่อคนที่ 2 ขึ้นไป" เป็นซ่อน (true)
                 if (collapsedSections[addrKey] === undefined) collapsedSections[addrKey] = true;
                 if (collapsedSections[notesKey] === undefined) collapsedSections[notesKey] = true;
                 if (collapsedSections[contactsKey] === undefined) collapsedSections[contactsKey] = true;
@@ -1207,72 +1202,70 @@
                 const escapedCompName = escapeHtml(comp.companyName).replace(/'/g, "\\'");
 
                 return `
-                <div class="bg-white rounded-3xl border border-slate-200/90 shadow-md shadow-slate-200/50 card-hover flex flex-col justify-between overflow-hidden">
+                <div class="bg-white/70 backdrop-blur-md rounded-3xl border border-teal-200/60 shadow-sm hover:shadow-lg hover:border-teal-400/80 transition-all duration-300 flex flex-col justify-between overflow-hidden">
                     <div>
-                        <!-- Card Header Clean Blue Gradient Style -->
-                        <div class="bg-gradient-to-r from-sky-500 via-blue-600 to-indigo-600 px-5 py-4 text-white flex items-start justify-between gap-3 border-b border-sky-400/30">
+                        <!-- Header การ์ดแบบโปร่งแสง เส้นกรอบบางๆ -->
+                        <div class="px-5 pt-5 pb-3 flex items-start justify-between gap-3 border-b border-teal-100/60">
                             <div class="flex items-start gap-3 min-w-0 flex-1">
-                                <div class="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md border border-white/30 text-white flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-xs">
+                                <div class="w-10 h-10 rounded-2xl bg-teal-50/90 text-teal-600 border border-teal-200/80 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5 shadow-2xs">
                                     <i class="fa-solid fa-building"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
-                                        <span class="text-[9px] font-bold text-sky-100 uppercase tracking-widest">บริษัท</span>
+                                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">บริษัท</span>
                                         ${isVirtual ? `
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-400 text-slate-950 shadow-2xs" title="ดึงจากบิลจัดส่ง - ยังไม่บันทึกเป็นทางการ">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200">
                                                 <i class="fa-solid fa-cloud-arrow-up text-[8px]"></i> จากบิล
                                             </span>
                                         ` : ''}
                                         ${hasNotes ? `
-                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-white/25 text-white border border-white/30 shadow-2xs">
+                                            <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-teal-50 text-teal-700 border border-teal-200/60">
                                                 <i class="fa-solid fa-note-sticky text-[8px]"></i> โน้ต
                                             </span>
                                         ` : ''}
                                     </div>
-                                    <div class="whitespace-nowrap overflow-x-auto scrollbar-none py-0.5" title="${escapeHtml(comp.companyName)}">
-                                        <h3 class="text-sm sm:text-base font-bold text-white inline-block cursor-pointer hover:text-sky-100 transition-colors" onclick="openDetailModal('${encodedKey}')">
-                                            ${escapeHtml(comp.companyName)}
-                                        </h3>
-                                    </div>
+                                    <!-- ชื่อบริษัทมองเห็นเด่นชัด พร้อมปุ่มใสๆ สไตล์ Glassmorphism -->
+                                    <h3 class="text-base font-bold text-slate-900 cursor-pointer hover:text-teal-700 transition-colors truncate" onclick="openDetailModal('${encodedKey}')" title="${escapeHtml(comp.companyName)}">
+                                        ${escapeHtml(comp.companyName)}
+                                    </h3>
                                     ${comp.companyDistrict ? `
-                                        <p class="text-xs text-sky-100 flex items-center gap-1 mt-0.5">
-                                            <i class="fa-solid fa-location-dot text-[10px] text-white"></i> ${escapeHtml(comp.companyDistrict)}
+                                        <p class="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                            <i class="fa-solid fa-location-dot text-[10px] text-teal-600"></i> ${escapeHtml(comp.companyDistrict)}
                                         </p>
                                     ` : ''}
                                 </div>
                             </div>
 
-                            <div class="flex items-center gap-1 shrink-0 bg-white/15 backdrop-blur-md p-1 rounded-xl border border-white/20">
+                            <!-- ปุ่มควบคุมการ์ดแบบโปร่งแสง (Translucent Action Buttons) -->
+                            <div class="flex items-center gap-1.5 shrink-0">
                                 ${isVirtual ? `
-                                    <button onclick="saveVirtualCompanyToDirectory('${encodedKey}')" class="px-2 py-1 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-[11px] font-bold transition-colors flex items-center gap-1 shadow-sm" title="บันทึกรายชื่อนี้ลงระบบฐานข้อมูลบริษัท">
-                                        <i class="fa-solid fa-floppy-disk"></i> บันทึก
+                                    <button onclick="saveVirtualCompanyToDirectory('${encodedKey}')" class="px-2.5 py-1 bg-emerald-50/80 hover:bg-emerald-100 text-emerald-700 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 border border-emerald-200" title="บันทึกรายชื่อนี้ลงระบบ">
+                                        <i class="fa-solid fa-floppy-disk text-[10px]"></i> บันทึก
                                     </button>
                                 ` : ''}
-                                <button onclick="toggleCardCollapse('${escapedCompName}')" class="w-6 h-6 flex items-center justify-center text-white/85 hover:text-white hover:bg-white/20 rounded-lg transition-colors" title="${isCollapsed ? 'ขยายรายละเอียด' : 'ย่อรายละเอียด'}">
-                                    <i class="fa-solid ${isCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'} text-[10px]"></i>
+                                <button onclick="openCompanyModal('${encodedKey}')" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-teal-700 bg-white/60 hover:bg-teal-50 border border-slate-200/70 rounded-xl transition-all shadow-2xs" title="แก้ไขข้อมูล">
+                                    <i class="fa-solid fa-pen-to-square text-xs"></i>
                                 </button>
-                                <button onclick="openCompanyModal('${encodedKey}')" class="w-6 h-6 flex items-center justify-center text-white/80 hover:text-white hover:bg-white/20 rounded-lg transition-colors" title="แก้ไขข้อมูลบริษัท">
-                                    <i class="fa-solid fa-pen-to-square text-[10px]"></i>
+                                <button onclick="confirmDeleteCompany('${encodedKey}')" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-rose-600 bg-white/60 hover:bg-rose-50 border border-slate-200/70 rounded-xl transition-all shadow-2xs" title="ลบข้อมูล">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
-                                <button onclick="confirmDeleteCompany('${encodedKey}')" class="w-6 h-6 flex items-center justify-center text-white/80 hover:text-rose-200 hover:bg-white/20 rounded-lg transition-colors" title="ลบข้อมูลบริษัท">
-                                    <i class="fa-solid fa-trash-can text-[10px]"></i>
+                                <button onclick="toggleCardCollapse('${escapedCompName}')" class="w-8 h-8 flex items-center justify-center text-slate-600 hover:text-slate-900 bg-white/60 hover:bg-slate-100 border border-slate-200/70 rounded-xl transition-all shadow-2xs" title="${isCollapsed ? 'ขยาย' : 'ย่อ'}">
+                                    <i class="fa-solid ${isCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'} text-xs"></i>
                                 </button>
                             </div>
                         </div>
 
                         <!-- Card Body Content -->
-                        <div class="p-4 sm:p-5 space-y-4 ${isCollapsed ? 'hidden' : ''}">
-                            
-                            <!-- 1. ส่วนข้อมูลผู้ติดต่อ (แสดงคนแรกเสมอ + ปุ่มเปิด/ปิดคนถัดไปเมื่อมีหลายคน) -->
+                        <div class="p-4 sm:p-5 space-y-3.5 ${isCollapsed ? 'hidden' : ''}">
                             <div class="space-y-2">
                                 <div class="flex items-center justify-between">
                                     <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                        <i class="fa-solid fa-users text-sky-600"></i> ผู้ติดต่อ (${comp.contacts.length})
+                                        <i class="fa-solid fa-users text-teal-600"></i> ผู้ติดต่อ (${comp.contacts.length})
                                     </span>
                                     <div class="flex items-center gap-2">
-                                        ${comp.totalSpent > 0 ? `<span class="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">฿${comp.totalSpent.toLocaleString()}</span>` : ''}
+                                        ${comp.totalSpent > 0 ? `<span class="text-[11px] font-bold text-emerald-700 bg-emerald-50/80 px-2.5 py-0.5 rounded-full border border-emerald-200">฿${comp.totalSpent.toLocaleString()}</span>` : ''}
                                         ${comp.contacts.length > 1 ? `
-                                            <button onclick="toggleSection('${escapedCompName}', 'contacts')" class="w-5 h-5 rounded-md bg-slate-100 border border-slate-300 text-slate-600 hover:bg-sky-600 hover:text-white hover:border-sky-600 flex items-center justify-center text-[10px] transition-colors shadow-2xs" title="${isContactsHidden ? 'แสดงผู้ติดต่อคนอื่นๆ' : 'ซ่อนผู้ติดต่อคนอื่นๆ'}">
+                                            <button onclick="toggleSection('${escapedCompName}', 'contacts')" class="w-5 h-5 rounded-md bg-white/80 border border-slate-200 text-slate-600 hover:bg-teal-600 hover:text-white hover:border-teal-600 flex items-center justify-center text-[10px] transition-colors" title="แสดง/ซ่อนผู้ติดต่ออื่นๆ">
                                                 <i class="fa-solid ${isContactsHidden ? 'fa-plus' : 'fa-minus'}"></i>
                                             </button>
                                         ` : ''}
@@ -1280,25 +1273,24 @@
                                 </div>
 
                                 <div class="space-y-2">
-                                    <!-- คนแรก (แสดงตลอด) -->
                                     ${comp.contacts.length > 0 ? `
-                                        <div class="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs text-xs space-y-1">
+                                        <div class="p-3 rounded-2xl bg-white/50 backdrop-blur-xs border border-teal-100/80 text-xs space-y-1">
                                             <div class="flex items-center justify-between gap-2">
                                                 <div class="flex items-center gap-1.5 min-w-0">
-                                                    <div class="w-5 h-5 rounded-lg bg-white text-sky-600 flex items-center justify-center text-[9px] font-bold shrink-0 shadow-2xs border border-slate-200">
+                                                    <div class="w-5 h-5 rounded-lg bg-white text-teal-600 flex items-center justify-center text-[9px] font-bold shrink-0 border border-teal-100">
                                                         <i class="fa-solid fa-user"></i>
                                                     </div>
                                                     <span class="font-bold text-slate-900 truncate">${escapeHtml(comp.contacts[0].name)}</span>
                                                 </div>
                                                 ${comp.contacts[0].role ? `
-                                                    <span class="px-2 py-0.5 rounded-lg bg-white text-slate-600 text-[10px] font-medium shrink-0 border border-slate-200">
+                                                    <span class="px-2 py-0.5 rounded-lg bg-white/80 text-slate-600 text-[10px] font-medium shrink-0 border border-slate-200/80">
                                                         ${escapeHtml(comp.contacts[0].role)}
                                                     </span>
                                                 ` : ''}
                                             </div>
                                             <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 pt-1 pl-6 text-[11px] text-slate-600">
                                                 ${comp.contacts[0].phone ? `
-                                                    <a href="tel:${escapeHtml(comp.contacts[0].phone)}" class="inline-flex items-center gap-1 hover:text-sky-600 font-semibold">
+                                                    <a href="tel:${escapeHtml(comp.contacts[0].phone)}" class="inline-flex items-center gap-1 hover:text-teal-700 font-semibold">
                                                         <i class="fa-solid fa-phone text-[9px] text-emerald-600"></i> ${escapeHtml(comp.contacts[0].phone)}
                                                     </a>
                                                 ` : ''}
@@ -1310,30 +1302,29 @@
                                             </div>
                                         </div>
                                     ` : `
-                                        <p class="text-xs text-slate-400 italic py-0.5 pl-1">ยังไม่มีข้อมูลผู้ติดต่อ</p>
+                                        <p class="text-xs text-slate-400 italic pl-1">ยังไม่มีข้อมูลผู้ติดต่อ</p>
                                     `}
 
-                                    <!-- คนที่ 2 เป็นต้นไป (ซ่อนค่าเริ่มต้น จะแสดงเมื่อกดปุ่ม + ที่หัวข้อผู้ติดต่อ) -->
                                     ${comp.contacts.length > 1 ? `
                                         <div class="space-y-2 ${isContactsHidden ? 'hidden' : ''}">
                                             ${comp.contacts.slice(1).map(c => `
-                                                <div class="p-3 rounded-2xl bg-slate-50/80 border border-slate-200/80 shadow-2xs text-xs space-y-1">
+                                                <div class="p-3 rounded-2xl bg-white/50 backdrop-blur-xs border border-teal-100/80 text-xs space-y-1">
                                                     <div class="flex items-center justify-between gap-2">
                                                         <div class="flex items-center gap-1.5 min-w-0">
-                                                            <div class="w-5 h-5 rounded-lg bg-white text-sky-600 flex items-center justify-center text-[9px] font-bold shrink-0 shadow-2xs border border-slate-200">
+                                                            <div class="w-5 h-5 rounded-lg bg-white text-teal-600 flex items-center justify-center text-[9px] font-bold shrink-0 border border-teal-100">
                                                                 <i class="fa-solid fa-user"></i>
                                                             </div>
                                                             <span class="font-bold text-slate-900 truncate">${escapeHtml(c.name)}</span>
                                                         </div>
                                                         ${c.role ? `
-                                                            <span class="px-2 py-0.5 rounded-lg bg-white text-slate-600 text-[10px] font-medium shrink-0 border border-slate-200">
+                                                            <span class="px-2 py-0.5 rounded-lg bg-white/80 text-slate-600 text-[10px] font-medium shrink-0 border border-slate-200/80">
                                                                 ${escapeHtml(c.role)}
                                                             </span>
                                                         ` : ''}
                                                     </div>
                                                     <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 pt-1 pl-6 text-[11px] text-slate-600">
                                                         ${c.phone ? `
-                                                            <a href="tel:${escapeHtml(c.phone)}" class="inline-flex items-center gap-1 hover:text-sky-600 font-semibold">
+                                                            <a href="tel:${escapeHtml(c.phone)}" class="inline-flex items-center gap-1 hover:text-teal-700 font-semibold">
                                                                 <i class="fa-solid fa-phone text-[9px] text-emerald-600"></i> ${escapeHtml(c.phone)}
                                                             </a>
                                                         ` : ''}
@@ -1350,35 +1341,33 @@
                                 </div>
                             </div>
 
-                            <!-- 2. ส่วนที่อยู่บริษัท (ค่าเริ่มต้นซ่อน) -->
                             ${hasAddress ? `
-                                <div class="rounded-2xl bg-slate-50 border border-slate-200/70 overflow-hidden shadow-2xs">
-                                    <div class="px-3.5 py-2 bg-slate-100/70 border-b border-slate-200/60 flex items-center justify-between text-xs font-semibold text-slate-700">
+                                <div class="rounded-2xl bg-white/40 border border-teal-100/80 overflow-hidden">
+                                    <div class="px-3 py-1.5 bg-teal-50/50 border-b border-teal-100/60 flex items-center justify-between text-[11px] font-semibold text-slate-600">
                                         <span class="flex items-center gap-1.5">
-                                            <i class="fa-solid fa-map-pin text-sky-500"></i> ที่อยู่บริษัท (สถานที่จัดส่งหลัก)
+                                            <i class="fa-solid fa-map-pin text-teal-600"></i> ที่อยู่จัดส่ง
                                         </span>
-                                        <button onclick="toggleSection('${escapedCompName}', 'address')" class="w-5 h-5 rounded-md bg-white border border-slate-300 text-slate-600 hover:bg-sky-600 hover:text-white hover:border-sky-600 flex items-center justify-center text-[10px] transition-colors shadow-2xs" title="${isAddrHidden ? 'แสดงที่อยู่' : 'ซ่อนที่อยู่'}">
+                                        <button onclick="toggleSection('${escapedCompName}', 'address')" class="w-4 h-4 rounded bg-white border border-slate-200 text-slate-600 hover:bg-teal-600 hover:text-white flex items-center justify-center text-[9px]">
                                             <i class="fa-solid ${isAddrHidden ? 'fa-plus' : 'fa-minus'}"></i>
                                         </button>
                                     </div>
-                                    <div class="p-3 text-xs text-slate-600 leading-relaxed ${isAddrHidden ? 'hidden' : ''}">
+                                    <div class="p-2.5 text-xs text-slate-600 leading-relaxed ${isAddrHidden ? 'hidden' : ''}">
                                         ${escapeHtml(comp.address)}
                                     </div>
                                 </div>
                             ` : ''}
 
-                            <!-- 3. ส่วนหมายเหตุบริษัท (ค่าเริ่มต้นซ่อน) -->
                             ${hasNotes ? `
-                                <div class="rounded-2xl bg-amber-50/60 border border-amber-200/80 overflow-hidden shadow-2xs">
-                                    <div class="px-3.5 py-2 bg-amber-100/70 border-b border-amber-200/70 flex items-center justify-between text-xs font-semibold text-amber-900">
+                                <div class="rounded-2xl bg-amber-50/40 border border-amber-200/60 overflow-hidden">
+                                    <div class="px-3 py-1.5 bg-amber-100/50 border-b border-amber-200/50 flex items-center justify-between text-[11px] font-semibold text-amber-800">
                                         <span class="flex items-center gap-1.5">
-                                            <i class="fa-solid fa-note-sticky text-amber-600"></i> หมายเหตุบริษัท (เงื่อนไขวางบิล / เวลา)
+                                            <i class="fa-solid fa-note-sticky text-amber-600"></i> หมายเหตุบริษัท
                                         </span>
-                                        <button onclick="toggleSection('${escapedCompName}', 'notes')" class="w-5 h-5 rounded-md bg-white border border-amber-300 text-amber-800 hover:bg-amber-600 hover:text-white hover:border-amber-600 flex items-center justify-center text-[10px] transition-colors shadow-2xs" title="${isNotesHidden ? 'แสดงหมายเหตุ' : 'ซ่อนหมายเหตุ'}">
+                                        <button onclick="toggleSection('${escapedCompName}', 'notes')" class="w-4 h-4 rounded bg-white border border-amber-300 text-amber-800 hover:bg-amber-600 hover:text-white flex items-center justify-center text-[9px]">
                                             <i class="fa-solid ${isNotesHidden ? 'fa-plus' : 'fa-minus'}"></i>
                                         </button>
                                     </div>
-                                    <div class="p-3 text-xs text-amber-900 font-medium leading-relaxed ${isNotesHidden ? 'hidden' : ''}">
+                                    <div class="p-2.5 text-xs text-amber-900 leading-relaxed ${isNotesHidden ? 'hidden' : ''}">
                                         ${escapeHtml(comp.notes)}
                                     </div>
                                 </div>
@@ -1387,11 +1376,12 @@
                         </div>
                     </div>
 
-                    <div class="px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between text-xs">
-                        <span class="text-slate-400 text-[11px] font-medium">
+                    <!-- Footer ของการ์ดแบบโปร่งแสง -->
+                    <div class="px-5 py-3 bg-white/40 backdrop-blur-xs border-t border-teal-100/60 flex items-center justify-between text-xs">
+                        <span class="text-slate-500 text-[11px]">
                             ${comp.purchaseHistory.length > 0 ? `${comp.purchaseHistory.length} บิลจัดส่งในระบบ` : 'ยังไม่มีประวัติบิล'}
                         </span>
-                        <button onclick="openDetailModal('${encodedKey}')" class="font-bold text-sky-600 hover:text-sky-700 inline-flex items-center gap-1.5 transition-colors">
+                        <button onclick="openDetailModal('${encodedKey}')" class="font-bold text-teal-600 hover:text-teal-700 inline-flex items-center gap-1.5 transition-colors">
                             ดูรายละเอียด <i class="fa-solid fa-arrow-right text-[10px]"></i>
                         </button>
                     </div>
@@ -1458,27 +1448,27 @@
                     <div>
                         <label class="block text-[11px] font-medium text-slate-600 mb-1">ชื่อ-นามสกุล ผู้ติดต่อ</label>
                         <input type="text" name="c_name" value="${escapeHtml(contact.name || '')}" placeholder="เช่น คุณสมชาย ใจดี"
-                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-sky-500 outline-none">
+                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-teal-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-[11px] font-medium text-slate-600 mb-1">ตำแหน่ง / แผนก</label>
                         <input type="text" name="c_role" value="${escapeHtml(contact.role || '')}" placeholder="เช่น Managing Director"
-                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-sky-500 outline-none">
+                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-teal-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-[11px] font-medium text-slate-600 mb-1">เบอร์โทรศัพท์</label>
                         <input type="text" name="c_phone" value="${escapeHtml(contact.phone || '')}" placeholder="เช่น 081-234-5678"
-                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-sky-500 outline-none">
+                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-teal-500 outline-none">
                     </div>
                     <div>
                         <label class="block text-[11px] font-medium text-slate-600 mb-1">อีเมล (Email)</label>
                         <input type="email" name="c_email" value="${escapeHtml(contact.email || '')}" placeholder="เช่น contact@innovtech.co.th"
-                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-sky-500 outline-none">
+                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-teal-500 outline-none">
                     </div>
                     <div class="sm:col-span-2">
                         <label class="block text-[11px] font-medium text-slate-600 mb-1">Line ID</label>
                         <input type="text" name="c_line" value="${escapeHtml(contact.lineId || '')}" placeholder="เช่น @innovtech"
-                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-sky-500 outline-none">
+                            class="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:border-teal-500 outline-none">
                     </div>
                 </div>
             `;
@@ -1777,12 +1767,12 @@
                                 <p class="text-sm font-bold text-slate-900">${escapeHtml(c.name)}</p>
                                 ${c.role ? `<p class="text-xs text-slate-500">${escapeHtml(c.role)}</p>` : ''}
                             </div>
-                            ${c.orderCount > 0 ? `<span class="text-[10px] px-2.5 py-0.5 rounded-full bg-sky-50 text-sky-600 font-medium">${c.orderCount} บิล</span>` : ''}
+                            ${c.orderCount > 0 ? `<span class="text-[10px] px-2.5 py-0.5 rounded-full bg-teal-50 text-teal-600 font-medium">${c.orderCount} บิล</span>` : ''}
                         </div>
                         <div class="flex flex-wrap gap-2 pt-1 text-xs">
                             ${c.phone ? `
-                                <a href="tel:${escapeHtml(c.phone)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-sky-50 text-slate-700 hover:text-sky-600 transition-colors">
-                                    <i class="fa-solid fa-phone text-sky-500"></i> ${escapeHtml(c.phone)}
+                                <a href="tel:${escapeHtml(c.phone)}" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-teal-50 text-slate-700 hover:text-teal-600 transition-colors">
+                                    <i class="fa-solid fa-phone text-teal-500"></i> ${escapeHtml(c.phone)}
                                 </a>
                             ` : ''}
                             ${c.email ? `
@@ -1816,7 +1806,7 @@
                                 <span class="text-xs text-slate-600 font-medium">• ผู้สั่ง: ${escapeHtml(h.customerName)}</span>
                             </div>
                             <div class="flex items-center gap-2">
-                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-sky-100 text-sky-700">
+                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-teal-100 text-teal-700">
                                     ${escapeHtml(h.status)}
                                 </span>
                                 <span class="text-sm font-bold text-slate-900">฿${h.total.toLocaleString()}</span>
