@@ -2,74 +2,57 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ระบบจัดการและค้นหารายการสินค้าของบริษัท | Delivery Tracking</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Google Fonts: Prompt, Sarabun & Plus Jakarta Sans -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- Font Awesome Icons -->
+    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts: Prompt & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <!-- Firebase SDK Compat -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Sarabun', 'Plus Jakarta Sans', 'sans-serif'],
-                        heading: ['Prompt', 'Plus Jakarta Sans', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            50: '#eef2ff',
-                            100: '#e0e7ff',
-                            200: '#c7d2fe',
-                            300: '#a5b4fc',
-                            400: '#818cf8',
-                            500: '#6366f1',
-                            600: '#4f46e5',
-                            700: '#4338ca',
-                            800: '#3730a3',
-                            900: '#312e81',
-                        }
-                    }
-                }
-            }
-        }
-    </script>
-
     <style>
         body {
-            font-family: 'Sarabun', 'Plus Jakarta Sans', sans-serif;
-            background-color: #f8fafc;
-            color: #0f172a;
-        }
-        h1, h2, h3, h4, .font-heading {
-            font-family: 'Prompt', 'Plus Jakarta Sans', sans-serif;
+            font-family: 'Prompt', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdfa 45%, #ecfdf5 100%);
+            overflow-x: hidden;
+            color: #1e293b;
         }
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 5px;
+            height: 5px;
         }
         ::-webkit-scrollbar-track {
-            background: #f1f5f9;
+            background: transparent;
         }
         ::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
+            background: rgba(20, 184, 166, 0.35);
             border-radius: 9999px;
         }
         ::-webkit-scrollbar-thumb:hover {
-            background: #94a3b8;
+            background: rgba(13, 148, 136, 0.6);
+        }
+        /* การ์ดโปร่งแสงระดับสูง (Glassmorphism) สไตล์เดียวกับภาพตัวอย่าง */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.48);
+            backdrop-filter: blur(18px) saturate(160%);
+            -webkit-backdrop-filter: blur(18px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.78);
+            box-shadow: 0 8px 32px -8px rgba(13, 148, 136, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            background: rgba(255, 255, 255, 0.65);
+            border-color: rgba(45, 212, 191, 0.75);
+            box-shadow: 0 16px 36px -10px rgba(13, 148, 136, 0.2);
         }
         @media print {
             body { background-color: #ffffff !important; color: #000000 !important; }
@@ -80,21 +63,28 @@
         }
     </style>
 </head>
-<body class="min-h-screen flex flex-col antialiased selection:bg-brand-100 selection:text-brand-900">
+<body class="min-h-screen flex flex-col antialiased selection:bg-teal-500 selection:text-white">
+
+    <!-- Ambient Background Shapes -->
+    <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div class="absolute -top-24 -left-24 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-teal-300/35 blur-3xl"></div>
+        <div class="absolute top-1/3 -right-20 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-cyan-300/35 blur-3xl"></div>
+        <div class="absolute -bottom-24 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-emerald-300/30 blur-3xl"></div>
+    </div>
 
     <!-- Toast Notification Container -->
     <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm w-full pointer-events-none no-print"></div>
 
     <!-- Top Navigation Bar -->
-    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm no-print">
+    <header class="bg-white/60 backdrop-blur-xl border-b border-white/70 sticky top-0 z-30 shadow-2xs no-print">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-blue-600 flex items-center justify-center text-white shadow-md shadow-brand-500/20 shrink-0">
+                <div class="w-10 h-10 rounded-2xl bg-gradient-to-tr from-teal-600 via-emerald-600 to-cyan-600 flex items-center justify-center text-white shadow-md shadow-teal-500/25 shrink-0">
                     <i class="fa-solid fa-boxes-packing text-lg"></i>
                 </div>
                 <div>
-                    <h1 class="font-heading font-bold text-slate-900 text-base sm:text-lg leading-tight">ฐานข้อมูลสินค้าแยกตามบริษัท</h1>
-                    <p class="text-xs text-slate-500 hidden sm:block">Company Products & Pricing Intelligence • <span class="text-brand-600 font-medium">delivery-tracking-2313a</span></p>
+                    <h1 class="font-bold text-slate-900 text-sm sm:text-base leading-tight">ฐานข้อมูลสินค้าแยกตามบริษัท</h1>
+                    <p class="text-[11px] text-slate-500 hidden sm:block">Company Products & Pricing Intelligence • <span class="text-teal-700 font-medium">delivery-tracking-2313a</span></p>
                 </div>
             </div>
 
@@ -104,12 +94,12 @@
                     <span>กำลังเชื่อมต่อ...</span>
                 </div>
 
-                <div id="user-profile-pill" class="hidden items-center gap-2 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5">
-                    <div class="w-7 h-7 rounded-lg bg-brand-100 text-brand-700 flex items-center justify-center font-heading font-bold text-xs" id="user-avatar-initial">U</div>
+                <div id="user-profile-pill" class="hidden items-center gap-2 bg-white/70 border border-white/90 rounded-2xl px-3 py-1.5 shadow-2xs">
+                    <div class="w-7 h-7 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs" id="user-avatar-initial">U</div>
                     <div class="hidden sm:block text-left">
                         <div class="text-xs font-semibold text-slate-800 leading-none" id="user-display-name">ผู้ใช้งาน</div>
                         <div class="text-[11px] text-slate-500 mt-0.5">
-                            <span id="user-role-badge" class="inline-block px-1.5 py-0.2 rounded bg-slate-200 text-slate-700 font-medium">user</span>
+                            <span id="user-role-badge" class="inline-block px-1.5 py-0.2 rounded text-[9px] font-bold bg-teal-600 text-white tracking-wider">USER</span>
                         </div>
                     </div>
                     <button onclick="handleLogout()" title="ออกจากระบบ" class="ml-1 p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
@@ -117,12 +107,12 @@
                     </button>
                 </div>
 
-                <button id="btn-open-login" onclick="openLoginModal()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs sm:text-sm font-medium shadow-sm transition-all">
+                <button id="btn-open-login" onclick="openLoginModal()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white text-xs sm:text-sm font-semibold shadow-md shadow-teal-600/20 transition-all">
                     <i class="fa-solid fa-right-to-bracket"></i>
                     <span>เข้าสู่ระบบ</span>
                 </button>
 
-                <a href="index.html" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs sm:text-sm font-medium transition-all">
+                <a href="index.html" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-2xl border border-white/80 bg-white/70 hover:bg-white text-slate-700 text-xs sm:text-sm font-semibold transition-all shadow-2xs">
                     <i class="fa-solid fa-house"></i>
                     <span class="hidden sm:inline">กลับหน้าหลัก</span>
                 </a>
@@ -134,72 +124,72 @@
     <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
         <!-- Auth Notice Banner -->
-        <div id="auth-notice-banner" class="hidden bg-gradient-to-r from-brand-50 via-blue-50 to-indigo-50 border border-brand-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm no-print">
+        <div id="auth-notice-banner" class="hidden glass-card rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 no-print border-teal-200">
             <div class="flex items-start gap-3.5">
-                <div class="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center shrink-0 mt-0.5">
+                <div class="w-10 h-10 rounded-2xl bg-teal-600 text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
                     <i class="fa-solid fa-shield-halved text-lg"></i>
                 </div>
                 <div>
-                    <h2 class="font-heading font-semibold text-slate-900 text-sm sm:text-base">กรุณาเข้าสู่ระบบเพื่อเข้าถึงข้อมูลบริษัทและสินค้า</h2>
+                    <h2 class="font-bold text-slate-900 text-sm sm:text-base">กรุณาเข้าสู่ระบบเพื่อเข้าถึงข้อมูลบริษัทและสินค้า</h2>
                     <p class="text-xs sm:text-sm text-slate-600 mt-0.5">ระบบเชื่อมต่อกับฐานข้อมูลหลัก Delivery Tracking (delivery-tracking-2313a)</p>
                 </div>
             </div>
-            <button onclick="openLoginModal()" class="px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-medium shadow-sm transition-all flex items-center justify-center gap-2">
+            <button onclick="openLoginModal()" class="px-4 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2">
                 <i class="fa-solid fa-key"></i>
                 <span>เข้าสู่ระบบตอนนี้</span>
             </button>
         </div>
 
-        <!-- Modernized KPI Summary Cards -->
+        <!-- KPI Summary Cards (Glassmorphism) -->
         <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-brand-50 rounded-full flex items-center justify-center text-brand-300 opacity-60 group-hover:scale-110 transition-transform">
+            <div class="glass-card rounded-3xl p-5 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-teal-500/10 rounded-full flex items-center justify-center text-teal-700 opacity-60 group-hover:scale-110 transition-transform">
                     <i class="fa-solid fa-boxes-stacked text-2xl"></i>
                 </div>
-                <p class="text-xs font-heading font-bold text-slate-400 uppercase tracking-wider">รายการสินค้าที่บันทึก</p>
-                <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-total-items">0</h3>
-                <p class="text-xs text-brand-600 font-semibold mt-1.5 flex items-center gap-1">
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">รายการสินค้าที่บันทึก</p>
+                <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-total-items">0</h3>
+                <p class="text-xs text-teal-700 font-semibold mt-1.5 flex items-center gap-1">
                     <i class="fa-solid fa-arrow-trend-up text-[10px]"></i> <span id="kpi-items-sub">ทั้งหมดในระบบ</span>
                 </p>
             </div>
-            <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-blue-50 rounded-full flex items-center justify-center text-blue-300 opacity-60 group-hover:scale-110 transition-transform">
+            <div class="glass-card rounded-3xl p-5 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center text-emerald-700 opacity-60 group-hover:scale-110 transition-transform">
                     <i class="fa-solid fa-building text-2xl"></i>
                 </div>
-                <p class="text-xs font-heading font-bold text-slate-400 uppercase tracking-wider">จำนวนบริษัท / ร้านค้า</p>
-                <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-total-companies">0</h3>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">จำนวนบริษัท / ร้านค้า</p>
+                <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-total-companies">0</h3>
                 <p class="text-xs text-slate-500 mt-1.5">เฉลี่ย <span class="font-bold text-slate-700" id="kpi-avg-per-company">0</span> รายการ/บริษัท</p>
             </div>
-            <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center text-indigo-300 opacity-60 group-hover:scale-110 transition-transform">
+            <div class="glass-card rounded-3xl p-5 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-cyan-500/10 rounded-full flex items-center justify-center text-cyan-700 opacity-60 group-hover:scale-110 transition-transform">
                     <i class="fa-solid fa-tags text-2xl"></i>
                 </div>
-                <p class="text-xs font-heading font-bold text-slate-400 uppercase tracking-wider">ราคาขายเฉลี่ยต่อรายการ</p>
-                <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-avg-price">฿0.00</h3>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">ราคาขายเฉลี่ยต่อรายการ</p>
+                <h3 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2" id="kpi-avg-price">฿0.00</h3>
                 <p class="text-xs text-slate-500 mt-1.5">รวมทั้งหมด <span class="font-bold text-slate-700" id="kpi-sum-price">฿0.00</span></p>
             </div>
-            <div class="bg-white rounded-3xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-all relative overflow-hidden group">
-                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center text-emerald-300 opacity-60 group-hover:scale-110 transition-transform">
+            <div class="glass-card rounded-3xl p-5 relative overflow-hidden group">
+                <div class="absolute -right-4 -bottom-4 w-20 h-20 bg-amber-500/10 rounded-full flex items-center justify-center text-amber-700 opacity-60 group-hover:scale-110 transition-transform">
                     <i class="fa-solid fa-chart-line text-2xl"></i>
                 </div>
-                <p class="text-xs font-heading font-bold text-slate-400 uppercase tracking-wider">กำไรเฉลี่ย (Margin)</p>
+                <p class="text-xs font-bold text-slate-500 uppercase tracking-wider">กำไรเฉลี่ย (Margin)</p>
                 <div class="flex items-baseline gap-2 mt-2">
-                    <h3 class="font-heading text-2xl sm:text-3xl font-extrabold text-emerald-600" id="kpi-avg-profit">฿0.00</h3>
-                    <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" id="kpi-avg-margin-pct">0%</span>
+                    <h3 class="text-2xl sm:text-3xl font-extrabold text-emerald-700" id="kpi-avg-profit">฿0.00</h3>
+                    <span class="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200" id="kpi-avg-margin-pct">0%</span>
                 </div>
-                <p class="text-xs text-slate-500 mt-1.5">เชื่อมสต็อกกลาง <span class="font-bold text-brand-600" id="kpi-linked-count">0</span> รายการ</p>
+                <p class="text-xs text-slate-500 mt-1.5">เชื่อมสต็อกกลาง <span class="font-bold text-teal-700" id="kpi-linked-count">0</span> รายการ</p>
             </div>
         </section>
 
         <!-- Search, Filters & Actions -->
-        <section class="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 shadow-sm space-y-4 no-print">
+        <section class="glass-card rounded-3xl p-4 sm:p-5 space-y-4 no-print">
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-3">
                 <div class="lg:col-span-5 relative">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">ค้นหาด่วน (Real-time Search)</label>
                     <div class="relative">
                         <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
                         <input type="text" id="search-input" placeholder="ค้นหาชื่อสินค้า, บริษัท, หน่วย, ราคา..." 
-                            class="w-full pl-10 pr-9 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20">
+                            class="w-full pl-10 pr-9 py-2.5 bg-white/75 border border-white/90 rounded-2xl text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-teal-500 transition-all">
                         <button id="btn-clear-search" onclick="clearSearchInput()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-1">
                             <i class="fa-solid fa-circle-xmark text-sm"></i>
                         </button>
@@ -209,42 +199,42 @@
                 <div class="lg:col-span-4 relative" id="company-dropdown-container">
                     <label class="block text-xs font-semibold text-slate-600 mb-1">กรองตามบริษัท / ร้านค้า</label>
                     <button type="button" id="company-dropdown-btn" onclick="toggleCompanyDropdown()" 
-                        class="w-full px-3.5 py-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-sm text-left flex items-center justify-between gap-2 focus:outline-none focus:border-brand-500">
+                        class="w-full px-3.5 py-2.5 bg-white/75 hover:bg-white border border-white/90 rounded-2xl text-sm text-left flex items-center justify-between gap-2 focus:outline-none focus:border-teal-500 transition-all">
                         <div class="flex items-center gap-2 truncate">
-                            <i class="fa-solid fa-building text-brand-600 text-xs"></i>
+                            <i class="fa-solid fa-building text-teal-600 text-xs"></i>
                             <span id="selected-company-label" class="font-medium text-slate-700 truncate">ทุกบริษัท / ร้านค้า (ทั้งหมด)</span>
                         </div>
                         <i class="fa-solid fa-chevron-down text-slate-400 text-xs transition-transform" id="company-dropdown-arrow"></i>
                     </button>
 
-                    <div id="company-dropdown-menu" class="hidden absolute left-0 right-0 mt-1.5 bg-white border border-slate-200 rounded-2xl shadow-xl z-40 overflow-hidden">
+                    <div id="company-dropdown-menu" class="hidden absolute left-0 right-0 mt-1.5 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl z-40 overflow-hidden">
                         <div class="p-2.5 border-b border-slate-100 bg-slate-50">
                             <input type="text" id="company-search-filter" placeholder="พิมพ์ค้นหาชื่อบริษัท..." 
-                                class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:outline-none focus:border-brand-500">
+                                class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500">
                         </div>
                         <div id="company-options-list" class="max-h-64 overflow-y-auto divide-y divide-slate-50 p-1"></div>
                     </div>
                 </div>
 
                 <div class="lg:col-span-3 flex items-end gap-2">
-                    <button onclick="refreshAllData()" title="รีเฟรชข้อมูล" class="px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-sm font-medium">
+                    <button onclick="refreshAllData()" title="รีเฟรชข้อมูล" class="px-3 py-2.5 rounded-2xl border border-white/80 bg-white/70 hover:bg-white text-slate-700 text-sm font-medium shadow-2xs">
                         <i id="refresh-icon" class="fa-solid fa-rotate"></i>
                     </button>
-                    <button onclick="exportToCSV()" class="flex-1 px-3 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium flex items-center justify-center gap-1.5">
+                    <button onclick="exportToCSV()" class="flex-1 px-3 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium flex items-center justify-center gap-1.5 shadow-sm">
                         <i class="fa-solid fa-file-excel"></i>
                         <span>ส่งออก CSV</span>
                     </button>
-                    <button onclick="printReport()" class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium" title="พิมพ์รายงาน">
+                    <button onclick="printReport()" class="px-3 py-2.5 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white text-sm font-medium shadow-sm" title="พิมพ์รายงาน">
                         <i class="fa-solid fa-print"></i>
                     </button>
                 </div>
             </div>
 
-            <div class="pt-3 border-t border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+            <div class="pt-3 border-t border-white/60 flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                 <div class="flex flex-wrap items-center gap-2.5">
                     <div class="flex items-center gap-1.5">
                         <label class="text-xs font-medium text-slate-500">สถานะกำไร:</label>
-                        <select id="filter-profit" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+                        <select id="filter-profit" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-white/75 border border-white/90 rounded-xl text-xs font-medium text-slate-700">
                             <option value="all">ทั้งหมด</option>
                             <option value="profit_positive">มีกำไร (> 0 บาท)</option>
                             <option value="profit_high">กำไรสูง (>= 20%)</option>
@@ -254,23 +244,23 @@
 
                     <div class="flex items-center gap-1.5">
                         <label class="text-xs font-medium text-slate-500">สต็อก:</label>
-                        <select id="filter-stock-link" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+                        <select id="filter-stock-link" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-white/75 border border-white/90 rounded-xl text-xs font-medium text-slate-700">
                             <option value="all">ทั้งหมด</option>
                             <option value="linked">เชื่อมโยงสต็อกกลางแล้ว</option>
                             <option value="unlinked">ยังไม่เชื่อมโยงสต็อกกลาง</option>
                         </select>
                     </div>
 
-                    <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
-                        <button type="button" onclick="setSourceFilter('all')" id="tab-source-all" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white text-brand-700 shadow-sm">ทั้งหมด (<span id="count-source-all">0</span>)</button>
-                        <button type="button" onclick="setSourceFilter('companyProducts')" id="tab-source-companyProducts" class="px-2.5 py-1 rounded-lg text-xs font-medium text-slate-600">📦 สินค้าบริษัท</button>
+                    <div class="flex items-center gap-1 bg-white/60 p-1 rounded-2xl border border-white/80 shadow-2xs">
+                        <button type="button" onclick="setSourceFilter('all')" id="tab-source-all" class="px-3 py-1 rounded-xl text-xs font-semibold bg-teal-600 text-white shadow-sm">ทั้งหมด (<span id="count-source-all">0</span>)</button>
+                        <button type="button" onclick="setSourceFilter('companyProducts')" id="tab-source-companyProducts" class="px-3 py-1 rounded-xl text-xs font-medium text-slate-600 hover:text-slate-900">📦 สินค้าบริษัท</button>
                     </div>
                 </div>
 
                 <div class="flex items-center gap-2.5">
                     <div class="flex items-center gap-1.5">
                         <label class="text-xs font-medium text-slate-500">เรียงตาม:</label>
-                        <select id="sort-by" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700">
+                        <select id="sort-by" onchange="applyFiltersAndRender()" class="px-2.5 py-1.5 bg-white/75 border border-white/90 rounded-xl text-xs font-medium text-slate-700">
                             <option value="updated_desc">อัปเดตล่าสุด</option>
                             <option value="name_asc">ชื่อสินค้า ก - ฮ (A-Z)</option>
                             <option value="company_asc">ชื่อบริษัท ก - ฮ (A-Z)</option>
@@ -279,17 +269,17 @@
                         </select>
                     </div>
 
-                    <!-- Modern Distinct View Mode Toggle Buttons -->
-                    <div class="inline-flex rounded-2xl bg-slate-100/90 p-1.5 border border-slate-200/80 shadow-inner">
-                        <button id="btn-view-table" onclick="switchViewMode('table')" class="px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 bg-white text-brand-600 shadow-sm">
+                    <!-- View Mode Toggle Buttons -->
+                    <div class="inline-flex rounded-2xl bg-white/60 p-1 border border-white/80 shadow-2xs">
+                        <button id="btn-view-table" onclick="switchViewMode('table')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-teal-600 text-white shadow-sm">
                             <i class="fa-solid fa-table-cells text-xs"></i><span>ตาราง</span>
                         </button>
-                        <button id="btn-view-grouped" onclick="switchViewMode('grouped')" class="px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-600 hover:text-slate-900">
+                        <button id="btn-view-grouped" onclick="switchViewMode('grouped')" class="px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-slate-900">
                             <i class="fa-solid fa-layer-group text-xs"></i><span>จัดกลุ่มบริษัท</span>
                         </button>
                     </div>
 
-                    <button type="button" onclick="openAddEditModal()" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-semibold shadow-sm flex items-center gap-1.5">
+                    <button type="button" onclick="openAddEditModal()" class="px-3.5 py-2 rounded-2xl bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white text-xs font-semibold shadow-md shadow-teal-600/20 flex items-center gap-1.5 transition-all">
                         <i class="fa-solid fa-plus"></i><span>เพิ่มสินค้าบริษัท</span>
                     </button>
                 </div>
@@ -297,13 +287,13 @@
         </section>
 
         <!-- Sync Status Bar -->
-        <div id="sync-status-bar" class="bg-slate-800 text-slate-200 rounded-xl px-4 py-2 text-xs flex items-center justify-between shadow-sm no-print">
+        <div id="sync-status-bar" class="bg-slate-900/90 backdrop-blur-md text-slate-200 rounded-2xl px-4 py-2.5 text-xs flex items-center justify-between shadow-lg no-print border border-slate-800">
             <div class="flex items-center gap-3">
                 <span class="font-semibold text-white flex items-center gap-1.5">
                     <span id="live-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                     สถานะ Firestore:
                 </span>
-                <span>companyProducts: <strong id="stat-cp-docs" class="text-white">0</strong>รายการ</span>
+                <span>companyProducts: <strong id="stat-cp-docs" class="text-white">0</strong> รายการ</span>
             </div>
             <div id="firestore-error-banner" class="hidden text-rose-300 font-medium"></div>
         </div>
@@ -314,26 +304,26 @@
         </div>
 
         <!-- Loading & Empty States -->
-        <div id="loading-state" class="bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3 shadow-sm">
-            <div class="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center mx-auto">
+        <div id="loading-state" class="glass-card rounded-3xl p-12 text-center space-y-3">
+            <div class="w-12 h-12 rounded-2xl bg-teal-500/15 text-teal-700 flex items-center justify-center mx-auto">
                 <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
             </div>
-            <h3 class="font-heading font-semibold text-slate-800 text-base">กำลังโหลดข้อมูลสินค้าและบริษัทจาก Firestore...</h3>
+            <h3 class="font-bold text-slate-800 text-base">กำลังโหลดข้อมูลสินค้าและบริษัทจาก Firestore...</h3>
         </div>
 
-        <div id="empty-state" class="hidden bg-white rounded-2xl border border-slate-200 p-12 text-center space-y-3 shadow-sm">
-            <div class="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
+        <div id="empty-state" class="hidden glass-card rounded-3xl p-12 text-center space-y-3">
+            <div class="w-14 h-14 rounded-2xl bg-white/70 text-slate-400 flex items-center justify-center mx-auto border border-white">
                 <i class="fa-solid fa-folder-open text-2xl"></i>
             </div>
-            <h3 class="font-heading font-semibold text-slate-800 text-base">ไม่พบรายการสินค้าที่ตรงกับเงื่อนไข</h3>
+            <h3 class="font-bold text-slate-800 text-base">ไม่พบรายการสินค้าที่ตรงกับเงื่อนไข</h3>
         </div>
 
-        <!-- VIEW 1: TABLE VIEW (Scrollable with max height & sticky header) -->
-        <section id="view-table-container" class="hidden bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+        <!-- VIEW 1: TABLE VIEW -->
+        <section id="view-table-container" class="hidden glass-card rounded-3xl overflow-hidden shadow-xl">
             <div class="overflow-x-auto max-h-[640px] overflow-y-auto">
                 <table class="w-full text-left border-collapse relative">
                     <thead>
-                        <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-heading font-semibold text-slate-500 uppercase tracking-wider sticky top-0 z-10 shadow-xs backdrop-blur-md bg-slate-50/95">
+                        <tr class="bg-white/80 border-b border-teal-100 text-[11px] font-bold text-teal-800 uppercase tracking-wider sticky top-0 z-10 backdrop-blur-md">
                             <th class="py-3 px-4 w-12 text-center">#</th>
                             <th class="py-3 px-4 min-w-[320px]">ชื่อสินค้า / รายละเอียดบริษัท</th>
                             <th class="py-3 px-4 w-24 text-center">หน่วย</th>
@@ -344,13 +334,13 @@
                             <th class="py-3 px-4 w-20 text-center no-print">จัดการ</th>
                         </tr>
                     </thead>
-                    <tbody id="products-table-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                    <tbody id="products-table-body" class="divide-y divide-teal-50/80 text-sm"></tbody>
                 </table>
             </div>
-            <div id="pagination-bar" class="bg-slate-50 border-t border-slate-200 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 no-print">
+            <div id="pagination-bar" class="bg-white/50 border-t border-white/80 px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-600 no-print">
                 <div class="flex items-center gap-2">
                     <span>แสดงหน้า <span id="page-current" class="font-semibold text-slate-900">1</span> จาก <span id="page-total" class="font-semibold text-slate-900">1</span></span>
-                    <select id="items-per-page-select" onchange="changeItemsPerPage(this.value)" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs text-slate-700">
+                    <select id="items-per-page-select" onchange="changeItemsPerPage(this.value)" class="px-2 py-1 bg-white border border-slate-200 rounded-xl text-xs text-slate-700">
                         <option value="25">25 รายการ/หน้า</option>
                         <option value="50" selected>50 รายการ/หน้า</option>
                         <option value="100">100 รายการ/หน้า</option>
@@ -360,12 +350,12 @@
             </div>
         </section>
 
-        <!-- VIEW 2: GROUPED VIEW (Scrollable container) -->
+        <!-- VIEW 2: GROUPED VIEW -->
         <section id="view-grouped-container" class="hidden space-y-4 max-h-[700px] overflow-y-auto pr-1"></section>
     </main>
 
     <!-- Footer -->
-    <footer class="bg-white border-t border-slate-200 py-4 px-4 sm:px-6 lg:px-8 mt-auto no-print">
+    <footer class="bg-white/60 backdrop-blur-xl border-t border-white/70 py-4 px-4 sm:px-6 lg:px-8 mt-auto no-print">
         <div class="max-w-7xl mx-auto flex items-center justify-between text-xs text-slate-500">
             <div>ระบบจัดการและค้นหารายการสินค้าแยกตามบริษัท • Firebase Project: <span class="font-mono text-slate-700">delivery-tracking-2313a</span></div>
             <div id="footer-sync-time">อัปเดตข้อมูลล่าสุด: -</div>
@@ -373,46 +363,46 @@
     </footer>
 
     <!-- MODAL 1: LOGIN MODAL -->
-    <div id="login-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
-        <div class="bg-white rounded-3xl max-w-md w-full shadow-2xl border border-slate-100 overflow-hidden">
-            <div class="bg-gradient-to-br from-brand-600 to-blue-700 p-6 text-white relative">
-                <button onclick="closeLoginModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white">
+    <div id="login-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl max-w-md w-full shadow-2xl border border-white overflow-hidden modal-animate">
+            <div class="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 p-6 text-white relative">
+                <button onclick="closeLoginModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/15 hover:bg-white/25 flex items-center justify-center text-white">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
-                <h2 class="font-heading text-xl font-bold">เข้าสู่ระบบฐานข้อมูลสินค้า</h2>
-                <p class="text-xs text-brand-100 mt-1">ใช้บัญชีเดียวกับระบบ Delivery Tracking</p>
+                <h2 class="text-lg font-bold">เข้าสู่ระบบฐานข้อมูลสินค้า</h2>
+                <p class="text-xs text-teal-100 mt-1">ใช้บัญชีเดียวกับระบบ Delivery Tracking</p>
             </div>
             <form id="login-form" onsubmit="handleLoginSubmit(event)" class="p-6 space-y-4">
-                <div id="login-error-box" class="hidden p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
+                <div id="login-error-box" class="hidden p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
                     <span id="login-error-text">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">อีเมล หรือ ชื่อผู้ใช้ (Username)</label>
                     <input type="text" id="login-username" required placeholder="example@email.com หรือ username" 
-                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-brand-500">
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:bg-white focus:border-teal-500">
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่าน (Password)</label>
                     <input type="password" id="login-password" required placeholder="••••••••" 
-                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:bg-white focus:border-brand-500">
+                        class="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:bg-white focus:border-teal-500">
                 </div>
                 <div class="pt-2 flex items-center gap-2">
-                    <button type="button" onclick="closeLoginModal()" class="w-1/3 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium">ยกเลิก</button>
-                    <button type="submit" id="btn-submit-login" class="w-2/3 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-sm font-semibold shadow-md">เข้าสู่ระบบ</button>
+                    <button type="button" onclick="closeLoginModal()" class="w-1/3 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-xs font-semibold">ยกเลิก</button>
+                    <button type="submit" id="btn-submit-login" class="w-2/3 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm">เข้าสู่ระบบ</button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- MODAL 2: PRODUCT DETAIL MODAL -->
-    <div id="detail-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 no-print">
-        <div class="bg-white rounded-3xl max-w-3xl w-full shadow-2xl border border-slate-200 overflow-hidden my-auto max-h-[90vh] flex flex-col">
-            <div class="px-6 py-4 bg-slate-50 border-b border-slate-200 flex items-start justify-between gap-4">
+    <div id="detail-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 no-print">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl max-w-3xl w-full shadow-2xl border border-white overflow-hidden my-auto max-h-[90vh] flex flex-col modal-animate">
+            <div class="px-6 py-4 bg-slate-50/90 border-b border-slate-200 flex items-start justify-between gap-4">
                 <div>
-                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-800" id="modal-company-badge">บริษัท</span>
-                    <h3 class="font-heading text-lg font-bold text-slate-900 mt-1" id="modal-product-title">ชื่อสินค้า</h3>
+                    <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800" id="modal-company-badge">บริษัท</span>
+                    <h3 class="text-base font-bold text-slate-900 mt-1" id="modal-product-title">ชื่อสินค้า</h3>
                 </div>
-                <button onclick="closeDetailModal()" class="w-9 h-9 rounded-xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 flex items-center justify-center">
+                <button onclick="closeDetailModal()" class="w-9 h-9 rounded-2xl bg-white border border-slate-200 hover:bg-slate-100 text-slate-500 flex items-center justify-center">
                     <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
@@ -420,63 +410,63 @@
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-200">
                         <span class="text-xs text-slate-500 block">ต้นทุน</span>
-                        <span class="font-heading text-lg font-bold text-slate-800" id="modal-cost">฿0.00</span>
+                        <span class="text-base font-bold text-slate-800" id="modal-cost">฿0.00</span>
                     </div>
-                    <div class="p-3.5 rounded-2xl bg-brand-50 border border-brand-200">
-                        <span class="text-xs text-brand-700 block">ราคาขาย</span>
-                        <span class="font-heading text-lg font-bold text-brand-700" id="modal-price">฿0.00</span>
+                    <div class="p-3.5 rounded-2xl bg-teal-50 border border-teal-200">
+                        <span class="text-xs text-teal-700 block">ราคาขาย</span>
+                        <span class="text-base font-bold text-teal-700" id="modal-price">฿0.00</span>
                     </div>
                     <div class="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200">
                         <span class="text-xs text-emerald-700 block">กำไรสุทธิ</span>
-                        <span class="font-heading text-lg font-bold text-emerald-700" id="modal-profit-baht">฿0.00</span>
+                        <span class="text-base font-bold text-emerald-700" id="modal-profit-baht">฿0.00</span>
                     </div>
                     <div class="p-3.5 rounded-2xl bg-amber-50 border border-amber-200">
                         <span class="text-xs text-amber-700 block">Margin %</span>
-                        <span class="font-heading text-lg font-bold text-amber-700" id="modal-margin-pct">0.0%</span>
+                        <span class="text-base font-bold text-amber-700" id="modal-margin-pct">0.0%</span>
                     </div>
                 </div>
             </div>
-            <div class="px-6 py-3.5 bg-slate-50 border-t border-slate-200 flex justify-end">
-                <button onclick="closeDetailModal()" class="px-5 py-2 rounded-xl bg-slate-800 text-white text-xs font-semibold">ปิดหน้าต่าง</button>
+            <div class="px-6 py-3.5 bg-slate-50/90 border-t border-slate-200 flex justify-end">
+                <button onclick="closeDetailModal()" class="px-5 py-2 rounded-2xl bg-slate-800 text-white text-xs font-semibold">ปิดหน้าต่าง</button>
             </div>
         </div>
     </div>
 
     <!-- MODAL 3: ADD/EDIT PRODUCT MODAL -->
-    <div id="edit-product-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 no-print">
-        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl border border-slate-200 overflow-hidden">
-            <div class="px-6 py-4 bg-gradient-to-r from-brand-600 to-blue-600 text-white flex items-center justify-between">
-                <h3 class="font-heading font-bold text-base" id="edit-modal-title">เพิ่มรายการสินค้าประจำบริษัท</h3>
+    <div id="edit-product-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl max-w-lg w-full shadow-2xl border border-white overflow-hidden modal-animate">
+            <div class="px-6 py-4 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 text-white flex items-center justify-between">
+                <h3 class="text-sm font-bold" id="edit-modal-title">เพิ่มรายการสินค้าประจำบริษัท</h3>
                 <button type="button" onclick="closeAddEditModal()" class="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center text-white"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <form id="edit-product-form" onsubmit="handleSaveCompanyProduct(event)" class="p-6 space-y-4">
                 <input type="hidden" id="edit-doc-id" value="">
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อบริษัท / ร้านค้า *</label>
-                    <input type="text" id="edit-company-name" list="company-datalist" required placeholder="ระบุชื่อบริษัท" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    <input type="text" id="edit-company-name" list="company-datalist" required placeholder="ระบุชื่อบริษัท" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-teal-500">
                     <datalist id="company-datalist"></datalist>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1">ชื่อสินค้า *</label>
-                    <input type="text" id="edit-product-name" required placeholder="ระบุชื่อสินค้า" class="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    <input type="text" id="edit-product-name" required placeholder="ระบุชื่อสินค้า" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-teal-500">
                 </div>
                 <div class="grid grid-cols-3 gap-3">
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">ต้นทุน</label>
-                        <input type="number" step="0.01" min="0" id="edit-cost" value="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <input type="number" step="0.01" min="0" id="edit-cost" value="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-teal-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">ราคาขาย *</label>
-                        <input type="number" step="0.01" min="0" id="edit-price" required value="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <input type="number" step="0.01" min="0" id="edit-price" required value="0" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-teal-500">
                     </div>
                     <div>
                         <label class="block text-xs font-semibold text-slate-700 mb-1">หน่วย</label>
-                        <input type="text" id="edit-unit" value="ชิ้น" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <input type="text" id="edit-unit" value="ชิ้น" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-2xl text-sm focus:outline-none focus:border-teal-500">
                     </div>
                 </div>
                 <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
-                    <button type="button" onclick="closeAddEditModal()" class="px-4 py-2 rounded-xl border border-slate-200 text-slate-600 text-xs font-semibold">ยกเลิก</button>
-                    <button type="submit" id="btn-save-company-product" class="px-5 py-2 rounded-xl bg-brand-600 text-white text-xs font-semibold shadow-sm">บันทึกข้อมูล</button>
+                    <button type="button" onclick="closeAddEditModal()" class="px-4 py-2.5 rounded-2xl border border-slate-200 text-slate-600 text-xs font-semibold">ยกเลิก</button>
+                    <button type="submit" id="btn-save-company-product" class="px-5 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-xs font-semibold shadow-sm">บันทึกข้อมูล</button>
                 </div>
             </form>
         </div>
@@ -591,7 +581,7 @@
                 const displayName = state.userProfile.displayName || state.userProfile.username || user.email;
                 document.getElementById('user-display-name').textContent = displayName;
                 document.getElementById('user-avatar-initial').textContent = displayName.charAt(0).toUpperCase();
-                document.getElementById('user-role-badge').textContent = state.userProfile.role.toUpperCase();
+                document.getElementById('user-role-badge').textContent = (state.userProfile.role || 'user').toUpperCase();
             } catch (e) {
                 console.error("Profile fetch error:", e);
             }
@@ -702,11 +692,11 @@
             const btnGrouped = document.getElementById('btn-view-grouped');
             
             if (mode === 'table') {
-                btnTable.className = 'px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 bg-white text-brand-600 shadow-sm';
-                btnGrouped.className = 'px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
+                btnTable.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-teal-600 text-white shadow-sm';
+                btnGrouped.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
             } else {
-                btnGrouped.className = 'px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 bg-white text-brand-600 shadow-sm';
-                btnTable.className = 'px-4 py-2 rounded-xl text-xs font-heading font-bold transition-all duration-200 flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
+                btnGrouped.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 bg-teal-600 text-white shadow-sm';
+                btnTable.className = 'px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 text-slate-600 hover:text-slate-900';
             }
             renderCurrentView();
         };
@@ -759,13 +749,12 @@
                 return true;
             });
 
-            // Sorting
             results.sort((a, b) => {
                 if (sortBy === 'name_asc') return a._plainName.localeCompare(b._plainName, 'th');
                 if (sortBy === 'company_asc') return a._companyName.localeCompare(b._companyName, 'th');
                 if (sortBy === 'price_desc') return b._price - a._price;
                 if (sortBy === 'price_asc') return a._price - b._price;
-                return b._updatedDate - a._updatedDate; // updated_desc
+                return b._updatedDate - a._updatedDate;
             });
 
             state.filteredItems = results;
@@ -826,11 +815,11 @@
 
             const tbody = document.getElementById('products-table-body');
             tbody.innerHTML = pageItems.map((item, idx) => `
-                <tr class="hover:bg-slate-50/80 transition-colors cursor-pointer border-b border-slate-100" onclick="openDetailModal('${item.id}')">
+                <tr class="hover:bg-teal-50/60 transition-colors cursor-pointer border-b border-teal-50" onclick="openDetailModal('${item.id}')">
                     <td class="py-3 px-4 text-center text-xs text-slate-400 font-mono">${startIdx + idx + 1}</td>
                     <td class="py-3 px-4">
-                        <div class="font-medium text-slate-900 leading-snug">${item._plainName}</div>
-                        <div class="text-xs text-brand-600 font-medium flex items-center gap-1 mt-0.5">
+                        <div class="font-semibold text-slate-900 leading-snug">${item._plainName}</div>
+                        <div class="text-xs text-teal-700 font-medium flex items-center gap-1 mt-0.5">
                             <i class="fa-solid fa-building text-[10px] text-slate-400"></i>
                             <span>${item._companyName}</span>
                         </div>
@@ -844,28 +833,27 @@
                     </td>
                     <td class="py-3 px-4 text-right text-xs text-slate-500">${formatThaiDate(item._updatedDate)}</td>
                     <td class="py-3 px-4 text-center">
-                        <button onclick="event.stopPropagation(); openDetailModal('${item.id}')" class="px-2.5 py-1 bg-brand-50 hover:bg-brand-100 text-brand-700 rounded-lg text-xs font-semibold transition-colors">
+                        <button onclick="event.stopPropagation(); openDetailModal('${item.id}')" class="px-2.5 py-1 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-xl text-xs font-semibold transition-colors">
                             ดู
                         </button>
                     </td>
                 </tr>
             `).join('');
 
-            // Update Pagination UI
             document.getElementById('page-current').textContent = state.currentPage;
             document.getElementById('page-total').textContent = totalPages;
 
             const btnContainer = document.getElementById('pagination-buttons');
             let btnHtml = `
-                <button onclick="changePage(${state.currentPage - 1})" ${state.currentPage === 1 ? 'disabled class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium"'}>ก่อนหน้า</button>
+                <button onclick="changePage(${state.currentPage - 1})" ${state.currentPage === 1 ? 'disabled class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium"'}>ก่อนหน้า</button>
             `;
             
             for (let p = Math.max(1, state.currentPage - 2); p <= Math.min(totalPages, state.currentPage + 2); p++) {
-                btnHtml += `<button onclick="changePage(${p})" class="px-3 py-1.5 rounded-lg border ${p === state.currentPage ? 'bg-brand-600 text-white border-brand-600 font-bold' : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'}">${p}</button>`;
+                btnHtml += `<button onclick="changePage(${p})" class="px-3 py-1.5 rounded-xl border ${p === state.currentPage ? 'bg-teal-600 text-white border-teal-600 font-bold' : 'border-slate-200 text-slate-700 bg-white hover:bg-slate-50'}">${p}</button>`;
             }
 
             btnHtml += `
-                <button onclick="changePage(${state.currentPage + 1})" ${state.currentPage >= totalPages ? 'disabled class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium"'}>ถัดไป</button>
+                <button onclick="changePage(${state.currentPage + 1})" ${state.currentPage >= totalPages ? 'disabled class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed"' : 'class="px-3 py-1.5 rounded-xl border border-slate-200 text-slate-700 bg-white hover:bg-slate-50 font-medium"'}>ถัดไป</button>
             `;
             btnContainer.innerHTML = btnHtml;
         }
@@ -895,16 +883,16 @@
             let html = '';
             map.forEach((items, company) => {
                 html += `
-                    <div class="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-                        <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 font-heading font-bold text-slate-800 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md bg-slate-50/95">
-                            <span class="flex items-center gap-2"><i class="fa-solid fa-building text-brand-600"></i> ${company}</span>
-                            <span class="px-2.5 py-0.5 rounded-full text-xs bg-brand-50 text-brand-700 font-semibold">${items.length} รายการ</span>
+                    <div class="glass-card rounded-3xl overflow-hidden shadow-sm">
+                        <div class="px-5 py-3.5 bg-white/70 border-b border-teal-100 font-bold text-slate-800 flex justify-between items-center sticky top-0 z-10 backdrop-blur-md">
+                            <span class="flex items-center gap-2"><i class="fa-solid fa-building text-teal-600"></i> ${company}</span>
+                            <span class="px-2.5 py-0.5 rounded-full text-xs bg-teal-50 text-teal-700 font-semibold">${items.length} รายการ</span>
                         </div>
-                        <div class="p-3 divide-y divide-slate-100 max-h-[350px] overflow-y-auto">
+                        <div class="p-3 divide-y divide-teal-50 max-h-[350px] overflow-y-auto">
                             ${items.map(i => `
-                                <div class="py-2.5 px-3 flex items-center justify-between hover:bg-slate-50 rounded-xl cursor-pointer" onclick="openDetailModal('${i.id}')">
+                                <div class="py-2.5 px-3 flex items-center justify-between hover:bg-teal-50/60 rounded-xl cursor-pointer" onclick="openDetailModal('${i.id}')">
                                     <div>
-                                        <div class="font-medium text-slate-900 text-sm">${i._plainName}</div>
+                                        <div class="font-semibold text-slate-900 text-sm">${i._plainName}</div>
                                         <div class="text-xs text-slate-500">หน่วย: ${i._unit} | อัปเดต: ${formatThaiDate(i._updatedDate)}</div>
                                     </div>
                                     <div class="text-right font-mono">
@@ -979,4 +967,3 @@
     </script>
 </body>
 </html>
- 
