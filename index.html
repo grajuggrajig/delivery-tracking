@@ -54,52 +54,81 @@
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- Login Overlay Screen -->
-    <div id="login-screen" class="hidden fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-md p-6 sm:p-8 modal-animate">
-            <div class="text-center mb-6">
-                <div class="w-14 h-14 bg-sky-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-600/30 mx-auto mb-3">
-                    <i class="fa-solid fa-building-user text-2xl"></i>
-                </div>
-                <h2 class="text-xl font-bold text-slate-900">เข้าสู่ระบบฐานข้อมูลลูกค้าและบริษัท</h2>
-                <p class="text-sm text-slate-500 mt-1">ใช้บัญชีเดียวกับระบบติดตามงานจัดส่ง (Delivery Tracking)</p>
+<!-- Login Overlay Screen -->
+<div id="login-screen" class="hidden fixed inset-0 z-50 bg-slate-900/75 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl shadow-2xl border border-slate-200/80 w-full max-w-md p-6 sm:p-8 modal-animate">
+        <div class="text-center mb-6">
+            <div class="w-14 h-14 bg-sky-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-600/30 mx-auto mb-3">
+                <i class="fa-solid fa-building-user text-2xl"></i>
             </div>
+            <h2 class="text-xl font-bold text-slate-900">เข้าสู่ระบบฐานข้อมูลลูกค้าและบริษัท</h2>
+            <p class="text-sm text-slate-500 mt-1">ใช้บัญชีเดียวกับระบบติดตามงานจัดส่ง (Delivery Tracking)</p>
+        </div>
 
-            <div id="login-error-box" class="hidden mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
-                <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
-                <span id="login-error-text">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
-            </div>
+        <div id="login-error-box" class="hidden mb-4 p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
+            <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+            <span id="login-error-text">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
+        </div>
 
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">ชื่อผู้ใช้งาน (Username หรือ Email)</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-user absolute left-3.5 top-3 text-slate-400 text-sm"></i>
-                        <input type="text" id="login-username" required autocomplete="username" placeholder="ระบุชื่อผู้ใช้งาน เช่น admin"
-                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
-                    </div>
+        <form id="login-form" class="space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">ชื่อผู้ใช้งาน (Username หรือ Email)</label>
+                <div class="relative">
+                    <i class="fa-solid fa-user absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <input type="text" id="login-username" required autocomplete="username" placeholder="ระบุชื่อผู้ใช้งาน เช่น admin"
+                        class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่าน (Password)</label>
-                    <div class="relative">
-                        <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-sm"></i>
-                        <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••"
-                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
-                    </div>
-                </div>
-                <button type="submit" id="btn-login-submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
-                </button>
-            </form>
-
-            <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                <span>ต้องการกลับหน้าหลัก?</span>
-                <a href="index.html" class="text-sky-600 hover:text-sky-700 font-medium inline-flex items-center gap-1">
-                    ไปที่หน้าหลัก (index.html) <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
-                </a>
             </div>
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่าน (Password)</label>
+                <div class="relative">
+                    <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <!-- เพิ่ม pr-10 เพื่อเว้นพื้นที่ด้านขวาไม่ให้ข้อความทับไอคอนตา -->
+                    <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••"
+                        class="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-sky-500 focus:ring-2 focus:ring-sky-500/20 outline-none">
+                    <!-- ปุ่มสำหรับคลิกดู/ซ่อนรหัสผ่าน -->
+                    <button type="button" id="toggle-password" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 focus:outline-none">
+                        <i class="fa-solid fa-eye text-sm" id="toggle-password-icon"></i>
+                    </button>
+                </div>
+            </div>
+            <button type="submit" id="btn-login-submit" class="w-full py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+            </button>
+        </form>
+
+        <div class="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+            <span>ต้องการกลับหน้าหลัก?</span>
+            <a href="index.html" class="text-sky-600 hover:text-sky-700 font-medium inline-flex items-center gap-1">
+                ไปที่หน้าหลัก (index.html) <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+            </a>
         </div>
     </div>
+</div>
+
+<!-- JavaScript สำหรับควบคุมการกดดูรหัสผ่าน -->
+<script>
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('login-password');
+    const togglePasswordIcon = document.getElementById('toggle-password-icon');
+
+    if (togglePasswordBtn && passwordInput && togglePasswordIcon) {
+        togglePasswordBtn.addEventListener('click', function () {
+            // สลับประเภท input ระหว่าง password กับ text
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+
+            // สลับไอคอนดวงตา (fa-eye <-> fa-eye-slash)
+            if (type === 'text') {
+                togglePasswordIcon.classList.remove('fa-eye');
+                togglePasswordIcon.classList.add('fa-eye-slash');
+            } else {
+                togglePasswordIcon.classList.remove('fa-eye-slash');
+                togglePasswordIcon.classList.add('fa-eye');
+            }
+        });
+    }
+</script>
 
     <!-- Top Navigation Header -->
     <header class="bg-white/90 backdrop-blur-xl border-b border-slate-200/85 sticky top-0 z-40 shadow-xs">
