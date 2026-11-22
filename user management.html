@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบตรวจสอบสิทธิ์ Admin</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Font: Prompt -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
+    <style>
+        body { 
+            font-family: 'Prompt', sans-serif; 
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 50%, #f0f9ff 100%);
+            min-height: 100vh;
+        }
+    </style>
+</head>
+<body class="text-gray-800 flex flex-col">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-emerald-100 sticky top-0 z-30 shadow-xs">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-teal-600 text-white p-2 rounded-xl shadow-sm">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-gray-900 leading-tight">ระบบตรวจสอบสิทธิ์ Admin</h1>
+                    <p class="text-xs text-teal-600 font-medium">User Management & Authorization System</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <div class="flex items-center space-x-2 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-full">
+                    <div id="current-user-avatar" class="w-7 h-7 rounded-full bg-teal-600 text-white flex items-center justify-center font-semibold text-xs shadow-xs">
+                        AD
+                    </div>
+                    <span id="current-user-name" class="text-xs font-semibold text-gray-700 hidden sm:inline">กำลังตรวจสอบสิทธิ์...</span>
+                    <span class="bg-purple-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-2xs">ADMIN</span>
+                </div>
+                <button onclick="logoutUser()" class="text-gray-400 hover:text-rose-600 transition-colors p-2 rounded-xl hover:bg-rose-50" title="ออกจากระบบ">
+                    <i class="fa-solid fa-right-from-bracket text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Page Header & Actions -->
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+            <div>
+                <h2 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                    <span>👥</span> จัดการผู้ใช้งานและสิทธิ์ระบบ
+                </h2>
+                <p class="text-sm text-gray-500 mt-0.5">ควบคุม กำหนดสิทธิ์การเข้าถึง และจัดการสถานะบัญชีผู้ใช้ภายในระบบ</p>
+            </div>
+            <button onclick="openUserModal()" class="inline-flex items-center justify-center bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold px-5 py-2.5 rounded-2xl shadow-sm transition-all cursor-pointer">
+                <i class="fa-solid fa-user-plus mr-2"></i> สร้างบัญชีผู้ใช้ใหม่
+            </button>
+        </div>
+
+        <!-- Filter & Search Section -->
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xs border border-emerald-100 p-4 mb-6">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="relative sm:col-span-2">
+                    <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </span>
+                    <input type="text" id="searchInput" oninput="filterUsers()" placeholder="ค้นหาด้วยชื่อผู้ใช้ หรือชื่อที่แสดง..." class="w-full pl-10 pr-4 py-2 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all">
+                </div>
+                <div>
+                    <select id="roleFilter" onchange="filterUsers()" class="w-full py-2 px-3 bg-gray-50/80 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition-all">
+                        <option value="">สิทธิ์ทั้งหมด (All Roles)</option>
+                        <option value="admin">Admin</option>
+                        <option value="user">User</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Table Card -->
+        <div class="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xs border border-emerald-100 overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-emerald-50/60 border-b border-emerald-100 text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            <th class="py-3.5 px-6">ผู้ใช้งาน / ชื่อแสดง</th>
+                            <th class="py-3.5 px-6">ชื่อผู้ใช้ (Username)</th>
+                            <th class="py-3.5 px-6">สิทธิ์การใช้งาน (Role)</th>
+                            <th class="py-3.5 px-6">สถานะบัญชี</th>
+                            <th class="py-3.5 px-6 text-right">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body" class="divide-y divide-gray-100 text-sm">
+                        <tr>
+                            <td colspan="5" class="py-12 text-center text-gray-400">
+                                <div class="flex flex-col items-center justify-center gap-2">
+                                    <div class="w-8 h-8 border-3 border-teal-500 border-t-transparent rounded-full animate-spin"></div>
+                                    <span>กำลังตรวจสอบสิทธิ์และโหลดข้อมูลผู้ใช้...</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal: สร้างผู้ใช้ใหม่ -->
+    <div id="user-modal" class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 border border-emerald-100 flex flex-col">
+            <div class="flex justify-between items-center pb-3 mb-4 border-b border-slate-100">
+                <h3 id="modal-title" class="text-base font-bold text-slate-800 flex items-center gap-2">
+                    <span class="text-teal-600">➕</span> สร้างผู้ใช้ใหม่
+                </h3>
+                <button type="button" onclick="closeUserModal()" class="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 transition text-xs font-bold cursor-pointer">✕</button>
+            </div>
+            <form id="user-form" onsubmit="handleUserSubmit(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อผู้ใช้ (Username) <span class="text-red-500">*</span></label>
+                    <input type="text" id="modal-username" required placeholder="เช่น sale01" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 bg-slate-50/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">ชื่อแสดง (Display Name)</label>
+                    <input type="text" id="modal-displayname" placeholder="เช่น ฝ่ายขายโซน A" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 bg-slate-50/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">รหัสผ่าน (Password) <span class="text-red-500">*</span></label>
+                    <input type="password" id="modal-password" required minlength="6" placeholder="อย่างน้อย 6 ตัวอักษร" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 bg-slate-50/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">สิทธิ์ระบบ (Role)</label>
+                    <select id="modal-role" class="w-full px-3.5 py-2.5 text-sm border border-slate-200 bg-slate-50/50 rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition">
+                        <option value="user">👤 User</option>
+                        <option value="admin">🛡️ Admin</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-3 border-t border-slate-100">
+                    <button type="button" onclick="closeUserModal()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition cursor-pointer">ยกเลิก</button>
+                    <button type="submit" id="modal-submit-btn" class="px-5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-bold transition shadow-sm cursor-pointer">บันทึกบัญชี</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="fixed bottom-5 right-5 z-[11000] flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- JavaScript Script Logic -->
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+            authDomain: "delivery-tracking-2313a.firebaseapp.com",
+            projectId: "delivery-tracking-2313a",
+            storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+            messagingSenderId: "631670801383",
+            appId: "1:631670801383:web:e720570af97bad7011f342",
+            measurementId: "G-BB2D5DJH3F"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+        const USER_EMAIL_DOMAIN = 'delivery-tracking-2313a.firebaseapp.com';
+
+        let adminUsersCache = [];
+        let currentAuthUser = null;
+        let currentUserProfile = null;
+        let secondaryAuthApp = null;
+
+        function usernameToAuthEmail(username) {
+            const value = String(username || '').trim().toLowerCase();
+            if (value.includes('@')) return value;
+            return value.replace(/[^a-z0-9._-]/g, '_') + '@' + USER_EMAIL_DOMAIN;
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgColors = {
+                success: 'bg-teal-900 text-white border-teal-800',
+                error: 'bg-rose-600 text-white border-rose-500',
+                info: 'bg-sky-700 text-white border-sky-600'
+            };
+            toast.className = `pointer-events-auto flex items-center gap-2 px-4 py-3 rounded-xl text-xs shadow-xl border transition-all duration-300 ${bgColors[type] || bgColors.success}`;
+            toast.innerHTML = `<span>${type === 'error' ? '❌' : '✅'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-4');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        auth.onAuthStateChanged(async (user) => {
+            if (!user) {
+                window.location.replace('login.html');
+                return;
+            }
+            currentAuthUser = user;
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (!userDoc.exists || userDoc.data().role !== 'admin') {
+                    showToast('คุณไม่มีสิทธิ์เข้าถึงหน้าผู้ดูแลระบบ', 'error');
+                    setTimeout(() => window.location.replace('index.html'), 1500);
+                    return;
+                }
+                currentUserProfile = { id: userDoc.id, ...userDoc.data() };
+                document.getElementById('current-user-name').textContent = currentUserProfile.displayName || currentUserProfile.username || user.email;
+                document.getElementById('current-user-avatar').textContent = (currentUserProfile.displayName || currentUserProfile.username || 'AD').substring(0,2).toUpperCase();
+                loadAdminUsers();
+            } catch (err) {
+                console.error("Auth state error:", err);
+                window.location.replace('login.html');
+            }
+        });
+
+        async function loadAdminUsers() {
+            try {
+                const snapshot = await db.collection('users').orderBy('createdAt', 'desc').get().catch(() => db.collection('users').get());
+                adminUsersCache = [];
+                snapshot.forEach(doc => adminUsersCache.push({ id: doc.id, ...doc.data() }));
+                renderUsersTable(adminUsersCache);
+            } catch (err) {
+                console.error("Error loading users:", err);
+                showToast("โหลดรายชื่อผู้ใช้ไม่สำเร็จ", "error");
+            }
+        }
+
+        function renderUsersTable(users) {
+            const tbody = document.getElementById('user-table-body');
+            if (!users.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="py-12 text-center text-gray-400">ไม่พบรายชื่อผู้ใช้งานในระบบ</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = users.map(u => `
+                <tr class="hover:bg-emerald-50/40 transition-colors">
+                    <td class="py-4 px-6">
+                        <div class="font-semibold text-gray-900">${escapeHTML(u.displayName || u.username || '-')}</div>
+                        <div class="text-xs text-gray-400">${escapeHTML(u.email || '-')}</div>
+                    </td>
+                    <td class="py-4 px-6 text-sm text-gray-600 font-mono">${escapeHTML(u.username || '-')}</td>
+                    <td class="py-4 px-6">
+                        <select onchange="updateUserRole('${u.id}', this.value)" class="text-xs font-semibold px-2.5 py-1 rounded-lg border border-gray-200 bg-white shadow-2xs focus:ring-2 focus:ring-teal-500 cursor-pointer">
+                            <option value="user" ${u.role === 'user' ? 'selected' : ''}>👤 User</option>
+                            <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>🛡️ Admin</option>
+                        </select>
+                    </td>
+                    <td class="py-4 px-6">
+                        <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${u.active !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'}">
+                            ${u.active !== false ? '● เปิดใช้งาน' : '○ ปิดใช้งาน'}
+                        </span>
+                    </td>
+                    <td class="py-4 px-6 text-right space-x-2">
+                        <button onclick="toggleUserStatus('${u.id}', ${u.active !== false})" class="px-3 py-1.5 rounded-xl text-xs font-semibold border border-gray-200 bg-white hover:bg-gray-50 transition-all cursor-pointer">
+                            ${u.active !== false ? '🔒 ปิดใช้งาน' : '🔓 เปิดใช้งาน'}
+                        </button>
+                        <button onclick="deleteUser('${u.id}', '${escapeHTML(u.username || u.email)}')" class="px-3 py-1.5 rounded-xl text-xs font-semibold bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all cursor-pointer">
+                            🗑️ ลบ
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function filterUsers() {
+            const keyword = document.getElementById('searchInput').value.toLowerCase();
+            const role = document.getElementById('roleFilter').value.toLowerCase();
+            const filtered = adminUsersCache.filter(u => {
+                const matchKeyword = (u.username || '').toLowerCase().includes(keyword) || (u.displayName || '').toLowerCase().includes(keyword) || (u.email || '').toLowerCase().includes(keyword);
+                const matchRole = !role || (u.role || 'user').toLowerCase() === role;
+                return matchKeyword && matchRole;
+            });
+            renderUsersTable(filtered);
+        }
+
+        function openUserModal() {
+            document.getElementById('user-form').reset();
+            document.getElementById('user-modal').classList.remove('hidden');
+        }
+
+        function closeUserModal() {
+            document.getElementById('user-modal').classList.add('hidden');
+        }
+
+        async function handleUserSubmit(e) {
+            e.preventDefault();
+            const username = document.getElementById('modal-username').value.trim();
+            const displayName = document.getElementById('modal-displayname').value.trim() || username;
+            const password = document.getElementById('modal-password').value;
+            const role = document.getElementById('modal-role').value;
+
+            const btn = document.getElementById('modal-submit-btn');
+            btn.disabled = true;
+            btn.textContent = 'กำลังสร้าง...';
+
+            try {
+                const email = usernameToAuthEmail(username);
+                secondaryAuthApp = secondaryAuthApp || firebase.initializeApp(firebaseConfig, 'secondaryAuth');
+                const secondaryAuth = secondaryAuthApp.auth();
+                const cred = await secondaryAuth.createUserWithEmailAndPassword(email, password);
+                
+                await db.collection('users').doc(cred.user.uid).set({
+                    uid: cred.user.uid,
+                    username,
+                    displayName,
+                    role,
+                    active: true,
+                    email,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    createdBy: currentAuthUser.uid
+                });
+
+                await secondaryAuth.signOut();
+                closeUserModal();
+                showToast(`สร้างบัญชี "${username}" สำเร็จ`, 'success');
+                loadAdminUsers();
+            } catch (err) {
+                console.error("Create user error:", err);
+                const errors = {
+                    'auth/email-already-in-use': 'ชื่อผู้ใช้นี้มีอยู่ในระบบแล้ว',
+                    'auth/invalid-email': 'รูปแบบชื่อผู้ใช้ไม่ถูกต้อง',
+                    'auth/weak-password': 'รหัสผ่านมีความปลอดภัยต่ำเกินไป'
+                };
+                showToast(errors[err.code] || 'ไม่สามารถสร้างบัญชีผู้ใช้ได้ กรุณาลองใหม่อีกครั้ง', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'บันทึกบัญชี';
+            }
+        }
+
+        async function updateUserRole(userId, newRole) {
+            try {
+                await db.collection('users').doc(userId).update({
+                    role: newRole,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                showToast('อัปเดตสิทธิ์ผู้ใช้งานสำเร็จ', 'success');
+                loadAdminUsers();
+            } catch (err) {
+                console.error("Update role error:", err);
+                showToast('ไม่สามารถอัปเดตสิทธิ์ได้', 'error');
+            }
+        }
+
+        async function toggleUserStatus(userId, currentActive) {
+            if (userId === currentAuthUser.uid) {
+                showToast('ไม่สามารถปิดการใช้งานบัญชีของตนเองได้', 'info');
+                return;
+            }
+            try {
+                await db.collection('users').doc(userId).update({
+                    active: !currentActive,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                showToast(currentActive ? 'ปิดการใช้งานบัญชีแล้ว' : 'เปิดการใช้งานบัญชีแล้ว', 'success');
+                loadAdminUsers();
+            } catch (err) {
+                console.error("Toggle status error:", err);
+                showToast('ไม่สามารถเปลี่ยนสถานะบัญชีได้', 'error');
+            }
+        }
+
+        async function deleteUser(userId, username) {
+            if (userId === currentAuthUser.uid) {
+                showToast('ไม่สามารถลบบัญชีของตนเองได้', 'info');
+                return;
+            }
+            if (!confirm(`คุณต้องการลบบัญชี "${username}" ออกจากระบบหรือไม่?`)) return;
+            try {
+                await db.collection('users').doc(userId).delete();
+                showToast(`ลบบัญชี "${username}" สำเร็จ`, 'success');
+                loadAdminUsers();
+            } catch (err) {
+                console.error("Delete user error:", err);
+                showToast('ไม่สามารถลบบัญชีได้ กรุณาตรวจสอบสิทธิ์ Firestore', 'error');
+            }
+        }
+
+        async function logoutUser() {
+            try {
+                await auth.signOut();
+                window.location.replace('login.html');
+            } catch (err) {
+                showToast('ออกจากระบบไม่สำเร็จ', 'error');
+            }
+        }
+
+        function escapeHTML(str) {
+            return String(str || '').replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+            }[tag] || tag));
+        }
+    </script>
+</body>
+</html>
