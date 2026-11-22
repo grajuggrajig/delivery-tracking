@@ -67,7 +67,7 @@
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col relative selection:bg-teal-500 selection:text-white">
 
-    <!-- Ambient Background Shapes (ช่วยให้เห็นมิติความโปร่งแสงของการ์ดชัดเจนขึ้น) -->
+    <!-- Ambient Background Shapes -->
     <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
         <div class="absolute -top-24 -left-24 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-teal-300/35 blur-3xl"></div>
         <div class="absolute top-1/3 -right-20 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-cyan-300/35 blur-3xl"></div>
@@ -124,7 +124,7 @@
         </div>
     </div>
 
-    <!-- Top Navigation Header (ปรับให้รองรับมือถือ 100% ไม่ทับซ้อนกัน) -->
+    <!-- Top Navigation Header -->
     <header class="bg-white/60 backdrop-blur-xl border-b border-white/70 sticky top-0 z-40 shadow-2xs">
         <div class="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3">
             
@@ -270,82 +270,51 @@
     </header>
 
     <!-- Main Content Container -->
-    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6">
+    <main class="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col">
         
-        <!-- KPI Summary Cards (ปรับให้พอดีบนมือถือ 2 คอลัมน์ ไม่ล้น) -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4 mb-4 sm:mb-6">
-            <div class="glass-card p-3 sm:p-4 rounded-2xl sm:rounded-3xl flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-teal-500/15 text-teal-700 flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-building text-sm sm:text-lg"></i>
+        <!-- แถบแสดงสถิติสรุปข้อมูลแบบเรียลไทม์ 4 ช่อง -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+            <!-- 1. บริษัททั้งหมด -->
+            <div class="glass-card p-4 sm:p-5 rounded-3xl flex items-center gap-3.5">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-teal-500/15 text-teal-700 flex items-center justify-center text-lg sm:text-xl font-bold shrink-0 border border-white">
+                    <i class="fa-solid fa-building"></i>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-[11px] sm:text-xs font-medium text-slate-600 truncate">บริษัททั้งหมด</p>
-                    <p id="stat-companies" class="text-lg sm:text-2xl font-bold text-slate-900 truncate">0</p>
-                </div>
-            </div>
-            
-            <div class="glass-card p-3 sm:p-4 rounded-2xl sm:rounded-3xl flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-users text-sm sm:text-lg"></i>
-                </div>
-                <div class="min-w-0">
-                    <p class="text-[11px] sm:text-xs font-medium text-slate-600 truncate">ลูกค้า / ผู้ติดต่อ</p>
-                    <p id="stat-contacts" class="text-lg sm:text-2xl font-bold text-slate-900 truncate">0</p>
+                    <p class="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">บริษัททั้งหมด</p>
+                    <h3 id="stat-total-companies" class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">0</h3>
                 </div>
             </div>
 
-            <div class="glass-card p-3 sm:p-4 rounded-2xl sm:rounded-3xl flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-cyan-500/15 text-cyan-700 flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-receipt text-sm sm:text-lg"></i>
+            <!-- 2. ลูกค้า / ผู้ติดต่อ -->
+            <div class="glass-card p-4 sm:p-5 rounded-3xl flex items-center gap-3.5">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-emerald-500/15 text-emerald-700 flex items-center justify-center text-lg sm:text-xl font-bold shrink-0 border border-white">
+                    <i class="fa-solid fa-users"></i>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-[11px] sm:text-xs font-medium text-slate-600 truncate">บิล / รายการสั่งซื้อ</p>
-                    <p id="stat-orders" class="text-lg sm:text-2xl font-bold text-slate-900 truncate">0</p>
+                    <p class="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">ลูกค้า / ผู้ติดต่อ</p>
+                    <h3 id="stat-total-contacts" class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">0</h3>
                 </div>
             </div>
 
-            <div class="glass-card p-3 sm:p-4 rounded-2xl sm:rounded-3xl flex items-center gap-2.5 sm:gap-3.5 min-w-0">
-                <div class="w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-amber-500/15 text-amber-700 flex items-center justify-center shrink-0">
-                    <i class="fa-solid fa-baht-sign text-sm sm:text-lg"></i>
+            <!-- 3. บิล / รายการสั่งซื้อ -->
+            <div class="glass-card p-4 sm:p-5 rounded-3xl flex items-center gap-3.5">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-cyan-500/15 text-cyan-700 flex items-center justify-center text-lg sm:text-xl font-bold shrink-0 border border-white">
+                    <i class="fa-solid fa-file-invoice"></i>
                 </div>
                 <div class="min-w-0">
-                    <p class="text-[11px] sm:text-xs font-medium text-slate-600 truncate">ยอดสั่งซื้อรวมสะสม</p>
-                    <p id="stat-revenue" class="text-base sm:text-xl font-bold text-slate-900 truncate">฿0</p>
+                    <p class="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">บิล / รายการสั่งซื้อ</p>
+                    <h3 id="stat-total-bills" class="text-lg sm:text-2xl font-bold text-slate-900 tracking-tight">0</h3>
                 </div>
             </div>
-        </div>
 
-        <!-- Search & Filter Bar -->
-        <div class="glass-card p-3 sm:p-4 rounded-2xl sm:rounded-3xl mb-5 sm:mb-6">
-            <div class="flex flex-col md:flex-row gap-2.5 sm:gap-3">
-                <div class="relative flex-1">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs sm:text-sm"></i>
-                    <input type="text" id="search-input" placeholder="ค้นหาชื่อบริษัท, ลูกค้า, เบอร์โทร, Line, เขต..." 
-                        class="w-full pl-9 pr-9 py-2.5 bg-white/65 border border-white/80 rounded-xl sm:rounded-2xl text-xs sm:text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition-all placeholder:text-slate-400">
-                    <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                        <i class="fa-solid fa-circle-xmark"></i>
-                    </button>
+            <!-- 4. ยอดสั่งซื้อรวมสะสม -->
+            <div class="glass-card p-4 sm:p-5 rounded-3xl flex items-center gap-3.5">
+                <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-amber-500/15 text-amber-700 flex items-center justify-center text-lg sm:text-xl font-bold shrink-0 border border-white">
+                    <i class="fa-solid fa-baht-sign"></i>
                 </div>
-
-                <div class="grid grid-cols-2 sm:flex items-center gap-2 sm:gap-2.5">
-                    <div class="relative w-full sm:w-44">
-                        <i class="fa-solid fa-location-dot absolute left-3 top-1/2 -translate-y-1/2 text-teal-600 text-xs"></i>
-                        <select id="district-filter" class="w-full pl-8 pr-7 py-2.5 bg-white/65 border border-white/80 rounded-xl sm:rounded-2xl text-xs sm:text-sm text-slate-700 focus:bg-white focus:border-teal-500 outline-none appearance-none cursor-pointer truncate">
-                            <option value="">ทุกอำเภอ / เขต</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
-                    </div>
-
-                    <div class="relative w-full sm:w-48">
-                        <i class="fa-solid fa-arrow-down-wide-short absolute left-3 top-1/2 -translate-y-1/2 text-teal-600 text-xs"></i>
-                        <select id="sort-select" class="w-full pl-8 pr-7 py-2.5 bg-white/65 border border-white/80 rounded-xl sm:rounded-2xl text-xs sm:text-sm text-slate-700 focus:bg-white focus:border-teal-500 outline-none appearance-none cursor-pointer truncate">
-                            <option value="recent">อัปเดตล่าสุด</option>
-                            <option value="name">ชื่อบริษัท (ก-ฮ)</option>
-                            <option value="contacts">ผู้ติดต่อมากสุด</option>
-                            <option value="spent">ยอดซื้อสูงสุด</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none"></i>
-                    </div>
+                <div class="min-w-0">
+                    <p class="text-[11px] sm:text-xs font-semibold text-slate-500 truncate">ยอดสั่งซื้อรวมสะสม</p>
+                    <h3 id="stat-total-spent" class="text-base sm:text-xl font-bold text-slate-900 tracking-tight truncate">฿0</h3>
                 </div>
             </div>
         </div>
@@ -357,7 +326,7 @@
         </div>
 
         <!-- Empty State -->
-        <div id="empty-state" class="hidden glass-card rounded-3xl p-8 sm:p-12 text-center">
+        <div id="empty-state" class="hidden glass-card rounded-3xl p-8 sm:p-12 text-center my-auto">
             <div class="w-14 h-14 bg-white/70 text-slate-400 rounded-2xl flex items-center justify-center mx-auto mb-3 border border-white">
                 <i class="fa-solid fa-folder-open text-2xl"></i>
             </div>
@@ -368,9 +337,61 @@
             </button>
         </div>
 
-        <!-- Company Directory Grid -->
-        <div id="directory-grid" class="hidden grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            <!-- Company cards injected via JS -->
+        <!-- Master-Detail Layout (แบ่ง 2 ฝั่งซ้าย-ขวา ตามภาพที่ 2) -->
+        <div id="master-detail-layout" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 items-start flex-1">
+            
+            <!-- ฝั่งซ้าย (Master): กล่องค้นหา + ตัวกรองอำเภอ/เขต + ตัวเรียงลำดับ + รายชื่อบริษัทให้คลิกเลือก -->
+            <div class="lg:col-span-4 flex flex-col gap-3">
+                <div class="glass-card p-3.5 sm:p-4 rounded-3xl space-y-3">
+                    <div class="flex items-center gap-2.5">
+                        <div class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center text-xs shrink-0 shadow-xs">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <h2 class="text-xs sm:text-sm font-bold text-slate-900 truncate">ค้นหาลูกค้า / บริษัท</h2>
+                            <p class="text-[10px] sm:text-[11px] text-slate-500 truncate">เลือกบริษัทเพื่อดูรายละเอียดทั้งหมด</p>
+                        </div>
+                    </div>
+
+                    <div class="relative">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input type="text" id="search-input" placeholder="ชื่อบริษัท ชื่อลูกค้า เบอร์โทร..." 
+                            class="w-full pl-8 pr-8 py-2 bg-white/75 border border-white/90 rounded-xl text-xs focus:bg-white focus:border-teal-500 outline-none transition-all placeholder:text-slate-400">
+                        <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
+                            <i class="fa-solid fa-circle-xmark"></i>
+                        </button>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="relative">
+                            <select id="district-filter" class="w-full pl-2.5 pr-6 py-1.5 bg-white/75 border border-white/90 rounded-xl text-[11px] text-slate-700 focus:bg-white focus:border-teal-500 outline-none appearance-none cursor-pointer truncate">
+                                <option value="">ทุกอำเภอ/เขต</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[9px] pointer-events-none"></i>
+                        </div>
+                        <div class="relative">
+                            <select id="sort-select" class="w-full pl-2.5 pr-6 py-1.5 bg-white/75 border border-white/90 rounded-xl text-[11px] text-slate-700 focus:bg-white focus:border-teal-500 outline-none appearance-none cursor-pointer truncate">
+                                <option value="recent">อัปเดตล่าสุด</option>
+                                <option value="name">ชื่อบริษัท (ก-ฮ)</option>
+                                <option value="contacts">ผู้ติดต่อมากสุด</option>
+                                <option value="spent">ยอดซื้อสูงสุด</option>
+                            </select>
+                            <i class="fa-solid fa-chevron-down absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-[9px] pointer-events-none"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- รายการบริษัทฝั่งซ้าย -->
+                <div id="company-sidebar-list" class="space-y-2 max-h-[calc(100vh-320px)] overflow-y-auto pr-1">
+                    <!-- Sidebar items injected via JS -->
+                </div>
+            </div>
+
+            <!-- ฝั่งขวา (Detail): แสดงการ์ดบริษัทตามรูปแบบเดิม (เหมือนภาพที่ 2 เป๊ะๆ) -->
+            <div id="company-detail-card-container" class="lg:col-span-8">
+                <!-- Selected company card injected via JS -->
+            </div>
+
         </div>
 
     </main>
@@ -630,6 +651,7 @@
         let unsubCompanies = null;
         let unsubCompanyProducts = null;
         let currentOpenCompany = null;
+        let selectedCompanyName = null;
 
         const collapsedCards = {};
         const collapsedSections = {};
@@ -1081,9 +1103,21 @@
                 };
             });
 
+            // อัปเดตตัวเลขสถิติสรุปภาพรวมด้านบนแบบเรียลไทม์
+            updateGlobalStats();
+
             document.getElementById('loading-state').classList.add('hidden');
             updateDistrictFilterOptions();
-            updateKPICards();
+
+            const list = getFilteredAndSortedData();
+            if (list.length > 0) {
+                if (!selectedCompanyName || !list.some(c => c.companyName === selectedCompanyName)) {
+                    selectedCompanyName = list[0].companyName;
+                }
+            } else {
+                selectedCompanyName = null;
+            }
+
             renderDirectory();
 
             if (currentOpenCompany) {
@@ -1095,16 +1129,22 @@
             }
         }
 
-        function updateKPICards() {
-            const totalCompanies = directoryData.length;
-            const totalContacts = directoryData.reduce((sum, c) => sum + c.contacts.length, 0);
-            const totalOrders = directoryData.reduce((sum, c) => sum + c.purchaseHistory.length, 0);
-            const totalRevenue = directoryData.reduce((sum, c) => sum + c.totalSpent, 0);
+        function updateGlobalStats() {
+            let totalCompanies = directoryData.length;
+            let totalContacts = 0;
+            let totalBills = 0;
+            let totalSpent = 0;
 
-            document.getElementById('stat-companies').textContent = totalCompanies.toLocaleString();
-            document.getElementById('stat-contacts').textContent = totalContacts.toLocaleString();
-            document.getElementById('stat-orders').textContent = totalOrders.toLocaleString();
-            document.getElementById('stat-revenue').textContent = '฿' + totalRevenue.toLocaleString('th-TH', { maximumFractionDigits: 0 });
+            directoryData.forEach(comp => {
+                totalContacts += (comp.contacts || []).length;
+                totalBills += (comp.purchaseHistory || []).length;
+                totalSpent += (comp.totalSpent || 0);
+            });
+
+            document.getElementById('stat-total-companies').textContent = totalCompanies.toLocaleString();
+            document.getElementById('stat-total-contacts').textContent = totalContacts.toLocaleString();
+            document.getElementById('stat-total-bills').textContent = totalBills.toLocaleString();
+            document.getElementById('stat-total-spent').textContent = '฿' + totalSpent.toLocaleString('th-TH', { maximumFractionDigits: 0 });
         }
 
         function updateDistrictFilterOptions() {
@@ -1117,7 +1157,7 @@
             });
 
             const sortedDistricts = Array.from(districts).sort((a, b) => a.localeCompare(b, 'th'));
-            select.innerHTML = '<option value="">ทุกอำเภอ / เขต</option>';
+            select.innerHTML = '<option value="">ทุกอำเภอ/เขต</option>';
             sortedDistricts.forEach(d => {
                 const opt = document.createElement('option');
                 opt.value = d;
@@ -1185,6 +1225,11 @@
             renderDirectory();
         }
 
+        function selectCompany(encodedCompanyName) {
+            selectedCompanyName = decodeURIComponent(encodedCompanyName);
+            renderDirectory();
+        }
+
         async function saveVirtualCompanyToDirectory(encodedCompanyName) {
             const targetName = decodeURIComponent(encodedCompanyName);
             const comp = directoryData.find(c => c.companyName === targetName);
@@ -1224,55 +1269,93 @@
         }
 
         // =========================================================================
-        // การ์ดโปร่งแสงสูง (Glassmorphism) + Layout บนมือถือไม่เบียดหรือทับซ้อน
+        // Master-Detail View Render: ฝั่งซ้ายรายชื่อบริษัท / ฝั่งขวาการ์ดบริษัทตามรูปแบบเดิม
         // =========================================================================
         function renderDirectory() {
-            const grid = document.getElementById('directory-grid');
+            const layout = document.getElementById('master-detail-layout');
             const emptyState = document.getElementById('empty-state');
+            const sidebarList = document.getElementById('company-sidebar-list');
+            const detailContainer = document.getElementById('company-detail-card-container');
             const list = getFilteredAndSortedData();
 
             if (list.length === 0) {
-                grid.classList.add('hidden');
+                layout.classList.add('hidden');
                 emptyState.classList.remove('hidden');
                 return;
             }
 
             emptyState.classList.add('hidden');
-            grid.classList.remove('hidden');
+            layout.classList.remove('hidden');
 
-            grid.innerHTML = list.map((comp) => {
+            // 1. Render รายชื่อบริษัทฝั่งซ้าย (มีกรอบไฮไลต์สีเขียว Teal ชัดเจนเมื่อเลือก)
+            sidebarList.innerHTML = list.map((comp) => {
                 const encodedKey = encodeURIComponent(comp.companyName);
-                const hasNotes = comp.notes && comp.notes.trim().length > 0;
-                const hasAddress = comp.address && comp.address.trim().length > 0;
-                const isCollapsed = !!collapsedCards[comp.companyName];
+                const isSelected = comp.companyName === selectedCompanyName;
                 const isVirtual = !comp.id;
 
-                const addrKey = `${comp.companyName}_address`;
-                const notesKey = `${comp.companyName}_notes`;
-                const contactsKey = `${comp.companyName}_contacts`;
-
-                if (collapsedSections[addrKey] === undefined) collapsedSections[addrKey] = true;
-                if (collapsedSections[notesKey] === undefined) collapsedSections[notesKey] = true;
-                if (collapsedSections[contactsKey] === undefined) collapsedSections[contactsKey] = true;
-
-                const isAddrHidden = collapsedSections[addrKey];
-                const isNotesHidden = collapsedSections[notesKey];
-                const isContactsHidden = collapsedSections[contactsKey];
-
-                const escapedCompName = escapeHtml(comp.companyName).replace(/'/g, "\\'");
-
                 return `
+                <div onclick="selectCompany('${encodedKey}')" class="glass-card p-3 sm:p-3.5 rounded-2xl cursor-pointer transition-all ${isSelected ? 'ring-2 ring-teal-500 border-teal-500 bg-white/85 shadow-md shadow-teal-500/15' : 'hover:bg-white/65'}">
+                    <div class="flex items-start gap-2.5">
+                        <div class="w-8 h-8 rounded-xl ${isSelected ? 'bg-teal-600 text-white' : 'bg-teal-500/15 text-teal-700'} flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 transition-colors">
+                            <i class="fa-solid fa-building"></i>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                ${isVirtual ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800">จากบิล</span>' : ''}
+                            </div>
+                            <h3 class="text-xs sm:text-sm font-bold ${isSelected ? 'text-teal-950' : 'text-slate-900'} truncate leading-snug" title="${escapeHtml(comp.companyName)}">
+                                ${escapeHtml(comp.companyName)}
+                            </h3>
+                            <p class="text-[11px] text-slate-500 mt-0.5 flex items-center justify-between">
+                                <span>${comp.contacts.length} ผู้ติดต่อ</span>
+                                ${comp.totalSpent > 0 ? `<span class="font-bold text-emerald-700">฿${comp.totalSpent.toLocaleString()}</span>` : ''}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                `;
+            }).join('');
+
+            // 2. Render การ์ดบริษัทที่เลือกฝั่งขวา (รูปแบบเดียวกับภาพที่ 2 เป๊ะๆ ไม่มีรายการสินค้า และมีปุ่ม ดูรายละเอียด →)
+            const comp = list.find(c => c.companyName === selectedCompanyName) || list[0];
+            if (!comp) {
+                detailContainer.innerHTML = '';
+                return;
+            }
+            selectedCompanyName = comp.companyName;
+
+            const encodedKey = encodeURIComponent(comp.companyName);
+            const hasNotes = comp.notes && comp.notes.trim().length > 0;
+            const hasAddress = comp.address && comp.address.trim().length > 0;
+            const isCollapsed = !!collapsedCards[comp.companyName];
+            const isVirtual = !comp.id;
+
+            const addrKey = `${comp.companyName}_address`;
+            const notesKey = `${comp.companyName}_notes`;
+            const contactsKey = `${comp.companyName}_contacts`;
+
+            if (collapsedSections[addrKey] === undefined) collapsedSections[addrKey] = true;
+            if (collapsedSections[notesKey] === undefined) collapsedSections[notesKey] = true;
+            if (collapsedSections[contactsKey] === undefined) collapsedSections[contactsKey] = true;
+
+            const isAddrHidden = collapsedSections[addrKey];
+            const isNotesHidden = collapsedSections[notesKey];
+            const isContactsHidden = collapsedSections[contactsKey];
+
+            const escapedCompName = escapeHtml(comp.companyName).replace(/'/g, "\\'");
+
+            detailContainer.innerHTML = `
                 <div class="glass-card rounded-3xl flex flex-col justify-between overflow-hidden min-w-0">
                     <div>
-                        <!-- Header การ์ด: ปรับให้ชื่อบริษัทมีพื้นที่เต็มที่ ปุ่มจัดการไม่บีบชื่อบริษัท -->
-                        <div class="p-4 sm:px-5 sm:pt-5 sm:pb-3.5 border-b border-white/60 space-y-2.5">
-                            <div class="flex items-start gap-3 min-w-0">
-                                <div class="w-10 h-10 rounded-2xl bg-teal-500/15 text-teal-700 border border-white/80 flex items-center justify-center font-bold text-sm shrink-0 mt-0.5">
+                        <!-- Header การ์ด -->
+                        <div class="p-4 sm:px-6 sm:pt-6 sm:pb-4 border-b border-white/60 space-y-2.5">
+                            <div class="flex items-start gap-3.5 min-w-0">
+                                <div class="w-11 h-11 rounded-2xl bg-teal-500/15 text-teal-700 border border-white/80 flex items-center justify-center font-bold text-base shrink-0 mt-0.5">
                                     <i class="fa-solid fa-building"></i>
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-1.5 flex-wrap mb-1">
-                                        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">บริษัท</span>
+                                        <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">บริษัท</span>
                                         ${isVirtual ? `
                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-800 border border-amber-300/60">
                                                 <i class="fa-solid fa-cloud-arrow-up text-[8px]"></i> จากบิล
@@ -1284,48 +1367,49 @@
                                             </span>
                                         ` : ''}
                                     </div>
-                                    <h3 class="text-sm sm:text-base font-bold text-slate-900 cursor-pointer hover:text-teal-700 transition-colors break-words leading-snug" onclick="openDetailModal('${encodedKey}')" title="${escapeHtml(comp.companyName)}">
+                                    <h3 class="text-base sm:text-lg font-bold text-slate-900 cursor-pointer hover:text-teal-700 transition-colors break-words leading-snug" onclick="openDetailModal('${encodedKey}')" title="${escapeHtml(comp.companyName)}">
                                         ${escapeHtml(comp.companyName)}
                                     </h3>
                                     ${comp.companyDistrict ? `
                                         <p class="text-xs text-slate-600 flex items-center gap-1 mt-1 truncate">
-                                            <i class="fa-solid fa-location-dot text-[10px] text-teal-600 shrink-0"></i>
+                                            <i class="fa-solid fa-location-dot text-[11px] text-teal-600 shrink-0"></i>
                                             <span class="truncate">${escapeHtml(comp.companyDistrict)}</span>
                                         </p>
                                     ` : ''}
                                 </div>
                             </div>
 
-                            <!-- แถวปุ่มควบคุมการ์ด (โปร่งแสง เรียงเป็นระเบียบ ไม่ล้นขอบขวา) -->
-                            <div class="flex items-center justify-end gap-1.5 pt-1">
+                            <!-- แถวปุ่มควบคุมการ์ด (แก้ไข / ลบ / ย่อ-ขยาย) -->
+                            <div class="flex items-center justify-end gap-2 pt-1">
                                 ${isVirtual ? `
-                                    <button onclick="saveVirtualCompanyToDirectory('${encodedKey}')" class="px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 rounded-xl text-[11px] font-semibold transition-colors inline-flex items-center gap-1 border border-emerald-300/60 mr-auto" title="บันทึกรายชื่อนี้ลงระบบ">
-                                        <i class="fa-solid fa-floppy-disk text-[10px]"></i> บันทึกลงระบบ
+                                    <button onclick="saveVirtualCompanyToDirectory('${encodedKey}')" class="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 rounded-xl text-xs font-semibold transition-colors inline-flex items-center gap-1.5 border border-emerald-300/60 mr-auto" title="บันทึกรายชื่อนี้ลงระบบ">
+                                        <i class="fa-solid fa-floppy-disk text-xs"></i> บันทึกลงระบบ
                                     </button>
                                 ` : ''}
-                                <button onclick="openCompanyModal('${encodedKey}')" class="w-8 h-8 flex items-center justify-center text-slate-700 hover:text-teal-700 bg-white/60 hover:bg-white border border-white/80 rounded-xl transition-all" title="แก้ไขข้อมูล">
+                                <button onclick="openCompanyModal('${encodedKey}')" class="w-9 h-9 flex items-center justify-center text-slate-700 hover:text-teal-700 bg-white/70 hover:bg-white border border-white/90 rounded-xl transition-all shadow-2xs" title="แก้ไขข้อมูล">
                                     <i class="fa-solid fa-pen-to-square text-xs"></i>
                                 </button>
-                                <button onclick="confirmDeleteCompany('${encodedKey}')" class="w-8 h-8 flex items-center justify-center text-slate-700 hover:text-rose-600 bg-white/60 hover:bg-white border border-white/80 rounded-xl transition-all" title="ลบข้อมูล">
+                                <button onclick="confirmDeleteCompany('${encodedKey}')" class="w-9 h-9 flex items-center justify-center text-slate-700 hover:text-rose-600 bg-white/70 hover:bg-white border border-white/90 rounded-xl transition-all shadow-2xs" title="ลบข้อมูล">
                                     <i class="fa-solid fa-trash-can text-xs"></i>
                                 </button>
-                                <button onclick="toggleCardCollapse('${escapedCompName}')" class="w-8 h-8 flex items-center justify-center text-slate-700 hover:text-slate-900 bg-white/60 hover:bg-white border border-white/80 rounded-xl transition-all" title="${isCollapsed ? 'ขยาย' : 'ย่อ'}">
+                                <button onclick="toggleCardCollapse('${escapedCompName}')" class="w-9 h-9 flex items-center justify-center text-slate-700 hover:text-slate-900 bg-white/70 hover:bg-white border border-white/90 rounded-xl transition-all shadow-2xs" title="${isCollapsed ? 'ขยาย' : 'ย่อ'}">
                                     <i class="fa-solid ${isCollapsed ? 'fa-chevron-down' : 'fa-chevron-up'} text-xs"></i>
                                 </button>
                             </div>
                         </div>
 
-                        <!-- Card Body Content -->
-                        <div class="p-4 sm:p-5 space-y-3 ${isCollapsed ? 'hidden' : ''}">
-                            <div class="space-y-2">
+                        <!-- Card Body Content (ผู้ติดต่อ, ที่อยู่จัดส่ง, หมายเหตุบริษัท - ไม่มีรายการสินค้า) -->
+                        <div class="p-4 sm:p-6 space-y-4 ${isCollapsed ? 'hidden' : ''}">
+                            <!-- ผู้ติดต่อ -->
+                            <div class="space-y-2.5">
                                 <div class="flex items-center justify-between gap-2">
-                                    <span class="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                                    <span class="text-xs sm:text-sm font-bold text-slate-700 flex items-center gap-2">
                                         <i class="fa-solid fa-users text-teal-600"></i> ผู้ติดต่อ (${comp.contacts.length})
                                     </span>
                                     <div class="flex items-center gap-1.5">
-                                        ${comp.totalSpent > 0 ? `<span class="text-[11px] font-bold text-emerald-800 bg-emerald-400/20 px-2.5 py-0.5 rounded-full border border-emerald-300/60">฿${comp.totalSpent.toLocaleString()}</span>` : ''}
+                                        ${comp.totalSpent > 0 ? `<span class="text-xs font-bold text-emerald-800 bg-emerald-400/20 px-2.5 py-0.5 rounded-full border border-emerald-300/60">฿${comp.totalSpent.toLocaleString()}</span>` : ''}
                                         ${comp.contacts.length > 1 ? `
-                                            <button onclick="toggleSection('${escapedCompName}', 'contacts')" class="w-6 h-6 rounded-lg bg-white/70 border border-white text-slate-700 hover:bg-teal-600 hover:text-white flex items-center justify-center text-[10px] transition-colors" title="แสดง/ซ่อนผู้ติดต่ออื่นๆ">
+                                            <button onclick="toggleSection('${escapedCompName}', 'contacts')" class="w-6 h-6 rounded-lg bg-white/80 border border-white text-slate-700 hover:bg-teal-600 hover:text-white flex items-center justify-center text-[10px] transition-colors" title="แสดง/ซ่อนผู้ติดต่ออื่นๆ">
                                                 <i class="fa-solid ${isContactsHidden ? 'fa-plus' : 'fa-minus'}"></i>
                                             </button>
                                         ` : ''}
@@ -1334,29 +1418,29 @@
 
                                 <div class="space-y-2">
                                     ${comp.contacts.length > 0 ? `
-                                        <div class="glass-subcard p-3 rounded-2xl text-xs space-y-1">
+                                        <div class="glass-subcard p-3.5 rounded-2xl text-xs space-y-1">
                                             <div class="flex items-center justify-between gap-2">
-                                                <div class="flex items-center gap-1.5 min-w-0">
-                                                    <div class="w-5 h-5 rounded-lg bg-white/80 text-teal-600 flex items-center justify-center text-[9px] font-bold shrink-0 border border-white">
+                                                <div class="flex items-center gap-2 min-w-0">
+                                                    <div class="w-6 h-6 rounded-lg bg-white/90 text-teal-600 flex items-center justify-center text-[10px] font-bold shrink-0 border border-white">
                                                         <i class="fa-solid fa-user"></i>
                                                     </div>
-                                                    <span class="font-bold text-slate-900 truncate">${escapeHtml(comp.contacts[0].name)}</span>
+                                                    <span class="font-bold text-slate-900 truncate text-xs sm:text-sm">${escapeHtml(comp.contacts[0].name)}</span>
                                                 </div>
                                                 ${comp.contacts[0].role ? `
-                                                    <span class="px-2 py-0.5 rounded-lg bg-white/75 text-slate-600 text-[10px] font-medium shrink-0 border border-white">
+                                                    <span class="px-2 py-0.5 rounded-lg bg-white/80 text-slate-600 text-[10px] font-medium shrink-0 border border-white">
                                                         ${escapeHtml(comp.contacts[0].role)}
                                                     </span>
                                                 ` : ''}
                                             </div>
-                                            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 pl-6 text-[11px] text-slate-700">
+                                            <div class="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 pl-8 text-xs text-slate-700">
                                                 ${comp.contacts[0].phone ? `
-                                                    <a href="tel:${escapeHtml(comp.contacts[0].phone)}" class="inline-flex items-center gap-1 hover:text-teal-700 font-semibold">
-                                                        <i class="fa-solid fa-phone text-[9px] text-emerald-600"></i> ${escapeHtml(comp.contacts[0].phone)}
+                                                    <a href="tel:${escapeHtml(comp.contacts[0].phone)}" class="inline-flex items-center gap-1.5 hover:text-teal-700 font-semibold">
+                                                        <i class="fa-solid fa-phone text-[10px] text-emerald-600"></i> ${escapeHtml(comp.contacts[0].phone)}
                                                     </a>
                                                 ` : ''}
                                                 ${comp.contacts[0].lineId ? `
-                                                    <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold break-all">
-                                                        <i class="fa-brands fa-line text-xs"></i> ${escapeHtml(comp.contacts[0].lineId)}
+                                                    <span class="inline-flex items-center gap-1.5 text-emerald-700 font-semibold break-all">
+                                                        <i class="fa-brands fa-line text-sm"></i> ${escapeHtml(comp.contacts[0].lineId)}
                                                     </span>
                                                 ` : ''}
                                             </div>
@@ -1368,29 +1452,29 @@
                                     ${comp.contacts.length > 1 ? `
                                         <div class="space-y-2 ${isContactsHidden ? 'hidden' : ''}">
                                             ${comp.contacts.slice(1).map(c => `
-                                                <div class="glass-subcard p-3 rounded-2xl text-xs space-y-1">
+                                                <div class="glass-subcard p-3.5 rounded-2xl text-xs space-y-1">
                                                     <div class="flex items-center justify-between gap-2">
-                                                        <div class="flex items-center gap-1.5 min-w-0">
-                                                            <div class="w-5 h-5 rounded-lg bg-white/80 text-teal-600 flex items-center justify-center text-[9px] font-bold shrink-0 border border-white">
+                                                        <div class="flex items-center gap-2 min-w-0">
+                                                            <div class="w-6 h-6 rounded-lg bg-white/90 text-teal-600 flex items-center justify-center text-[10px] font-bold shrink-0 border border-white">
                                                                 <i class="fa-solid fa-user"></i>
                                                             </div>
-                                                            <span class="font-bold text-slate-900 truncate">${escapeHtml(c.name)}</span>
+                                                            <span class="font-bold text-slate-900 truncate text-xs sm:text-sm">${escapeHtml(c.name)}</span>
                                                         </div>
                                                         ${c.role ? `
-                                                            <span class="px-2 py-0.5 rounded-lg bg-white/75 text-slate-600 text-[10px] font-medium shrink-0 border border-white">
+                                                            <span class="px-2 py-0.5 rounded-lg bg-white/80 text-slate-600 text-[10px] font-medium shrink-0 border border-white">
                                                                 ${escapeHtml(c.role)}
                                                             </span>
                                                         ` : ''}
                                                     </div>
-                                                    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 pl-6 text-[11px] text-slate-700">
+                                                    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 pl-8 text-xs text-slate-700">
                                                         ${c.phone ? `
-                                                            <a href="tel:${escapeHtml(c.phone)}" class="inline-flex items-center gap-1 hover:text-teal-700 font-semibold">
-                                                                <i class="fa-solid fa-phone text-[9px] text-emerald-600"></i> ${escapeHtml(c.phone)}
+                                                            <a href="tel:${escapeHtml(c.phone)}" class="inline-flex items-center gap-1.5 hover:text-teal-700 font-semibold">
+                                                                <i class="fa-solid fa-phone text-[10px] text-emerald-600"></i> ${escapeHtml(c.phone)}
                                                             </a>
                                                         ` : ''}
                                                         ${c.lineId ? `
-                                                            <span class="inline-flex items-center gap-1 text-emerald-700 font-semibold break-all">
-                                                                <i class="fa-brands fa-line text-xs"></i> ${escapeHtml(c.lineId)}
+                                                            <span class="inline-flex items-center gap-1.5 text-emerald-700 font-semibold break-all">
+                                                                <i class="fa-brands fa-line text-sm"></i> ${escapeHtml(c.lineId)}
                                                             </span>
                                                         ` : ''}
                                                     </div>
@@ -1401,9 +1485,10 @@
                                 </div>
                             </div>
 
+                            <!-- ที่อยู่จัดส่ง -->
                             ${hasAddress ? `
                                 <div class="glass-subcard rounded-2xl overflow-hidden">
-                                    <div class="px-3 py-1.5 bg-white/40 border-b border-white/60 flex items-center justify-between text-[11px] font-semibold text-slate-700">
+                                    <div class="px-3.5 py-2 bg-white/40 border-b border-white/60 flex items-center justify-between text-xs font-semibold text-slate-700">
                                         <span class="flex items-center gap-1.5">
                                             <i class="fa-solid fa-map-pin text-teal-600"></i> ที่อยู่จัดส่ง
                                         </span>
@@ -1411,15 +1496,16 @@
                                             <i class="fa-solid ${isAddrHidden ? 'fa-plus' : 'fa-minus'}"></i>
                                         </button>
                                     </div>
-                                    <div class="p-2.5 text-xs text-slate-700 leading-relaxed break-words ${isAddrHidden ? 'hidden' : ''}">
+                                    <div class="p-3 text-xs sm:text-sm text-slate-700 leading-relaxed break-words ${isAddrHidden ? 'hidden' : ''}">
                                         ${escapeHtml(comp.address)}
                                     </div>
                                 </div>
                             ` : ''}
 
+                            <!-- หมายเหตุบริษัท -->
                             ${hasNotes ? `
                                 <div class="rounded-2xl bg-amber-400/15 border border-amber-300/60 overflow-hidden">
-                                    <div class="px-3 py-1.5 bg-amber-400/20 border-b border-amber-300/50 flex items-center justify-between text-[11px] font-semibold text-amber-900">
+                                    <div class="px-3.5 py-2 bg-amber-400/20 border-b border-amber-300/50 flex items-center justify-between text-xs font-semibold text-amber-900">
                                         <span class="flex items-center gap-1.5">
                                             <i class="fa-solid fa-note-sticky text-amber-600"></i> หมายเหตุบริษัท
                                         </span>
@@ -1427,27 +1513,25 @@
                                             <i class="fa-solid ${isNotesHidden ? 'fa-plus' : 'fa-minus'}"></i>
                                         </button>
                                     </div>
-                                    <div class="p-2.5 text-xs text-amber-950 leading-relaxed break-words ${isNotesHidden ? 'hidden' : ''}">
+                                    <div class="p-3 text-xs sm:text-sm text-amber-950 leading-relaxed break-words ${isNotesHidden ? 'hidden' : ''}">
                                         ${escapeHtml(comp.notes)}
                                     </div>
                                 </div>
                             ` : ''}
-
                         </div>
                     </div>
 
-                    <!-- Footer ของการ์ดแบบโปร่งแสง -->
-                    <div class="px-4 sm:px-5 py-3 bg-white/35 border-t border-white/60 flex items-center justify-between text-xs">
-                        <span class="text-slate-600 text-[11px] font-medium">
+                    <!-- Footer ของการ์ด พร้อมปุ่ม ดูรายละเอียด → -->
+                    <div class="px-4 sm:px-6 py-3.5 bg-white/35 border-t border-white/60 flex items-center justify-between text-xs sm:text-sm">
+                        <span class="text-slate-600 text-xs font-medium">
                             ${comp.purchaseHistory.length > 0 ? `${comp.purchaseHistory.length} บิลจัดส่งในระบบ` : 'ยังไม่มีประวัติบิล'}
                         </span>
-                        <button onclick="openDetailModal('${encodedKey}')" class="font-bold text-teal-700 hover:text-teal-900 inline-flex items-center gap-1.5 transition-colors">
-                            ดูรายละเอียด <i class="fa-solid fa-arrow-right text-[10px]"></i>
+                        <button onclick="openDetailModal('${encodedKey}')" class="font-bold text-teal-700 hover:text-teal-900 inline-flex items-center gap-1.5 transition-colors cursor-pointer">
+                            ดูรายละเอียด <i class="fa-solid fa-arrow-right text-xs"></i>
                         </button>
                     </div>
                 </div>
-                `;
-            }).join('');
+            `;
         }
 
         function openCompanyModal(encodedCompanyName = null) {
@@ -1669,6 +1753,7 @@
                     rawCompanies.push(localCompany);
                 }
 
+                selectedCompanyName = compName;
                 closeCompanyModal();
                 rebuildDirectoryFromSources();
                 showToast('บันทึกข้อมูลบริษัทและซิงค์ไปยังระบบจัดส่งสำเร็จ');
@@ -1775,6 +1860,7 @@
                             : d
                     );
 
+                    selectedCompanyName = null;
                     rebuildDirectoryFromSources();
                     showToast('ลบทะเบียนบริษัท ผู้ติดต่อ และราคาสินค้าที่เชื่อมโยงจาก Firebase แล้ว');
                 } catch (err) {
@@ -1963,18 +2049,18 @@
             const clearBtn = document.getElementById('clear-search');
             if (e.target.value.trim()) clearBtn.classList.remove('hidden');
             else clearBtn.classList.add('hidden');
-            renderDirectory();
+            rebuildDirectoryFromSources();
         });
 
         function clearSearch() {
             const input = document.getElementById('search-input');
             input.value = '';
             document.getElementById('clear-search').classList.add('hidden');
-            renderDirectory();
+            rebuildDirectoryFromSources();
         }
 
-        document.getElementById('district-filter').addEventListener('change', renderDirectory);
-        document.getElementById('sort-select').addEventListener('change', renderDirectory);
+        document.getElementById('district-filter').addEventListener('change', rebuildDirectoryFromSources);
+        document.getElementById('sort-select').addEventListener('change', rebuildDirectoryFromSources);
 
         function showToast(message, type = 'success') {
             const toast = document.getElementById('toast');
