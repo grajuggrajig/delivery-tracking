@@ -518,6 +518,7 @@
             currentUser: null,
             userProfile: null,
             rawCompanyProducts: [],
+            rawCompanies: [], // จัดเก็บข้อมูลบริษัทจาก collection companies (ที่เพิ่มมาจากหน้า index)
             enrichedItems: [],
             filteredItems: [],
             companiesSummary: [],
@@ -527,7 +528,7 @@
             currentPage: 1,
             itemsPerPage: 50,
             selectedModalItem: null,
-            selectedModalCompanies: new Set() // เก็บรายชื่อบริษัทที่ถูกเลือกไว้ใน Modal แบบถาวรระหว่างค้นหา
+            selectedModalCompanies: new Set()
         };
 
         function normalizeText(str) {
@@ -661,11 +662,17 @@
             showToast('ออกจากระบบแล้ว', 'info');
         };
 
+        // โหลดข้อมูลทั้ง companyProducts และ companies จาก Firestore พร้อมกัน
         async function loadAllCollections() {
             document.getElementById('loading-state').classList.remove('hidden');
             try {
-                const cpSnap = await db.collection('companyProducts').get();
+                const [cpSnap, compSnap] = await Promise.all([
+                    db.collection('companyProducts').get(),
+                    db.collection('companies').get()
+                ]);
+
                 state.rawCompanyProducts = cpSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+                state.rawCompanies = compSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
                 document.getElementById('stat-cp-docs').textContent = formatNumber(state.rawCompanyProducts.length);
                 document.getElementById('loading-state').classList.add('hidden');
@@ -749,9 +756,20 @@
             renderCurrentView();
         };
 
+        // รวมรายชื่อบริษัทจากทั้ง companyProducts และ companies (หน้าที่เพิ่มจาก index.html)
         function buildCompanyFilterOptions() {
             const countMap = new Map();
             state.enrichedItems.forEach(i => countMap.set(i._companyName, (countMap.get(i._companyName) || 0) + 1));
+            
+            if (state.rawCompanies) {
+                state.rawCompanies.forEach(comp => {
+                    const compName = (comp.companyName || comp.name || '').trim();
+                    if (compName && !countMap.has(compName)) {
+                        countMap.set(compName, 0);
+                    }
+                });
+            }
+
             state.companiesSummary = Array.from(countMap.entries()).sort((a, b) => a[0].localeCompare(b[0], 'th'));
             renderCompanyDropdownList('');
         }
@@ -985,7 +1003,6 @@
 
         window.closeDetailModal = () => document.getElementById('detail-modal').classList.add('hidden');
         
-        // Modal เพิ่มสินค้าแบบเลือกหลายบริษัท (จำค่าการเลือกระหว่างค้นหา)
         window.openAddEditModal = () => {
             document.getElementById('edit-doc-id').value = '';
             document.getElementById('edit-product-name').value = '';
@@ -995,7 +1012,6 @@
             document.getElementById('modal-company-search').value = '';
             document.getElementById('btn-clear-modal-search').classList.add('hidden');
             
-            // ล้างค่าที่จำไว้เฉพาะตอนเปิด Modal ใหม่ครั้งแรก
             state.selectedModalCompanies.clear();
             
             renderModalCompanyCheckboxes('');
@@ -1012,7 +1028,6 @@
             input.focus();
         };
 
-        // ฟังก์ชันสร้าง Checkbox บริษัทใน Modal โดยเช็กสถานะจาก state.selectedModalCompanies
         function renderModalCompanyCheckboxes(filterKeyword = '') {
             const container = document.getElementById('modal-company-checkboxes');
             const clearBtn = document.getElementById('btn-clear-modal-search');
@@ -1052,7 +1067,6 @@
             }).join('');
         }
 
-        // บันทึก/ลบชื่อบริษัทลงใน Set เมื่อกดติ๊กหรือเอาติ๊กออก
         window.handleModalCompanyCheckboxChange = (checkbox) => {
             const companyName = checkbox.value;
             const label = checkbox.closest('label');
@@ -1070,7 +1084,6 @@
             updateSelectedCompanyUI();
         };
 
-        // เลือกทั้งหมดเฉพาะที่แสดงอยู่ (ไม่ทับของเดิมที่เลือกไว้) หรือล้างทั้งหมด
         window.toggleSelectAllCompanies = (select) => {
             if (select) {
                 const visibleCheckboxes = document.querySelectorAll('input[name="modal-company-cb"]');
@@ -1085,7 +1098,6 @@
             updateSelectedCompanyUI();
         };
 
-        // ลบรายบริษัทออกจากแท็กที่เลือกไว้
         window.removeSelectedModalCompany = (encodedName) => {
             const companyName = decodeURIComponent(encodedName);
             state.selectedModalCompanies.delete(companyName);
@@ -1094,7 +1106,6 @@
             updateSelectedCompanyUI();
         };
 
-        // อัปเดตตัวเลขจำนวนและแสดงแท็กบริษัทที่เลือกไว้ด้านล่างกล่อง Checkbox
         function updateSelectedCompanyUI() {
             const count = state.selectedModalCompanies.size;
             document.getElementById('company-selected-count-hint').textContent = `เลือกแล้ว: ${count} บริษัท`;
@@ -1118,7 +1129,6 @@
             }).join('');
         }
 
-        // บันทึกสินค้าพร้อมกันหลายบริษัทจาก state.selectedModalCompanies
         window.handleSaveCompanyProduct = async (e) => {
             e.preventDefault();
             
