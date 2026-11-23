@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Firebase Development Data Cleanup Tool</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Firebase App & Firestore SDK (Compat v9.22.0) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f0fdf4; }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 p-4 md:p-8 flex flex-col justify-between">
+
+    <div class="max-w-4xl mx-auto w-full space-y-6">
+        <!-- ส่วนหัว -->
+        <div class="bg-white p-6 rounded-3xl shadow-sm border border-emerald-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+                <div class="flex items-center gap-2 text-emerald-600 font-extrabold text-lg">
+                    <span>🧹</span>
+                    <span>Firebase Development Data Cleanup</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-1">เครื่องมือล้างข้อมูลขยะและเลือกติ๊กเฉพาะรายการที่ต้องการลบเพื่อความปลอดภัย</p>
+            </div>
+            <button onclick="window.location.href='index.html'" class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition">
+                ← กลับสู่หน้าหลัก CRM
+            </button>
+        </div>
+
+        <!-- สถานะการเชื่อมต่อ -->
+        <div id="auth-status-card" class="bg-emerald-50 border border-emerald-200 p-4 rounded-2xl text-xs text-emerald-900 flex items-center justify-between">
+            <span id="auth-status-text">🔄 กำลังตรวจสอบการเชื่อมต่อ Firebase...</span>
+            <button id="quick-login-btn" onclick="triggerLogin()" class="hidden px-3 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition">เข้าสู่ระบบ Admin</button>
+        </div>
+
+        <!-- แผงควบคุมการสแกนและลบ -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- การ์ดเลือก Collection และเงื่อนไข -->
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-emerald-100 space-y-4 md:col-span-1">
+                <h3 class="text-sm font-bold text-slate-700">📂 เลือกหมวดหมู่ข้อมูล</h3>
+                <div class="space-y-2 text-xs font-semibold">
+                    <label class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-emerald-50/50 transition">
+                        <input type="checkbox" name="target-col" value="deliveries" checked class="accent-emerald-600">
+                        <span>📦 รายการจัดส่ง (deliveries)</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-emerald-50/50 transition">
+                        <input type="checkbox" name="target-col" value="companyProducts" checked class="accent-emerald-600">
+                        <span>🏷️ ราคาสินค้าบริษัท (companyProducts)</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-emerald-50/50 transition">
+                        <input type="checkbox" name="target-col" value="products" checked class="accent-emerald-600">
+                        <span>📋 สต็อกสินค้ากลาง (products)</span>
+                    </label>
+                    <label class="flex items-center gap-2 p-2.5 rounded-xl bg-slate-50 border border-slate-100 cursor-pointer hover:bg-emerald-50/50 transition">
+                        <input type="checkbox" name="target-col" value="reminders" checked class="accent-emerald-600">
+                        <span>🔔 การแจ้งเตือน (reminders)</span>
+                    </label>
+                </div>
+
+                <!-- เงื่อนไขการค้นหาพิเศษเพิ่มเติม -->
+                <div class="space-y-2 pt-2 border-t border-slate-100">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">⚙️ เงื่อนไขพิเศษ (Advanced Filters)</label>
+                    
+                    <label class="flex items-center gap-2 p-2 rounded-xl bg-emerald-50/40 border border-emerald-100 cursor-pointer hover:bg-emerald-50 text-xs">
+                        <input type="checkbox" id="filter-no-products" class="accent-emerald-600">
+                        <span class="text-emerald-900 font-semibold">🔍 เฉพาะบริษัทที่ "ไม่มีสินค้า" ผูกอยู่</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 p-2 rounded-xl bg-amber-50/40 border border-amber-100 cursor-pointer hover:bg-amber-50 text-xs">
+                        <input type="checkbox" id="filter-invalid-name" class="accent-amber-600">
+                        <span class="text-amber-900 font-semibold">⚠️ ชื่อบริษัทผิดปกติ (Test, ทดสอบ)</span>
+                    </label>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">🔍 ค้นหาเฉพาะคำ (Keyword Filter)</label>
+                    <input type="text" id="filter-keyword" placeholder="เช่น demo, abc (เว้นว่างได้)" class="w-full px-3 py-2 text-xs border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-emerald-400">
+                </div>
+
+                <button onclick="scanDatabase()" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm transition">
+                    🔍 สแกนหาข้อมูลตามเงื่อนไข
+                </button>
+            </div>
+
+            <!-- ผลการสแกนและรายการที่จะลบ -->
+            <div class="bg-white p-5 rounded-3xl shadow-sm border border-emerald-100 flex flex-col justify-between md:col-span-2">
+                <div>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-3">
+                        <h3 class="text-sm font-bold text-slate-700">📋 รายการที่พบจากการสแกน</h3>
+                        <div class="flex items-center gap-2">
+                            <button onclick="toggleSelectAll(true)" class="text-[11px] text-emerald-600 hover:underline font-bold">เลือกทั้งหมด</button>
+                            <span class="text-slate-300">|</span>
+                            <button onclick="toggleSelectAll(false)" class="text-[11px] text-slate-500 hover:underline font-bold">ยกเลิกเลือกทั้งหมด</button>
+                            <span id="scan-count-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-bold ml-2">0 รายการ</span>
+                        </div>
+                    </div>
+                    <div id="scan-results-container" class="space-y-2 max-h-[320px] overflow-y-auto pr-1 text-xs border border-slate-100 rounded-2xl p-3 bg-slate-50/50">
+                        <div class="text-center py-12 text-slate-400">ยังไม่ได้สแกนข้อมูล กรุณากดปุ่ม "สแกนหาข้อมูลตามเงื่อนไข"</div>
+                    </div>
+                </div>
+
+                <div class="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between gap-3">
+                    <div class="text-[11px] text-slate-500">
+                        ⚠️ <span class="font-bold text-rose-600">คำเตือน:</span> จะลบเฉพาะรายการที่คุณติ๊กเลือกไว้เท่านั้น
+                    </div>
+                    <button id="delete-btn" onclick="confirmAndDelete()" disabled class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                        🗑️ ลบรายการที่เลือก (0)
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center py-4 text-xs text-slate-400">
+        Firebase Cleanup Utility &copy; 2026
+    </footer>
+
+    <script>
+        const firebaseConfig = {
+            apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+            authDomain: "delivery-tracking-2313a.firebaseapp.com",
+            projectId: "delivery-tracking-2313a",
+            storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+            messagingSenderId: "631670801383",
+            appId: "1:631670801383:web:e720570af97bad7011f342",
+            measurementId: "G-BB2D5DJH3F"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        let scannedItemsMap = new Map();
+
+        auth.onAuthStateChanged(user => {
+            const statusText = document.getElementById('auth-status-text');
+            const loginBtn = document.getElementById('quick-login-btn');
+            if (user) {
+                statusText.innerHTML = `✅ เข้าสู่ระบบแล้วในนาม: <b>${user.email}</b>`;
+                loginBtn.classList.add('hidden');
+            } else {
+                statusText.innerHTML = `❌ ยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนทำการลบข้อมูล`;
+                loginBtn.classList.remove('hidden');
+            }
+        });
+
+        function triggerLogin() {
+            window.location.href = 'login.html';
+        }
+
+        async function scanDatabase() {
+            const selectedCols = Array.from(document.querySelectorAll('input[name="target-col"]:checked')).map(el => el.value);
+            const keyword = document.getElementById('filter-keyword').value.trim().toLowerCase();
+            const filterNoProducts = document.getElementById('filter-no-products').checked;
+            const filterInvalidName = document.getElementById('filter-invalid-name').checked;
+            
+            const container = document.getElementById('scan-results-container');
+            const badge = document.getElementById('scan-count-badge');
+            const deleteBtn = document.getElementById('delete-btn');
+
+            if (!selectedCols.length) {
+                alert('กรุณาเลือกหมวดหมู่อย่างน้อย 1 หมวด');
+                return;
+            }
+
+            container.innerHTML = '<div class="text-center py-12 text-slate-400 animate-pulse">กำลังสแกนวิเคราะห์ข้อมูลใน Firebase...</div>';
+            scannedItemsMap.clear();
+            let totalFound = 0;
+
+            try {
+                let companyWithProductsSet = new Set();
+                if (filterNoProducts) {
+                    const cpSnapshot = await db.collection('companyProducts').get();
+                    cpSnapshot.forEach(doc => {
+                        const d = doc.data();
+                        if (d.companyName) {
+                            companyWithProductsSet.add(d.companyName.trim().toLowerCase());
+                        }
+                    });
+                }
+
+                for (const colName of selectedCols) {
+                    const snapshot = await db.collection(colName).get();
+                    snapshot.forEach(doc => {
+                        const data = doc.data();
+                        const title = data.companyName || data.name || data.customerName || data.title || `ID: ${doc.id}`;
+                        const titleLower = String(title).toLowerCase();
+                        const stringified = JSON.stringify(data).toLowerCase();
+
+                        let isMatch = false;
+                        let matchReason = '';
+
+                        const matchKeyword = !keyword || stringified.includes(keyword);
+
+                        let isCompanyWithoutProduct = false;
+                        if (filterNoProducts && (colName === 'companyProducts' || colName === 'deliveries')) {
+                            const compName = (data.companyName || '').trim().toLowerCase();
+                            if (compName && !companyWithProductsSet.has(compName)) {
+                                isCompanyWithoutProduct = true;
+                            }
+                        }
+
+                        let isInvalidNamed = false;
+                        if (filterInvalidName) {
+                            const badKeywords = ['test', 'ทดสอบ', 'demo', 'asdf', 'xxx', 'aaa', '1234'];
+                            const hasBadWord = badKeywords.some(bk => titleLower.includes(bk));
+                            const isTooShort = title.trim().length <= 2;
+                            if (hasBadWord || isTooShort) {
+                                isInvalidNamed = true;
+                            }
+                        }
+
+                        if (filterNoProducts || filterInvalidName) {
+                            if ((filterNoProducts && isCompanyWithoutProduct) || (filterInvalidName && isInvalidNamed)) {
+                                isMatch = true;
+                                matchReason = isCompanyWithoutProduct ? '🚫 ไม่มีสินค้าผูกอยู่' : '⚠️ ชื่อผิดปกติ';
+                            }
+                        } else if (matchKeyword) {
+                            isMatch = true;
+                            matchReason = '🔍 ตรงตาม Keyword';
+                        }
+
+                        if (isMatch) {
+                            totalFound++;
+                            const uniqueKey = `${colName}_${doc.id}`;
+                            const subText = data.itemInput || data.price ? `ราคา: ${data.price || '-'} | จำนวน: ${data.subItems ? data.subItems.length : 1}` : JSON.stringify(data).substring(0, 50);
+
+                            scannedItemsMap.set(uniqueKey, { collection: colName, id: doc.id, title });
+
+                            const itemDiv = document.createElement('div');
+                            itemDiv.className = 'flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 transition';
+                            itemDiv.innerHTML = `
+                                <div class="flex items-center gap-3 min-w-0 pr-2">
+                                    <input type="checkbox" id="chk_${uniqueKey}" value="${uniqueKey}" onchange="updateSelectedCount()" class="item-checkbox accent-emerald-600 w-4 h-4 cursor-pointer" checked>
+                                    <div class="min-w-0">
+                                        <div class="font-bold text-slate-800 truncate">[${colName}] ${escapeHTML(title)}</div>
+                                        <div class="text-[10px] text-slate-400 truncate">${escapeHTML(subText)}</div>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] bg-rose-50 text-rose-600 px-2 py-1 rounded-lg font-bold shrink-0">${matchReason}</span>
+                            `;
+                            container.appendChild(itemDiv);
+                        }
+                    });
+                }
+
+                badge.textContent = `${totalFound} รายการ`;
+                if (totalFound === 0) {
+                    container.innerHTML = '<div class="text-center py-12 text-slate-400">ไม่พบข้อมูลที่ตรงกับเงื่อนไขการค้นหา</div>';
+                    deleteBtn.disabled = true;
+                    deleteBtn.textContent = '🗑️ ลบรายการที่เลือก (0)';
+                } else {
+                    updateSelectedCount();
+                }
+            } catch (err) {
+                console.error("Scan error:", err);
+                container.innerHTML = `<div class="text-center py-12 text-rose-600 font-bold">เกิดข้อผิดพลาดในการสแกน: ${err.message}</div>`;
+            }
+        }
+
+        function toggleSelectAll(select) {
+            document.querySelectorAll('.item-checkbox').forEach(chk => {
+                chk.checked = select;
+            });
+            updateSelectedCount();
+        }
+
+        function updateSelectedCount() {
+            const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+            const deleteBtn = document.getElementById('delete-btn');
+            deleteBtn.textContent = `🗑️ ลบรายการที่เลือก (${checkedBoxes.length})`;
+            deleteBtn.disabled = checkedBoxes.length === 0;
+        }
+
+        async function confirmAndDelete() {
+            const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
+            if (checkedBoxes.length === 0) return;
+
+            const confirmText = prompt(`⚠️ คุณกำลังจะลบข้อมูลที่เลือกจำนวน ${checkedBoxes.length} รายการออกจาก Firebase\nพิมพ์คำว่า "DELETE" เพื่อยืนยันการลบ:`);
+            if (confirmText !== "DELETE") {
+                alert("การลบถูกยกเลิกเนื่องจากพิมพ์ยืนยันไม่ถูกต้อง");
+                return;
+            }
+
+            const deleteBtn = document.getElementById('delete-btn');
+            deleteBtn.disabled = true;
+            deleteBtn.textContent = 'กำลังลบข้อมูล...';
+
+            try {
+                const batches = [];
+                let currentBatch = db.batch();
+                let operationCount = 0;
+
+                for (const chk of checkedBoxes) {
+                    const item = scannedItemsMap.get(chk.value);
+                    if (item) {
+                        const docRef = db.collection(item.collection).doc(item.id);
+                        currentBatch.delete(docRef);
+                        operationCount++;
+
+                        if (operationCount >= 400) {
+                            batches.push(currentBatch.commit());
+                            currentBatch = db.batch();
+                            operationCount = 0;
+                        }
+                    }
+                }
+                if (operationCount > 0) {
+                    batches.push(currentBatch.commit());
+                }
+
+                await Promise.all(batches);
+
+                alert(`🎉 ลบข้อมูลที่เลือกจำนวน ${checkedBoxes.length} รายการเรียบร้อยแล้ว!`);
+                
+                checkedBoxes.forEach(chk => {
+                    scannedItemsMap.delete(chk.value);
+                    chk.closest('.flex').remove();
+                });
+
+                document.getElementById('scan-count-badge').textContent = `${scannedItemsMap.size} รายการ`;
+                updateSelectedCount();
+
+                if (scannedItemsMap.size === 0) {
+                    document.getElementById('scan-results-container').innerHTML = '<div class="text-center py-12 text-slate-400">รายการทั้งหมดถูกลบเรียบร้อยแล้ว</div>';
+                }
+            } catch (err) {
+                console.error("Delete error:", err);
+                alert(`เกิดข้อผิดพลาดในการลบ: ${err.message}`);
+                deleteBtn.disabled = false;
+                updateSelectedCount();
+            }
+        }
+
+        function escapeHTML(str) {
+            return String(str).replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+    </script>
+</body>
+</html>
