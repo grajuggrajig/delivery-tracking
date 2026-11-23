@@ -658,6 +658,33 @@
         </div>
     </div>
 
+
+    <!-- Password Re-authentication Modal: ใช้ยืนยันตัวตนก่อนลบข้อมูลสำคัญ -->
+    <div id="delete-password-modal" class="hidden fixed inset-0 z-[100] bg-slate-900/65 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl border border-white max-w-sm w-full p-6 modal-animate">
+            <div class="w-12 h-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mx-auto mb-3">
+                <i class="fa-solid fa-shield-halved text-xl"></i>
+            </div>
+            <h3 class="text-base font-bold text-slate-900 text-center">ยืนยันรหัสผ่านก่อนลบข้อมูล</h3>
+            <p id="delete-password-description" class="text-xs text-slate-500 text-center mt-1 mb-4">กรุณากรอกรหัสผ่านบัญชีที่ใช้เข้าสู่ระบบ</p>
+            <form id="delete-password-form" class="space-y-3">
+                <div class="relative">
+                    <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                    <input id="delete-password-input" type="password" required autocomplete="current-password"
+                        class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none"
+                        placeholder="รหัสผ่านที่ใช้เข้าสู่ระบบ">
+                </div>
+                <p id="delete-password-error" class="hidden text-xs text-rose-600" role="alert"></p>
+                <div class="flex gap-2">
+                    <button type="button" id="delete-password-cancel" class="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl">ยกเลิก</button>
+                    <button type="submit" id="delete-password-submit" class="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-xl">
+                        <i class="fa-solid fa-lock mr-1"></i> ยืนยัน
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Toast Notification -->
     <div id="toast" class="fixed bottom-4 left-4 right-4 sm:left-auto sm:right-5 sm:bottom-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none flex justify-center sm:justify-end">
         <div class="bg-slate-900/95 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs sm:text-sm border border-slate-700/80 max-w-md">
@@ -699,7 +726,94 @@
         let auth = null;
         let currentUser = null;
         let currentUserRole = 'user';
+
         let currentUserData = null;
+        let deletePasswordVerificationInProgress = false;
+
+        // ยืนยันตัวตนซ้ำกับ Firebase Authentication จริง ไม่เปรียบเทียบรหัสผ่านจากฐานข้อมูล
+        function verifyPasswordBeforeDelete(description = 'กรุณากรอกรหัสผ่านบัญชีที่ใช้เข้าสู่ระบบอีกครั้ง') {
+            return new Promise((resolve) => {
+                const modal = document.getElementById('delete-password-modal');
+                const form = document.getElementById('delete-password-form');
+                const input = document.getElementById('delete-password-input');
+                const errorBox = document.getElementById('delete-password-error');
+                const submit = document.getElementById('delete-password-submit');
+                const cancel = document.getElementById('delete-password-cancel');
+                const descriptionEl = document.getElementById('delete-password-description');
+                if (!modal || !form || !input || !currentUser || !auth) {
+                    showToast('ไม่พบสถานะการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่', 'error');
+                    resolve(false);
+                    return;
+                }
+                if (deletePasswordVerificationInProgress) {
+                    showToast('กำลังตรวจสอบรหัสผ่าน กรุณารอสักครู่', 'error');
+                    resolve(false);
+                    return;
+                }
+                deletePasswordVerificationInProgress = true;
+                descriptionEl.textContent = description;
+                input.value = '';
+                errorBox.textContent = '';
+                errorBox.classList.add('hidden');
+                submit.disabled = false;
+                cancel.disabled = false;
+                modal.classList.remove('hidden');
+                setTimeout(() => input.focus(), 50);
+
+                let settled = false;
+                const finish = (result) => {
+                    if (settled) return;
+                    settled = true;
+                    form.removeEventListener('submit', onSubmit);
+                    cancel.removeEventListener('click', onCancel);
+                    modal.classList.add('hidden');
+                    input.value = '';
+                    submit.disabled = false;
+                    cancel.disabled = false;
+                    deletePasswordVerificationInProgress = false;
+                    resolve(result);
+                };
+                const onCancel = () => finish(false);
+                const onSubmit = async (event) => {
+                    event.preventDefault();
+                    const password = input.value;
+                    if (!password) {
+                        errorBox.textContent = 'กรุณากรอกรหัสผ่าน';
+                        errorBox.classList.remove('hidden');
+                        input.focus();
+                        return;
+                    }
+                    if (!currentUser || !currentUser.email) {
+                        errorBox.textContent = 'บัญชีนี้ไม่มีอีเมลสำหรับยืนยันตัวตน กรุณาออกจากระบบและเข้าสู่ระบบใหม่';
+                        errorBox.classList.remove('hidden');
+                        return;
+                    }
+                    submit.disabled = true;
+                    cancel.disabled = true;
+                    submit.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> กำลังตรวจสอบ...';
+                    try {
+                        const credential = firebase.auth.EmailAuthProvider.credential(currentUser.email, password);
+                        await currentUser.reauthenticateWithCredential(credential);
+                        finish(true);
+                    } catch (err) {
+                        console.error('Delete password re-authentication failed:', err);
+                        let message = 'รหัสผ่านไม่ถูกต้อง ไม่สามารถดำเนินการลบได้';
+                        if (err.code === 'auth/too-many-requests') message = 'พยายามหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่';
+                        else if (err.code === 'auth/network-request-failed') message = 'เชื่อมต่อเครือข่ายไม่ได้ กรุณาลองใหม่';
+                        else if (err.code === 'auth/user-token-expired' || err.code === 'auth/requires-recent-login') message = 'เซสชันหมดอายุ กรุณาออกจากระบบและเข้าสู่ระบบใหม่';
+                        errorBox.textContent = message;
+                        errorBox.classList.remove('hidden');
+                        submit.disabled = false;
+                        cancel.disabled = false;
+                        submit.innerHTML = '<i class="fa-solid fa-lock mr-1"></i> ยืนยัน';
+                        input.select();
+                    }
+                };
+                form.addEventListener('submit', onSubmit);
+                cancel.addEventListener('click', onCancel);
+            });
+        }
+
 
         let rawDeliveries = [];
         let rawCompanies = [];
@@ -2012,6 +2126,8 @@
                 return;
             }
             if (!confirm(`ต้องการลบรูปภาพของ "${comp.companyName}" ใช่หรือไม่?`)) return;
+            const passwordVerified = await verifyPasswordBeforeDelete(`ยืนยันรหัสผ่านเพื่ออนุญาตให้ลบรูปภาพของ "${comp.companyName}"`);
+            if (!passwordVerified) return;
             try {
                 const docId = await ensureCompanyPhotoDocument(comp);
                 await db.collection('companies').doc(docId).set({
@@ -2046,10 +2162,12 @@
 
             const yesBtn = document.getElementById('confirm-yes-btn');
             yesBtn.onclick = async () => {
-                closeConfirmModal();
                 yesBtn.disabled = true;
                 try {
                     if (!db || !currentUser) throw new Error('กรุณาเข้าสู่ระบบใหม่');
+                    const passwordVerified = await verifyPasswordBeforeDelete(`ยืนยันรหัสผ่านเพื่ออนุญาตให้ลบข้อมูลบริษัท "${comp.companyName}" รวมถึงผู้ติดต่อและราคาสินค้าที่เกี่ยวข้อง`);
+                    if (!passwordVerified) return;
+                    closeConfirmModal();
 
                     const companyRefs = new Map();
                     rawCompanies.forEach(item => {
