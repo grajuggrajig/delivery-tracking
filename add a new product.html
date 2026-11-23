@@ -36,7 +36,6 @@
         ::-webkit-scrollbar-thumb:hover {
             background: rgba(13, 148, 136, 0.6);
         }
-        /* การ์ดโปร่งแสงระดับสูง (Glassmorphism) สไตล์เดียวกับภาพตัวอย่าง */
         .glass-card {
             background: rgba(255, 255, 255, 0.48);
             backdrop-filter: blur(18px) saturate(160%);
@@ -68,10 +67,9 @@
         <div class="absolute -bottom-24 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-emerald-300/30 blur-3xl"></div>
     </div>
 
-    <!-- Top Header Bar ตามภาพตัวอย่าง -->
+    <!-- Top Header Bar -->
     <header class="w-full glass-card border-b border-white/80 py-3.5 px-4 sm:px-8 mb-6 sticky top-0 z-40">
-        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-            <!-- ฝั่งซ้าย: โลโก้และชื่อหัวข้อ -->
+        <div class="max-w-[90rem] mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="flex items-center gap-3.5 w-full md:w-auto justify-between md:justify-start">
                 <div class="flex items-center gap-3">
                     <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-teal-600/20 text-lg">
@@ -82,16 +80,13 @@
                         <p class="text-[11px] text-slate-500 font-medium">ซิงค์ข้อมูลตรงกับระบบจัดส่ง (Deliveries & Company Products)</p>
                     </div>
                 </div>
-                <!-- สถานะตรวจสอบสิทธิ์ (Mobile) -->
                 <div id="auth-status-badge-mobile" class="md:hidden flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/90 border border-amber-200/80 rounded-full text-[10px] text-amber-800 font-medium">
                     <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
                     <span>กำลังตรวจสอบสิทธิ์...</span>
                 </div>
             </div>
 
-            <!-- ฝั่งขวา: โปรไฟล์ เมนู และปุ่มลัด -->
             <div class="flex items-center gap-2.5 flex-wrap justify-end w-full md:w-auto">
-                <!-- โปรไฟล์ผู้ใช้งาน -->
                 <div class="flex items-center gap-2 bg-white/70 border border-white rounded-2xl px-3 py-1.5 shadow-2xs">
                     <div class="w-7 h-7 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center font-bold text-xs">
                         <i class="fa-solid fa-user text-[11px]"></i>
@@ -102,7 +97,6 @@
                     <span id="user-role-badge" class="px-2 py-0.5 bg-purple-600 text-white rounded-lg text-[10px] font-bold uppercase tracking-wide shadow-2xs">ADMIN</span>
                 </div>
 
-                <!-- เมนูระบบอื่นๆ -->
                 <div class="relative">
                     <button type="button" onclick="toggleMenuDropdown()" class="px-3 py-2 bg-white/70 hover:bg-white border border-white rounded-2xl text-xs font-semibold text-slate-700 shadow-2xs transition flex items-center gap-1.5">
                         <i class="fa-solid fa-compass text-teal-600"></i>
@@ -110,12 +104,11 @@
                         <i class="fa-solid fa-chevron-down text-[10px] text-slate-400"></i>
                     </button>
                     <div id="system-menu-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-xl py-1.5 z-50 text-xs divide-y divide-slate-100">
-                        <a href="index.html" class="block px-4 py-2 hover:bg-teal-50 text-slate-700 font-medium transition">🏠 หน้าหลักระบบจัดส่ง</a>
-                        <a href="stock management.html" class="block px-4 py-2 hover:bg-teal-50 text-slate-700 font-medium transition">📦 จัดการสต็อกสินค้า</a>
+                        <a href="index.html" class="block px-4 py-2 hover:bg-teal-50 text-slate-700 font-medium transition">🏠 หน้าหลักระบบจัดส่ง[cite: 6]</a>
+                        <a href="stock management.html" class="block px-4 py-2 hover:bg-teal-50 text-slate-700 font-medium transition">📦 จัดการสต็อกสินค้า[cite: 6]</a>
                     </div>
                 </div>
 
-                <!-- ปุ่มออกจากระบบ -->
                 <button type="button" onclick="handleLogout()" class="w-9 h-9 rounded-2xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 flex items-center justify-center transition shadow-2xs" title="ออกจากระบบ">
                     <i class="fa-solid fa-right-from-bracket text-xs"></i>
                 </button>
@@ -123,10 +116,10 @@
         </div>
     </header>
 
-<!-- ขยายคอนเทนเนอร์หลักเป็น max-w-7xl และปรับสัดส่วน Grid เป็น col-span-4 / col-span-8 เพื่อให้การ์ดตารางสินค้าด้านขวากว้างขวางและเห็นรายละเอียดชัดเจนยิ่งขึ้น -->
-<div class="w-full max-w-7xl mx-auto px-3 sm:px-6 pb-8 grid grid-cols-1 lg:grid-cols-12 gap-5 sm:gap-6 items-start">
+<!-- ปรับโครงสร้างหลักให้กว้างและยาวขึ้น (Max-width กว้างขึ้นเป็น 90rem) -->
+<div class="w-full max-w-[90rem] mx-auto px-3 sm:px-6 pb-12 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
     
-    <!-- ฝั่งซ้าย: ฟอร์มเพิ่ม/แก้ไขสินค้า (ความกว้าง 4 ส่วน) -->
+    <!-- ฝั่งซ้าย: ฟอร์มเพิ่ม/แก้ไขสินค้า (ลดขนาดสัดส่วนเหลือ lg:col-span-4 เพื่อให้ฝั่งตารางกว้างขึ้น) -->
     <div class="lg:col-span-4 glass-card rounded-[2rem] overflow-hidden flex flex-col shadow-xl">
         <div class="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-5 sm:px-6 py-4 text-white flex items-center justify-between gap-2 shadow-sm">
             <div class="flex items-center gap-3">
@@ -147,7 +140,6 @@
             <input type="hidden" id="editing-product-id" value="">
             <div class="space-y-3.5 relative">
                 
-                <!-- โหมดเลือกบริษัท -->
                 <div id="company-mode-container">
                     <div class="flex items-center justify-between mb-1">
                         <label class="block text-xs font-bold text-slate-700">🏢 ชื่อบริษัท / ลูกค้า</label>
@@ -156,7 +148,6 @@
                         </label>
                     </div>
 
-                    <!-- ช่องเลือกแบบเดี่ยว -->
                     <div id="single-company-wrapper" class="relative">
                         <input type="text" id="company-search-input" placeholder="🔍 พิมพ์เพื่อค้นหาหรือเลือกบริษัท..." autocomplete="off"
                             class="w-full px-3.5 py-2.5 border border-teal-200/80 bg-white/70 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition text-xs sm:text-sm">
@@ -165,7 +156,6 @@
                         </div>
                     </div>
 
-                    <!-- ช่องเลือกแบบหลายบริษัท -->
                     <div id="multi-company-wrapper" class="hidden space-y-2">
                         <input type="text" id="multi-search-input" placeholder="🔍 ค้นหาบริษัทในเครือ..." autocomplete="off"
                             class="w-full px-3.5 py-2 border border-teal-200/80 bg-white/70 rounded-xl outline-none text-xs">
@@ -178,7 +168,6 @@
                     </div>
                 </div>
 
-                <!-- ชื่อสินค้า -->
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">🏷️ ชื่อสินค้า / รายการ</label>
                     <input id="product-name" type="text" required
@@ -186,7 +175,6 @@
                         class="w-full px-3.5 py-2.5 border border-teal-200/80 bg-white/70 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition text-xs sm:text-sm">
                 </div>
 
-                <!-- กล่องแจ้งเตือนสินค้าซ้ำ/คล้ายคลึงกัน (Smart Warning) -->
                 <div id="duplicate-warning" class="hidden rounded-xl p-3 bg-amber-50/90 border border-amber-200 text-amber-800 text-xs space-y-1">
                     <div class="font-bold flex items-center gap-1">
                         <span>⚠️</span> <span id="duplicate-warning-title">พบสินค้าที่อาจจะซ้ำหรือคล้ายกันในระบบ:</span>
@@ -194,7 +182,6 @@
                     <div id="duplicate-warning-list" class="pl-4 list-disc text-[11px] text-amber-700 space-y-0.5"></div>
                 </div>
 
-                <!-- ต้นทุนและราคาขาย -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-1">💰 ต้นทุน (บาท) <span class="text-[10px] text-slate-400 font-normal">(ไม่บังคับ)</span></label>
@@ -210,7 +197,6 @@
                     </div>
                 </div>
 
-                <!-- หน่วยสินค้า -->
                 <div>
                     <label class="block text-xs font-bold text-slate-700 mb-1">📦 หน่วยสินค้า</label>
                     <input id="product-unit" type="text"
@@ -218,11 +204,9 @@
                         class="w-full px-3.5 py-2.5 border border-teal-200/80 bg-white/70 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition text-xs sm:text-sm">
                 </div>
 
-                <!-- ข้อความแจ้งเตือนสถานะ -->
                 <div id="form-message" class="hidden rounded-xl px-3 py-2 text-xs"></div>
             </div>
 
-            <!-- ปุ่มบันทึกและปุ่มยกเลิกการแก้ไข -->
             <div class="pt-2 border-t border-white/60 space-y-2">
                 <button id="submit-product-btn" type="submit"
                     class="w-full py-3 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-xl font-bold shadow-md shadow-teal-600/20 transition active:scale-95 text-xs sm:text-sm flex items-center justify-center gap-2">
@@ -235,51 +219,64 @@
         </form>
     </div>
 
-    <!-- ฝั่งขวา: ตารางแสดงรายการสินค้า (ขยายความกว้างเป็น 8 ส่วน ทำให้ตารางกว้างขวางและเห็นรายละเอียดชัดเจน) -->
+    <!-- ฝั่งขวา: ตารางแสดงรายการสินค้า (ขยายสัดส่วนเป็น lg:col-span-8 เพื่อความกว้าง และเพิ่มความสูง max-h-[600px]) -->
     <div class="lg:col-span-8 glass-card rounded-[2rem] overflow-hidden flex flex-col shadow-xl">
         <div class="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-5 sm:px-6 py-4 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
             <div>
                 <h3 class="text-sm font-bold tracking-tight">📋 รายการสินค้าตามบริษัท</h3>
-                <p class="text-[11px] text-white/85">เลือกบริษัทเพื่อตรวจสอบรายการสินค้าในระบบ (Real-time Firestore)</p>
+                <p class="text-[11px] text-white/85">เลือกบริษัทเพื่อตรวจสอบรายการสินค้าในระบบ (Real-time Firestore)[cite: 6]</p>
             </div>
-            <!-- ตัวกรองบริษัทบนตาราง -->
             <select id="filter-company"
                 class="px-3 py-2 bg-white/20 hover:bg-white/25 border border-white/30 rounded-xl text-xs text-white outline-none focus:ring-2 focus:ring-teal-300 max-w-full sm:max-w-[280px] [&>option]:text-slate-800 [&>option]:bg-white cursor-pointer font-medium">
                 <option value="all">แสดงทุกบริษัททั้งหมด</option>
             </select>
         </div>
 
-        <div class="p-5 max-h-[460px] overflow-y-auto overflow-x-auto">
+        <div class="p-5 min-h-[420px] max-h-[600px] overflow-y-auto overflow-x-auto">
             <table class="w-full text-left border-collapse">
                 <thead>
-                    <tr class="border-b border-teal-100 text-[11px] uppercase tracking-wider text-teal-800 font-bold sticky top-0 bg-white/90 backdrop-blur-md z-10">
+                    <tr class="border-b border-teal-100 text-[11px] uppercase tracking-wider text-teal-800 font-bold sticky top-0 bg-white/95 backdrop-blur-md z-10">
+                        <th class="pb-3 px-3">บริษัท / ลูกค้า</th>
                         <th class="pb-3 px-3">รายการสินค้า</th>
-                        <th class="pb-3 px-2 text-right">ต้นทุน</th>
-                        <th class="pb-3 px-2 text-right">ราคาขาย</th>
-                        <th class="pb-3 px-2 text-center">หน่วย</th>
-                        <th class="pb-3 px-2 text-center">จัดการ</th>
+                        <th class="pb-3 px-3 text-right">ต้นทุน</th>
+                        <th class="pb-3 px-3 text-right">ราคาขาย</th>
+                        <th class="pb-3 px-3 text-center">หน่วย</th>
+                        <th class="pb-3 px-3 text-center">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody id="product-table-body" class="divide-y divide-teal-50 text-xs">
                 </tbody>
             </table>
-            <div id="empty-state" class="hidden text-center py-12 text-slate-400 text-xs">
+            <div id="empty-state" class="hidden text-center py-16 text-slate-400 text-xs">
                 📭 ยังไม่มีรายการสินค้าในระบบสำหรับบริษัทนี้
             </div>
         </div>
 
-        <div class="px-6 py-3 bg-white/30 border-t border-white/60 flex justify-between items-center text-[11px]">
-            <span id="total-items-count" class="text-teal-800 font-bold flex items-center gap-1.5">
+        <!-- แถบควบคุมการแบ่งหน้า (Pagination Controls) และสรุปยอด -->
+        <div class="px-6 py-3.5 bg-white/40 border-t border-white/60 flex flex-col sm:flex-row justify-between items-center gap-3 text-xs">
+            <span id="total-items-count" class="text-teal-900 font-bold flex items-center gap-1.5">
                 <span class="w-2 h-2 rounded-full bg-teal-600 inline-block"></span>
                 <span>รวมทั้งหมด: 0 รายการ</span>
             </span>
-            <button id="clear-all-btn" class="text-rose-600 hover:underline font-medium">ล้างข้อมูลทั้งหมด (Firestore)</button>
+
+            <!-- ปุ่มเปลี่ยนหน้า Pagination -->
+            <div id="pagination-controls" class="flex items-center gap-1.5">
+                <button type="button" id="prev-page-btn" onclick="changePage(-1)" class="px-3 py-1.5 bg-white/80 hover:bg-white border border-teal-200 text-teal-800 rounded-xl font-semibold disabled:opacity-40 disabled:pointer-events-none transition shadow-2xs">
+                    ◀ ก่อนหน้า
+                </button>
+                <span id="page-info" class="px-3 py-1 text-slate-700 font-medium">หน้า 1 / 1</span>
+                <button type="button" id="next-page-btn" onclick="changePage(1)" class="px-3 py-1.5 bg-white/80 hover:bg-white border border-teal-200 text-teal-800 rounded-xl font-semibold disabled:opacity-40 disabled:pointer-events-none transition shadow-2xs">
+                    ถัดไป ▶
+                </button>
+            </div>
+
+            <button id="clear-all-btn" class="text-rose-600 hover:underline font-medium text-[11px]">ล้างข้อมูลทั้งหมด (Firestore)</button>
         </div>
     </div>
 
 </div>
 
-<!-- Modal จัดการ รวม คัดลอกสินค้า และลบรายชื่อบริษัท -->
+<!-- Modal จัดการบริษัท คัดลอก และรวมสินค้า -->
 <div id="company-manager-modal" class="hidden fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-2xl overflow-hidden flex flex-col max-h-[88vh] modal-animate">
         <div class="bg-gradient-to-r from-teal-600 to-cyan-600 px-6 py-4 text-white flex items-center justify-between">
@@ -290,7 +287,6 @@
             <button type="button" onclick="closeCompanyManager()" class="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm font-bold transition">✕</button>
         </div>
 
-        <!-- แถบแจ้งเตือนพบชื่อบริษัทที่อาจซ้ำกัน -->
         <div id="duplicate-companies-banner" class="hidden px-5 py-3 bg-amber-50 border-b border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
                 <span class="text-base">💡</span>
@@ -310,7 +306,6 @@
         </div>
 
         <div id="manager-company-list" class="p-4 overflow-y-auto divide-y divide-slate-100 text-xs sm:text-sm flex-1">
-            <!-- รายการบริษัทจะถูกสร้างที่นี่ -->
         </div>
 
         <div class="px-6 py-3 bg-slate-50 border-t border-slate-200/70 flex justify-between items-center text-[11px] text-slate-500">
@@ -320,7 +315,7 @@
     </div>
 </div>
 
-<!-- Modal ย่อย: คัดลอกรายการสินค้าจากบริษัทแม่มายังบริษัทลูก -->
+<!-- Modal คัดลอกสินค้า -->
 <div id="copy-products-modal" class="hidden fixed inset-0 z-[70] bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-md overflow-hidden flex flex-col modal-animate">
         <div class="bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-4 text-white">
@@ -328,14 +323,12 @@
             <p class="text-[11px] text-white/85 mt-0.5">ดึงสินค้าและราคาจากบริษัทแม่ มาใส่ให้บริษัทในเครือที่ยังไม่มีสินค้า</p>
         </div>
         <div class="p-5 space-y-4 text-xs">
-            <!-- บริษัทปลายทาง -->
             <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl">
                 <div class="text-[11px] text-teal-700 font-semibold">บริษัทเป้าหมาย (ผู้รับรายการสินค้า):</div>
                 <div id="copy-target-name" class="font-bold text-slate-800 text-sm mt-0.5"></div>
                 <div id="copy-target-current-count" class="text-[11px] text-slate-500 mt-0.5"></div>
             </div>
 
-            <!-- เลือกบริษัทแม่ (ต้นทาง) -->
             <div>
                 <label class="block font-bold text-slate-700 mb-1.5">🏢 เลือกบริษัทแม่ (แหล่งข้อมูลสินค้า):</label>
                 <select id="copy-source-select" class="w-full px-3.5 py-2.5 border border-teal-300 bg-teal-50/40 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm font-semibold text-slate-800">
@@ -358,7 +351,7 @@
     </div>
 </div>
 
-<!-- Modal ย่อยสำหรับเลือกบริษัทปลายทางเพื่อรวมสินค้า (Merge Modal) -->
+<!-- Modal รวมบริษัท -->
 <div id="merge-company-modal" class="hidden fixed inset-0 z-[60] bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
     <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-md overflow-hidden flex flex-col modal-animate">
         <div class="bg-gradient-to-r from-teal-600 to-cyan-600 px-6 py-4 text-white">
@@ -420,8 +413,11 @@
     let currentMergeSourceName = '';
     let currentCopyTargetName = '';
     
-    // เก็บชื่อบริษัทที่ถูกติ๊กเลือกไว้ในโหมดหลายบริษัท (จดจำสถานะแม้จะเปลี่ยนคำค้นหา)
     let persistentCheckedCompanies = new Set();
+    
+    // ตัวแปรสำหรับระบบ Pagination (แบ่งหน้า)
+    let currentPage = 1;
+    const itemsPerPage = 10;
     
     const form = document.getElementById('add-product-form');
     const message = document.getElementById('form-message');
@@ -449,7 +445,6 @@
     const selectedCountLabel = document.getElementById('selected-count-label');
     const selectAllBtn = document.getElementById('select-all-btn');
 
-    // Modal จัดการบริษัท
     const companyManagerModal = document.getElementById('company-manager-modal');
     const managerSearchInput = document.getElementById('manager-search-input');
     const managerCompanyList = document.getElementById('manager-company-list');
@@ -457,7 +452,6 @@
     const duplicateCompaniesBanner = document.getElementById('duplicate-companies-banner');
     const btnResetManagerSearch = document.getElementById('btn-reset-manager-search');
 
-    // Modal คัดลอกสินค้า
     const copyProductsModal = document.getElementById('copy-products-modal');
     const copyTargetNameEl = document.getElementById('copy-target-name');
     const copyTargetCurrentCountEl = document.getElementById('copy-target-current-count');
@@ -465,7 +459,6 @@
     const copySkipDuplicatesCheckbox = document.getElementById('copy-skip-duplicates');
     const confirmCopyBtn = document.getElementById('confirm-copy-btn');
 
-    // Modal รวมบริษัท
     const mergeCompanyModal = document.getElementById('merge-company-modal');
     const mergeSourceNameEl = document.getElementById('merge-source-name');
     const mergeSourceCountEl = document.getElementById('merge-source-count');
@@ -473,13 +466,11 @@
     const mergeSkipDuplicateCheckbox = document.getElementById('merge-skip-duplicate-products');
     const confirmMergeBtn = document.getElementById('confirm-merge-btn');
 
-    // ฟังก์ชันเปิด/ปิดเมนูระบบอื่นๆ บน Header
     window.toggleMenuDropdown = function() {
         const menu = document.getElementById('system-menu-dropdown');
         menu.classList.toggle('hidden');
     };
 
-    // ปิดเมนูเมื่อคลิกนอกพื้นที่
     document.addEventListener('click', (e) => {
         const menu = document.getElementById('system-menu-dropdown');
         const btn = document.querySelector('button[onclick="toggleMenuDropdown()"]');
@@ -488,7 +479,6 @@
         }
     });
 
-    // ฟังก์ชันจัดการออกจากระบบ
     window.handleLogout = async function() {
         if (confirm('คุณต้องการออกจากระบบใช่หรือไม่?')) {
             try {
@@ -542,9 +532,6 @@
             .replace(/[^ก-ฮa-z0-9]/g, '');
     }
 
-    // ==========================================
-    // ฟังก์ชันคัดลอกสินค้าจากบริษัทแม่มายังบริษัทลูก
-    // ==========================================
     window.openCopyModal = function(targetCompanyName) {
         currentCopyTargetName = targetCompanyName;
         const targetStrictKey = cleanCompanyName(targetCompanyName).toLowerCase().replace(/\s+/g, '');
@@ -676,9 +663,6 @@
         }
     };
 
-    // ==========================================
-    // 1. ระบบรวมบริษัท (Merge Company)
-    // ==========================================
     window.openMergeModal = function(sourceName) {
         currentMergeSourceName = sourceName;
         const sourceStrictKey = cleanCompanyName(sourceName).toLowerCase().replace(/\s+/g, '');
@@ -820,9 +804,6 @@
         }
     };
 
-    // ==========================================
-    // 2. ฟังก์ชันลบชื่อบริษัทออกจาก Firebase
-    // ==========================================
     window.deleteCompanyFromFirebase = async function(companyNameTarget, event) {
         if (event) {
             event.stopPropagation();
@@ -893,9 +874,6 @@
         }
     };
 
-    // ==========================================
-    // 3. จัดการ Modal รายชื่อบริษัท & ตรวจจับชื่อซ้ำ
-    // ==========================================
     window.openCompanyManager = function() {
         managerSearchInput.value = '';
         showOnlyDuplicatesFlag = false;
@@ -1036,7 +1014,6 @@
 
         if (typedVal.length >= 2 && normalizedTyped) {
             if (isMultiSelectMode) {
-                // ตรวจสอบจาก persistentCheckedCompanies ที่ถูกติ๊กไว้ทั้งหมด
                 persistentCheckedCompanies.forEach(compName => {
                     const isSimilar = products.some(p => {
                         const pComp = cleanCompanyName(p.companyName || p.company);
@@ -1129,7 +1106,7 @@
             singleCompanyWrapper.classList.add('hidden');
             multiCompanyWrapper.classList.remove('hidden');
             multiSelectToggleLabel.textContent = '← กลับไปเลือกบริษัทเดียว';
-            persistentCheckedCompanies.clear(); // ล้างค่าเก่าเมื่อเริ่มเปิดโหมดเลือกหลายบริษัทใหม่
+            persistentCheckedCompanies.clear();
             renderMultiCheckboxes();
         } else {
             singleCompanyWrapper.classList.remove('hidden');
@@ -1160,7 +1137,6 @@
             checkbox.value = name;
             checkbox.className = 'rounded text-teal-600 focus:ring-teal-500 w-4 h-4';
             
-            // คืนค่าสถานะการติ๊กจาก persistentCheckedCompanies ที่จดจำไว้
             if (persistentCheckedCompanies.has(name)) {
                 checkbox.checked = true;
             }
@@ -1229,6 +1205,7 @@
                 
                 if (!editingProductId.value) {
                     filterCompany.value = name;
+                    currentPage = 1;
                     renderTable();
                 }
                 checkDuplicateStatus();
@@ -1274,6 +1251,9 @@
         }
     });
 
+    // ==========================================
+    // ฟังก์ชันจัดการตารางและการแบ่งหน้า (Pagination)
+    // ==========================================
     function renderTable() {
         const selectedFilter = filterCompany.value;
         tableBody.innerHTML = '';
@@ -1285,19 +1265,32 @@
                 return pComp.toLowerCase().replace(/\s+/g, '') === selectedFilter.toLowerCase().replace(/\s+/g, '');
             });
 
+        // คำนวณระบบแบ่งหน้า Pagination
+        const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const paginatedItems = filteredProducts.slice(startIndex, startIndex + itemsPerPage);
+
         if (filteredProducts.length === 0) {
             emptyState.classList.remove('hidden');
+            document.getElementById('pagination-controls').classList.add('hidden');
         } else {
             emptyState.classList.add('hidden');
-            filteredProducts.forEach((p) => {
+            document.getElementById('pagination-controls').classList.remove('hidden');
+
+            paginatedItems.forEach((p) => {
+                const compName = p.companyName || p.company || '-';
                 const tr = document.createElement('tr');
                 tr.className = 'hover:bg-teal-50/60 transition';
                 tr.innerHTML = `
+                    <td class="py-3 px-3 text-teal-900 font-medium truncate max-w-[180px]" title="${compName}">${compName}</td>
                     <td class="py-3 px-3 text-slate-800 font-semibold">${p.name}</td>
-                    <td class="py-3 px-2 text-right text-slate-500">${Number(p.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-                    <td class="py-3 px-2 text-right font-bold text-teal-700">${Number(p.price || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
-                    <td class="py-3 px-2 text-center text-slate-500">${p.unit || '-'}</td>
-                    <td class="py-3 px-2 text-center flex items-center justify-center gap-1.5">
+                    <td class="py-3 px-3 text-right text-slate-500">${Number(p.cost || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                    <td class="py-3 px-3 text-right font-bold text-teal-700">${Number(p.price || 0).toLocaleString('th-TH', {minimumFractionDigits: 2})}</td>
+                    <td class="py-3 px-3 text-center text-slate-500">${p.unit || '-'}</td>
+                    <td class="py-3 px-3 text-center flex items-center justify-center gap-1.5">
                         <button onclick="editProduct('${p.id}')" class="w-7 h-7 bg-amber-50 hover:bg-amber-100 text-amber-600 rounded-lg inline-flex items-center justify-center transition text-xs" title="แก้ไขรายการ">✏️</button>
                         <button onclick="deleteProduct('${p.id}')" class="w-7 h-7 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-lg inline-flex items-center justify-center transition text-xs" title="ลบรายการ">🗑️</button>
                     </td>
@@ -1305,11 +1298,25 @@
                 tableBody.appendChild(tr);
             });
         }
+
+        // อัปเดตข้อความบอกสถานะหน้าและปุ่มกด
         totalCount.innerHTML = `
             <span class="w-2 h-2 rounded-full bg-teal-600 inline-block"></span>
             <span>รวมทั้งหมด: ${filteredProducts.length.toLocaleString('th-TH')} รายการ</span>
         `;
+        document.getElementById('page-info').textContent = `หน้า ${currentPage} / ${totalPages}`;
+        document.getElementById('prev-page-btn').disabled = currentPage === 1;
+        document.getElementById('next-page-btn').disabled = currentPage === totalPages || totalPages === 0;
     }
+
+    // ฟังก์ชันเปลี่ยนหน้า Pagination
+    window.changePage = function(direction) {
+        currentPage += direction;
+        renderTable();
+        // เลื่อนมุมมองกลับมาที่หัวตารางเบาๆ
+        const tableContainer = document.querySelector('.overflow-y-auto');
+        if (tableContainer) tableContainer.scrollTop = 0;
+    };
 
     function rebuildCompaniesMapFromAllSources(companiesSnapshot, productsList) {
         companiesMap.clear();
@@ -1330,14 +1337,9 @@
 
     function initDataListeners() {
         const mobileBadge = document.getElementById('auth-status-badge-mobile');
-        const desktopBadge = document.getElementById('auth-status-badge-desktop');
         if(mobileBadge) {
             mobileBadge.className = "flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50/90 border border-emerald-200/80 rounded-full text-[10px] text-emerald-800 font-medium";
             mobileBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>เชื่อมต่อแล้ว</span>';
-        }
-        if(desktopBadge) {
-            desktopBadge.className = "hidden lg:flex items-center gap-1.5 px-3 py-1 bg-emerald-50/90 border border-emerald-200/80 rounded-full text-xs text-emerald-800 font-medium shadow-2xs";
-            desktopBadge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500"></span><span>เชื่อมต่อแล้ว</span>';
         }
 
         db.collection('companies').onSnapshot((snapshot) => {
@@ -1372,7 +1374,10 @@
         });
     }
 
-    filterCompany.addEventListener('change', renderTable);
+    filterCompany.addEventListener('change', () => {
+        currentPage = 1; // รีเซ็ตกลับมาหน้าแรกเมื่อเปลี่ยนตัวกรองบริษัท
+        renderTable();
+    });
 
     window.editProduct = function(id) {
         if (isMultiSelectMode) {
@@ -1512,6 +1517,7 @@
                 companySelectHidden.value = keepCompany;
                 filterCompany.value = keepCompany;
                 duplicateWarning.classList.add('hidden');
+                currentPage = 1;
                 renderTable();
                 checkDuplicateStatus();
             }
