@@ -2,73 +2,126 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เข้าสู่ระบบ | Delivery Tracking & CRM</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>เข้าสู่ระบบฐานข้อมูลลูกค้าและบริษัท | Delivery Tracking & CRM</title>
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Prompt & Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Firebase SDK Compat v9.22.0 -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+
     <style>
-        body { font-family: Arial, "Noto Sans Thai", sans-serif; }
-        .glass { backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+        body {
+            font-family: 'Prompt', 'Inter', sans-serif;
+            background: linear-gradient(135deg, #e0f2fe 0%, #f0fdfa 45%, #ecfdf5 100%);
+            overflow-x: hidden;
+        }
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(20, 184, 166, 0.35);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(13, 148, 136, 0.6);
+        }
+        .glass-card {
+            background: rgba(255, 255, 255, 0.48);
+            backdrop-filter: blur(18px) saturate(160%);
+            -webkit-backdrop-filter: blur(18px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.78);
+            box-shadow: 0 8px 32px -8px rgba(13, 148, 136, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.7);
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.97); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .modal-animate {
+            animation: fadeIn 0.2s ease-out forwards;
+        }
     </style>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-sky-50 via-white to-indigo-100 text-slate-800 flex items-center justify-center p-4">
+<body class="text-slate-800 antialiased min-h-screen flex items-center justify-center p-4 relative selection:bg-teal-500 selection:text-white">
 
-<div class="w-full max-w-md">
-    <div class="bg-white/90 glass border border-white rounded-[2rem] shadow-2xl shadow-sky-200/50 overflow-hidden">
-        <div class="bg-gradient-to-r from-sky-600 via-blue-600 to-indigo-600 px-6 py-7 text-white">
-            <div class="flex items-center gap-3">
-                <div class="w-12 h-12 rounded-2xl bg-white/15 flex items-center justify-center text-2xl border border-white/20">📦</div>
+    <!-- Ambient Background Shapes -->
+    <div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div class="absolute -top-24 -left-24 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-teal-300/35 blur-3xl"></div>
+        <div class="absolute top-1/3 -right-20 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-cyan-300/35 blur-3xl"></div>
+        <div class="absolute -bottom-24 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-emerald-300/30 blur-3xl"></div>
+    </div>
+
+    <!-- Login Screen Card -->
+    <div class="w-full max-w-md">
+        <div class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/80 w-full p-6 sm:p-8 modal-animate">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-gradient-to-tr from-teal-600 to-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-600/30 mx-auto mb-3">
+                    <i class="fa-solid fa-building-user text-2xl"></i>
+                </div>
+                <h2 class="text-lg sm:text-xl font-bold text-slate-900">เข้าสู่ระบบฐานข้อมูลลูกค้าและบริษัท</h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">ใช้บัญชีเดียวกับระบบติดตามงานจัดส่ง (Delivery Tracking)</p>
+            </div>
+
+            <!-- กล่องแจ้งเตือนข้อผิดพลาดหรือสถานะ -->
+            <div id="login-error-box" class="hidden mb-4 p-3 rounded-2xl bg-rose-50/90 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
+                <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+                <span id="login-error-text">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
+            </div>
+
+            <form id="login-form" class="space-y-4">
                 <div>
-                    <h1 class="text-xl font-bold">Delivery Tracking & CRM</h1>
-                    <p class="text-sm text-white/75 mt-1">เข้าสู่ระบบเพื่อใช้งานระบบ</p>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">ชื่อผู้ใช้งาน (Username หรือ Email)</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="text" id="login-username" required autocomplete="username" placeholder="ระบุชื่อผู้ใช้งาน หรืออีเมล"
+                            class="w-full pl-10 pr-4 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                    </div>
                 </div>
-            </div>
-        </div>
 
-        <form id="login-form" class="p-6 space-y-4">
-            <div>
-                <label class="block text-sm font-bold text-slate-700 mb-1.5">📧 อีเมล</label>
-                <input id="email" type="email" autocomplete="username" required
-                    placeholder="example@email.com"
-                    class="w-full px-4 py-3 border border-sky-200 bg-sky-50/40 rounded-2xl outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 focus:bg-white transition">
-            </div>
-
-            <div>
-                <div class="flex items-center justify-between mb-1.5">
-                    <label class="block text-sm font-bold text-slate-700">🔐 รหัสผ่าน</label>
-                    <button type="button" id="forgot-password"
-                        class="text-xs font-semibold text-sky-600 hover:text-sky-800">
-                        ลืมรหัสผ่าน?
-                    </button>
+                <div>
+                    <div class="flex items-center justify-between mb-1.5">
+                        <label class="block text-xs font-semibold text-slate-700">รหัสผ่าน (Password)</label>
+                        <button type="button" id="forgot-password" class="text-xs font-semibold text-teal-600 hover:text-teal-700 transition">
+                            ลืมรหัสผ่าน?
+                        </button>
+                    </div>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••"
+                            class="w-full pl-10 pr-10 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none transition">
+                        <button type="button" id="toggle-password" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 focus:outline-none">
+                            <i class="fa-solid fa-eye text-sm" id="toggle-password-icon"></i>
+                        </button>
+                    </div>
                 </div>
-                <div class="relative">
-                    <input id="password" type="password" autocomplete="current-password" required
-                        placeholder="กรอกรหัสผ่าน"
-                        class="w-full px-4 py-3 pr-12 border border-sky-200 bg-sky-50/40 rounded-2xl outline-none focus:ring-2 focus:ring-sky-400 focus:border-sky-400 focus:bg-white transition">
-                    <button type="button" id="toggle-password"
-                        class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 text-sm">👁️</button>
-                </div>
+
+                <button type="submit" id="btn-login-submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+                </button>
+            </form>
+
+            <div class="mt-5 pt-4 border-t border-slate-200/70 flex items-center justify-between text-xs text-slate-500">
+                <span>ต้องการกลับหน้าหลัก?</span>
+                <a href="index.html" class="text-teal-600 hover:text-teal-700 font-medium inline-flex items-center gap-1">
+                    ไปที่หน้าหลัก (index.html) <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
             </div>
 
-            <div id="login-message" class="hidden rounded-2xl px-4 py-3 text-sm"></div>
-
-            <button id="login-btn" type="submit"
-                class="w-full py-3.5 bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-700 hover:to-indigo-700 text-white rounded-2xl font-bold shadow-lg shadow-sky-200 transition disabled:opacity-60 disabled:cursor-not-allowed">
-                🔓 เข้าสู่ระบบ
-            </button>
-
-            <a href="index.html"
-               class="block text-center text-xs text-slate-400 hover:text-sky-600 transition">
-                ← กลับหน้าหลัก
-            </a>
-        </form>
-
-        <div class="px-6 pb-6 text-center">
-            <p class="text-[11px] text-slate-400">ระบบรักษาความปลอดภัยด้วย Firebase Authentication</p>
+            <div class="mt-4 text-center">
+                <p class="text-[11px] text-slate-400">ระบบรักษาความปลอดภัยด้วย Firebase Authentication</p>
+            </div>
         </div>
     </div>
-</div>
 
 <script>
 const firebaseConfig = {
@@ -81,34 +134,41 @@ const firebaseConfig = {
     measurementId: "G-BB2D5DJH3F"
 };
 
-if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+const AUTH_DOMAIN_SUFFIX = "@delivery-tracking-2313a.firebaseapp.com";
+
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const auth = firebase.auth();
 
 const form = document.getElementById('login-form');
-const email = document.getElementById('email');
-const password = document.getElementById('password');
-const loginBtn = document.getElementById('login-btn');
-const message = document.getElementById('login-message');
+const usernameInput = document.getElementById('login-username');
+const passwordInput = document.getElementById('login-password');
+const loginBtn = document.getElementById('btn-login-submit');
+const errorBox = document.getElementById('login-error-box');
+const errorText = document.getElementById('login-error-text');
 
 function showMessage(text, type = 'error') {
-    message.textContent = text;
-    message.className = 'rounded-2xl px-4 py-3 text-sm ' +
-        (type === 'success'
-            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-            : 'bg-rose-50 text-rose-700 border border-rose-200');
+    errorText.textContent = text;
+    if (type === 'success') {
+        errorBox.className = 'mb-4 p-3 rounded-2xl bg-emerald-50/90 border border-emerald-200 text-emerald-700 text-xs flex items-start gap-2';
+    } else {
+        errorBox.className = 'mb-4 p-3 rounded-2xl bg-rose-50/90 border border-rose-200 text-rose-700 text-xs flex items-start gap-2';
+    }
+    errorBox.classList.remove('hidden');
 }
 
 function friendlyError(code) {
     const map = {
         'auth/invalid-email': 'รูปแบบอีเมลไม่ถูกต้อง',
-        'auth/user-not-found': 'ไม่พบผู้ใช้งานอีเมลนี้',
-        'auth/wrong-password': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
-        'auth/invalid-credential': 'อีเมลหรือรหัสผ่านไม่ถูกต้อง',
-        'auth/too-many-requests': 'มีการลองเข้าสู่ระบบหลายครั้ง กรุณารอสักครู่',
+        'auth/user-not-found': 'ไม่พบผู้ใช้งานนี้ในระบบ',
+        'auth/wrong-password': 'รหัสผ่านไม่ถูกต้อง',
+        'auth/invalid-credential': 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง',
+        'auth/too-many-requests': 'มีการลองเข้าสู่ระบบหลายครั้งเกินไป กรุณารอสักครู่',
         'auth/user-disabled': 'บัญชีนี้ถูกปิดการใช้งาน',
         'auth/network-request-failed': 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้'
     };
-    return map[code] || 'ไม่สามารถเข้าสู่ระบบได้ กรุณาตรวจสอบข้อมูลแล้วลองใหม่อีกครั้ง';
+    return map[code] || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
 }
 
 auth.onAuthStateChanged(function(user) {
@@ -119,55 +179,61 @@ auth.onAuthStateChanged(function(user) {
 
 form.addEventListener('submit', async function(e) {
     e.preventDefault();
-    const mail = email.value.trim();
-    const pass = password.value;
+    const rawUser = usernameInput.value.trim();
+    const pass = passwordInput.value;
 
-    if (!mail || !pass) return;
+    if (!rawUser || !pass) return;
+
+    // รองรับทั้งการกรอกอีเมลเต็ม หรือกรอก Username สั้นๆ แล้วเติม Domain อัตโนมัติ
+    const email = rawUser.includes('@') ? rawUser : `${rawUser.toLowerCase()}${AUTH_DOMAIN_SUFFIX}`;
 
     loginBtn.disabled = true;
-    loginBtn.textContent = 'กำลังเข้าสู่ระบบ...';
-    message.classList.add('hidden');
+    loginBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังเข้าสู่ระบบ...';
+    errorBox.classList.add('hidden');
 
     try {
-        await auth.signInWithEmailAndPassword(mail, pass);
+        await auth.signInWithEmailAndPassword(email, pass);
         showMessage('เข้าสู่ระบบสำเร็จ กำลังเปิดระบบ...', 'success');
-        message.classList.remove('hidden');
         setTimeout(() => {
             window.location.replace('index.html');
         }, 350);
     } catch (error) {
+        console.error("Login error:", error);
         showMessage(friendlyError(error.code));
-        message.classList.remove('hidden');
         loginBtn.disabled = false;
-        loginBtn.textContent = '🔓 เข้าสู่ระบบ';
+        loginBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ';
     }
 });
 
-document.getElementById('toggle-password').addEventListener('click', function() {
-    const isPassword = password.type === 'password';
-    password.type = isPassword ? 'text' : 'password';
-    this.textContent = isPassword ? '🙈' : '👁️';
+// Toggle Password Visibility
+const togglePasswordBtn = document.getElementById('toggle-password');
+const togglePasswordIcon = document.getElementById('toggle-password-icon');
+
+togglePasswordBtn.addEventListener('click', function() {
+    const isPassword = passwordInput.type === 'password';
+    passwordInput.type = isPassword ? 'text' : 'password';
+    togglePasswordIcon.classList.toggle('fa-eye');
+    togglePasswordIcon.classList.toggle('fa-eye-slash');
 });
 
+// Forgot Password Handler
 document.getElementById('forgot-password').addEventListener('click', async function() {
-    const mail = email.value.trim();
-    if (!mail) {
-        showMessage('กรุณากรอกอีเมลก่อนกด “ลืมรหัสผ่าน”');
-        message.classList.remove('hidden');
-        email.focus();
+    const rawUser = usernameInput.value.trim();
+    if (!rawUser) {
+        showMessage('กรุณากรอกชื่อผู้ใช้งานหรืออีเมลก่อนกด "ลืมรหัสผ่าน"');
+        usernameInput.focus();
         return;
     }
 
+    const email = rawUser.includes('@') ? rawUser : `${rawUser.toLowerCase()}${AUTH_DOMAIN_SUFFIX}`;
+
     try {
-        await auth.sendPasswordResetEmail(mail);
+        await auth.sendPasswordResetEmail(email);
         showMessage('ส่งลิงก์สำหรับตั้งรหัสผ่านใหม่ไปยังอีเมลแล้ว', 'success');
-        message.classList.remove('hidden');
     } catch (error) {
         showMessage(friendlyError(error.code));
-        message.classList.remove('hidden');
     }
 });
-
 </script>
 </body>
 </html>
