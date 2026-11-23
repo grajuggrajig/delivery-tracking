@@ -84,7 +84,7 @@
                 </div>
                 <div>
                     <h1 class="font-bold text-slate-900 text-sm sm:text-base leading-tight">ฐานข้อมูลสินค้าแยกตามบริษัท (Global Search)</h1>
-                    <p class="text-[11px] text-slate-500 hidden sm:block">Company Products & Pricing Intelligence • <span class="text-teal-700 font-medium">delivery-tracking-2313a</span>[cite: 6]</p>
+                    <p class="text-[11px] text-slate-500 hidden sm:block">Company Products & Pricing Intelligence • <span class="text-teal-700 font-medium">delivery-tracking-2313a</span></p>
                 </div>
             </div>
 
@@ -131,7 +131,7 @@
                 </div>
                 <div>
                     <h2 class="font-bold text-slate-900 text-sm sm:text-base">กรุณาเข้าสู่ระบบเพื่อเข้าถึงข้อมูลบริษัทและสินค้า</h2>
-                    <p class="text-xs sm:text-sm text-slate-600 mt-0.5">ระบบเชื่อมต่อกับฐานข้อมูลหลัก Delivery Tracking (delivery-tracking-2313a)[cite: 6]</p>
+                    <p class="text-xs sm:text-sm text-slate-600 mt-0.5">ระบบเชื่อมต่อกับฐานข้อมูลหลัก Delivery Tracking (delivery-tracking-2313a)</p>
                 </div>
             </div>
             <button onclick="openLoginModal()" class="px-4 py-2.5 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-semibold shadow-sm transition-all flex items-center justify-center gap-2">
@@ -298,7 +298,7 @@
             <div class="w-12 h-12 rounded-2xl bg-teal-500/15 text-teal-700 flex items-center justify-center mx-auto">
                 <i class="fa-solid fa-circle-notch fa-spin text-2xl"></i>
             </div>
-            <h3 class="font-bold text-slate-800 text-base">กำลังโหลดข้อมูลสินค้าและบริษัทจาก Firestore...[cite: 6]</h3>
+            <h3 class="font-bold text-slate-800 text-base">กำลังโหลดข้อมูลสินค้าและบริษัทจาก Firestore...</h3>
         </div>
 
         <div id="empty-state" class="hidden glass-card rounded-3xl p-12 text-center space-y-3">
@@ -347,7 +347,7 @@
     <!-- Footer -->
     <footer class="bg-white/60 backdrop-blur-xl border-t border-white/70 py-4 px-4 sm:px-6 lg:px-8 mt-auto no-print">
         <div class="max-w-7xl mx-auto flex items-center justify-between text-xs text-slate-500">
-            <div>ระบบจัดการและค้นหารายการสินค้าแยกตามบริษัท • Firebase Project: <span class="font-mono text-slate-700">delivery-tracking-2313a</span>[cite: 6]</div>
+            <div>ระบบจัดการและค้นหารายการสินค้าแยกตามบริษัท • Firebase Project: <span class="font-mono text-slate-700">delivery-tracking-2313a</span></div>
             <div id="footer-sync-time">อัปเดตข้อมูลล่าสุด: -</div>
         </div>
     </footer>
@@ -360,7 +360,7 @@
                     <i class="fa-solid fa-xmark"></i>
                 </button>
                 <h2 class="text-lg font-bold">เข้าสู่ระบบฐานข้อมูลสินค้า</h2>
-                <p class="text-xs text-teal-100 mt-1">ใช้บัญชีเดียวกับระบบ Delivery Tracking[cite: 6]</p>
+                <p class="text-xs text-teal-100 mt-1">ใช้บัญชีเดียวกับระบบ Delivery Tracking</p>
             </div>
             <form id="login-form" onsubmit="handleLoginSubmit(event)" class="p-6 space-y-4">
                 <div id="login-error-box" class="hidden p-3 rounded-2xl bg-rose-50 border border-rose-200 text-rose-700 text-xs">
@@ -422,7 +422,7 @@
         </div>
     </div>
 
-    <!-- MODAL 3: ADD/EDIT PRODUCT MODAL (UPDATED FOR MULTI-COMPANY SELECTION) -->
+    <!-- MODAL 3: ADD/EDIT PRODUCT MODAL (PERSISTENT MULTI-COMPANY SELECTION) -->
     <div id="edit-product-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4 no-print">
         <div class="bg-white/95 backdrop-blur-xl rounded-3xl max-w-lg w-full shadow-2xl border border-white overflow-hidden modal-animate">
             <div class="px-6 py-4 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 text-white flex items-center justify-between">
@@ -437,23 +437,35 @@
                     <div class="flex items-center justify-between mb-1">
                         <label class="block text-xs font-semibold text-slate-700">เลือกบริษัท / ร้านค้าในเครือ (ติ๊กเลือกได้หลายบริษัท) *</label>
                         <div class="space-x-2 text-[11px]">
-                            <button type="button" onclick="toggleSelectAllCompanies(true)" class="text-teal-600 hover:underline font-medium">เลือกทั้งหมด</button>
+                            <button type="button" onclick="toggleSelectAllCompanies(true)" class="text-teal-600 hover:underline font-medium">เลือกที่แสดงทั้งหมด</button>
                             <span class="text-slate-300">|</span>
-                            <button type="button" onclick="toggleSelectAllCompanies(false)" class="text-slate-500 hover:underline">ล้างทั้งหมด</button>
+                            <button type="button" onclick="toggleSelectAllCompanies(false)" class="text-rose-500 hover:underline font-medium">ล้างที่เลือกทั้งหมด</button>
                         </div>
                     </div>
                     
                     <!-- Search inside modal checkboxes -->
-                    <div class="mb-2">
-                        <input type="text" id="modal-company-search" oninput="renderModalCompanyCheckboxes(this.value)" placeholder="🔍 ค้นหาชื่อบริษัทในรายการ..." 
-                            class="w-full px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500">
+                    <div class="mb-2 relative">
+                        <input type="text" id="modal-company-search" oninput="renderModalCompanyCheckboxes(this.value)" placeholder="🔍 ค้นหาชื่อบริษัทในรายการ (ค่าที่ติ๊กไว้จะถูกจำไว้)..." 
+                            class="w-full pl-3 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-teal-500">
+                        <button type="button" id="btn-clear-modal-search" onclick="clearModalCompanySearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                            <i class="fa-solid fa-circle-xmark text-xs"></i>
+                        </button>
                     </div>
 
                     <!-- Container for Checkboxes -->
-                    <div id="modal-company-checkboxes" class="max-h-44 overflow-y-auto border border-slate-200 rounded-2xl p-3 space-y-2 bg-slate-50/50">
+                    <div id="modal-company-checkboxes" class="max-h-40 overflow-y-auto border border-slate-200 rounded-2xl p-2.5 space-y-1 bg-slate-50/50">
                         <!-- รายการ Checkbox จะถูกสร้างด้วย JS -->
                     </div>
-                    <p class="text-[11px] text-amber-700 mt-1" id="company-selected-count-hint">เลือกแล้ว: 0 บริษัท</p>
+
+                    <!-- Selected Count & Badges -->
+                    <div class="mt-2">
+                        <div class="flex items-center justify-between">
+                            <p class="text-[11px] font-semibold text-teal-700" id="company-selected-count-hint">เลือกแล้ว: 0 บริษัท</p>
+                        </div>
+                        <div id="selected-companies-badges" class="flex flex-wrap gap-1.5 mt-1.5 max-h-20 overflow-y-auto">
+                            <!-- แสดงแท็กบริษัทที่เลือกไว้ -->
+                        </div>
+                    </div>
                 </div>
 
                 <div>
@@ -514,7 +526,8 @@
             viewMode: 'table',
             currentPage: 1,
             itemsPerPage: 50,
-            selectedModalItem: null
+            selectedModalItem: null,
+            selectedModalCompanies: new Set() // เก็บรายชื่อบริษัทที่ถูกเลือกไว้ใน Modal แบบถาวรระหว่างค้นหา
         };
 
         function normalizeText(str) {
@@ -526,6 +539,15 @@
                 .replace(/\s+/g, ' ')
                 .trim()
                 .toLowerCase();
+        }
+
+        function escapeHtmlAttr(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
         }
 
         function formatCurrency(num) {
@@ -963,7 +985,7 @@
 
         window.closeDetailModal = () => document.getElementById('detail-modal').classList.add('hidden');
         
-        // Modal เพิ่มสินค้าแบบเลือกหลายบริษัท
+        // Modal เพิ่มสินค้าแบบเลือกหลายบริษัท (จำค่าการเลือกระหว่างค้นหา)
         window.openAddEditModal = () => {
             document.getElementById('edit-doc-id').value = '';
             document.getElementById('edit-product-name').value = '';
@@ -971,22 +993,41 @@
             document.getElementById('edit-price').value = '0';
             document.getElementById('edit-unit').value = 'ชิ้น';
             document.getElementById('modal-company-search').value = '';
+            document.getElementById('btn-clear-modal-search').classList.add('hidden');
+            
+            // ล้างค่าที่จำไว้เฉพาะตอนเปิด Modal ใหม่ครั้งแรก
+            state.selectedModalCompanies.clear();
+            
             renderModalCompanyCheckboxes('');
+            updateSelectedCompanyUI();
             document.getElementById('edit-product-modal').classList.remove('hidden');
         };
 
         window.closeAddEditModal = () => document.getElementById('edit-product-modal').classList.add('hidden');
 
-        // ฟังก์ชันสร้าง Checkbox บริษัทใน Modal เพิ่มสินค้า
+        window.clearModalCompanySearch = () => {
+            const input = document.getElementById('modal-company-search');
+            input.value = '';
+            renderModalCompanyCheckboxes('');
+            input.focus();
+        };
+
+        // ฟังก์ชันสร้าง Checkbox บริษัทใน Modal โดยเช็กสถานะจาก state.selectedModalCompanies
         function renderModalCompanyCheckboxes(filterKeyword = '') {
             const container = document.getElementById('modal-company-checkboxes');
-            const kw = normalizeText(filterKeyword);
+            const clearBtn = document.getElementById('btn-clear-modal-search');
             
-            // ดึงรายชื่อบริษัททั้งหมดที่ไม่ซ้ำกัน
+            if (filterKeyword.trim().length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            const kw = normalizeText(filterKeyword);
             const allCompanies = state.companiesSummary.map(c => c[0]);
             
             if (allCompanies.length === 0) {
-                container.innerHTML = `<div class="text-xs text-slate-400 text-center py-2">ยังไม่มีรายชื่อบริษัทในระบบ สามารถพิมพ์เพิ่มใหม่ได้</div>`;
+                container.innerHTML = `<div class="text-xs text-slate-400 text-center py-2">ยังไม่มีรายชื่อบริษัทในระบบ</div>`;
                 return;
             }
 
@@ -997,38 +1038,91 @@
                 return;
             }
 
-            container.innerHTML = filtered.map((comp, idx) => `
-                <label class="flex items-center gap-2.5 p-1.5 hover:bg-white rounded-xl cursor-pointer transition-colors">
-                    <input type="checkbox" name="modal-company-cb" value="${comp.replace(/"/g, '&quot;')}" onchange="updateSelectedCompanyCount()" 
-                        class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
-                    <span class="text-xs font-medium text-slate-800">${comp}</span>
-                </label>
-            `).join('');
-            updateSelectedCompanyCount();
+            container.innerHTML = filtered.map(comp => {
+                const isChecked = state.selectedModalCompanies.has(comp);
+                const safeValue = escapeHtmlAttr(comp);
+                return `
+                    <label class="flex items-center gap-2.5 p-1.5 rounded-xl cursor-pointer transition-colors ${isChecked ? 'bg-teal-50/90 border border-teal-200/70' : 'hover:bg-white border border-transparent'}">
+                        <input type="checkbox" name="modal-company-cb" value="${safeValue}" ${isChecked ? 'checked' : ''} 
+                            onchange="handleModalCompanyCheckboxChange(this)" 
+                            class="w-4 h-4 text-teal-600 rounded border-slate-300 focus:ring-teal-500">
+                        <span class="text-xs font-medium ${isChecked ? 'text-teal-900 font-semibold' : 'text-slate-800'}">${comp}</span>
+                    </label>
+                `;
+            }).join('');
         }
 
-        window.toggleSelectAllCompanies = (select) => {
-            const checkboxes = document.querySelectorAll('input[name="modal-company-cb"]');
-            checkboxes.forEach(cb => {
-                // ถ้าช่องนั้นแสดงอยู่ตามการค้นหา ให้เปลี่ยนสถานะตาม select
-                if (cb.closest('label').style.display !== 'none') {
-                    cb.checked = select;
-                }
-            });
-            updateSelectedCompanyCount();
+        // บันทึก/ลบชื่อบริษัทลงใน Set เมื่อกดติ๊กหรือเอาติ๊กออก
+        window.handleModalCompanyCheckboxChange = (checkbox) => {
+            const companyName = checkbox.value;
+            const label = checkbox.closest('label');
+            const span = label.querySelector('span');
+
+            if (checkbox.checked) {
+                state.selectedModalCompanies.add(companyName);
+                label.className = 'flex items-center gap-2.5 p-1.5 rounded-xl cursor-pointer transition-colors bg-teal-50/90 border border-teal-200/70';
+                span.className = 'text-xs font-semibold text-teal-900';
+            } else {
+                state.selectedModalCompanies.delete(companyName);
+                label.className = 'flex items-center gap-2.5 p-1.5 rounded-xl cursor-pointer transition-colors hover:bg-white border border-transparent';
+                span.className = 'text-xs font-medium text-slate-800';
+            }
+            updateSelectedCompanyUI();
         };
 
-        function updateSelectedCompanyCount() {
-            const checkedCount = document.querySelectorAll('input[name="modal-company-cb"]:checked').length;
-            document.getElementById('company-selected-count-hint').textContent = `เลือกแล้ว: ${checkedCount} บริษัท`;
+        // เลือกทั้งหมดเฉพาะที่แสดงอยู่ (ไม่ทับของเดิมที่เลือกไว้) หรือล้างทั้งหมด
+        window.toggleSelectAllCompanies = (select) => {
+            if (select) {
+                const visibleCheckboxes = document.querySelectorAll('input[name="modal-company-cb"]');
+                visibleCheckboxes.forEach(cb => {
+                    state.selectedModalCompanies.add(cb.value);
+                });
+            } else {
+                state.selectedModalCompanies.clear();
+            }
+            const currentSearch = document.getElementById('modal-company-search').value;
+            renderModalCompanyCheckboxes(currentSearch);
+            updateSelectedCompanyUI();
+        };
+
+        // ลบรายบริษัทออกจากแท็กที่เลือกไว้
+        window.removeSelectedModalCompany = (encodedName) => {
+            const companyName = decodeURIComponent(encodedName);
+            state.selectedModalCompanies.delete(companyName);
+            const currentSearch = document.getElementById('modal-company-search').value;
+            renderModalCompanyCheckboxes(currentSearch);
+            updateSelectedCompanyUI();
+        };
+
+        // อัปเดตตัวเลขจำนวนและแสดงแท็กบริษัทที่เลือกไว้ด้านล่างกล่อง Checkbox
+        function updateSelectedCompanyUI() {
+            const count = state.selectedModalCompanies.size;
+            document.getElementById('company-selected-count-hint').textContent = `เลือกแล้ว: ${count} บริษัท`;
+
+            const badgesContainer = document.getElementById('selected-companies-badges');
+            if (count === 0) {
+                badgesContainer.innerHTML = '';
+                return;
+            }
+
+            badgesContainer.innerHTML = Array.from(state.selectedModalCompanies).map(comp => {
+                const encoded = encodeURIComponent(comp);
+                return `
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-medium bg-teal-100 text-teal-800 border border-teal-200">
+                        <span class="truncate max-w-[180px]">${comp}</span>
+                        <button type="button" onclick="removeSelectedModalCompany('${encoded}')" class="text-teal-600 hover:text-rose-600 ml-0.5 focus:outline-none" title="นำออก">
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </span>
+                `;
+            }).join('');
         }
 
-        // บันทึกสินค้าพร้อมกันหลายบริษัท (Loop เพิ่มข้อมูลลง Firestore)
+        // บันทึกสินค้าพร้อมกันหลายบริษัทจาก state.selectedModalCompanies
         window.handleSaveCompanyProduct = async (e) => {
             e.preventDefault();
             
-            const selectedCheckboxes = document.querySelectorAll('input[name="modal-company-cb"]:checked');
-            if (selectedCheckboxes.length === 0) {
+            if (state.selectedModalCompanies.size === 0) {
                 showToast('กรุณาเลือกอย่างน้อย 1 บริษัท', 'warning');
                 return;
             }
@@ -1038,9 +1132,13 @@
             const price = parseFloat(document.getElementById('edit-price').value) || 0;
             const unit = document.getElementById('edit-unit').value.trim() || 'ชิ้น';
 
+            const saveBtn = document.getElementById('btn-save-company-product');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'กำลังบันทึก...';
+
             try {
-                const batchPromises = Array.from(selectedCheckboxes).map(cb => {
-                    const companyName = cb.value;
+                const selectedArray = Array.from(state.selectedModalCompanies);
+                const batchPromises = selectedArray.map(companyName => {
                     return db.collection('companyProducts').add({
                         companyName,
                         name,
@@ -1054,10 +1152,13 @@
 
                 await Promise.all(batchPromises);
                 closeAddEditModal();
-                showToast(`บันทึกสินค้าให้ ${selectedCheckboxes.length} บริษัทสำเร็จ`, 'success');
+                showToast(`บันทึกสินค้าให้ ${selectedArray.length} บริษัทสำเร็จ`, 'success');
                 loadAllCollections();
             } catch (err) {
                 showToast('บันทึกไม่สำเร็จ: ' + err.message, 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = 'บันทึกข้อมูลสินค้า';
             }
         };
 
