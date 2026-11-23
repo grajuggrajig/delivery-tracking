@@ -63,6 +63,58 @@
         .modal-animate {
             animation: fadeIn 0.2s ease-out forwards;
         }
+
+        /* Company photo: isolated styles, existing card layout remains unchanged */
+        .company-directory-photo {
+            width: 44px; height: 44px; flex: 0 0 44px; object-fit: cover;
+            border-radius: 16px; border: 1px solid rgba(255,255,255,.9);
+            box-shadow: 0 3px 10px rgba(15,23,42,.12); cursor: zoom-in;
+            transition: transform .2s ease, box-shadow .2s ease;
+            background: #fff;
+        }
+        .company-directory-photo:hover {
+            transform: scale(1.16);
+            box-shadow: 0 8px 20px rgba(15,23,42,.24);
+            position: relative; z-index: 8;
+        }
+        .company-directory-sidebar-photo {
+            width: 32px; height: 32px; flex: 0 0 32px; object-fit: cover;
+            border-radius: 12px; border: 1px solid rgba(255,255,255,.9);
+            cursor: zoom-in; transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .company-directory-sidebar-photo:hover { transform: scale(1.18); z-index: 8; }
+        #company-directory-photo-viewer {
+            position: fixed; inset: 0; z-index: 100000;
+            display: flex; align-items: center; justify-content: center;
+            padding: 24px; background: rgba(10,15,30,.84); backdrop-filter: blur(5px);
+        }
+        #company-directory-photo-viewer[hidden] { display: none !important; }
+        #company-directory-photo-viewer .photo-viewer-panel {
+            position: relative; max-width: min(92vw,1100px); max-height: 90vh;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #company-directory-photo-viewer img {
+            display: block; max-width: 88vw; max-height: 82vh; width: auto; height: auto;
+            object-fit: contain; border-radius: 14px; background: #fff;
+            box-shadow: 0 18px 70px rgba(0,0,0,.45);
+        }
+        #company-directory-photo-viewer button {
+            position: absolute; right: -12px; top: -12px; width: 38px; height: 38px;
+            border: 1px solid rgba(255,255,255,.55); border-radius: 50%;
+            background: #fff; color: #172033; font-size: 25px; line-height: 1;
+            cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.25);
+        }
+        #company-directory-photo-viewer .photo-viewer-caption {
+            position: absolute; left: 0; right: 0; bottom: -32px; color: #fff;
+            text-align: center; font-size: 13px; text-shadow: 0 1px 4px #000;
+            overflow-wrap: anywhere;
+        }
+        @media(max-width:600px) {
+            #company-directory-photo-viewer { padding: 16px; }
+            #company-directory-photo-viewer img { max-width: 92vw; max-height: 76vh; }
+            #company-directory-photo-viewer button { right: -8px; top: -8px; }
+        }
+
     </style>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col relative selection:bg-teal-500 selection:text-white">
@@ -915,6 +967,9 @@
                         companyDistrict: (district || '').trim(),
                         address: (address || '').trim(),
                         notes: '',
+                        customerPhoto: '',
+                        customerPhotoRemoved: false,
+                        hasCompanyPhotoRecord: false,
                         contactsMap: new Map(),
                         purchaseHistory: [],
                         specialProducts: [],
@@ -934,6 +989,11 @@
                 const entry = ensureCompanyEntry(comp.companyName || comp.name, comp.companyDistrict || comp.district, comp.address);
                 entry.id = comp.id;
                 if (comp.notes) entry.notes = comp.notes;
+                if (Object.prototype.hasOwnProperty.call(comp, 'customerPhoto') || comp.customerPhotoRemoved === true) {
+                    entry.hasCompanyPhotoRecord = true;
+                    entry.customerPhotoRemoved = comp.customerPhotoRemoved === true;
+                    entry.customerPhoto = entry.customerPhotoRemoved ? '' : (typeof comp.customerPhoto === 'string' ? comp.customerPhoto : '');
+                }
                 if (comp.address) entry.address = comp.address;
                 if (comp.companyDistrict || comp.district) entry.companyDistrict = comp.companyDistrict || comp.district;
 
@@ -969,6 +1029,9 @@
                 const district = del.companyDistrict || del.district || '';
                 const address = del.address || del.deliveryAddress || '';
                 const entry = ensureCompanyEntry(compName, district, address);
+                if (!entry.hasCompanyPhotoRecord && !entry.customerPhotoRemoved && !entry.customerPhoto && typeof del.customerPhoto === 'string' && del.customerPhoto.startsWith('data:image/')) {
+                    entry.customerPhoto = del.customerPhoto;
+                }
                 entry.deliveryDocIds.push(del.id);
 
                 let orderDateStr = del.deliveryDate || del.date || '';
@@ -1253,6 +1316,8 @@
                     companyDistrict: comp.companyDistrict || '',
                     address: comp.address || '',
                     notes: comp.notes || '',
+                    customerPhoto: comp.customerPhoto || '',
+                    customerPhotoRemoved: comp.customerPhotoRemoved === true,
                     contacts: comp.contacts.map(c => ({
                         name: c.name,
                         role: c.role || '',
@@ -1303,9 +1368,13 @@
                 return `
                 <div onclick="selectCompany('${encodedKey}')" class="glass-card p-3 sm:p-3.5 rounded-2xl cursor-pointer transition-all ${isSelected ? 'ring-2 ring-teal-500 border-teal-500 bg-white/85 shadow-md shadow-teal-500/15' : 'hover:bg-white/65'}">
                     <div class="flex items-start gap-2.5">
-                        <div class="w-8 h-8 rounded-xl ${isSelected ? 'bg-teal-600 text-white' : 'bg-teal-500/15 text-teal-700'} flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 transition-colors">
-                            <i class="fa-solid fa-building"></i>
-                        </div>
+                        ${comp.customerPhoto ? `
+                            <img src="${comp.customerPhoto}" alt="รูป ${escapeHtml(comp.companyName)}" class="company-directory-sidebar-photo shrink-0 mt-0.5" loading="lazy" title="คลิกเพื่อขยายภาพ" onclick="event.stopPropagation();openCompanyDirectoryPhotoViewer(this.src, '${escapeHtml(comp.companyName).replace(/'/g, '&#39;')}')">
+                        ` : `
+                            <div class="w-8 h-8 rounded-xl ${isSelected ? 'bg-teal-600 text-white' : 'bg-teal-500/15 text-teal-700'} flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 transition-colors">
+                                <i class="fa-solid fa-building"></i>
+                            </div>
+                        `}
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
                                 ${isVirtual ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800">จากบิล</span>' : ''}
@@ -1357,9 +1426,13 @@
                         <!-- Header การ์ด -->
                         <div class="p-4 sm:px-6 sm:pt-6 sm:pb-4 border-b border-white/60 space-y-2.5">
                             <div class="flex items-start gap-3.5 min-w-0">
-                                <div class="w-11 h-11 rounded-2xl bg-teal-500/15 text-teal-700 border border-white/80 flex items-center justify-center font-bold text-base shrink-0 mt-0.5">
-                                    <i class="fa-solid fa-building"></i>
-                                </div>
+                                ${comp.customerPhoto ? `
+                                    <img src="${comp.customerPhoto}" alt="รูป ${escapeHtml(comp.companyName)}" class="company-directory-photo shrink-0 mt-0.5" loading="lazy" title="คลิกเพื่อขยายภาพ" onclick="event.stopPropagation();openCompanyDirectoryPhotoViewer(this.src, '${escapeHtml(comp.companyName).replace(/'/g, '&#39;')}')">
+                                ` : `
+                                    <div class="w-11 h-11 rounded-2xl bg-teal-500/15 text-teal-700 border border-white/80 flex items-center justify-center font-bold text-base shrink-0 mt-0.5">
+                                        <i class="fa-solid fa-building"></i>
+                                    </div>
+                                `}
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-1.5 flex-wrap mb-1">
                                         <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">บริษัท</span>
@@ -1388,6 +1461,15 @@
 
                             <!-- แถวปุ่มควบคุมการ์ด (แก้ไข / ลบ / ย่อ-ขยาย) -->
                             <div class="flex items-center justify-end gap-2 pt-1">
+                                <input id="company-photo-input-${encodeURIComponent(comp.companyName).replace(/%/g, '_')}" type="file" accept="image/*" class="hidden" onchange="handleCompanyPhotoSelection(event, '${encodedKey}')">
+                                <button type="button" onclick="document.getElementById('company-photo-input-${encodeURIComponent(comp.companyName).replace(/%/g, '_')}').click()" class="px-2.5 h-9 inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-teal-700 hover:text-teal-900 bg-white/70 hover:bg-white border border-white/90 rounded-xl transition-all shadow-2xs" title="${comp.customerPhoto ? 'เปลี่ยนรูปลูกค้า / บริษัท' : 'เพิ่มรูปลูกค้า / บริษัท'}">
+                                    <i class="fa-solid fa-camera"></i><span class="hidden sm:inline">${comp.customerPhoto ? 'เปลี่ยนรูป' : 'เพิ่มรูป'}</span>
+                                </button>
+                                ${comp.customerPhoto ? `
+                                    <button type="button" onclick="deleteCompanyPhoto('${encodedKey}')" class="w-9 h-9 flex items-center justify-center text-rose-600 hover:text-rose-700 bg-white/70 hover:bg-white border border-white/90 rounded-xl transition-all shadow-2xs" title="ลบรูปภาพ">
+                                        <i class="fa-solid fa-image-portrait"></i><i class="fa-solid fa-xmark text-[9px] -ml-1"></i>
+                                    </button>
+                                ` : ''}
                                 ${isVirtual ? `
                                     <button onclick="saveVirtualCompanyToDirectory('${encodedKey}')" class="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-800 rounded-xl text-xs font-semibold transition-colors inline-flex items-center gap-1.5 border border-emerald-300/60 mr-auto" title="บันทึกรายชื่อนี้ลงระบบ">
                                         <i class="fa-solid fa-floppy-disk text-xs"></i> บันทึกลงระบบ
@@ -1772,6 +1854,183 @@
                 btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูล';
             }
         }
+
+
+        // =========================================================================
+        // Company photo: ใช้แนวทางจาก index เดิม (ย่อ JPEG และเก็บ customerPhoto ใน Firestore)
+        // รองรับรูปเดิมที่อยู่ใน deliveries และรูปใหม่ที่จัดเก็บระดับ companies
+        // =========================================================================
+        function openCompanyDirectoryPhotoViewer(src, caption = '') {
+            if (!src) return;
+            let viewer = document.getElementById('company-directory-photo-viewer');
+            if (!viewer) {
+                viewer = document.createElement('div');
+                viewer.id = 'company-directory-photo-viewer';
+                viewer.hidden = true;
+                viewer.setAttribute('role', 'dialog');
+                viewer.setAttribute('aria-modal', 'true');
+                viewer.setAttribute('aria-label', 'รูปภาพลูกค้า / บริษัทแบบขยาย');
+                viewer.innerHTML = `
+                    <div class="photo-viewer-panel">
+                        <img alt="รูปภาพลูกค้า / บริษัท">
+                        <button type="button" aria-label="ปิดรูปภาพ">×</button>
+                        <div class="photo-viewer-caption"></div>
+                    </div>`;
+                viewer.addEventListener('click', event => {
+                    if (event.target === viewer) closeCompanyDirectoryPhotoViewer();
+                });
+                viewer.querySelector('.photo-viewer-panel').addEventListener('click', event => event.stopPropagation());
+                viewer.querySelector('button').addEventListener('click', closeCompanyDirectoryPhotoViewer);
+                document.addEventListener('keydown', event => {
+                    if (event.key === 'Escape' && !viewer.hidden) closeCompanyDirectoryPhotoViewer();
+                });
+                document.body.appendChild(viewer);
+            }
+            viewer.querySelector('img').src = src;
+            viewer.querySelector('img').alt = caption || 'รูปภาพลูกค้า / บริษัท';
+            viewer.querySelector('.photo-viewer-caption').textContent = caption || '';
+            viewer.hidden = false;
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeCompanyDirectoryPhotoViewer() {
+            const viewer = document.getElementById('company-directory-photo-viewer');
+            if (!viewer) return;
+            viewer.hidden = true;
+            viewer.querySelector('img')?.removeAttribute('src');
+            document.body.style.overflow = '';
+        }
+
+        function companyPhotoToDataUrl(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            }).then(dataUrl => new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => {
+                    const maxSide = 700;
+                    const scale = Math.min(1, maxSide / Math.max(image.width, image.height));
+                    const canvas = document.createElement('canvas');
+                    canvas.width = Math.max(1, Math.round(image.width * scale));
+                    canvas.height = Math.max(1, Math.round(image.height * scale));
+                    const context = canvas.getContext('2d');
+                    if (!context) return reject(new Error('ไม่สามารถเตรียมรูปภาพได้'));
+                    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.72));
+                };
+                image.onerror = () => reject(new Error('ไม่สามารถอ่านไฟล์รูปภาพได้'));
+                image.src = dataUrl;
+            }));
+        }
+
+        async function ensureCompanyPhotoDocument(comp) {
+            if (comp.id) return comp.id;
+            const payload = {
+                companyName: comp.companyName,
+                companyDistrict: comp.companyDistrict || '',
+                address: comp.address || '',
+                notes: comp.notes || '',
+                contacts: (comp.contacts || []).map(c => ({
+                    name: c.name || '',
+                    role: c.role || '',
+                    phone: c.phone || '',
+                    email: c.email || '',
+                    lineId: c.lineId || ''
+                })),
+                ownerUid: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            const docRef = await db.collection('companies').add(payload);
+            comp.id = docRef.id;
+            rawCompanies.push({ id: docRef.id, ...payload });
+            return docRef.id;
+        }
+
+        window.handleCompanyPhotoSelection = async function(event, encodedCompanyName) {
+            const input = event?.target;
+            const file = input?.files?.[0];
+            if (!file) return;
+            const companyName = decodeURIComponent(encodedCompanyName || '');
+            const comp = directoryData.find(item => normalizeKey(item.companyName) === normalizeKey(companyName));
+            if (!comp) {
+                showToast('ไม่พบข้อมูลบริษัทที่ต้องการเพิ่มรูปภาพ', 'error');
+                if (input) input.value = '';
+                return;
+            }
+            if (!file.type || !file.type.startsWith('image/')) {
+                showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น', 'error');
+                input.value = '';
+                return;
+            }
+            if (file.size > 12 * 1024 * 1024) {
+                showToast('รูปภาพมีขนาดใหญ่เกิน 12 MB กรุณาเลือกภาพที่เล็กลง', 'error');
+                input.value = '';
+                return;
+            }
+            if (!db || !currentUser) {
+                showToast('กรุณาเข้าสู่ระบบก่อนเพิ่มรูปภาพ', 'error');
+                input.value = '';
+                return;
+            }
+
+            const button = input.parentElement?.querySelector('button[title*="รูปลูกค้า"]');
+            if (button) button.disabled = true;
+            try {
+                const photoData = await companyPhotoToDataUrl(file);
+                const docId = await ensureCompanyPhotoDocument(comp);
+                await db.collection('companies').doc(docId).set({
+                    customerPhoto: photoData,
+                    customerPhotoRemoved: false,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+
+                comp.customerPhoto = photoData;
+                comp.customerPhotoRemoved = false;
+                comp.hasCompanyPhotoRecord = true;
+                const raw = rawCompanies.find(item => item.id === docId);
+                if (raw) Object.assign(raw, { customerPhoto: photoData, customerPhotoRemoved: false });
+                else rawCompanies.push({ id: docId, companyName: comp.companyName, ownerUid: currentUser.uid, customerPhoto: photoData, customerPhotoRemoved: false });
+                rebuildDirectoryFromSources();
+                showToast('บันทึกรูปลูกค้า / บริษัทลง Firebase สำเร็จ', 'success');
+            } catch (err) {
+                console.error('Company photo upload error:', err);
+                showToast('บันทึกรูปภาพไม่สำเร็จ: ' + (err.message || 'กรุณาตรวจสอบสิทธิ์ Firebase'), 'error');
+            } finally {
+                if (input) input.value = '';
+                if (button) button.disabled = false;
+            }
+        };
+
+        window.deleteCompanyPhoto = async function(encodedCompanyName) {
+            const companyName = decodeURIComponent(encodedCompanyName || '');
+            const comp = directoryData.find(item => normalizeKey(item.companyName) === normalizeKey(companyName));
+            if (!comp || !db || !currentUser) {
+                showToast('ไม่พบข้อมูลบริษัทหรือกรุณาเข้าสู่ระบบใหม่', 'error');
+                return;
+            }
+            if (!confirm(`ต้องการลบรูปภาพของ "${comp.companyName}" ใช่หรือไม่?`)) return;
+            try {
+                const docId = await ensureCompanyPhotoDocument(comp);
+                await db.collection('companies').doc(docId).set({
+                    customerPhoto: '',
+                    customerPhotoRemoved: true,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                comp.customerPhoto = '';
+                comp.customerPhotoRemoved = true;
+                comp.hasCompanyPhotoRecord = true;
+                const raw = rawCompanies.find(item => item.id === docId);
+                if (raw) Object.assign(raw, { customerPhoto: '', customerPhotoRemoved: true });
+                rebuildDirectoryFromSources();
+                showToast('ลบรูปภาพออกจาก Firebase เรียบร้อยแล้ว', 'success');
+            } catch (err) {
+                console.error('Delete company photo error:', err);
+                showToast('ลบรูปภาพไม่สำเร็จ: ' + (err.message || 'กรุณาตรวจสอบสิทธิ์ Firebase'), 'error');
+            }
+        };
 
         function confirmDeleteCompany(encodedCompanyName) {
             const targetName = decodeURIComponent(encodedCompanyName);
