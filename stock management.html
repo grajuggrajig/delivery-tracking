@@ -510,7 +510,13 @@
 
         function normalizeText(str) {
             if (!str) return '';
-            return String(str).normalize('NFKC').replace(/["“”″]/g, 'นิ้ว').replace(/\s+/g, ' ').trim().toLowerCase();
+            return String(str)
+                .normalize('NFKC')
+                .replace(/["“”″]/g, 'นิ้ว')
+                .replace(/[(),._\-/]/g, ' ') // เพิ่มเครื่องหมาย \ หน้าเครื่องหมาย - เพื่อแก้ Error Range out of order
+                .replace(/\s+/g, ' ')
+                .trim()
+                .toLowerCase();
         }
 
         function formatCurrency(num) {
@@ -732,23 +738,43 @@
         };
 
         function applyFiltersAndRender() {
-            const keyword = normalizeText(document.getElementById('search-input').value);
+            const rawKeyword = document.getElementById('search-input').value;
+            // แยกคำค้นหาด้วยเว้นวรรค เพื่อให้ค้นหาแบบหลายคำได้ครอบคลุม
+            const keywords = normalizeText(rawKeyword).split(' ').filter(k => k.length > 0);
+            
             const profitFilter = document.getElementById('filter-profit').value;
             const stockFilter = document.getElementById('filter-stock-link').value;
             const sortBy = document.getElementById('sort-by').value;
 
             let results = state.enrichedItems.filter(item => {
+                // กรองตามบริษัท
                 if (state.selectedCompany !== 'ALL' && item._companyName !== state.selectedCompany) return false;
+                
+                // กรองตามกำไร
                 if (profitFilter === 'profit_positive' && item._profit <= 0) return false;
                 if (profitFilter === 'profit_high' && item._marginPct < 20) return false;
                 if (profitFilter === 'profit_zero_or_loss' && item._profit > 0) return false;
-                if (keyword) {
-                    const blob = normalizeText(`${item._plainName} ${item._companyName} ${item._price}`);
-                    if (!blob.includes(keyword)) return false;
+                
+                // ค้นหาแบบละเอียดครอบคลุมทุกฟิลด์ (Multi-keyword check)
+                if (keywords.length > 0) {
+                    const searchableBlob = normalizeText(`
+                        ${item._plainName || ''} 
+                        ${item._companyName || ''} 
+                        ${item._unit || ''} 
+                        ${item._cost || ''} 
+                        ${item._price || ''} 
+                        ${item.sku || ''} 
+                        ${item.code || ''}
+                    `);
+                    
+                    // ทุกคำใน keywords ต้องปรากฏอยู่ใน searchableBlob
+                    const matchAll = keywords.every(kw => searchableBlob.includes(kw));
+                    if (!matchAll) return false;
                 }
                 return true;
             });
 
+            // จัดเรียงข้อมูล
             results.sort((a, b) => {
                 if (sortBy === 'name_asc') return a._plainName.localeCompare(b._plainName, 'th');
                 if (sortBy === 'company_asc') return a._companyName.localeCompare(b._companyName, 'th');
