@@ -2,116 +2,246 @@
 <html lang="th">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Yellow Pages • สมุดหน้าเหลืองลูกค้า & บริษัท</title>
 
+<!-- Tailwind CSS & Font Awesome & Google Fonts (ให้เข้าธีมระบบหลัก) -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- Firebase SDKs (Compat v9.22.0 ตามต้นฉบับ) -->
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 
 <style>
 :root{
-  --navy:#172554;
-  --blue:#2563eb;
-  --indigo:#6d28d9;
-  --paper:#fff;
-  --bg:#f4f6fb;
-  --line:#e4e8f0;
-  --text:#172033;
-  --muted:#718096;
-  --green:#059669;
+  --teal:#0d9488;
+  --emerald:#059669;
+  --cyan:#0891b2;
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(255, 255, 255, 0.75);
 }
 *{box-sizing:border-box}
-html,body{margin:0;min-height:100%;font-family:"Segoe UI","Noto Sans Thai",Tahoma,sans-serif;color:var(--text);background:
-  radial-gradient(circle at 10% 0%,rgba(37,99,235,.10),transparent 28%),
-  radial-gradient(circle at 95% 5%,rgba(109,40,217,.10),transparent 28%),var(--bg)}
+html,body{
+  margin:0;
+  min-height:100%;
+  font-family:'Prompt', 'Inter', "Segoe UI", Tahoma, sans-serif;
+  color:var(--text);
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0fdfa 45%, #ecfdf5 100%);
+  overflow-x:hidden;
+}
 body{min-height:100vh}
-button,input{font:inherit}
+button,input,select{font:inherit}
 button{cursor:pointer}
 
-#app{min-height:100vh}
+/* Custom Scrollbar ธีม Teal */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(20,184,166,.35);border-radius:9999px}
+::-webkit-scrollbar-thumb:hover{background:rgba(13,148,136,.6)}
+
+/* การ์ดกระจกโปร่งแสง Glassmorphism */
+.glass-panel{
+  background:rgba(255, 255, 255, 0.58);
+  backdrop-filter:blur(18px) saturate(160%);
+  -webkit-backdrop-filter:blur(18px) saturate(160%);
+  border:1px solid rgba(255, 255, 255, 0.85);
+  box-shadow:0 10px 35px -8px rgba(13, 148, 136, 0.12), inset 0 1px 0 0 rgba(255, 255, 255, 0.75);
+}
+.glass-stat{
+  background:rgba(255, 255, 255, 0.65);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  border:1px solid rgba(255, 255, 255, 0.9);
+  box-shadow:0 6px 24px -6px rgba(13, 148, 136, 0.10);
+  transition:all .2s ease;
+}
+.glass-stat:hover{
+  background:rgba(255, 255, 255, 0.82);
+  border-color:rgba(45, 212, 191, 0.7);
+  transform:translateY(-1px);
+}
+
+#app{min-height:100vh;position:relative}
+
+/* Top Navigation Header (โทนเดียวกับ index_2.html) */
 .topbar{
-  position:sticky;top:0;z-index:20;
-  min-height:72px;padding:12px 20px;
+  position:sticky;top:0;z-index:30;
+  padding:12px 20px;
   display:flex;align-items:center;gap:14px;
-  color:#fff;background:linear-gradient(110deg,#172554,#2563eb 52%,#6d28d9);
-  box-shadow:0 8px 28px rgba(23,37,84,.20)
+  background:rgba(255, 255, 255, 0.65);
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:0 4px 20px -4px rgba(13, 148, 136, 0.08);
 }
 .brand-icon{
-  width:44px;height:44px;border-radius:13px;display:grid;place-items:center;
-  background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);font-size:22px
+  width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+  background:linear-gradient(135deg, #0d9488, #059669, #0891b2);
+  color:#fff;font-size:19px;
+  box-shadow:0 6px 16px rgba(13, 148, 136, 0.28);
+  flex-shrink:0;
 }
 .brand{min-width:0;flex:1}
-.brand strong{display:block;font-size:17px}
-.brand span{display:block;font-size:11px;color:#dbeafe;margin-top:2px}
+.brand strong{display:block;font-size:17px;font-weight:700;color:#0f172a;letter-spacing:-0.01em}
+.brand span{display:block;font-size:11px;color:#64748b;margin-top:1px}
+
 .status{
-  display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:999px;
-  border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.10);font-size:11px;white-space:nowrap
+  display:inline-flex;align-items:center;gap:7px;padding:5px 12px;border-radius:999px;
+  border:1px solid rgba(167, 243, 208, 0.9);background:rgba(236, 253, 245, 0.85);
+  color:#047857;font-size:11px;font-weight:600;white-space:nowrap
 }
-.dot{width:8px;height:8px;border-radius:50%;background:#fbbf24}
-.dot.online{background:#34d399}.dot.error{background:#fb7185}
+.dot{width:7px;height:7px;border-radius:50%;background:#f59e0b}
+.dot.online{background:#10b981}.dot.error{background:#f43f5e}
+
 .logout{
-  border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.10);
-  color:#fff;padding:8px 12px;border-radius:10px;font-size:12px;font-weight:700
+  border:1px solid rgba(20, 184, 166, 0.35);
+  background:rgba(255, 255, 255, 0.85);
+  color:#0f766e;
+  padding:8px 14px;border-radius:13px;font-size:12px;font-weight:600;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:all .2s ease;
+  box-shadow:0 2px 8px rgba(13, 148, 136, 0.06);
+}
+.logout:hover{
+  background:#0d9488;color:#fff;border-color:#0d9488;
 }
 
-.page{width:min(1400px,calc(100% - 28px));margin:18px auto 30px}
+.page{width:min(1360px,calc(100% - 28px));margin:20px auto 36px}
 .hero{
-  background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:22px;
-  padding:20px;box-shadow:0 15px 45px rgba(31,42,63,.08)
+  border-radius:26px;
+  padding:22px;
 }
-.hero-top{display:flex;gap:14px;align-items:flex-start;justify-content:space-between}
-.kicker{font-size:10px;letter-spacing:.18em;color:#6d28d9;font-weight:900}
-h1{font-size:23px;margin:5px 0 4px}
+.hero-top{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.kicker{font-size:10px;letter-spacing:.16em;color:#0d9488;font-weight:700;text-transform:uppercase}
+h1{font-size:21px;font-weight:700;margin:4px 0 4px;color:#0f172a;display:flex;align-items:center;gap:8px}
 .sub{font-size:12px;color:var(--muted);margin:0}
+
 .actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .btn{
-  border:1px solid #dbe2ee;background:#fff;color:#334155;border-radius:11px;
-  padding:10px 13px;font-size:12px;font-weight:800
+  border:1px solid rgba(255,255,255,0.9);
+  background:rgba(255,255,255,0.8);
+  color:#334155;border-radius:13px;
+  padding:9px 14px;font-size:12px;font-weight:600;
+  display:inline-flex;align-items:center;gap:6px;
+  transition:all .2s ease;user-select:none;
+  box-shadow:0 2px 8px rgba(15,23,42,0.04);
 }
-.btn.primary{background:linear-gradient(135deg,#2563eb,#6d28d9);color:#fff;border-color:transparent}
-.btn.green{background:#ecfdf5;color:#047857;border-color:#a7f3d0}
-.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn:hover{background:#fff;border-color:#5eead4;color:#0f766e;transform:translateY(-1px)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{
+  background:linear-gradient(135deg, #0d9488, #059669, #0891b2);
+  color:#fff;border-color:transparent;
+  box-shadow:0 6px 16px -3px rgba(13, 148, 136, 0.35);
+}
+.btn.primary:hover{
+  background:linear-gradient(135deg, #0f766e, #047857, #0e7490);
+  color:#fff;
+}
+.btn.danger{
+  background:#fff1f2;color:#e11d48;border-color:#fecdd3;
+}
+.btn.danger:hover{
+  background:#e11d48;color:#fff;border-color:#e11d48;
+}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:17px}
-.stat{padding:13px 14px;border:1px solid var(--line);border-radius:15px;background:#fafbff}
-.stat b{font-size:20px}.stat span{font-size:11px;color:var(--muted);margin-left:6px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.stat{
+  padding:15px 18px;border-radius:20px;
+  display:flex;align-items:center;gap:14px;
+}
+.stat-icon{
+  width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+  font-size:18px;flex-shrink:0;border:1px solid #fff;
+}
+.stat b{font-size:22px;font-weight:700;color:#0f172a;display:block;line-height:1.1}
+.stat span{font-size:11px;color:var(--muted);font-weight:500}
 
 .toolbar{
-  display:grid;grid-template-columns:minmax(240px,1fr) auto auto;gap:9px;
-  margin-top:16px
+  display:grid;grid-template-columns:minmax(240px,1fr) auto auto;gap:10px;
+  margin-top:18px
 }
+.search-wrap{position:relative;min-width:0}
+.search-wrap i{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#94a3b8;font-size:12px}
 .search{
-  min-width:0;border:1px solid #dbe2ee;background:#f8fafc;border-radius:12px;
-  padding:11px 13px;outline:none;font-size:13px
+  width:100%;border:1px solid rgba(255,255,255,0.9);
+  background:rgba(255,255,255,0.78);border-radius:13px;
+  padding:10px 14px 10px 35px;outline:none;font-size:13px;
+  transition:all .2s ease;
 }
-.search:focus{border-color:#7c6ac2;background:#fff;box-shadow:0 0 0 3px rgba(124,58,237,.08)}
-.select{border:1px solid #dbe2ee;background:#fff;border-radius:12px;padding:10px 12px;font-size:12px}
+.search:focus{border-color:#14b8a6;background:#fff;box-shadow:0 0 0 3px rgba(20,184,166,.15)}
+.select{
+  border:1px solid rgba(255,255,255,0.9);
+  background:rgba(255,255,255,0.78);border-radius:13px;
+  padding:10px 14px;font-size:12px;color:#334155;outline:none;
+}
+.select:focus{border-color:#14b8a6;background:#fff}
 
 .table-wrap{
-  margin-top:15px;border:1px solid var(--line);border-radius:17px;overflow:auto;
-  background:#fff;box-shadow:0 10px 30px rgba(31,42,63,.05)
+  margin-top:16px;border:1px solid rgba(255,255,255,0.85);
+  border-radius:20px;overflow:auto;
+  background:rgba(255,255,255,0.82);
+  backdrop-filter:blur(12px);
+  box-shadow:0 10px 30px -8px rgba(13,148,136,.08)
 }
-table{width:100%;border-collapse:collapse;min-width:900px}
+table{width:100%;border-collapse:collapse;min-width:940px}
 thead th{
-  position:sticky;top:0;z-index:2;background:#f7f8fc;color:#53617a;
-  text-align:left;font-size:11px;padding:12px;border-bottom:1px solid var(--line);white-space:nowrap
+  position:sticky;top:0;z-index:2;
+  background:rgba(240, 253, 250, 0.95);
+  color:#0f766e;
+  text-align:left;font-size:11px;font-weight:700;
+  padding:13px 12px;border-bottom:1px solid #ccfbf1;white-space:nowrap
 }
-tbody td{padding:12px;border-bottom:1px solid #eef1f5;font-size:12px;vertical-align:top}
-tbody tr:hover{background:#fafbff}
-.company{font-weight:900;color:#1d4ed8}
-.contact{font-weight:700}
+tbody td{padding:12px;border-bottom:1px solid rgba(226,232,240,0.65);font-size:12px;vertical-align:middle}
+tbody tr{transition:background .15s ease}
+tbody tr:hover{background:rgba(240, 253, 250, 0.7)}
+tbody tr.selected-row{background:rgba(204, 251, 241, 0.45)}
+
+.company{font-weight:700;color:#0f766e;display:flex;align-items:center;gap:7px}
+.contact{font-weight:600;color:#1e293b}
 .muted{color:#94a3b8}
-.line-pill{
-  display:inline-block;padding:4px 7px;margin:2px 3px 2px 0;border-radius:8px;
-  background:#ecfdf5;border:1px solid #bbf7d0;color:#047857;font-size:10px;white-space:nowrap
-}
+
 .email-pill{
-  display:inline-block;padding:4px 7px;border-radius:8px;background:#eff6ff;
-  border:1px solid #bfdbfe;color:#1d4ed8;font-size:10px
+  display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:10px;
+  background:#f0fdfa;border:1px solid #99f6e4;color:#0f766e;font-size:11px;font-weight:500
 }
-.empty{text-align:center;padding:45px 20px;color:#94a3b8;font-size:13px}
-.footer{text-align:center;color:#94a3b8;font-size:11px;padding:15px}
+.line-badge {
+  display: inline-flex;align-items: center;gap: 5px;
+  margin: 2px 4px 2px 0;padding: 4px 10px;border-radius: 999px;
+  background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+  border: 1px solid #6ee7b7;color: #047857;
+  font-size: 11px;font-weight: 600;text-decoration: none;white-space: nowrap;
+  transition: all 0.2s ease;
+}
+.line-badge:hover {
+  background: #06c755;border-color: #06c755;color: #ffffff;
+  transform: translateY(-1px);box-shadow: 0 4px 10px rgba(6, 199, 85, 0.25);
+}
+
+/* ปุ่มลบรายแถว */
+.btn-row-del{
+  width:32px;height:32px;border-radius:10px;
+  border:1px solid #fecdd3;background:#fff1f2;color:#e11d48;
+  display:inline-flex;align-items:center;justify-content:center;
+  transition:all .15s ease;
+}
+.btn-row-del:hover{
+  background:#e11d48;color:#fff;border-color:#e11d48;transform:scale(1.05);
+}
+
+.row-checkbox{
+  width:16px;height:16px;accent-color:#0d9488;cursor:pointer;border-radius:4px;
+}
+
+.empty{text-align:center;padding:45px 20px;color:#64748b;font-size:13px}
+.footer{text-align:center;color:#64748b;font-size:11px;padding-top:14px;font-weight:500}
+
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.spinning{display:inline-block;animation:spin .8s linear infinite}
 
 /* รูปแบบสำหรับพิมพ์: พิมพ์รายการที่แสดงอยู่ตามคำค้นหา/ตัวกรองปัจจุบัน */
 @page{size:A4 landscape;margin:12mm}
@@ -119,7 +249,7 @@ tbody tr:hover{background:#fafbff}
   html,body{min-height:0!important;background:#fff!important;color:#111827!important}
   body{-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #app{display:block!important;min-height:0!important}
-  .topbar,.actions,.toolbar,.footer{display:none!important}
+  .topbar,.actions,.toolbar,.footer,.no-print{display:none!important}
   .page{width:100%!important;margin:0!important}
   .hero{padding:0!important;border:0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important}
   .hero-top{display:block!important}
@@ -127,9 +257,10 @@ tbody tr:hover{background:#fafbff}
   h1{font-size:17pt!important;margin:4px 0 6px!important}
   .sub{font-size:9pt!important;color:#444!important}
   .stats{grid-template-columns:repeat(3,1fr)!important;gap:6px!important;margin:10px 0!important}
-  .stat{padding:7px 9px!important;border:1px solid #d1d5db!important;border-radius:5px!important;background:#fff!important}
-  .stat b{font-size:12pt!important}
-  .stat span{font-size:8pt!important;color:#374151!important}
+  .stat{padding:7px 9px!important;border:1px solid #d1d5db!important;border-radius:5px!important;background:#fff!important;box-shadow:none!important}
+  .stat-icon{display:none!important}
+  .stat b{font-size:12pt!important;display:inline!important}
+  .stat span{font-size:8pt!important;color:#374151!important;margin-left:5px!important}
   .table-wrap{margin-top:8px!important;border:1px solid #9ca3af!important;border-radius:0!important;overflow:visible!important;box-shadow:none!important}
   table{width:100%!important;min-width:0!important;border-collapse:collapse!important;table-layout:fixed!important}
   thead{display:table-header-group}
@@ -144,142 +275,142 @@ tbody tr:hover{background:#fafbff}
 
 @media(max-width:760px){
   .topbar{padding:10px 12px}
-  .brand strong{font-size:14px}.brand span{font-size:9px}
-  .status{display:none}.logout{font-size:11px;padding:7px 9px}
-  .page{width:calc(100% - 16px);margin:9px auto 20px}
-  .hero{padding:14px;border-radius:18px}
+  .brand strong{font-size:14px}.brand span{font-size:10px}
+  .status{display:none}.logout{font-size:11px;padding:7px 10px}
+  .page{width:calc(100% - 16px);margin:12px auto 24px}
+  .hero{padding:15px;border-radius:20px}
   .hero-top{display:block}
-  h1{font-size:19px}
+  h1{font-size:18px}
   .actions{margin-top:12px;justify-content:flex-start}
-  .btn{padding:9px 10px;font-size:11px}
-  .stats{gap:6px}.stat{padding:10px 8px}.stat b{font-size:16px}.stat span{font-size:9px;margin-left:2px}
-  .toolbar{grid-template-columns:1fr 1fr;margin-top:11px}
-  .toolbar .search{grid-column:1/-1}
+  .btn{padding:8px 11px;font-size:11px}
+  .stats{gap:8px}.stat{padding:11px 10px;gap:8px}.stat-icon{width:34px;height:34px;font-size:14px}.stat b{font-size:16px}
+  .toolbar{grid-template-columns:1fr 1fr;margin-top:12px}
+  .toolbar .search-wrap{grid-column:1/-1}
   .select{min-width:0}
 }
-
-/* ตกแต่งปุ่ม/แท็ก LINE ID สไตล์ทันสมัย */
-.line-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  margin: 2px 4px 2px 0;
-  padding: 4px 10px;
-  border-radius: 20px;
-  background: linear-gradient(135deg, #ecfdf5 0%, #e6f4ea 100%);
-  border: 1px solid #a7f3d0;
-  color: #047857;
-  font-size: 11px;
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.line-badge:hover {
-  background: #06c755; /* สีเขียวเอกลักษณ์ของ LINE */
-  border-color: #06c755;
-  color: #ffffff;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 10px rgba(6, 199, 85, 0.25);
-}
-
-.line-icon {
-  font-size: 11px;
-  line-height: 1;
-}
-
-.line-text {
-  letter-spacing: 0.01em;
-}
-
-/* เอฟเฟกต์ความนุ่มนวลและสถานะกำลังโหลดของปุ่ม */
-.btn {
-  border: 1px solid #dbe2ee; background: #fff; color: #334155; border-radius: 11px;
-  padding: 10px 13px; font-size: 12px; font-weight: 800;
-  transition: all 0.2s ease;
-  user-select: none;
-}
-.btn:hover {
-  background: #f1f5f9;
-  border-color: #cbd5e1;
-  transform: translateY(-1px);
-}
-.btn:active {
-  transform: translateY(1px); /* ให้ความรู้สึกยุบตัวลงไปเมื่อคลิก */
-}
-/* คลาสสำหรับหมุนไอคอนตอนกำลังโหลด */
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.spinning {
-  display: inline-block;
-  animation: spin 0.8s linear infinite;
-}
-
 </style>
 </head>
 <body>
 
+<!-- Ambient Background Shapes ให้เข้ากับระบบหลัก -->
+<div class="fixed inset-0 -z-10 overflow-hidden pointer-events-none no-print">
+  <div class="absolute -top-24 -left-24 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-teal-300/35 blur-3xl"></div>
+  <div class="absolute top-1/3 -right-20 w-72 h-72 sm:w-96 sm:h-96 rounded-full bg-cyan-300/35 blur-3xl"></div>
+  <div class="absolute -bottom-24 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-emerald-300/30 blur-3xl"></div>
+</div>
+
 <div id="app" style="display:none">
   <header class="topbar">
-    <div class="brand-icon">📒</div>
+    <div class="brand-icon"><i class="fa-solid fa-address-book"></i></div>
     <div class="brand">
-      <strong>Yellow Pages</strong>
-      <span>สมุดหน้าเหลือง • ลูกค้า & บริษัท</span>
+      <strong>Yellow Pages • สมุดหน้าเหลือง</strong>
+      <span>ฐานข้อมูลรายชื่อลูกค้า & บริษัท (ซิงค์กับระบบจัดส่ง)</span>
+    </div>
+    <div id="userBadge" class="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/75 border border-white text-xs text-slate-700 font-semibold">
+      <i class="fa-solid fa-user text-teal-600"></i>
+      <span id="userNameText">-</span>
+      <span id="userRoleBadge" class="px-1.5 py-0.5 rounded text-[9px] font-bold bg-teal-600 text-white uppercase">USER</span>
     </div>
     <div class="status"><span class="dot" id="statusDot"></span><span id="statusText">กำลังเชื่อมต่อ...</span></div>
-    <button class="logout" id="logoutBtn">↩ กลับหน้าหลัก</button>
+    <button class="logout" id="logoutBtn"><i class="fa-solid fa-arrow-left"></i> กลับหน้าหลัก</button>
   </header>
 
   <main class="page">
-    <section class="hero">
+    <section class="hero glass-panel">
       <div class="hero-top">
         <div>
-          <div class="kicker">CUSTOMER DIRECTORY</div>
-          <h1>📒 สมุดหน้าเหลืองลูกค้า & บริษัท</h1>
-          <p class="sub">ข้อมูลถูกอ่านจาก Firestore collection <b>deliveries</b> ของระบบ Delivery Tracking & CRM</p>
+          <div class="kicker">CUSTOMER & COMPANY DIRECTORY</div>
+          <h1><i class="fa-solid fa-building-user text-teal-600"></i> สมุดหน้าเหลืองลูกค้า & บริษัท</h1>
+          <p class="sub">ข้อมูลเชื่อมต่อตรงกับระบบ Delivery Tracking & CRM • สามารถเลือกลบรายชื่อบริษัทที่ไม่ได้ใช้งานได้ทันที</p>
         </div>
         <div class="actions">
-          <button class="btn" id="refreshBtn">↻ รีเฟรช</button>
-          <button class="btn primary" id="printPageBtn">🖨️ พิมพ์หน้านี้</button>
+          <button class="btn danger hidden" id="bulkDeleteBtn">
+            <i class="fa-solid fa-trash-can"></i> ลบที่เลือก (<span id="selectedCount">0</span>)
+          </button>
+          <button class="btn" id="refreshBtn"><i class="fa-solid fa-rotate-right" id="refreshIcon"></i> รีเฟรช</button>
+          <button class="btn primary" id="printPageBtn"><i class="fa-solid fa-print"></i> พิมพ์หน้านี้</button>
         </div>
       </div>
 
       <div class="stats">
-        <div class="stat">🏢 <b id="companyCount">0</b><span>บริษัท</span></div>
-        <div class="stat">👤 <b id="contactCount">0</b><span>ผู้ติดต่อ</span></div>
-        <div class="stat">📞 <b id="phoneCount">0</b><span>มีเบอร์โทร</span></div>
+        <div class="stat glass-stat">
+          <div class="stat-icon bg-teal-500/15 text-teal-700"><i class="fa-solid fa-building"></i></div>
+          <div><b id="companyCount">0</b><span>บริษัททั้งหมด</span></div>
+        </div>
+        <div class="stat glass-stat">
+          <div class="stat-icon bg-emerald-500/15 text-emerald-700"><i class="fa-solid fa-users"></i></div>
+          <div><b id="contactCount">0</b><span>ผู้ติดต่อทั้งหมด</span></div>
+        </div>
+        <div class="stat glass-stat">
+          <div class="stat-icon bg-cyan-500/15 text-cyan-700"><i class="fa-solid fa-phone"></i></div>
+          <div><b id="phoneCount">0</b><span>มีเบอร์โทรติดต่อ</span></div>
+        </div>
       </div>
 
       <div class="toolbar">
-        <input class="search" id="search" placeholder="🔎 ค้นหาบริษัท, ผู้ติดต่อ, เบอร์โทร, LINE หรืออีเมล...">
+        <div class="search-wrap">
+          <i class="fa-solid fa-magnifying-glass"></i>
+          <input class="search" id="search" placeholder="ค้นหาชื่อบริษัท, ผู้ติดต่อ, เบอร์โทร, LINE หรืออีเมล...">
+        </div>
         <select class="select" id="companyFilter"><option value="">ทุกบริษัท</option></select>
-        <select class="select" id="sort"><option value="company">เรียงตามบริษัท</option><option value="contact">เรียงตามผู้ติดต่อ</option><option value="phone">เรียงตามเบอร์โทร</option></select>
+        <select class="select" id="sort">
+          <option value="company">เรียงตามบริษัท</option>
+          <option value="contact">เรียงตามผู้ติดต่อ</option>
+          <option value="phone">เรียงตามเบอร์โทร</option>
+        </select>
       </div>
 
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th style="width:23%">ชื่อบริษัท</th>
+              <th class="no-print" style="width:40px;text-align:center">
+                <input type="checkbox" id="selectAllCheckbox" class="row-checkbox" title="เลือกทั้งหมดในหน้านี้">
+              </th>
+              <th style="width:24%">ชื่อบริษัท</th>
               <th style="width:18%">ชื่อผู้ติดต่อ</th>
-              <th style="width:14%">เบอร์โทร</th>
-              <th style="width:18%">LINE</th>
-              <th style="width:18%">อีเมล</th>
-              <th style="width:9%">แหล่งข้อมูล</th>
+              <th style="width:13%">เบอร์โทร</th>
+              <th style="width:17%">LINE</th>
+              <th style="width:16%">อีเมล</th>
+              <th style="width:8%">สถานะ</th>
+              <th class="no-print" style="width:65px;text-align:center">จัดการ</th>
             </tr>
           </thead>
           <tbody id="rows">
-            <tr><td colspan="6" class="empty">กำลังโหลดข้อมูล...</td></tr>
+            <tr><td colspan="8" class="empty">กำลังโหลดข้อมูล...</td></tr>
           </tbody>
         </table>
       </div>
       <div class="footer" id="resultInfo">กำลังโหลด...</div>
     </section>
   </main>
+</div>
+
+<!-- Modal ยืนยันการลบ -->
+<div id="deleteModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+  <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white max-w-md w-full p-6 text-center">
+    <div class="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mx-auto mb-4 border border-rose-100 text-2xl">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+    </div>
+    <h3 id="deleteModalTitle" class="text-base font-bold text-slate-900 mb-1.5">ยืนยันการลบข้อมูล?</h3>
+    <p id="deleteModalDesc" class="text-xs text-slate-500 leading-relaxed mb-5">ระบบจะลบข้อมูลรายชื่อบริษัท/ผู้ติดต่อที่ไม่ได้ใช้งานออกจากฐานข้อมูลถาวร</p>
+    <div class="flex items-center justify-center gap-2.5">
+      <button type="button" id="cancelDeleteBtn" class="flex-1 px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-2xl transition-colors">
+        ยกเลิก
+      </button>
+      <button type="button" id="confirmDeleteBtn" class="flex-1 px-4 py-2.5 text-xs font-semibold text-white bg-rose-600 hover:bg-rose-700 rounded-2xl transition-colors shadow-sm flex items-center justify-center gap-1.5">
+        <i class="fa-solid fa-trash-can"></i> ยืนยันการลบ
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast แจ้งเตือน -->
+<div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-24 opacity-0 transition-all duration-300 pointer-events-none no-print">
+  <div class="bg-slate-900/95 text-white px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2.5 text-xs border border-slate-700">
+    <i id="toastIcon" class="fa-solid fa-circle-check text-emerald-400"></i>
+    <span id="toastText">ดำเนินการสำเร็จ</span>
+  </div>
 </div>
 
 <script>
@@ -304,6 +435,8 @@ let profile = null;
 let unsubscribe = null;
 let rawRows = [];
 let visibleRows = [];
+let selectedKeys = new Set();
+let pendingDeleteRows = [];
 
 function usernameToAuthEmail(username){
   const value = String(username||'').trim().toLowerCase();
@@ -318,7 +451,6 @@ function lineIds(data){
   return [...new Set(src.map(x=>String(x||'').trim()).filter(Boolean))];
 }
 function emailValue(data){
-  // รองรับข้อมูลเก่าหรือข้อมูลภายนอกที่อาจมี email อยู่แล้ว
   return String(data.email ?? data.emailAddress ?? data.customerEmail ?? data.contactEmail ?? '').trim();
 }
 function normalize(v){return String(v||'').trim().toLowerCase();}
@@ -326,6 +458,15 @@ function setStatus(text, state=''){
   document.getElementById('statusText').textContent=text;
   document.getElementById('statusDot').className='dot '+state;
 }
+function showToast(msg, isError=false){
+  const toast = document.getElementById('toast');
+  const icon = document.getElementById('toastIcon');
+  document.getElementById('toastText').textContent = msg;
+  icon.className = isError ? 'fa-solid fa-circle-exclamation text-rose-400' : 'fa-solid fa-circle-check text-emerald-400';
+  toast.classList.remove('translate-y-24','opacity-0');
+  setTimeout(()=>toast.classList.add('translate-y-24','opacity-0'), 3200);
+}
+
 function uniqueKey(d){
   return [
     normalize(d.companyName || 'ไม่ระบุบริษัท'),
@@ -335,28 +476,59 @@ function uniqueKey(d){
     normalize(emailValue(d))
   ].join('¦');
 }
+
 function buildRows(docs){
   const map = new Map();
   docs.forEach(d=>{
-    const data=d.data ? d.data() : d;
-    const row={
-      companyName:String(data.companyName||'ไม่ระบุบริษัท').trim() || 'ไม่ระบุบริษัท',
-      customerName:String(data.customerName||'ไม่ระบุชื่อผู้ติดต่อ').trim() || 'ไม่ระบุชื่อผู้ติดต่อ',
-      phone:String(data.phone||'').trim(),
-      lineIds:lineIds(data),
-      email:emailValue(data)
+    const data = d.data ? d.data() : d;
+    if (data.companyDetached === true) return; // ข้ามรายการที่ถูกลบ/ปลดเชื่อมโยงบริษัทแล้ว
+
+    const key = uniqueKey(data);
+    const row = {
+      key: key,
+      docIds: d.id ? [d.id] : [],
+      companyName: String(data.companyName||'ไม่ระบุบริษัท').trim() || 'ไม่ระบุบริษัท',
+      customerName: String(data.customerName||'ไม่ระบุชื่อผู้ติดต่อ').trim() || 'ไม่ระบุชื่อผู้ติดต่อ',
+      phone: String(data.phone||'').trim(),
+      lineIds: lineIds(data),
+      email: emailValue(data)
     };
-    const key=uniqueKey(data);
-    if(!map.has(key)) map.set(key,row);
-    else{
-      const old=map.get(key);
-      old.lineIds=[...new Set([...old.lineIds,...row.lineIds])];
-      if(!old.phone) old.phone=row.phone;
-      if(!old.email) old.email=row.email;
+    if(!map.has(key)){
+      map.set(key, row);
+    } else {
+      const old = map.get(key);
+      if(d.id && !old.docIds.includes(d.id)) old.docIds.push(d.id);
+      old.lineIds = [...new Set([...old.lineIds, ...row.lineIds])];
+      if(!old.phone) old.phone = row.phone;
+      if(!old.email) old.email = row.email;
     }
   });
   return [...map.values()];
 }
+
+function updateBulkDeleteUI(){
+  const btn = document.getElementById('bulkDeleteBtn');
+  const countSpan = document.getElementById('selectedCount');
+  const selectAllCb = document.getElementById('selectAllCheckbox');
+
+  // ล้าง key ที่ไม่อยู่ใน visibleRows
+  const visibleKeySet = new Set(visibleRows.map(r => r.key));
+  for (const k of selectedKeys) {
+    if (!visibleKeySet.has(k)) selectedKeys.delete(k);
+  }
+
+  countSpan.textContent = selectedKeys.size;
+  if (selectedKeys.size > 0) {
+    btn.classList.remove('hidden');
+  } else {
+    btn.classList.add('hidden');
+  }
+
+  if (selectAllCb) {
+    selectAllCb.checked = visibleRows.length > 0 && selectedKeys.size === visibleRows.length;
+  }
+}
+
 function applyView(){
   const q=normalize(document.getElementById('search').value);
   const company=normalize(document.getElementById('companyFilter').value);
@@ -375,38 +547,67 @@ function applyView(){
 
   render();
 }
+
 function render(){
   const body=document.getElementById('rows');
   if(!visibleRows.length){
-    body.innerHTML='<tr><td colspan="6" class="empty">ไม่พบข้อมูลที่ตรงกับคำค้นหา</td></tr>';
+    body.innerHTML='<tr><td colspan="8" class="empty">ไม่พบข้อมูลที่ตรงกับคำค้นหา</td></tr>';
   }else{
-    body.innerHTML=visibleRows.map(r=>`
-      <tr>
-        <td><div class="company">🏢 ${esc(r.companyName)}</div></td>
-        <td><div class="contact">👤 ${esc(r.customerName)}</div></td>
-        <td>${r.phone ? `<a href="tel:${esc(r.phone)}">${esc(r.phone)}</a>` : '<span class="muted">—</span>'}</td>
+    body.innerHTML=visibleRows.map((r, idx)=>{
+      const isChecked = selectedKeys.has(r.key);
+      return `
+      <tr class="${isChecked ? 'selected-row' : ''}">
+        <td class="no-print" style="text-align:center">
+          <input type="checkbox" class="row-checkbox" data-idx="${idx}" ${isChecked ? 'checked' : ''}>
+        </td>
         <td>
-  ${r.lineIds.length ? r.lineIds.map(x => {
-    const cleanId = String(x || '').trim();
-    const lineUrl = `https://line.me/R/ti/p/~${encodeURIComponent(cleanId)}`;
-    return `
-      <a href="${lineUrl}" target="_blank" rel="noopener noreferrer" class="line-badge" title="คลิกเพื่อทัก LINE: ${esc(cleanId)}">
-        <span class="line-icon">💬</span>
-        <span class="line-text">${esc(cleanId)}</span>
-      </a>
-    `;
-  }).join('') : '<span class="muted">—</span>'}
-</td>
-        <td>${r.email ? `<span class="email-pill">✉ ${esc(r.email)}</span>` : '<span class="muted">—</span>'}</td>
-        <td><span class="muted">Firestore</span></td>
-      </tr>`).join('');
+          <div class="company">
+            <span class="w-7 h-7 rounded-lg bg-teal-500/15 text-teal-700 inline-flex items-center justify-center text-xs shrink-0">
+              <i class="fa-solid fa-building"></i>
+            </span>
+            <span>${esc(r.companyName)}</span>
+          </div>
+        </td>
+        <td>
+          <div class="contact">
+            <i class="fa-solid fa-user text-slate-400 text-[11px] mr-1"></i> ${esc(r.customerName)}
+          </div>
+        </td>
+        <td>
+          ${r.phone ? `<a href="tel:${esc(r.phone)}" class="font-semibold text-slate-700 hover:text-teal-700"><i class="fa-solid fa-phone text-emerald-600 text-[10px] mr-1"></i>${esc(r.phone)}</a>` : '<span class="muted">—</span>'}
+        </td>
+        <td>
+          ${r.lineIds.length ? r.lineIds.map(x => {
+            const cleanId = String(x || '').trim();
+            const lineUrl = `https://line.me/R/ti/p/~${encodeURIComponent(cleanId)}`;
+            return `
+              <a href="${lineUrl}" target="_blank" rel="noopener noreferrer" class="line-badge" title="คลิกเพื่อทัก LINE: ${esc(cleanId)}">
+                <i class="fa-brands fa-line"></i>
+                <span>${esc(cleanId)}</span>
+              </a>
+            `;
+          }).join('') : '<span class="muted">—</span>'}
+        </td>
+        <td>${r.email ? `<span class="email-pill"><i class="fa-solid fa-envelope text-[10px]"></i> ${esc(r.email)}</span>` : '<span class="muted">—</span>'}</td>
+        <td><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Synced</span></td>
+        <td class="no-print" style="text-align:center">
+          <button type="button" class="btn-row-del" data-del-idx="${idx}" title="ลบรายชื่อบริษัท/ผู้ติดต่อที่ไม่ได้ใช้งาน">
+            <i class="fa-solid fa-trash-can text-xs"></i>
+          </button>
+        </td>
+      </tr>`;
+    }).join('');
   }
+
   const companies=new Set(rawRows.map(r=>normalize(r.companyName)).filter(Boolean));
   document.getElementById('companyCount').textContent=companies.size.toLocaleString('th-TH');
   document.getElementById('contactCount').textContent=rawRows.length.toLocaleString('th-TH');
   document.getElementById('phoneCount').textContent=rawRows.filter(r=>r.phone).length.toLocaleString('th-TH');
   document.getElementById('resultInfo').textContent=`แสดง ${visibleRows.length.toLocaleString('th-TH')} รายการ จากทั้งหมด ${rawRows.length.toLocaleString('th-TH')} รายการ`;
+
+  updateBulkDeleteUI();
 }
+
 function fillCompanies(){
   const sel=document.getElementById('companyFilter');
   const old=sel.value;
@@ -415,6 +616,132 @@ function fillCompanies(){
   sel.innerHTML='<option value="">ทุกบริษัท</option>'+companies.map(([key,name])=>`<option value="${esc(key)}">${esc(name)}</option>`).join('');
   sel.value=old;
 }
+
+// =========================================================================
+// ระบบยืนยันและลบรายชื่อบริษัท / ผู้ติดต่อที่ไม่ได้ใช้งานออกจาก Firestore
+// =========================================================================
+function openDeleteModal(rowsToDelete){
+  if (!rowsToDelete || !rowsToDelete.length) return;
+  pendingDeleteRows = rowsToDelete;
+
+  const titleEl = document.getElementById('deleteModalTitle');
+  const descEl = document.getElementById('deleteModalDesc');
+
+  if (rowsToDelete.length === 1) {
+    const item = rowsToDelete[0];
+    titleEl.textContent = `ลบข้อมูล "${item.companyName}"?`;
+    descEl.textContent = `ระบบจะลบข้อมูลรายชื่อบริษัท "${item.companyName}" (${item.customerName}) ที่ไม่ได้ใช้งานออกจากระบบถาวร`;
+  } else {
+    titleEl.textContent = `ลบข้อมูลที่เลือกทั้งหมด ${rowsToDelete.length} รายการ?`;
+    descEl.textContent = `ระบบจะลบรายชื่อบริษัทและผู้ติดต่อที่เลือกทั้งหมด ${rowsToDelete.length} รายการออกจากฐานข้อมูลถาวร`;
+  }
+
+  document.getElementById('deleteModal').classList.remove('hidden');
+}
+
+function closeDeleteModal(){
+  pendingDeleteRows = [];
+  document.getElementById('deleteModal').classList.add('hidden');
+}
+
+async function executeDeletePendingRows(){
+  if (!pendingDeleteRows.length || !db || !currentUser) return;
+
+  const btn = document.getElementById('confirmDeleteBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner spinning"></i> กำลังลบ...';
+
+  try {
+    const allDocIds = new Set();
+    const companyNamesToClean = new Set();
+
+    pendingDeleteRows.forEach(r => {
+      (r.docIds || []).forEach(id => allDocIds.add(id));
+      if (r.companyName && r.companyName !== 'ไม่ระบุบริษัท') {
+        companyNamesToClean.add(r.companyName);
+      }
+    });
+
+    // 1. ลบหรือปลดการเชื่อมโยงในคอลเลกชัน deliveries
+    const docIdArr = [...allDocIds];
+    for (let i = 0; i < docIdArr.length; i += 400) {
+      const batch = db.batch();
+      const chunk = docIdArr.slice(i, i + 400);
+      for (const docId of chunk) {
+        const ref = db.collection('deliveries').doc(docId);
+        batch.delete(ref);
+      }
+      await batch.commit();
+    }
+
+    // 2. ลบทะเบียนบริษัทที่ชื่อตรงกันในคอลเลกชัน companies (ถ้ามี)
+    for (const compName of companyNamesToClean) {
+      const stillHasOtherContacts = rawRows.some(r =>
+        !pendingDeleteRows.some(del => del.key === r.key) &&
+        normalize(r.companyName) === normalize(compName)
+      );
+      if (!stillHasOtherContacts) {
+        let compQ = db.collection('companies').where('companyName', '==', compName);
+        if (profile.role !== 'admin') compQ = compQ.where('ownerUid', '==', currentUser.uid);
+        const compSnap = await compQ.get();
+        if (!compSnap.empty) {
+          const b = db.batch();
+          compSnap.forEach(d => b.delete(d.ref));
+          await b.commit();
+        }
+      }
+    }
+
+    pendingDeleteRows.forEach(r => selectedKeys.delete(r.key));
+    showToast(`ลบรายชื่อบริษัท/ผู้ติดต่อเรียบร้อยแล้ว (${pendingDeleteRows.length} รายการ)`);
+    closeDeleteModal();
+  } catch (err) {
+    console.error('Delete error:', err);
+    showToast('ลบข้อมูลไม่สำเร็จ: ' + (err.message || 'กรุณาตรวจสอบสิทธิ์ Firestore'), true);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> ยืนยันการลบ';
+  }
+}
+
+// Event Delegation สำหรับ Checkbox และปุ่มลบในตาราง
+document.getElementById('rows').addEventListener('change', (e) => {
+  if (e.target.classList.contains('row-checkbox')) {
+    const idx = Number(e.target.dataset.idx);
+    const row = visibleRows[idx];
+    if (!row) return;
+    if (e.target.checked) selectedKeys.add(row.key);
+    else selectedKeys.delete(row.key);
+    render();
+  }
+});
+
+document.getElementById('rows').addEventListener('click', (e) => {
+  const delBtn = e.target.closest('.btn-row-del');
+  if (delBtn) {
+    const idx = Number(delBtn.dataset.delIdx);
+    const row = visibleRows[idx];
+    if (row) openDeleteModal([row]);
+  }
+});
+
+document.getElementById('selectAllCheckbox').addEventListener('change', (e) => {
+  if (e.target.checked) {
+    visibleRows.forEach(r => selectedKeys.add(r.key));
+  } else {
+    visibleRows.forEach(r => selectedKeys.delete(r.key));
+  }
+  render();
+});
+
+document.getElementById('bulkDeleteBtn').addEventListener('click', () => {
+  const rowsToDelete = visibleRows.filter(r => selectedKeys.has(r.key));
+  if (rowsToDelete.length) openDeleteModal(rowsToDelete);
+});
+
+document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
+document.getElementById('confirmDeleteBtn').addEventListener('click', executeDeletePendingRows);
+
 async function loadData(){
   if(!currentUser || !profile) return;
   if(unsubscribe) unsubscribe();
@@ -433,7 +760,7 @@ async function loadData(){
     console.error(err);
     rawRows=[];visibleRows=[];render();
     setStatus('เชื่อมต่อไม่ได้','error');
-    alert('ไม่สามารถโหลดข้อมูลจาก Firestore ได้\\n'+(err.message||'กรุณาตรวจสอบสิทธิ์ Firebase'));
+    alert('ไม่สามารถโหลดข้อมูลจาก Firestore ได้\n'+(err.message||'กรุณาตรวจสอบสิทธิ์ Firebase'));
   });
 }
 
@@ -441,8 +768,6 @@ function showApp(){
   document.getElementById('app').style.display='block';
 }
 
-// Customer.html ไม่ทำ Login เอง
-// login.html เป็นจุด Login เพียงจุดเดียวของระบบ
 function showLogin(){
   window.location.replace('login.html');
 }
@@ -451,25 +776,25 @@ document.getElementById('logoutBtn').addEventListener('click',()=>{
   if(unsubscribe) unsubscribe();
   window.location.href='index.html';
 });
+
 document.getElementById('refreshBtn').addEventListener('click', async () => {
   const btn = document.getElementById('refreshBtn');
   if (btn.disabled) return;
-  
-  // ล็อคปุ่มและเปลี่ยนไอคอนเป็นหมุนๆ
   btn.disabled = true;
   const originalHTML = btn.innerHTML;
-  btn.innerHTML = '<span class="spinning">↻</span> กำลังโหลด...';
+  btn.innerHTML = '<i class="fa-solid fa-rotate-right spinning"></i> กำลังโหลด...';
 
   try {
     await loadData();
+    showToast('อัปเดตข้อมูลล่าสุดเรียบร้อยแล้ว');
   } finally {
-    // คืนค่าปุ่มเดิมเมื่อโหลดเสร็จ
     setTimeout(() => {
       btn.innerHTML = originalHTML;
       btn.disabled = false;
-    }, 400); // หน่วงเวลาเล็กน้อยให้ผู้ใช้เห็นความเปลี่ยนแปลง
+    }, 400);
   }
 });
+
 document.getElementById('search').addEventListener('input',applyView);
 document.getElementById('companyFilter').addEventListener('change',applyView);
 document.getElementById('sort').addEventListener('change',applyView);
@@ -489,6 +814,16 @@ auth.onAuthStateChanged(async user=>{
     if(!snap.exists) throw new Error('บัญชีนี้ยังไม่ได้รับสิทธิ์ใช้งานระบบ');
     profile=snap.data();
     if(profile.active===false) throw new Error('บัญชีนี้ถูกปิดการใช้งาน');
+
+    // แสดงชื่อและ Role บน Header ให้เหมือนระบบหลัก
+    const displayName = profile.displayName || profile.name || profile.username || (user.email ? user.email.split('@')[0] : 'User');
+    const isAdmin = (profile.role || '').toLowerCase() === 'admin';
+    document.getElementById('userNameText').textContent = displayName;
+    const roleBadge = document.getElementById('userRoleBadge');
+    roleBadge.textContent = isAdmin ? 'ADMIN' : 'USER';
+    roleBadge.className = `px-1.5 py-0.5 rounded text-[9px] font-bold ${isAdmin ? 'bg-purple-600' : 'bg-teal-600'} text-white uppercase`;
+    document.getElementById('userBadge').classList.remove('hidden');
+
     showApp();
     await loadData();
   }catch(e){
