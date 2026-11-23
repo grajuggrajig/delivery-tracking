@@ -1150,6 +1150,7 @@
         const sortedCompanies = Array.from(companiesMap.values()).sort((a, b) => a.localeCompare(b, 'th'));
         const filtered = sortedCompanies.filter(c => c.toLowerCase().includes(filterText.toLowerCase()));
 
+        // 1. บันทึกรายชื่อบริษัทที่เคยถูกติ๊กเลือกไว้ก่อนหน้านี้เก็บไว้ใน Set
         const checkedSet = new Set(
             Array.from(multiCheckboxList.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
         );
@@ -1168,7 +1169,11 @@
             checkbox.type = 'checkbox';
             checkbox.value = name;
             checkbox.className = 'rounded text-teal-600 focus:ring-teal-500 w-4 h-4';
-            if (checkedSet.has(name)) checkbox.checked = true;
+            
+            // 2. ถ้าบริษัทนี้เคยถูกเลือกไว้ก่อนหน้า ให้คงสถานะติ๊กไว้เหมือนเดิม
+            if (checkedSet.has(name)) {
+                checkbox.checked = true;
+            }
 
             checkbox.addEventListener('change', () => {
                 updateSelectedCount();
@@ -1182,6 +1187,8 @@
             label.appendChild(span);
             multiCheckboxList.appendChild(label);
         });
+        
+        // 3. อัปเดตจำนวนที่เลือกด้านล่าง
         updateSelectedCount();
     }
 
