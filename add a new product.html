@@ -431,6 +431,9 @@
     let currentMergeSourceName = '';
     let currentCopyTargetName = '';
     
+    // เก็บชื่อบริษัทที่ถูกติ๊กเลือกไว้ในโหมดหลายบริษัท (จดจำสถานะแม้จะเปลี่ยนคำค้นหา)
+    let persistentCheckedCompanies = new Set();
+    
     const form = document.getElementById('add-product-form');
     const message = document.getElementById('form-message');
     const tableBody = document.getElementById('product-table-body');
@@ -875,6 +878,7 @@
             await batch.commit();
 
             companiesMap.delete(targetStrictKey);
+            persistentCheckedCompanies.delete(companyNameTarget);
 
             if (cleanCompanyName(companySelectHidden.value).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
                 companySelectHidden.value = '';
@@ -1043,9 +1047,8 @@
 
         if (typedVal.length >= 2 && normalizedTyped) {
             if (isMultiSelectMode) {
-                const checkedBoxes = multiCheckboxList.querySelectorAll('input[type="checkbox"]:checked');
-                checkedBoxes.forEach(cb => {
-                    const compName = cb.value;
+                // ตรวจสอบจาก persistentCheckedCompanies ที่ถูกติ๊กไว้ทั้งหมด
+                persistentCheckedCompanies.forEach(compName => {
                     const isSimilar = products.some(p => {
                         const pComp = cleanCompanyName(p.companyName || p.company);
                         if (pComp.toLowerCase() !== compName.toLowerCase()) return false;
@@ -1137,11 +1140,13 @@
             singleCompanyWrapper.classList.add('hidden');
             multiCompanyWrapper.classList.remove('hidden');
             multiSelectToggleLabel.textContent = '← กลับไปเลือกบริษัทเดียว';
+            persistentCheckedCompanies.clear(); // ล้างค่าเก่าเมื่อเริ่มเปิดโหมดเลือกหลายบริษัทใหม่
             renderMultiCheckboxes();
         } else {
             singleCompanyWrapper.classList.remove('hidden');
             multiCompanyWrapper.classList.add('hidden');
             multiSelectToggleLabel.textContent = '+ เลือกหลายบริษัทพร้อมกัน';
+            persistentCheckedCompanies.clear();
         }
         checkDuplicateStatus();
     });
@@ -1150,14 +1155,10 @@
         const sortedCompanies = Array.from(companiesMap.values()).sort((a, b) => a.localeCompare(b, 'th'));
         const filtered = sortedCompanies.filter(c => c.toLowerCase().includes(filterText.toLowerCase()));
 
-        // 1. บันทึกรายชื่อบริษัทที่เคยถูกติ๊กเลือกไว้ก่อนหน้านี้เก็บไว้ใน Set
-        const checkedSet = new Set(
-            Array.from(multiCheckboxList.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value)
-        );
-
         multiCheckboxList.innerHTML = '';
         if (filtered.length === 0) {
             multiCheckboxList.innerHTML = '<div class="text-slate-400 text-center py-2">ไม่พบรายชื่อบริษัท</div>';
+            updateSelectedCount();
             return;
         }
 
@@ -1170,12 +1171,17 @@
             checkbox.value = name;
             checkbox.className = 'rounded text-teal-600 focus:ring-teal-500 w-4 h-4';
             
-            // 2. ถ้าบริษัทนี้เคยถูกเลือกไว้ก่อนหน้า ให้คงสถานะติ๊กไว้เหมือนเดิม
-            if (checkedSet.has(name)) {
+            // คืนค่าสถานะการติ๊กจาก persistentCheckedCompanies ที่จดจำไว้
+            if (persistentCheckedCompanies.has(name)) {
                 checkbox.checked = true;
             }
 
             checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    persistentCheckedCompanies.add(name);
+                } else {
+                    persistentCheckedCompanies.delete(name);
+                }
                 updateSelectedCount();
                 checkDuplicateStatus();
             });
@@ -1187,14 +1193,12 @@
             label.appendChild(span);
             multiCheckboxList.appendChild(label);
         });
-        
-        // 3. อัปเดตจำนวนที่เลือกด้านล่าง
         updateSelectedCount();
     }
 
     function updateSelectedCount() {
-        const checkedCount = multiCheckboxList.querySelectorAll('input[type="checkbox"]:checked').length;
-        selectedCountLabel.textContent = `เลือกแล้ว: ${checkedCount} บริษัท`;
+        const count = persistentCheckedCompanies.size;
+        selectedCountLabel.textContent = `เลือกแล้ว: ${count} บริษัท`;
     }
 
     multiSearchInput.addEventListener('input', (e) => {
@@ -1202,10 +1206,15 @@
     });
 
     selectAllBtn.addEventListener('click', () => {
-        const checkboxes = multiCheckboxList.querySelectorAll('input[type="checkbox"]');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-        checkboxes.forEach(cb => cb.checked = !allChecked);
-        updateSelectedCount();
+        const sortedCompanies = Array.from(companiesMap.values());
+        const allSelected = sortedCompanies.every(c => persistentCheckedCompanies.has(c));
+        
+        if (allSelected) {
+            persistentCheckedCompanies.clear();
+        } else {
+            sortedCompanies.forEach(c => persistentCheckedCompanies.add(c));
+        }
+        renderMultiCheckboxes(multiSearchInput.value);
         checkDuplicateStatus();
     });
 
@@ -1331,7 +1340,6 @@
     let latestCompaniesSnapshot = null;
 
     function initDataListeners() {
-        // อัปเดตสถานะเชื่อมต่อเมื่อโหลดสำเร็จ
         const mobileBadge = document.getElementById('auth-status-badge-mobile');
         const desktopBadge = document.getElementById('auth-status-badge-desktop');
         if(mobileBadge) {
@@ -1423,6 +1431,8 @@
         multiSelectToggleLabel.classList.remove('opacity-50', 'pointer-events-none');
         message.classList.add('hidden');
         duplicateWarning.classList.add('hidden');
+        persistentCheckedCompanies.clear();
+        if (isMultiSelectMode) renderMultiCheckboxes(multiSearchInput.value);
         checkDuplicateStatus();
     }
 
@@ -1462,16 +1472,14 @@
                 showMessage('อัปเดตข้อมูลสินค้าสำเร็จ!', 'success');
                 resetForm();
             } else if (isMultiSelectMode) {
-                const checkedBoxes = multiCheckboxList.querySelectorAll('input[type="checkbox"]:checked');
-                if (checkedBoxes.length === 0) {
+                if (persistentCheckedCompanies.size === 0) {
                     alert('กรุณาเลือกอย่างน้อย 1 บริษัท');
                     submitBtn.disabled = false;
                     return;
                 }
 
                 const batch = db.batch();
-                checkedBoxes.forEach(cb => {
-                    const compName = cb.value;
+                persistentCheckedCompanies.forEach(compName => {
                     const newDocRef = db.collection('companyProducts').doc();
                     batch.set(newDocRef, {
                         companyName: compName,
@@ -1485,9 +1493,11 @@
                 });
 
                 await batch.commit();
-                showMessage(`เพิ่มสินค้าไปยัง ${checkedBoxes.length} บริษัทสำเร็จ!`, 'success');
+                showMessage(`เพิ่มสินค้าไปยัง ${persistentCheckedCompanies.size} บริษัทสำเร็จ!`, 'success');
                 form.reset();
                 duplicateWarning.classList.add('hidden');
+                persistentCheckedCompanies.clear();
+                renderMultiCheckboxes(multiSearchInput.value);
                 checkDuplicateStatus();
             } else {
                 const company = companySelectHidden.value || companySearchInput.value.trim();
