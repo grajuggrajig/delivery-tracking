@@ -25,7 +25,7 @@
                     <span>🧹</span>
                     <span>Firebase Development Data Cleanup & Image Purge</span>
                 </div>
-                <p class="text-xs text-slate-400 mt-1">เครื่องมือล้างข้อมูลขยะ ลบรูปภาพ และเลือกติ๊กเฉพาะรายการที่ต้องการลบพร้อมระบบยืนยันรหัสผ่าน</p>
+                <p class="text-xs text-slate-400 mt-1">เครื่องมือล้างข้อมูลขยะ ลบรูปภาพ สินค้าที่ไม่ได้ผูกบริษัท และบิลที่ไม่มีบริษัทคงอยู่</p>
             </div>
             <button onclick="window.location.href='index.html'" class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition">
                 ← กลับสู่หน้าหลัก CRM
@@ -66,6 +66,11 @@
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-bold text-slate-600 mb-1">⚙️ เงื่อนไขพิเศษ (Advanced Filters)</label>
                     
+                    <label class="flex items-center gap-2 p-2 rounded-xl bg-rose-50/60 border border-rose-100 cursor-pointer hover:bg-rose-50 text-xs">
+                        <input type="checkbox" id="filter-unbound-orphans" checked class="accent-rose-600">
+                        <span class="text-rose-900 font-semibold">🚫 ลบสินค้า/บิลที่ไม่มีบริษัทรองรับ</span>
+                    </label>
+
                     <label class="flex items-center gap-2 p-2 rounded-xl bg-emerald-50/40 border border-emerald-100 cursor-pointer hover:bg-emerald-50 text-xs">
                         <input type="checkbox" id="filter-no-products" class="accent-emerald-600">
                         <span class="text-emerald-900 font-semibold">🔍 เฉพาะบริษัทที่ "ไม่มีสินค้า" ผูกอยู่</span>
@@ -121,7 +126,7 @@
         </div>
     </div>
 
-    <!-- MODAL ยืนยันรหัสผ่าน (อ้างอิงจาก login.html) -->
+    <!-- MODAL ยืนยันรหัสผ่าน -->
     <div id="password-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
             <div class="flex items-center justify-between">
@@ -191,6 +196,7 @@
         async function scanDatabase() {
             const selectedCols = Array.from(document.querySelectorAll('input[name="target-col"]:checked')).map(el => el.value);
             const keyword = document.getElementById('filter-keyword').value.trim().toLowerCase();
+            const filterUnboundOrphans = document.getElementById('filter-unbound-orphans').checked;
             const filterNoProducts = document.getElementById('filter-no-products').checked;
             const filterInvalidName = document.getElementById('filter-invalid-name').checked;
             const filterHasImages = document.getElementById('filter-has-images').checked;
@@ -204,21 +210,34 @@
                 return;
             }
 
-            container.innerHTML = '<div class="text-center py-12 text-slate-400 animate-pulse">กำลังสแกนวิเคราะห์ข้อมูลและตรวจสอบรูปภาพใน Firebase...</div>';
+            container.innerHTML = '<div class="text-center py-12 text-slate-400 animate-pulse">กำลังสแกนวิเคราะห์ข้อมูลและตรวจสอบรายชื่อบริษัทอ้างอิงใน Firebase...</div>';
             scannedItemsMap.clear();
             let totalFound = 0;
 
             try {
+                // รวบรวมรายชื่อบริษัทที่ถูกต้องทั้งหมดจากฐานข้อมูลหลัก (อ้างอิงจาก index เก่า.html)
+                let validCompaniesSet = new Set();
                 let companyWithProductsSet = new Set();
-                if (filterNoProducts) {
-                    const cpSnapshot = await db.collection('companyProducts').get();
-                    cpSnapshot.forEach(doc => {
-                        const d = doc.data();
-                        if (d.companyName) {
-                            companyWithProductsSet.add(d.companyName.trim().toLowerCase());
-                        }
-                    });
-                }
+
+                // ดึงรายชื่อบริษัทจาก deliveries หรือเอกสารทั้งหมดเพื่อสร้างรายการบริษัทที่มีอยู่จริง
+                const allDeliveriesSnap = await db.collection('deliveries').get();
+                allDeliveriesSnap.forEach(doc => {
+                    const d = doc.data();
+                    if (d.companyName) {
+                        validCompaniesSet.add(d.companyName.trim().toLowerCase());
+                    }
+                });
+
+                // ตรวจสอบ collection อื่นๆ เพิ่มเติมเพื่อความครอบคลุมของบริษัท
+                const cpSnapshot = await db.collection('companyProducts').get();
+                cpSnapshot.forEach(doc => {
+                    const d = doc.data();
+                    if (d.companyName) {
+                        const cName = d.companyName.trim().toLowerCase();
+                        validCompaniesSet.add(cName);
+                        companyWithProductsSet.add(cName);
+                    }
+                });
 
                 for (const colName of selectedCols) {
                     const snapshot = await db.collection(colName).get();
@@ -229,7 +248,6 @@
                         const stringified = JSON.stringify(data).toLowerCase();
 
                         // ตรวจสอบว่ามีลิงก์รูปภาพในข้อมูลหรือไม่
-                        const imageKeys = ['image', 'imageUrl', 'img', 'photo', 'picture', 'slip', 'receiptUrl', 'url'];
                         let hasImages = false;
                         let extractedImageUrls = [];
 
@@ -252,6 +270,17 @@
 
                         const matchKeyword = !keyword || stringified.includes(keyword);
 
+                        // เงื่อนไข: สินค้าหรือบิลที่ไม่ได้ผูกกับบริษัทใดๆ เลย หรือมีการออกบิลไว้ที่ไม่ได้อยู่ในบริษัททั้งหมด
+                        let isUnboundOrphan = false;
+                        if (filterUnboundOrphans) {
+                            const itemComp = (data.companyName || '').trim().toLowerCase();
+                            if (colName === 'companyProducts' || colName === 'deliveries') {
+                                if (!itemComp || !validCompaniesSet.has(itemComp)) {
+                                    isUnboundOrphan = true;
+                                }
+                            }
+                        }
+
                         let isCompanyWithoutProduct = false;
                         if (filterNoProducts && (colName === 'companyProducts' || colName === 'deliveries')) {
                             const compName = (data.companyName || '').trim().toLowerCase();
@@ -271,7 +300,8 @@
                         }
 
                         // ประเมินเงื่อนไขการกรอง
-                        if (filterNoProducts || filterInvalidName || filterHasImages) {
+                        if (filterUnboundOrphans || filterNoProducts || filterInvalidName || filterHasImages) {
+                            if (filterUnboundOrphans && isUnboundOrphan) { matchReasons.push('🚫 ไม่พบว่าผูกกับบริษัทใดๆ'); isMatch = true; }
                             if (filterNoProducts && isCompanyWithoutProduct) { matchReasons.push('🚫 ไม่มีสินค้าผูกอยู่'); isMatch = true; }
                             if (filterInvalidName && isInvalidNamed) { matchReasons.push('⚠️ ชื่อผิดปกติ'); isMatch = true; }
                             if (filterHasImages && hasImages) { matchReasons.push(`🖼️ มีรูปภาพ (${extractedImageUrls.length})`); isMatch = true; }
@@ -283,7 +313,7 @@
                         if (isMatch) {
                             totalFound++;
                             const uniqueKey = `${colName}_${doc.id}`;
-                            const subText = data.itemInput || data.price ? `ราคา: ${data.price || '-'} | มีรูปภาพ: ${hasImages ? 'มี' : 'ไม่มี'}` : JSON.stringify(data).substring(0, 50);
+                            const subText = data.companyName ? `บริษัท: ${data.companyName} | ราคา: ${data.price || '-'}` : JSON.stringify(data).substring(0, 50);
 
                             scannedItemsMap.set(uniqueKey, { collection: colName, id: doc.id, title, imageUris: extractedImageUrls });
 
@@ -367,7 +397,6 @@
             errorBox.classList.add('hidden');
 
             try {
-                // อ้างอิงตรรกะการตรวจสอบรหัสผ่าน (re-authentication) จาก login.html
                 const credential = firebase.auth.EmailAuthProvider.credential(user.email, password);
                 await user.reauthenticateWithCredential(credential);
 
@@ -397,21 +426,18 @@
                 for (const chk of checkedBoxes) {
                     const item = scannedItemsMap.get(chk.value);
                     if (item) {
-                        // 1. ลบไฟล์รูปภาพออกจาก Firebase Storage (ถ้ามี URL อ้างอิง)
                         if (item.imageUris && item.imageUris.length > 0) {
                             for (const imgUrl of item.imageUris) {
                                 try {
-                                    // แปลง Download URL ให้เป็น Storage Reference หรือใช้ refFromURL โดยตรง
                                     const storageRef = storage.refFromURL(imgUrl);
                                     await storageRef.delete();
                                     deletedImagesCount++;
                                 } catch (storageErr) {
-                                    console.warn("ไม่สามารถลบไฟล์ภาพจาก Storage ได้หรือไฟล์อาจถูกลบไปแล้ว:", storageErr);
+                                    console.warn("ไม่สามารถลบไฟล์ภาพจาก Storage ได้:", storageErr);
                                 }
                             }
                         }
 
-                        // 2. ลบ Document จาก Firestore
                         const docRef = db.collection(item.collection).doc(item.id);
                         currentBatch.delete(docRef);
                         operationCount++;
