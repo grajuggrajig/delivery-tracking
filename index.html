@@ -768,6 +768,14 @@
                 auth = firebase.auth();
                 db = firebase.firestore();
 
+                // แก้ปัญหา Firestore Listen WebChannel ตอบกลับ 404 / transport errored
+                // โดยบังคับใช้ Long Polling แทนการเชื่อมต่อแบบ streaming
+                // ต้องกำหนดก่อนเริ่มอ่าน/เขียนข้อมูล Firestore ครั้งแรก
+                db.settings({
+                    experimentalForceLongPolling: true,
+                    useFetchStreams: false
+                });
+
                 auth.onAuthStateChanged(async (user) => {
                     if (user) {
                         currentUser = user;
