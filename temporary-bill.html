@@ -11,6 +11,11 @@
     <!-- Google Fonts: Prompt & Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
+    <!-- Firebase SDKs (Compat v10 - เหมือน index.html) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
     <style>
         body {
             font-family: 'Prompt', 'Inter', sans-serif;
@@ -126,65 +131,153 @@
         <div class="absolute -bottom-24 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-emerald-300/30 blur-3xl"></div>
     </div>
 
-    <!-- Top Header Bar (Hidden on Print) -->
-    <header class="w-full glass-card border-b border-white/80 py-3.5 px-4 sm:px-8 mb-6 sticky top-0 z-40 no-print">
-        <div class="max-w-[95rem] mx-auto flex flex-col lg:flex-row items-center justify-between gap-3.5">
-            <!-- Brand & Title -->
-            <div class="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-start">
-                <div class="flex items-center gap-3">
-                    <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-teal-600/20 text-lg">
-                        <i class="fa-solid fa-file-invoice-dollar"></i>
-                    </div>
-                    <div>
-                        <h1 class="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">ระบบออกบิลชั่วคราว (Temporary Bill)</h1>
-                        <p class="text-[11px] text-slate-500 font-medium">ใบรับเงินชั่วคราว / ใบส่งของชั่วคราว พร้อมสั่งพิมพ์ทันที</p>
-                    </div>
+    <!-- Login Overlay Screen (เหมือน index.html) -->
+    <div id="login-screen" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 no-print">
+        <div class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/80 w-full max-w-md p-6 sm:p-8 modal-animate">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-gradient-to-tr from-teal-600 to-emerald-500 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-teal-600/30 mx-auto mb-3">
+                    <i class="fa-solid fa-file-invoice-dollar text-2xl"></i>
                 </div>
-                <button type="button" onclick="openIssuerModal()" class="lg:hidden px-3 py-1.5 bg-white/80 border border-teal-200 rounded-xl text-xs font-semibold text-teal-800 shadow-2xs">
-                    <i class="fa-solid fa-store text-teal-600"></i> ตั้งค่าหัวบิล
-                </button>
+                <h2 class="text-lg sm:text-xl font-bold text-slate-900">เข้าสู่ระบบออกบิลชั่วคราว</h2>
+                <p class="text-xs sm:text-sm text-slate-500 mt-1">ใช้บัญชีเดียวกับระบบติดตามงานจัดส่ง (Delivery Tracking)</p>
             </div>
 
-            <!-- Action Controls -->
-            <div class="flex items-center gap-2 flex-wrap justify-end w-full lg:w-auto">
-                <!-- เลือกขนาดกระดาษ -->
-                <div class="flex items-center bg-white/75 border border-white rounded-2xl p-1 shadow-2xs text-xs">
-                    <span class="px-2 text-slate-500 font-medium hidden sm:inline"><i class="fa-solid fa-print text-teal-600 mr-1"></i>ขนาด:</span>
-                    <button type="button" onclick="setPaperSize('a4')" id="btn-size-a4" class="px-2.5 py-1.5 rounded-xl font-semibold transition bg-teal-600 text-white shadow-2xs">A4 แนวตั้ง</button>
-                    <button type="button" onclick="setPaperSize('a5')" id="btn-size-a5" class="px-2.5 py-1.5 rounded-xl font-semibold transition text-slate-600 hover:bg-teal-50">A5 แนวนอน</button>
-                    <button type="button" onclick="setPaperSize('80mm')" id="btn-size-80mm" class="px-2.5 py-1.5 rounded-xl font-semibold transition text-slate-600 hover:bg-teal-50">สลิป 80mm</button>
+            <div id="login-error-box" class="hidden mb-4 p-3 rounded-2xl bg-rose-50/90 border border-rose-200 text-rose-700 text-xs flex items-start gap-2">
+                <i class="fa-solid fa-circle-exclamation mt-0.5"></i>
+                <span id="login-error-text">ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง</span>
+            </div>
+
+            <form id="login-form" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">ชื่อผู้ใช้งาน (Username หรือ Email)</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-user absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="text" id="login-username" required autocomplete="username" placeholder="ระบุชื่อผู้ใช้งาน เช่น admin"
+                            class="w-full pl-10 pr-4 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">รหัสผ่าน (Password)</label>
+                    <div class="relative">
+                        <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-sm"></i>
+                        <input type="password" id="login-password" required autocomplete="current-password" placeholder="••••••••"
+                            class="w-full pl-10 pr-10 py-2.5 bg-white/80 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
+                        <button type="button" id="toggle-password" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600 focus:outline-none">
+                            <i class="fa-solid fa-eye text-sm" id="toggle-password-icon"></i>
+                        </button>
+                    </div>
+                </div>
+                <button type="submit" id="btn-login-submit" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-xl text-sm shadow-sm transition-colors flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ
+                </button>
+            </form>
+
+            <div class="mt-5 pt-4 border-t border-slate-200/70 flex items-center justify-between text-xs text-slate-500">
+                <span>ต้องการกลับหน้าหลัก?</span>
+                <a href="index.html" class="text-teal-600 hover:text-teal-700 font-medium inline-flex items-center gap-1">
+                    ไปที่หน้าหลัก (index.html) <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Header Bar (Hidden on Print) -->
+    <header class="w-full glass-card border-b border-white/80 py-3 px-4 sm:px-8 mb-6 sticky top-0 z-40 no-print">
+        <div class="max-w-[95rem] mx-auto flex flex-col gap-2.5">
+            <div class="flex flex-col lg:flex-row items-center justify-between gap-3">
+                <!-- Brand & Title -->
+                <div class="flex items-center gap-3 w-full lg:w-auto justify-between lg:justify-start">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 sm:w-11 sm:h-11 rounded-2xl bg-gradient-to-tr from-teal-600 to-emerald-500 text-white flex items-center justify-center shadow-md shadow-teal-600/20 text-lg shrink-0">
+                            <i class="fa-solid fa-file-invoice-dollar"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-sm sm:text-lg font-bold text-slate-900 tracking-tight leading-tight">ระบบออกบิลชั่วคราว (Temporary Bill)</h1>
+                            <div class="flex items-center gap-2 mt-0.5 flex-wrap">
+                                <span id="connection-badge" class="inline-flex items-center gap-1.5 px-2 py-0.2 rounded-full text-[10px] font-semibold bg-amber-50/85 text-amber-700 border border-amber-200/80">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> กำลังตรวจสอบสิทธิ์...
+                                </span>
+                                <span class="text-[11px] text-slate-500 hidden sm:inline">ซิงค์ข้อมูลบริษัทและประวัติบิลบน Firebase</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- User Profile & Logout (Mobile) -->
+                    <div class="flex items-center gap-1.5 lg:hidden">
+                        <div id="user-profile-pill-mobile" class="hidden items-center gap-1.5 px-2.5 py-1 bg-white/80 border border-white rounded-full text-[11px] text-slate-700">
+                            <span id="current-user-name-mobile" class="font-semibold max-w-[80px] truncate">-</span>
+                            <span id="current-user-role-mobile" class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-600 text-white">USER</span>
+                        </div>
+                        <a href="index.html" class="w-8 h-8 rounded-xl bg-white/80 border border-white text-teal-700 flex items-center justify-center text-xs" title="กลับหน้าฐานข้อมูลบริษัท">
+                            <i class="fa-solid fa-house"></i>
+                        </a>
+                        <button id="btn-logout-mobile" onclick="handleLogout()" class="hidden w-8 h-8 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 items-center justify-center text-xs" title="ออกจากระบบ">
+                            <i class="fa-solid fa-right-from-bracket"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- ตั้งค่าหัวบิลร้านค้า -->
-                <button type="button" onclick="openIssuerModal()" class="hidden lg:flex items-center gap-1.5 px-3 py-2 bg-white/75 hover:bg-white border border-white rounded-2xl text-xs font-semibold text-slate-700 shadow-2xs transition">
-                    <i class="fa-solid fa-store text-teal-600"></i>
-                    <span>ตั้งค่าหัวบิล</span>
-                </button>
+                <!-- Action Controls -->
+                <div class="flex items-center gap-2 flex-wrap justify-end w-full lg:w-auto">
+                    <!-- User Pill Desktop -->
+                    <div id="user-profile-pill-desktop" class="hidden lg:flex items-center gap-2 px-3 py-1.5 bg-white/75 border border-white rounded-2xl text-xs text-slate-700 shadow-2xs">
+                        <div class="w-6 h-6 rounded-full bg-teal-100 text-teal-700 flex items-center justify-center text-xs shrink-0 font-bold">
+                            <i class="fa-solid fa-user"></i>
+                        </div>
+                        <span id="current-user-name-desktop" class="font-semibold max-w-[110px] truncate">-</span>
+                        <span id="current-user-role-desktop" class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-600 text-white tracking-wider">USER</span>
+                    </div>
 
-                <!-- ประวัติบิลที่บันทึก -->
-                <button type="button" onclick="openHistoryModal()" class="flex items-center gap-1.5 px-3 py-2 bg-white/75 hover:bg-white border border-white rounded-2xl text-xs font-semibold text-slate-700 shadow-2xs transition relative">
-                    <i class="fa-solid fa-clock-rotate-left text-cyan-600"></i>
-                    <span>ประวัติบิล</span>
-                    <span id="saved-bills-badge" class="px-1.5 py-0.2 bg-teal-600 text-white rounded-full text-[10px] font-bold">0</span>
-                </button>
+                    <!-- ปุ่มกลับหน้าหลัก index.html -->
+                    <a href="index.html" class="hidden lg:flex items-center gap-1.5 px-3 py-2 bg-white/75 hover:bg-white border border-white rounded-2xl text-xs font-semibold text-teal-800 shadow-2xs transition" title="กลับหน้าฐานข้อมูลลูกค้าและบริษัท">
+                        <i class="fa-solid fa-building-user text-teal-600"></i>
+                        <span>ฐานข้อมูลบริษัท</span>
+                    </a>
 
-                <!-- บันทึกบิล -->
-                <button type="button" onclick="saveCurrentBill()" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95">
-                    <i class="fa-solid fa-floppy-disk"></i>
-                    <span>บันทึกบิล</span>
-                </button>
+                    <!-- เลือกขนาดกระดาษ -->
+                    <div class="flex items-center bg-white/75 border border-white rounded-2xl p-1 shadow-2xs text-xs">
+                        <span class="px-2 text-slate-500 font-medium hidden sm:inline"><i class="fa-solid fa-print text-teal-600 mr-1"></i>ขนาด:</span>
+                        <button type="button" onclick="setPaperSize('a4')" id="btn-size-a4" class="px-2.5 py-1.5 rounded-xl font-semibold transition bg-teal-600 text-white shadow-2xs">A4</button>
+                        <button type="button" onclick="setPaperSize('a5')" id="btn-size-a5" class="px-2.5 py-1.5 rounded-xl font-semibold transition text-slate-600 hover:bg-teal-50">A5</button>
+                        <button type="button" onclick="setPaperSize('80mm')" id="btn-size-80mm" class="px-2.5 py-1.5 rounded-xl font-semibold transition text-slate-600 hover:bg-teal-50">80mm</button>
+                    </div>
 
-                <!-- ออกบิลใหม่ -->
-                <button type="button" onclick="confirmNewBill()" class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-2xl text-xs font-semibold transition">
-                    <i class="fa-solid fa-file-circle-plus"></i>
-                    <span>บิลใหม่</span>
-                </button>
+                    <!-- ตั้งค่าหัวบิลร้านค้า -->
+                    <button type="button" onclick="openIssuerModal()" class="flex items-center gap-1.5 px-3 py-2 bg-white/75 hover:bg-white border border-white rounded-2xl text-xs font-semibold text-slate-700 shadow-2xs transition">
+                        <i class="fa-solid fa-store text-teal-600"></i>
+                        <span class="hidden sm:inline">ตั้งค่าหัวบิล</span>
+                    </button>
 
-                <!-- สั่งพิมพ์ / PDF -->
-                <button type="button" onclick="window.print()" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-teal-600/20 transition active:scale-95">
-                    <i class="fa-solid fa-print"></i>
-                    <span>พิมพ์บิล / PDF</span>
-                </button>
+                    <!-- ประวัติบิลบน Firebase -->
+                    <button type="button" onclick="openHistoryModal()" class="flex items-center gap-1.5 px-3 py-2 bg-white/75 hover:bg-white border border-white rounded-2xl text-xs font-semibold text-slate-700 shadow-2xs transition relative">
+                        <i class="fa-solid fa-cloud text-cyan-600"></i>
+                        <span>ประวัติบิล</span>
+                        <span id="saved-bills-badge" class="px-1.5 py-0.2 bg-teal-600 text-white rounded-full text-[10px] font-bold">0</span>
+                    </button>
+
+                    <!-- บันทึกบิลขึ้น Firebase -->
+                    <button type="button" id="btn-save-bill" onclick="saveCurrentBillToFirebase()" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>บันทึกบิล</span>
+                    </button>
+
+                    <!-- ออกบิลใหม่ -->
+                    <button type="button" onclick="confirmNewBill()" class="flex items-center gap-1.5 px-3 py-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 rounded-2xl text-xs font-semibold transition">
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                        <span>บิลใหม่</span>
+                    </button>
+
+                    <!-- สั่งพิมพ์ / PDF -->
+                    <button type="button" onclick="window.print()" class="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white rounded-2xl text-xs font-bold shadow-md shadow-teal-600/20 transition active:scale-95">
+                        <i class="fa-solid fa-print"></i>
+                        <span>พิมพ์ / PDF</span>
+                    </button>
+
+                    <!-- Logout Desktop -->
+                    <button id="btn-logout-desktop" onclick="handleLogout()" class="hidden w-9 h-9 items-center justify-center text-rose-600 bg-rose-50/80 hover:bg-rose-100 border border-rose-200/80 rounded-2xl transition-colors shrink-0" title="ออกจากระบบ">
+                        <i class="fa-solid fa-right-from-bracket text-sm"></i>
+                    </button>
+                </div>
             </div>
         </div>
     </header>
@@ -199,12 +292,12 @@
                     <div class="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center text-base border border-white/30">📝</div>
                     <div>
                         <h2 class="text-sm font-bold tracking-tight">กรอกรายละเอียดบิลชั่วคราว</h2>
-                        <p class="text-[11px] text-white/85">ข้อมูลจะอัปเดตลงตัวอย่างเอกสารฝั่งขวาทันที</p>
+                        <p class="text-[11px] text-white/85">ดึงข้อมูลลูกค้า/ราคาสินค้าจาก Firebase อัตโนมัติ</p>
                     </div>
                 </div>
-                <button type="button" onclick="fillSampleData()" class="px-2.5 py-1 bg-white/15 hover:bg-white/25 rounded-xl text-[11px] font-medium border border-white/20 transition" title="เติมข้อมูลตัวอย่างเพื่อทดสอบ">
-                    ✨ ตัวอย่างข้อมูล
-                </button>
+                <span id="editing-bill-badge" class="hidden px-2.5 py-1 bg-amber-400 text-slate-900 rounded-xl text-[11px] font-bold shadow-xs">
+                    <i class="fa-solid fa-pen mr-1"></i>โหมดแก้ไขบิล
+                </span>
             </div>
 
             <div class="p-5 space-y-5 max-h-[calc(100vh-170px)] overflow-y-auto">
@@ -253,15 +346,33 @@
                     </div>
                 </div>
 
-                <!-- 2. ข้อมูลลูกค้า / บริษัท -->
+                <!-- 2. ข้อมูลลูกค้า / บริษัท (ซิงค์จาก Firebase companies & deliveries) -->
                 <div class="bg-white/60 border border-teal-100 rounded-2xl p-4 space-y-3">
-                    <h3 class="text-xs font-bold text-teal-800 flex items-center gap-1.5 border-b border-teal-100 pb-2">
-                        <i class="fa-solid fa-building-user text-teal-600"></i> ข้อมูลบริษัท / ลูกค้า
-                    </h3>
+                    <div class="flex items-center justify-between border-b border-teal-100 pb-2">
+                        <h3 class="text-xs font-bold text-teal-800 flex items-center gap-1.5">
+                            <i class="fa-solid fa-building-user text-teal-600"></i> ข้อมูลบริษัท / ลูกค้า
+                        </h3>
+                        <span id="directory-sync-count" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-teal-50 text-teal-700 border border-teal-200">
+                            0 บริษัทในระบบ
+                        </span>
+                    </div>
+
+                    <!-- ช่องค้นหาและเลือกบริษัทจาก Firebase -->
+                    <div class="relative">
+                        <label class="block text-[11px] font-semibold text-teal-700 mb-1">
+                            <i class="fa-solid fa-magnifying-glass mr-1"></i>ดึงข้อมูลด่วนจากฐานข้อมูลบริษัท
+                        </label>
+                        <input type="text" id="company-autocomplete-input" placeholder="พิมพ์ค้นหาชื่อบริษัท หรือ ชื่อผู้ติดต่อในระบบ..." autocomplete="off"
+                            onfocus="renderCompanyDropdown(this.value)"
+                            oninput="renderCompanyDropdown(this.value)"
+                            class="w-full px-3 py-2 bg-teal-50/60 focus:bg-white border border-teal-300 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-teal-500">
+                        <div id="company-autocomplete-dropdown" class="hidden absolute left-0 right-0 mt-1 bg-white/95 backdrop-blur-xl border border-slate-200 rounded-2xl shadow-2xl max-h-60 overflow-y-auto z-30 divide-y divide-slate-100 text-xs">
+                        </div>
+                    </div>
 
                     <div>
-                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">ชื่อบริษัท / ชื่อลูกค้า <span class="text-rose-500">*</span></label>
-                        <input type="text" id="input-customer-name" placeholder="เช่น บริษัท ตัวอย่าง จำกัด (สำนักงานใหญ่)" oninput="updatePreview()"
+                        <label class="block text-[11px] font-semibold text-slate-600 mb-1">ชื่อบริษัท / ชื่อลูกค้า (แสดงบนบิล) <span class="text-rose-500">*</span></label>
+                        <input type="text" id="input-customer-name" placeholder="เช่น บริษัท ตัวอย่าง จำกัด (สำนักงานใหญ่)" oninput="onCustomerNameManualChange()"
                             class="w-full px-3 py-2 bg-white border border-teal-200 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-teal-500">
                     </div>
 
@@ -285,15 +396,20 @@
                     </div>
                 </div>
 
-                <!-- 3. รายการสินค้า / บริการ -->
+                <!-- 3. รายการสินค้า / บริการ (รองรับราคาเฉพาะบริษัทจาก companyProducts) -->
                 <div class="bg-white/60 border border-teal-100 rounded-2xl p-4 space-y-3">
-                    <div class="flex items-center justify-between border-b border-teal-100 pb-2">
+                    <div class="flex items-center justify-between border-b border-teal-100 pb-2 gap-2 flex-wrap">
                         <h3 class="text-xs font-bold text-teal-800 flex items-center gap-1.5">
                             <i class="fa-solid fa-boxes-stacked text-teal-600"></i> รายการสินค้า / บริการ
                         </h3>
-                        <button type="button" onclick="addItemRow()" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-[11px] font-semibold shadow-2xs transition flex items-center gap-1">
-                            <i class="fa-solid fa-plus"></i> เพิ่มรายการ
-                        </button>
+                        <div class="flex items-center gap-1.5">
+                            <span id="special-price-available-badge" class="hidden px-2 py-0.5 bg-amber-100 text-amber-800 border border-amber-300 rounded-lg text-[10px] font-bold">
+                                <i class="fa-solid fa-tags mr-0.5"></i>มีราคาเฉพาะบริษัท (0)
+                            </span>
+                            <button type="button" onclick="addItemRow()" class="px-2.5 py-1 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-[11px] font-semibold shadow-2xs transition flex items-center gap-1">
+                                <i class="fa-solid fa-plus"></i> เพิ่มรายการ
+                            </button>
+                        </div>
                     </div>
 
                     <div id="items-form-container" class="space-y-2.5">
@@ -493,13 +609,31 @@
 
     </main>
 
-    <!-- Modal: ตั้งค่าข้อมูลร้านค้า/บริษัทผู้ออกบิล -->
+    <!-- Modal: เลือกราคาสินค้าเฉพาะบริษัท (จาก companyProducts ใน Firebase) -->
+    <div id="special-product-picker-modal" class="hidden fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4 no-print">
+        <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-lg overflow-hidden flex flex-col max-h-[82vh] modal-animate">
+            <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-white flex items-center justify-between">
+                <div>
+                    <h4 class="text-sm font-bold">🏷️ เลือกราคาสินค้าเฉพาะบริษัท</h4>
+                    <p id="picker-company-subtitle" class="text-[11px] text-white/90 truncate max-w-xs">-</p>
+                </div>
+                <button type="button" onclick="closeSpecialProductPicker()" class="w-8 h-8 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center text-sm font-bold">✕</button>
+            </div>
+            <div class="p-3.5 border-b border-slate-100 bg-slate-50">
+                <input type="text" id="picker-search-input" oninput="renderSpecialProductPickerList(this.value)" placeholder="🔍 ค้นหาชื่อสินค้า..."
+                    class="w-full px-3.5 py-2 bg-white border border-amber-200 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-amber-500">
+            </div>
+            <div id="picker-product-list" class="p-3.5 overflow-y-auto divide-y divide-slate-100 flex-1 text-xs"></div>
+        </div>
+    </div>
+
+    <!-- Modal: ตั้งค่าข้อมูลร้านค้า/บริษัทผู้ออกบิล (ซิงค์กับ Firestore settings/temporaryBillIssuer) -->
     <div id="issuer-modal" class="hidden fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4 no-print">
         <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-lg overflow-hidden modal-animate">
             <div class="bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-4 text-white flex items-center justify-between">
                 <div>
                     <h4 class="text-sm font-bold">🏪 ตั้งค่าข้อมูลหัวบิล (ร้านค้า / บริษัทผู้ออกบิล)</h4>
-                    <p class="text-[11px] text-white/85">บันทึกข้อมูลไว้ในเครื่องอัตโนมัติสำหรับออกบิลครั้งถัดไป</p>
+                    <p class="text-[11px] text-white/85">บันทึกลง Cloud Firestore เพื่อใช้งานร่วมกันทุกอุปกรณ์</p>
                 </div>
                 <button type="button" onclick="closeIssuerModal()" class="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm font-bold">✕</button>
             </div>
@@ -524,19 +658,19 @@
                 </div>
                 <div class="pt-3 border-t border-slate-100 flex justify-end gap-2">
                     <button type="button" onclick="closeIssuerModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold">ยกเลิก</button>
-                    <button type="submit" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-sm">💾 บันทึกข้อมูลหัวบิล</button>
+                    <button type="submit" id="btn-save-issuer" class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-bold shadow-sm">💾 บันทึกข้อมูลหัวบิล</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- Modal: ประวัติบิลชั่วคราวที่บันทึกไว้ -->
+    <!-- Modal: ประวัติบิลชั่วคราวบน Cloud Firestore -->
     <div id="history-modal" class="hidden fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4 no-print">
         <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-2xl overflow-hidden flex flex-col max-h-[85vh] modal-animate">
             <div class="bg-gradient-to-r from-cyan-600 to-teal-600 px-6 py-4 text-white flex items-center justify-between">
                 <div>
-                    <h4 class="text-sm font-bold">🗂️ ประวัติบิลชั่วคราวที่บันทึกไว้</h4>
-                    <p class="text-[11px] text-white/85">สามารถเรียกดู แก้ไข หรือสั่งพิมพ์ย้อนหลังได้ทันที</p>
+                    <h4 class="text-sm font-bold">☁️ ประวัติบิลชั่วคราวบน Cloud Firestore</h4>
+                    <p class="text-[11px] text-white/85">ซิงค์ข้อมูลอัตโนมัติ เรียกดู แก้ไข หรือสั่งพิมพ์ย้อนหลังได้ทันที</p>
                 </div>
                 <button type="button" onclick="closeHistoryModal()" class="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm font-bold">✕</button>
             </div>
@@ -545,7 +679,7 @@
                     class="w-full px-3.5 py-2 bg-white border border-teal-200 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-teal-500">
             </div>
             <div id="history-list-container" class="p-4 overflow-y-auto divide-y divide-slate-100 flex-1 text-xs">
-                <!-- Saved bills list -->
+                <!-- Saved bills list from Firestore -->
             </div>
             <div class="px-6 py-3 bg-slate-50 border-t border-slate-200/70 flex justify-between items-center text-[11px] text-slate-500">
                 <span id="history-total-label">ทั้งหมด 0 รายการ</span>
@@ -554,7 +688,7 @@
         </div>
     </div>
 
-    <!-- Custom Toast Notification (No alert() used) -->
+    <!-- Custom Toast Notification -->
     <div id="toast-notification" class="hidden fixed bottom-5 right-5 z-[100] bg-slate-900/90 backdrop-blur-md text-white px-4 py-3 rounded-2xl shadow-xl border border-white/15 text-xs font-medium flex items-center gap-2.5 modal-animate no-print">
         <i id="toast-icon" class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
         <span id="toast-text">บันทึกข้อมูลเรียบร้อยแล้ว</span>
@@ -562,11 +696,43 @@
 
 <script>
     // ==========================================
-    // State & Storage Keys
+    // 1. Firebase Configuration & Initialization (ตรงกับ index.html)
     // ==========================================
-    const STORAGE_ISSUER_KEY = 'temp_bill_issuer_info_v1';
-    const STORAGE_BILLS_KEY = 'temp_bill_saved_history_v1';
+    const firebaseConfig = {
+        apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
+        authDomain: "delivery-tracking-2313a.firebaseapp.com",
+        projectId: "delivery-tracking-2313a",
+        storageBucket: "delivery-tracking-2313a.firebasestorage.app",
+        messagingSenderId: "631670801383",
+        appId: "1:631670801383:web:e720570af97bad7011f342",
+        measurementId: "G-BB2D5DJH3F"
+    };
 
+    const AUTH_DOMAIN_SUFFIX = "@delivery-tracking-2313a.firebaseapp.com";
+    const STORAGE_ISSUER_KEY = 'temp_bill_issuer_info_v1';
+
+    let db = null;
+    let auth = null;
+    let currentUser = null;
+    let currentUserRole = 'user';
+    let currentUserData = null;
+
+    // Real-time Firestore Data Stores
+    let rawCompanies = [];
+    let rawDeliveries = [];
+    let rawCompanyProducts = [];
+    let mergedDirectory = [];
+    let savedBills = [];
+    let currentEditingBillDocId = null;
+
+    // Unsubscribe Handlers
+    let unsubCompanies = null;
+    let unsubDeliveries = null;
+    let unsubCompanyProducts = null;
+    let unsubTemporaryBills = null;
+    let unsubIssuerSettings = null;
+
+    // Bill Form State
     let billItems = [
         { id: Date.now(), name: '', qty: 1, unit: 'ชิ้น', price: 0 }
     ];
@@ -578,8 +744,483 @@
         phone: '02-000-0000'
     };
 
-    let savedBills = [];
     let currentPaperSize = 'a4';
+    let activePickerTargetItemId = null;
+
+    // ==========================================
+    // 2. Auth & Firebase Bootstrap
+    // ==========================================
+    const togglePasswordBtn = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('login-password');
+    const togglePasswordIcon = document.getElementById('toggle-password-icon');
+
+    if (togglePasswordBtn && passwordInput && togglePasswordIcon) {
+        togglePasswordBtn.addEventListener('click', function () {
+            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordInput.setAttribute('type', type);
+            togglePasswordIcon.classList.toggle('fa-eye');
+            togglePasswordIcon.classList.toggle('fa-eye-slash');
+        });
+    }
+
+    function initFirebase() {
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+            auth = firebase.auth();
+            db = firebase.firestore();
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    currentUser = user;
+                    document.getElementById('login-screen').classList.add('hidden');
+                    await loadUserProfileAndSubscribe(user);
+                } else {
+                    currentUser = null;
+                    currentUserRole = 'user';
+                    detachListeners();
+                    showLoginScreen();
+                }
+            });
+        } catch (err) {
+            console.error("Firebase Init Error:", err);
+            updateConnectionBadge('error', 'เชื่อมต่อระบบล้มเหลว');
+            showLoginScreen('เกิดข้อผิดพลาดในการเชื่อมต่อ Firebase: ' + err.message);
+        }
+    }
+
+    function setUserPillsVisibility(show) {
+        const mobilePill = document.getElementById('user-profile-pill-mobile');
+        const desktopPill = document.getElementById('user-profile-pill-desktop');
+        const logoutMobile = document.getElementById('btn-logout-mobile');
+        const logoutDesktop = document.getElementById('btn-logout-desktop');
+
+        if (show) {
+            mobilePill.classList.remove('hidden');
+            mobilePill.classList.add('flex');
+            desktopPill.classList.remove('hidden');
+            desktopPill.classList.add('lg:flex');
+            logoutMobile.classList.remove('hidden');
+            logoutMobile.classList.add('flex');
+            logoutDesktop.classList.remove('hidden');
+            logoutDesktop.classList.add('inline-flex');
+        } else {
+            mobilePill.classList.add('hidden');
+            mobilePill.classList.remove('flex');
+            desktopPill.classList.add('hidden');
+            desktopPill.classList.remove('lg:flex');
+            logoutMobile.classList.add('hidden');
+            logoutMobile.classList.remove('flex');
+            logoutDesktop.classList.add('hidden');
+            logoutDesktop.classList.remove('inline-flex');
+        }
+    }
+
+    function showLoginScreen(errorMsg = '') {
+        document.getElementById('login-screen').classList.remove('hidden');
+        setUserPillsVisibility(false);
+        updateConnectionBadge('offline', 'กรุณาเข้าสู่ระบบ');
+
+        if (errorMsg) {
+            const errBox = document.getElementById('login-error-box');
+            document.getElementById('login-error-text').textContent = errorMsg;
+            errBox.classList.remove('hidden');
+        }
+    }
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const rawUser = document.getElementById('login-username').value.trim();
+        const password = document.getElementById('login-password').value;
+        const btn = document.getElementById('btn-login-submit');
+        const errBox = document.getElementById('login-error-box');
+
+        if (!rawUser || !password) return;
+
+        errBox.classList.add('hidden');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังเข้าสู่ระบบ...';
+
+        const email = rawUser.includes('@') ? rawUser : `${rawUser.toLowerCase()}${AUTH_DOMAIN_SUFFIX}`;
+
+        try {
+            await auth.signInWithEmailAndPassword(email, password);
+        } catch (error) {
+            console.error("Login error:", error);
+            let msg = "ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง";
+            if (error.code === 'auth/too-many-requests') {
+                msg = "พยายามเข้าสู่ระบบหลายครั้งเกินไป กรุณารอสักครู่แล้วลองใหม่";
+            } else if (error.code === 'auth/network-request-failed') {
+                msg = "ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้";
+            }
+            document.getElementById('login-error-text').textContent = msg;
+            errBox.classList.remove('hidden');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> เข้าสู่ระบบ';
+        }
+    });
+
+    async function handleLogout() {
+        try {
+            detachListeners();
+            await auth.signOut();
+            showToast('ออกจากระบบเรียบร้อยแล้ว');
+        } catch (err) {
+            console.error("Logout error:", err);
+        }
+    }
+
+    async function loadUserProfileAndSubscribe(user) {
+        updateConnectionBadge('loading', 'กำลังตรวจสอบสิทธิ์...');
+        try {
+            const userDoc = await db.collection('users').doc(user.uid).get();
+            if (userDoc.exists) {
+                currentUserData = userDoc.data();
+                currentUserRole = (currentUserData.role || 'user').toLowerCase();
+            } else {
+                currentUserData = { name: user.email ? user.email.split('@')[0] : 'ผู้ใช้งาน' };
+                currentUserRole = 'user';
+            }
+
+            const displayName = currentUserData.displayName || currentUserData.name || currentUserData.username || (user.email ? user.email.split('@')[0] : 'User');
+            const roleText = currentUserRole === 'admin' ? 'ADMIN' : 'USER';
+            const roleBg = currentUserRole === 'admin' ? 'bg-purple-600' : 'bg-teal-600';
+
+            document.getElementById('current-user-name-mobile').textContent = displayName;
+            const roleMobile = document.getElementById('current-user-role-mobile');
+            roleMobile.textContent = roleText;
+            roleMobile.className = `px-1.5 py-0.2 rounded text-[9px] font-bold ${roleBg} text-white`;
+
+            document.getElementById('current-user-name-desktop').textContent = displayName;
+            const roleDesktop = document.getElementById('current-user-role-desktop');
+            roleDesktop.textContent = roleText;
+            roleDesktop.className = `px-2 py-0.5 rounded-md text-[10px] font-bold ${roleBg} text-white tracking-wider`;
+
+            // เติมชื่อพนักงานผู้รับเงินให้อัตโนมัติถ้ายังว่างอยู่
+            const staffInput = document.getElementById('input-staff-name');
+            if (staffInput && !staffInput.value.trim()) {
+                staffInput.value = displayName;
+                updatePreview();
+            }
+
+            setUserPillsVisibility(true);
+            subscribeToFirestoreCollections();
+        } catch (err) {
+            console.error("Error loading user profile:", err);
+            currentUserRole = 'user';
+            subscribeToFirestoreCollections();
+        }
+    }
+
+    function updateConnectionBadge(status, text) {
+        const badge = document.getElementById('connection-badge');
+        if (!badge) return;
+        if (status === 'online') {
+            badge.className = "inline-flex items-center gap-1.5 px-2 py-0.2 rounded-full text-[10px] font-semibold bg-emerald-50/85 text-emerald-700 border border-emerald-200/80";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> <span>${text}</span>`;
+        } else if (status === 'loading') {
+            badge.className = "inline-flex items-center gap-1.5 px-2 py-0.2 rounded-full text-[10px] font-semibold bg-amber-50/85 text-amber-700 border border-amber-200/80";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span> <span>${text}</span>`;
+        } else {
+            badge.className = "inline-flex items-center gap-1.5 px-2 py-0.2 rounded-full text-[10px] font-semibold bg-rose-50/85 text-rose-700 border border-rose-200/80";
+            badge.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span> <span>${text}</span>`;
+        }
+    }
+
+    function detachListeners() {
+        if (unsubCompanies) { unsubCompanies(); unsubCompanies = null; }
+        if (unsubDeliveries) { unsubDeliveries(); unsubDeliveries = null; }
+        if (unsubCompanyProducts) { unsubCompanyProducts(); unsubCompanyProducts = null; }
+        if (unsubTemporaryBills) { unsubTemporaryBills(); unsubTemporaryBills = null; }
+        if (unsubIssuerSettings) { unsubIssuerSettings(); unsubIssuerSettings = null; }
+    }
+
+    // ==========================================
+    // 3. Firestore Real-time Subscriptions
+    // ==========================================
+    function subscribeToFirestoreCollections() {
+        detachListeners();
+        if (!db || !currentUser) return;
+
+        const isAdmin = currentUserRole === 'admin';
+
+        // A. ซิงค์หัวบิลร้านค้าจาก Firestore (settings/temporaryBillIssuer)
+        unsubIssuerSettings = db.collection('settings').doc('temporaryBillIssuer').onSnapshot((doc) => {
+            if (doc.exists) {
+                const data = doc.data();
+                issuerInfo = {
+                    name: data.name || issuerInfo.name,
+                    address: data.address || issuerInfo.address,
+                    taxId: data.taxId || '',
+                    phone: data.phone || ''
+                };
+                localStorage.setItem(STORAGE_ISSUER_KEY, JSON.stringify(issuerInfo));
+                updatePreview();
+            }
+        }, (err) => console.warn("Issuer settings snapshot warning:", err));
+
+        // B. ซิงค์ทะเบียนบริษัท (companies)
+        let companiesQuery = db.collection('companies');
+        if (!isAdmin) companiesQuery = companiesQuery.where('ownerUid', '==', currentUser.uid);
+
+        unsubCompanies = companiesQuery.onSnapshot((snap) => {
+            rawCompanies = [];
+            snap.forEach(doc => rawCompanies.push({ id: doc.id, ...doc.data() }));
+            updateConnectionBadge('online', isAdmin ? 'ออนไลน์ (Admin)' : 'ออนไลน์ (ซิงค์แล้ว)');
+            rebuildCustomerDirectory();
+        }, (err) => {
+            console.error("Companies snapshot error:", err);
+            updateConnectionBadge('error', 'สิทธิ์เข้าถึงข้อมูลขัดข้อง');
+        });
+
+        // C. ซิงค์ประวัติจัดส่ง (deliveries) เพื่อดึงรายชื่อบริษัทที่เคยเปิดบิล
+        let deliveriesQuery = db.collection('deliveries');
+        if (!isAdmin) deliveriesQuery = deliveriesQuery.where('ownerUid', '==', currentUser.uid);
+
+        unsubDeliveries = deliveriesQuery.onSnapshot((snap) => {
+            rawDeliveries = [];
+            snap.forEach(doc => rawDeliveries.push({ id: doc.id, ...doc.data() }));
+            rebuildCustomerDirectory();
+        }, (err) => console.warn("Deliveries snapshot warning:", err));
+
+        // D. ซิงค์ราคาสินค้าเฉพาะบริษัท (companyProducts)
+        unsubCompanyProducts = db.collection('companyProducts').onSnapshot((snap) => {
+            rawCompanyProducts = [];
+            snap.forEach(doc => rawCompanyProducts.push({ id: doc.id, ...doc.data() }));
+            refreshSpecialPriceAvailability();
+        }, (err) => console.warn("companyProducts snapshot warning:", err));
+
+        // E. ซิงค์ประวัติบิลชั่วคราวที่บันทึกไว้ (temporaryBills)
+        let billsQuery = db.collection('temporaryBills');
+        if (!isAdmin) billsQuery = billsQuery.where('ownerUid', '==', currentUser.uid);
+
+        unsubTemporaryBills = billsQuery.onSnapshot((snap) => {
+            savedBills = [];
+            snap.forEach(doc => {
+                savedBills.push({ docId: doc.id, ...doc.data() });
+            });
+            // เรียงลำดับจากบิลล่าสุด
+            savedBills.sort((a, b) => {
+                const tsA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
+                const tsB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
+                return tsB - tsA;
+            });
+            document.getElementById('saved-bills-badge').textContent = savedBills.length;
+            if (!document.getElementById('history-modal').classList.contains('hidden')) {
+                renderHistoryList(document.getElementById('history-search-input').value);
+            }
+        }, (err) => {
+            console.error("temporaryBills snapshot error:", err);
+        });
+    }
+
+    function normalizeKey(str) {
+        return (str || '').trim().toLowerCase().replace(/\s+/g, ' ');
+    }
+
+    function rebuildCustomerDirectory() {
+        const map = new Map();
+
+        function ensureEntry(name, district = '', address = '') {
+            const cleanName = (name || '').trim();
+            if (!cleanName) return null;
+            const key = normalizeKey(cleanName);
+            if (!map.has(key)) {
+                map.set(key, {
+                    companyName: cleanName,
+                    companyDistrict: (district || '').trim(),
+                    address: (address || '').trim(),
+                    taxId: '',
+                    contactPerson: '',
+                    phone: ''
+                });
+            }
+            const entry = map.get(key);
+            if (!entry.companyDistrict && district) entry.companyDistrict = district.trim();
+            if (!entry.address && address) entry.address = address.trim();
+            return entry;
+        }
+
+        rawCompanies.forEach(comp => {
+            const entry = ensureEntry(comp.companyName || comp.name, comp.companyDistrict || comp.district, comp.address);
+            if (!entry) return;
+            if (comp.taxId) entry.taxId = comp.taxId;
+            if (Array.isArray(comp.contacts) && comp.contacts.length > 0) {
+                const first = comp.contacts[0];
+                entry.contactPerson = first.name || first.customerName || '';
+                entry.phone = first.phone || '';
+            }
+        });
+
+        rawDeliveries.forEach(del => {
+            if (del.companyDetached === true) return;
+            const compName = del.companyName || del.company || '';
+            if (!compName) return;
+            const entry = ensureEntry(compName, del.companyDistrict || del.district, del.address || del.deliveryAddress);
+            if (!entry) return;
+            if (!entry.contactPerson && del.customerName) entry.contactPerson = del.customerName.trim();
+            if (!entry.phone && (del.phone || del.customerPhone)) entry.phone = (del.phone || del.customerPhone).trim();
+        });
+
+        mergedDirectory = Array.from(map.values()).sort((a, b) => a.companyName.localeCompare(b.companyName, 'th'));
+        document.getElementById('directory-sync-count').textContent = `${mergedDirectory.length} บริษัทในระบบ`;
+    }
+
+    // ==========================================
+    // 4. Autocomplete เลือกบริษัท & ดึงราคาเฉพาะบริษัท
+    // ==========================================
+    window.renderCompanyDropdown = function(keyword = '') {
+        const dropdown = document.getElementById('company-autocomplete-dropdown');
+        const q = normalizeKey(keyword);
+
+        const matches = mergedDirectory.filter(c =>
+            normalizeKey(c.companyName).includes(q) ||
+            normalizeKey(c.contactPerson).includes(q) ||
+            normalizeKey(c.phone).includes(q)
+        ).slice(0, 25);
+
+        if (matches.length === 0) {
+            dropdown.innerHTML = `<div class="p-3 text-center text-slate-400">ไม่พบชื่อบริษัทที่ตรงกับ "${escapeHtml(keyword)}"</div>`;
+        } else {
+            dropdown.innerHTML = matches.map(c => {
+                const contactText = [c.contactPerson, c.phone].filter(Boolean).join(' • ');
+                return `
+                    <div onclick="selectCompanyFromDirectory('${encodeURIComponent(c.companyName)}')"
+                        class="px-3.5 py-2.5 hover:bg-teal-50 cursor-pointer transition flex items-start justify-between gap-2">
+                        <div class="min-w-0 flex-1">
+                            <div class="font-bold text-slate-800 truncate">${escapeHtml(c.companyName)}</div>
+                            <div class="text-[11px] text-slate-500 truncate">${escapeHtml(c.address || 'ไม่ระบุที่อยู่')}</div>
+                            ${contactText ? `<div class="text-[10px] text-teal-700 font-medium mt-0.5"><i class="fa-solid fa-user mr-1"></i>${escapeHtml(contactText)}</div>` : ''}
+                        </div>
+                        <span class="px-2 py-0.5 bg-teal-100 text-teal-800 rounded-lg text-[10px] font-bold shrink-0">เลือก</span>
+                    </div>
+                `;
+            }).join('');
+        }
+        dropdown.classList.remove('hidden');
+    };
+
+    window.selectCompanyFromDirectory = function(encodedName) {
+        const name = decodeURIComponent(encodedName);
+        const comp = mergedDirectory.find(c => c.companyName === name);
+        document.getElementById('company-autocomplete-dropdown').classList.add('hidden');
+        document.getElementById('company-autocomplete-input').value = name;
+
+        if (comp) {
+            document.getElementById('input-customer-name').value = comp.companyName;
+            document.getElementById('input-customer-address').value = comp.address || '';
+            if (comp.taxId) document.getElementById('input-customer-tax').value = comp.taxId;
+            const phoneAndContact = [comp.phone, comp.contactPerson ? `(${comp.contactPerson})` : ''].filter(Boolean).join(' ');
+            document.getElementById('input-customer-phone').value = phoneAndContact;
+        }
+
+        refreshSpecialPriceAvailability();
+        updatePreview();
+        showToast(`ดึงข้อมูล "${name}" เรียบร้อยแล้ว`, 'info');
+    };
+
+    document.addEventListener('click', (e) => {
+        const input = document.getElementById('company-autocomplete-input');
+        const dropdown = document.getElementById('company-autocomplete-dropdown');
+        if (input && dropdown && !input.contains(e.target) && !dropdown.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    window.onCustomerNameManualChange = function() {
+        refreshSpecialPriceAvailability();
+        updatePreview();
+    };
+
+    function getSpecialProductsForCurrentCustomer() {
+        const custKey = normalizeKey(document.getElementById('input-customer-name').value);
+        if (!custKey) return [];
+        return rawCompanyProducts.filter(cp => {
+            const cpCompKey = normalizeKey(cp.companyName || cp.company || '');
+            return cpCompKey && cpCompKey === custKey;
+        });
+    }
+
+    function refreshSpecialPriceAvailability() {
+        const specialList = getSpecialProductsForCurrentCustomer();
+        const badge = document.getElementById('special-price-available-badge');
+        if (specialList.length > 0) {
+            badge.innerHTML = `<i class="fa-solid fa-tags mr-0.5"></i>มีราคาเฉพาะบริษัท (${specialList.length})`;
+            badge.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+        }
+        renderFormItems();
+    }
+
+    // ==========================================
+    // Special Product Picker Modal
+    // ==========================================
+    window.openSpecialProductPicker = function(itemId) {
+        const specialList = getSpecialProductsForCurrentCustomer();
+        if (specialList.length === 0) {
+            showToast('ไม่พบรายการราคาเฉพาะบริษัทสำหรับลูกค้านี้', 'info');
+            return;
+        }
+        activePickerTargetItemId = itemId;
+        document.getElementById('picker-company-subtitle').textContent = document.getElementById('input-customer-name').value;
+        document.getElementById('picker-search-input').value = '';
+        renderSpecialProductPickerList('');
+        document.getElementById('special-product-picker-modal').classList.remove('hidden');
+    };
+
+    window.closeSpecialProductPicker = function() {
+        document.getElementById('special-product-picker-modal').classList.add('hidden');
+        activePickerTargetItemId = null;
+    };
+
+    window.renderSpecialProductPickerList = function(keyword = '') {
+        const container = document.getElementById('picker-product-list');
+        const q = normalizeKey(keyword);
+        const list = getSpecialProductsForCurrentCustomer().filter(sp =>
+            normalizeKey(sp.productName || sp.name || '').includes(q)
+        );
+
+        if (list.length === 0) {
+            container.innerHTML = '<div class="py-8 text-center text-slate-400">ไม่พบรายการสินค้าที่ค้นหา</div>';
+            return;
+        }
+
+        container.innerHTML = list.map(sp => {
+            const pName = sp.productName || sp.name || 'สินค้า';
+            const pPrice = Number(sp.price || sp.specialPrice || 0);
+            const pUnit = sp.unit || 'ชิ้น';
+            return `
+                <div onclick="applySpecialProductToRow('${encodeURIComponent(pName)}', ${pPrice}, '${encodeURIComponent(pUnit)}')"
+                    class="py-2.5 px-3 hover:bg-amber-50 cursor-pointer rounded-xl transition flex items-center justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                        <div class="font-bold text-slate-800 break-words">${escapeHtml(pName)}</div>
+                        <div class="text-[11px] text-slate-500">หน่วย: ${escapeHtml(pUnit)}</div>
+                    </div>
+                    <div class="text-right shrink-0">
+                        <span class="text-sm font-bold text-amber-700">฿${formatMoney(pPrice)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    };
+
+    window.applySpecialProductToRow = function(encodedName, price, encodedUnit) {
+        if (activePickerTargetItemId !== null) {
+            const item = billItems.find(i => i.id === activePickerTargetItemId);
+            if (item) {
+                item.name = decodeURIComponent(encodedName);
+                item.price = Number(price) || 0;
+                item.unit = decodeURIComponent(encodedUnit) || 'ชิ้น';
+            }
+        }
+        closeSpecialProductPicker();
+        renderFormItems();
+        updatePreview();
+        showToast('เลือกรายการสินค้าและราคาเฉพาะบริษัทแล้ว');
+    };
 
     // ==========================================
     // Toast Notification Helper
@@ -607,7 +1248,7 @@
     }
 
     // ==========================================
-    // Thai Baht Text Converter (แปลงตัวเลขเป็นคำอ่านภาษาไทย)
+    // Thai Baht Text Converter
     // ==========================================
     function numberToThaiBahtText(amount) {
         if (isNaN(amount) || amount === 0) return 'ศูนย์บาทถ้วน';
@@ -730,6 +1371,7 @@
     // ==========================================
     function renderFormItems() {
         const container = document.getElementById('items-form-container');
+        const hasSpecialPrices = getSpecialProductsForCurrentCustomer().length > 0;
         container.innerHTML = '';
 
         billItems.forEach((item, index) => {
@@ -737,13 +1379,20 @@
             const card = document.createElement('div');
             card.className = 'p-3 bg-white border border-teal-100 rounded-xl shadow-2xs space-y-2 relative transition hover:border-teal-300';
             card.innerHTML = `
-                <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
                     <span class="text-[11px] font-bold text-teal-700 bg-teal-50 px-2 py-0.5 rounded-md">รายการที่ ${index + 1}</span>
-                    ${billItems.length > 1 ? `
-                        <button type="button" onclick="removeItemRow(${item.id})" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded hover:bg-rose-50 transition" title="ลบรายการนี้">
-                            <i class="fa-solid fa-trash-can"></i> ลบ
-                        </button>
-                    ` : ''}
+                    <div class="flex items-center gap-1.5">
+                        ${hasSpecialPrices ? `
+                            <button type="button" onclick="openSpecialProductPicker(${item.id})" class="px-2 py-0.5 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-md text-[11px] font-semibold transition">
+                                <i class="fa-solid fa-tags mr-0.5"></i>ดึงราคาเฉพาะบริษัท
+                            </button>
+                        ` : ''}
+                        ${billItems.length > 1 ? `
+                            <button type="button" onclick="removeItemRow(${item.id})" class="text-rose-500 hover:text-rose-700 text-xs px-1.5 py-0.5 rounded hover:bg-rose-50 transition" title="ลบรายการนี้">
+                                <i class="fa-solid fa-trash-can"></i> ลบ
+                            </button>
+                        ` : ''}
+                    </div>
                 </div>
                 <div>
                     <input type="text" value="${escapeHtml(item.name)}" placeholder="ระบุชื่อสินค้า หรือ บริการ..."
@@ -785,7 +1434,8 @@
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;');
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     window.addItemRow = function() {
@@ -825,13 +1475,11 @@
     // Real-time Document Preview & Calculation
     // ==========================================
     window.updatePreview = function() {
-        // 1. Issuer info
         document.getElementById('preview-issuer-name').textContent = issuerInfo.name || '-';
         document.getElementById('preview-issuer-address').textContent = issuerInfo.address || '-';
         document.getElementById('preview-issuer-tax').textContent = issuerInfo.taxId ? `เลขประจำตัวผู้เสียภาษี: ${issuerInfo.taxId}` : '';
         document.getElementById('preview-issuer-phone').textContent = issuerInfo.phone ? `โทร: ${issuerInfo.phone}` : '';
 
-        // 2. Bill Meta
         const billNo = document.getElementById('input-bill-no').value.trim() || '-';
         const billDate = document.getElementById('input-bill-date').value;
         const paymentMethod = document.getElementById('input-payment-method').value;
@@ -843,14 +1491,12 @@
         document.getElementById('preview-staff-name').textContent = staffName || '-';
         document.getElementById('preview-sign-staff').textContent = staffName ? `(${staffName})` : '(........................................)';
 
-        // 3. Customer Info
         document.getElementById('preview-customer-name').textContent = document.getElementById('input-customer-name').value.trim() || '-';
         document.getElementById('preview-customer-address').textContent = document.getElementById('input-customer-address').value.trim() || '-';
         document.getElementById('preview-customer-tax').textContent = document.getElementById('input-customer-tax').value.trim() || '-';
         document.getElementById('preview-customer-phone').textContent = document.getElementById('input-customer-phone').value.trim() || '-';
         document.getElementById('preview-note').textContent = document.getElementById('input-note').value.trim() || '-';
 
-        // 4. Items Table
         const tbody = document.getElementById('preview-items-tbody');
         tbody.innerHTML = '';
         let subtotal = 0;
@@ -873,7 +1519,6 @@
             tbody.appendChild(tr);
         });
 
-        // 5. Discount & VAT Calculations
         const discountVal = parseFloat(document.getElementById('input-discount-val').value) || 0;
         const discountType = document.getElementById('input-discount-type').value;
         const vatMode = document.getElementById('input-vat-mode').value;
@@ -918,7 +1563,7 @@
     };
 
     // ==========================================
-    // Issuer Settings Modal
+    // Issuer Settings Modal (บันทึกบน Firestore + LocalStorage)
     // ==========================================
     window.openIssuerModal = function() {
         document.getElementById('issuer-name-input').value = issuerInfo.name;
@@ -932,8 +1577,9 @@
         document.getElementById('issuer-modal').classList.add('hidden');
     };
 
-    document.getElementById('issuer-form').addEventListener('submit', function(e) {
+    document.getElementById('issuer-form').addEventListener('submit', async function(e) {
         e.preventDefault();
+        const btn = document.getElementById('btn-save-issuer');
         issuerInfo = {
             name: document.getElementById('issuer-name-input').value.trim(),
             address: document.getElementById('issuer-address-input').value.trim(),
@@ -942,31 +1588,41 @@
         };
         localStorage.setItem(STORAGE_ISSUER_KEY, JSON.stringify(issuerInfo));
         updatePreview();
-        closeIssuerModal();
-        showToast('บันทึกข้อมูลหัวบิลเรียบร้อยแล้ว');
+
+        if (db && currentUser) {
+            btn.disabled = true;
+            btn.textContent = 'กำลังบันทึก...';
+            try {
+                await db.collection('settings').doc('temporaryBillIssuer').set({
+                    ...issuerInfo,
+                    updatedBy: currentUser.uid,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                }, { merge: true });
+                closeIssuerModal();
+                showToast('บันทึกข้อมูลหัวบิลขึ้น Cloud Firestore เรียบร้อยแล้ว');
+            } catch (err) {
+                console.error("Save issuer error:", err);
+                closeIssuerModal();
+                showToast('บันทึกหัวบิลในเครื่องแล้ว (Cloud: ' + err.message + ')', 'info');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '💾 บันทึกข้อมูลหัวบิล';
+            }
+        } else {
+            closeIssuerModal();
+            showToast('บันทึกข้อมูลหัวบิลเรียบร้อยแล้ว');
+        }
     });
 
     // ==========================================
-    // Save & History Management (LocalStorage)
+    // Save & History Management on Cloud Firestore (temporaryBills)
     // ==========================================
-    function loadStorageData() {
-        try {
-            const savedIssuer = localStorage.getItem(STORAGE_ISSUER_KEY);
-            if (savedIssuer) issuerInfo = JSON.parse(savedIssuer);
-
-            const history = localStorage.getItem(STORAGE_BILLS_KEY);
-            if (history) savedBills = JSON.parse(history);
-        } catch (err) {
-            console.error('Storage load error:', err);
+    window.saveCurrentBillToFirebase = async function() {
+        if (!db || !currentUser) {
+            showToast('กรุณาเข้าสู่ระบบก่อนบันทึกบิลขึ้น Cloud', 'error');
+            return;
         }
-        updateHistoryBadge();
-    }
 
-    function updateHistoryBadge() {
-        document.getElementById('saved-bills-badge').textContent = savedBills.length;
-    }
-
-    window.saveCurrentBill = function() {
         const customerName = document.getElementById('input-customer-name').value.trim();
         if (!customerName) {
             showToast('กรุณาระบุชื่อบริษัทหรือชื่อลูกค้าก่อนบันทึกบิล', 'error');
@@ -976,35 +1632,59 @@
 
         const billNo = document.getElementById('input-bill-no').value.trim() || generateBillNumber();
         const grandTotalText = document.getElementById('preview-grand-total').textContent;
+        const grandTotalNumeric = parseFloat(grandTotalText.replace(/,/g, '')) || 0;
 
-        const billData = {
-            billNo: billNo,
-            billDate: document.getElementById('input-bill-date').value,
-            paymentMethod: document.getElementById('input-payment-method').value,
-            staffName: document.getElementById('input-staff-name').value.trim(),
-            customerName: customerName,
-            customerAddress: document.getElementById('input-customer-address').value.trim(),
-            customerTax: document.getElementById('input-customer-tax').value.trim(),
-            customerPhone: document.getElementById('input-customer-phone').value.trim(),
-            discountVal: document.getElementById('input-discount-val').value,
-            discountType: document.getElementById('input-discount-type').value,
-            vatMode: document.getElementById('input-vat-mode').value,
-            note: document.getElementById('input-note').value.trim(),
-            items: JSON.parse(JSON.stringify(billItems)),
-            grandTotalText: grandTotalText,
-            savedAt: new Date().toISOString()
-        };
+        const saveBtn = document.getElementById('btn-save-bill');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>กำลังบันทึก...</span>';
 
-        const existingIndex = savedBills.findIndex(b => b.billNo === billNo);
-        if (existingIndex >= 0) {
-            savedBills[existingIndex] = billData;
-        } else {
-            savedBills.unshift(billData);
+        try {
+            const payload = {
+                billNo: billNo,
+                billDate: document.getElementById('input-bill-date').value,
+                paymentMethod: document.getElementById('input-payment-method').value,
+                staffName: document.getElementById('input-staff-name').value.trim(),
+                customerName: customerName,
+                customerAddress: document.getElementById('input-customer-address').value.trim(),
+                customerTax: document.getElementById('input-customer-tax').value.trim(),
+                customerPhone: document.getElementById('input-customer-phone').value.trim(),
+                discountVal: Number(document.getElementById('input-discount-val').value) || 0,
+                discountType: document.getElementById('input-discount-type').value,
+                vatMode: document.getElementById('input-vat-mode').value,
+                note: document.getElementById('input-note').value.trim(),
+                items: billItems.map(it => ({
+                    name: it.name || '',
+                    qty: Number(it.qty) || 0,
+                    unit: it.unit || 'ชิ้น',
+                    price: Number(it.price) || 0
+                })),
+                grandTotal: grandTotalNumeric,
+                grandTotalText: grandTotalText,
+                issuerSnapshot: issuerInfo,
+                ownerUid: currentUser.uid,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            // ตรวจสอบว่ามีบิลเลขที่นี้อยู่แล้วหรือไม่
+            const existingBill = savedBills.find(b => b.docId === currentEditingBillDocId || b.billNo === billNo);
+            if (existingBill && existingBill.docId) {
+                await db.collection('temporaryBills').doc(existingBill.docId).set(payload, { merge: true });
+                currentEditingBillDocId = existingBill.docId;
+            } else {
+                payload.createdAt = firebase.firestore.FieldValue.serverTimestamp();
+                const docRef = await db.collection('temporaryBills').add(payload);
+                currentEditingBillDocId = docRef.id;
+            }
+
+            document.getElementById('editing-bill-badge').classList.remove('hidden');
+            showToast(`บันทึกบิล ${billNo} ลง Cloud Firestore เรียบร้อยแล้ว`);
+        } catch (err) {
+            console.error("Save bill to Firestore error:", err);
+            showToast('บันทึกข้อมูลไม่สำเร็จ: ' + (err.message || 'กรุณาตรวจสอบสิทธิ์ Firestore'), 'error');
+        } finally {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> <span>บันทึกบิล</span>';
         }
-
-        localStorage.setItem(STORAGE_BILLS_KEY, JSON.stringify(savedBills));
-        updateHistoryBadge();
-        showToast(`บันทึกบิลเลขที่ ${billNo} เรียบร้อยแล้ว`);
     };
 
     window.openHistoryModal = function() {
@@ -1024,14 +1704,15 @@
 
         const filtered = savedBills.filter(b =>
             (b.billNo || '').toLowerCase().includes(q) ||
-            (b.customerName || '').toLowerCase().includes(q)
+            (b.customerName || '').toLowerCase().includes(q) ||
+            (b.staffName || '').toLowerCase().includes(q)
         );
 
-        totalLabel.textContent = `แสดง ${filtered.length} จากทั้งหมด ${savedBills.length} บิล`;
+        totalLabel.textContent = `แสดง ${filtered.length} จากทั้งหมด ${savedBills.length} บิลบน Cloud`;
         container.innerHTML = '';
 
         if (filtered.length === 0) {
-            container.innerHTML = '<div class="py-12 text-center text-slate-400">📭 ยังไม่มีประวัติบิลชั่วคราวที่บันทึกไว้</div>';
+            container.innerHTML = '<div class="py-12 text-center text-slate-400">📭 ยังไม่มีประวัติบิลชั่วคราวบน Cloud Firestore</div>';
             return;
         }
 
@@ -1043,16 +1724,16 @@
                     <div class="flex items-center gap-2 flex-wrap">
                         <span class="font-bold text-teal-800">${escapeHtml(bill.billNo)}</span>
                         <span class="text-[11px] text-slate-500">วันที่ ${formatThaiDate(bill.billDate)}</span>
-                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md font-bold text-[11px]">฿${escapeHtml(bill.grandTotalText)}</span>
+                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md font-bold text-[11px]">฿${escapeHtml(bill.grandTotalText || formatMoney(bill.grandTotal))}</span>
                     </div>
                     <div class="font-semibold text-slate-800 truncate mt-0.5">${escapeHtml(bill.customerName)}</div>
-                    <div class="text-[11px] text-slate-500">จำนวน ${bill.items ? bill.items.length : 0} รายการ • ชำระโดย ${escapeHtml(bill.paymentMethod)}</div>
+                    <div class="text-[11px] text-slate-500">จำนวน ${bill.items ? bill.items.length : 0} รายการ • ชำระโดย ${escapeHtml(bill.paymentMethod || '-')}</div>
                 </div>
                 <div class="flex items-center gap-1.5 shrink-0">
-                    <button type="button" onclick="loadSavedBill('${escapeHtml(bill.billNo)}')" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold transition">
+                    <button type="button" onclick="loadSavedBill('${bill.docId}')" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold transition">
                         <i class="fa-solid fa-folder-open mr-1"></i>เปิดบิล
                     </button>
-                    <button type="button" onclick="deleteSavedBill('${escapeHtml(bill.billNo)}')" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-200 rounded-xl font-semibold transition" title="ลบบิลนี้">
+                    <button type="button" onclick="deleteSavedBillFromFirebase('${bill.docId}', '${escapeHtml(bill.billNo)}')" class="px-2.5 py-1.5 bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-200 rounded-xl font-semibold transition" title="ลบบิลนี้">
                         <i class="fa-solid fa-trash-can"></i>
                     </button>
                 </div>
@@ -1061,9 +1742,12 @@
         });
     };
 
-    window.loadSavedBill = function(billNo) {
-        const bill = savedBills.find(b => b.billNo === billNo);
+    window.loadSavedBill = function(docId) {
+        const bill = savedBills.find(b => b.docId === docId);
         if (!bill) return;
+
+        currentEditingBillDocId = bill.docId;
+        document.getElementById('editing-bill-badge').classList.remove('hidden');
 
         document.getElementById('input-bill-no').value = bill.billNo;
         document.getElementById('input-bill-date').value = bill.billDate;
@@ -1078,23 +1762,34 @@
         document.getElementById('input-vat-mode').value = bill.vatMode || 'none';
         document.getElementById('input-note').value = bill.note || '';
 
-        billItems = JSON.parse(JSON.stringify(bill.items || [{ id: Date.now(), name: '', qty: 1, unit: 'ชิ้น', price: 0 }]));
-        renderFormItems();
+        const loadedItems = Array.isArray(bill.items) && bill.items.length > 0
+            ? bill.items.map((it, idx) => ({ id: Date.now() + idx, ...it }))
+            : [{ id: Date.now(), name: '', qty: 1, unit: 'ชิ้น', price: 0 }];
+
+        billItems = loadedItems;
+        refreshSpecialPriceAvailability();
         updatePreview();
         closeHistoryModal();
-        showToast(`โหลดข้อมูลบิล ${billNo} เรียบร้อยแล้ว`, 'info');
+        showToast(`โหลดข้อมูลบิล ${bill.billNo} จาก Cloud เรียบร้อยแล้ว`, 'info');
     };
 
-    window.deleteSavedBill = function(billNo) {
-        savedBills = savedBills.filter(b => b.billNo !== billNo);
-        localStorage.setItem(STORAGE_BILLS_KEY, JSON.stringify(savedBills));
-        updateHistoryBadge();
-        renderHistoryList(document.getElementById('history-search-input').value);
-        showToast(`ลบประวัติบิล ${billNo} แล้ว`);
+    window.deleteSavedBillFromFirebase = async function(docId, billNo) {
+        if (!db || !docId) return;
+        try {
+            await db.collection('temporaryBills').doc(docId).delete();
+            if (currentEditingBillDocId === docId) {
+                currentEditingBillDocId = null;
+                document.getElementById('editing-bill-badge').classList.add('hidden');
+            }
+            showToast(`ลบบิล ${billNo} ออกจาก Cloud Firestore แล้ว`);
+        } catch (err) {
+            console.error("Delete bill error:", err);
+            showToast('ลบบิลไม่สำเร็จ: ' + err.message, 'error');
+        }
     };
 
     // ==========================================
-    // Utility Actions: New Bill, Regenerate No, Sample Data
+    // Utility Actions: New Bill, Regenerate No
     // ==========================================
     window.regenerateBillNo = function() {
         document.getElementById('input-bill-no').value = generateBillNumber();
@@ -1102,6 +1797,9 @@
     };
 
     window.confirmNewBill = function() {
+        currentEditingBillDocId = null;
+        document.getElementById('editing-bill-badge').classList.add('hidden');
+        document.getElementById('company-autocomplete-input').value = '';
         document.getElementById('input-bill-no').value = generateBillNumber();
         document.getElementById('input-bill-date').valueAsDate = new Date();
         document.getElementById('input-customer-name').value = '';
@@ -1112,41 +1810,25 @@
         document.getElementById('input-discount-type').value = 'baht';
         document.getElementById('input-vat-mode').value = 'none';
         billItems = [{ id: Date.now(), name: '', qty: 1, unit: 'ชิ้น', price: 0 }];
-        renderFormItems();
+        refreshSpecialPriceAvailability();
         updatePreview();
         showToast('รีเซ็ตฟอร์มสำหรับออกบิลใหม่เรียบร้อยแล้ว', 'info');
-    };
-
-    window.fillSampleData = function() {
-        document.getElementById('input-customer-name').value = 'บริษัท สยามออฟฟิศ ซัพพลาย จำกัด (สำนักงานใหญ่)';
-        document.getElementById('input-customer-address').value = '123/45 อาคารสาทรทาวเวอร์ ถนนสาทรใต้ แขวงยานนาวา เขตสาทร กรุงเทพฯ 10120';
-        document.getElementById('input-customer-tax').value = '0105561234567';
-        document.getElementById('input-customer-phone').value = '089-999-8888 (คุณวิชัย)';
-        document.getElementById('input-staff-name').value = 'สมชาย ใจดี';
-        document.getElementById('input-payment-method').value = 'โอนเงินผ่านธนาคาร (Transfer)';
-        document.getElementById('input-discount-val').value = 50;
-        document.getElementById('input-discount-type').value = 'baht';
-        document.getElementById('input-vat-mode').value = 'exclude';
-
-        billItems = [
-            { id: Date.now() + 1, name: 'กระดาษถ่ายเอกสาร A4 80 แกรม Double A (กล่อง 5 รีม)', qty: 4, unit: 'กล่อง', price: 620 },
-            { id: Date.now() + 2, name: 'ปากกาเคมี Uni Paint Marker สีดำ (หัวกลาง)', qty: 12, unit: 'ด้าม', price: 65 },
-            { id: Date.now() + 3, name: 'แฟ้มสันกว้าง 3 นิ้ว ตราช้าง สีดำ', qty: 6, unit: 'แฟ้ม', price: 75 }
-        ];
-        renderFormItems();
-        updatePreview();
-        showToast('เติมข้อมูลตัวอย่างเรียบร้อยแล้ว', 'info');
     };
 
     // ==========================================
     // Initialization
     // ==========================================
     window.addEventListener('DOMContentLoaded', () => {
-        loadStorageData();
+        try {
+            const cachedIssuer = localStorage.getItem(STORAGE_ISSUER_KEY);
+            if (cachedIssuer) issuerInfo = JSON.parse(cachedIssuer);
+        } catch (e) {}
+
         document.getElementById('input-bill-no').value = generateBillNumber();
         document.getElementById('input-bill-date').valueAsDate = new Date();
         renderFormItems();
         updatePreview();
+        initFirebase();
     });
 </script>
 </body>
