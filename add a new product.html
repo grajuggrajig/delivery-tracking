@@ -116,10 +116,10 @@
         </div>
     </header>
 
-<!-- ปรับโครงสร้างหลักให้กว้างและยาวขึ้น (Max-width กว้างขึ้นเป็น 90rem) -->
+<!-- Main Container -->
 <div class="w-full max-w-[90rem] mx-auto px-3 sm:px-6 pb-12 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
     
-    <!-- ฝั่งซ้าย: ฟอร์มเพิ่ม/แก้ไขสินค้า (ลดขนาดสัดส่วนเหลือ lg:col-span-4 เพื่อให้ฝั่งตารางกว้างขึ้น) -->
+    <!-- ฝั่งซ้าย: ฟอร์มเพิ่ม/แก้ไขสินค้า -->
     <div class="lg:col-span-4 glass-card rounded-[2rem] overflow-hidden flex flex-col shadow-xl">
         <div class="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-5 sm:px-6 py-4 text-white flex items-center justify-between gap-2 shadow-sm">
             <div class="flex items-center gap-3">
@@ -175,6 +175,16 @@
                         class="w-full px-3.5 py-2.5 border border-teal-200/80 bg-white/70 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition text-xs sm:text-sm">
                 </div>
 
+                <!-- เพิ่มตัวเลือกสำหรับการซิงค์ราคาบริษัทในเครือเดียวกันเฉพาะตอนแก้ไขสินค้า -->
+                <div id="sync-affiliated-group-container" class="hidden p-3 bg-teal-50/80 border border-teal-200 rounded-xl space-y-1.5">
+                    <label class="flex items-start gap-2 cursor-pointer">
+                        <input type="checkbox" id="sync-affiliated-checkbox" class="mt-0.5 rounded text-teal-600 focus:ring-teal-500 w-4 h-4">
+                        <span class="text-[11px] text-teal-900 leading-snug font-medium">
+                            <b>🔄 อัปเดตราคาพร้อมกันทุกบริษัทในเครือ:</b> เปลี่ยนแปลงราคา/ต้นทุนนี้ให้สินค้าชื่อเดียวกันทุกบริษัทที่มีชื่อรากเดียวกันโดยอัตโนมัติ (ไม่รวมบริษัทอิสระนอกเครือ)
+                        </span>
+                    </label>
+                </div>
+
                 <div id="duplicate-warning" class="hidden rounded-xl p-3 bg-amber-50/90 border border-amber-200 text-amber-800 text-xs space-y-1">
                     <div class="font-bold flex items-center gap-1">
                         <span>⚠️</span> <span id="duplicate-warning-title">พบสินค้าที่อาจจะซ้ำหรือคล้ายกันในระบบ:</span>
@@ -219,17 +229,27 @@
         </form>
     </div>
 
-    <!-- ฝั่งขวา: ตารางแสดงรายการสินค้า (ขยายสัดส่วนเป็น lg:col-span-8 เพื่อความกว้าง และเพิ่มความสูง max-h-[600px]) -->
+    <!-- ฝั่งขวา: ตารางแสดงรายการสินค้า -->
     <div class="lg:col-span-8 glass-card rounded-[2rem] overflow-hidden flex flex-col shadow-xl">
-        <div class="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-5 sm:px-6 py-4 text-white flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
+        <div class="bg-gradient-to-r from-teal-600 via-emerald-600 to-cyan-600 px-5 sm:px-6 py-4 text-white flex flex-col xl:flex-row items-start xl:items-center justify-between gap-3 shadow-sm">
             <div>
                 <h3 class="text-sm font-bold tracking-tight">📋 รายการสินค้าตามบริษัท</h3>
-                <p class="text-[11px] text-white/85">เลือกบริษัทเพื่อตรวจสอบรายการสินค้าในระบบ (Real-time Firestore)[cite: 6]</p>
+                <p class="text-[11px] text-white/85">เลือกบริษัทหรือค้นหาสินค้าในระบบ (Real-time Firestore)</p>
             </div>
-            <select id="filter-company"
-                class="px-3 py-2 bg-white/20 hover:bg-white/25 border border-white/30 rounded-xl text-xs text-white outline-none focus:ring-2 focus:ring-teal-300 max-w-full sm:max-w-[280px] [&>option]:text-slate-800 [&>option]:bg-white cursor-pointer font-medium">
-                <option value="all">แสดงทุกบริษัททั้งหมด</option>
-            </select>
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full xl:w-auto">
+                <div class="relative flex-1 sm:w-52">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-white/75 text-xs pointer-events-none"></i>
+                    <input type="text" id="search-product-input" placeholder="ค้นหาชื่อสินค้า..." autocomplete="off"
+                        class="w-full pl-8 pr-7 py-2 bg-white/20 hover:bg-white/25 focus:bg-white/30 border border-white/30 rounded-xl text-xs text-white placeholder-white/75 outline-none focus:ring-2 focus:ring-teal-300 transition">
+                    <button type="button" id="clear-search-product-btn" class="hidden absolute right-2.5 top-2 text-white/80 hover:text-white text-xs" title="ล้างคำค้นหา">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+                <select id="filter-company"
+                    class="px-3 py-2 bg-white/20 hover:bg-white/25 border border-white/30 rounded-xl text-xs text-white outline-none focus:ring-2 focus:ring-teal-300 max-w-full sm:max-w-[240px] [&>option]:text-slate-800 [&>option]:bg-white cursor-pointer font-medium">
+                    <option value="all">แสดงทุกบริษัททั้งหมด</option>
+                </select>
+            </div>
         </div>
 
         <div class="p-5 min-h-[420px] max-h-[600px] overflow-y-auto overflow-x-auto">
@@ -248,7 +268,7 @@
                 </tbody>
             </table>
             <div id="empty-state" class="hidden text-center py-16 text-slate-400 text-xs">
-                📭 ยังไม่มีรายการสินค้าในระบบสำหรับบริษัทนี้
+                📭 ไม่พบรายการสินค้าที่ค้นหาในระบบ
             </div>
         </div>
 
@@ -274,6 +294,54 @@
         </div>
     </div>
 
+</div>
+
+<!-- Modal ยืนยันรหัสผ่านก่อนลบข้อมูล -->
+<div id="password-confirm-modal" class="hidden fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-md overflow-hidden flex flex-col modal-animate">
+        <div class="bg-gradient-to-r from-rose-600 to-red-600 px-6 py-4 text-white flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center text-sm">
+                    <i class="fa-solid fa-shield-halved"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-bold">ยืนยันรหัสผ่านเพื่อดำเนินการ</h4>
+                    <p class="text-[11px] text-white/85">มาตรการความปลอดภัยก่อนลบข้อมูล</p>
+                </div>
+            </div>
+            <button type="button" onclick="closePasswordModal()" class="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm font-bold transition">✕</button>
+        </div>
+
+        <form id="password-confirm-form" class="p-5 space-y-4 text-xs">
+            <div class="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 leading-relaxed whitespace-pre-line" id="password-confirm-desc">
+                กรุณากรอกรหัสผ่านบัญชีของคุณเพื่อยืนยันการลบข้อมูล
+            </div>
+
+            <div id="password-confirm-error" class="hidden p-2.5 rounded-xl bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                <span id="password-confirm-error-text">รหัสผ่านไม่ถูกต้อง</span>
+            </div>
+
+            <div>
+                <label class="block font-bold text-slate-700 mb-1.5">รหัสผ่านเข้าสู่ระบบ (Password)</label>
+                <div class="relative">
+                    <i class="fa-solid fa-lock absolute left-3.5 top-3 text-slate-400 text-xs"></i>
+                    <input type="password" id="confirm-login-password" required autocomplete="current-password" placeholder="••••••••"
+                        class="w-full pl-9 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl text-sm focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 outline-none transition">
+                    <button type="button" id="toggle-confirm-password" class="absolute right-3.5 top-2.5 text-slate-400 hover:text-slate-600 focus:outline-none">
+                        <i class="fa-solid fa-eye text-xs" id="toggle-confirm-password-icon"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="pt-2 flex justify-end gap-2">
+                <button type="button" onclick="closePasswordModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold text-xs transition">ยกเลิก</button>
+                <button type="submit" id="btn-verify-password-submit" class="px-4 py-2 bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-700 hover:to-red-700 text-white rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5">
+                    <i class="fa-solid fa-check"></i> ยืนยันรหัสผ่านและดำเนินการ
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
 
 <!-- Modal จัดการบริษัท คัดลอก และรวมสินค้า -->
@@ -426,6 +494,8 @@
     const companySelectHidden = document.getElementById('company-select');
     const companyDropdownList = document.getElementById('company-dropdown-list');
     const filterCompany = document.getElementById('filter-company');
+    const searchProductInput = document.getElementById('search-product-input');
+    const clearSearchProductBtn = document.getElementById('clear-search-product-btn');
     const emptyState = document.getElementById('empty-state');
     const totalCount = document.getElementById('total-items-count');
     const editingProductId = document.getElementById('editing-product-id');
@@ -465,6 +535,88 @@
     const mergeTargetSelect = document.getElementById('merge-target-select');
     const mergeSkipDuplicateCheckbox = document.getElementById('merge-skip-duplicate-products');
     const confirmMergeBtn = document.getElementById('confirm-merge-btn');
+
+    const syncAffiliatedGroupContainer = document.getElementById('sync-affiliated-group-container');
+    const syncAffiliatedCheckbox = document.getElementById('sync-affiliated-checkbox');
+
+    // ==========================================
+    // ระบบยืนยันรหัสผ่าน (Re-authentication) ก่อนลบข้อมูล
+    // ==========================================
+    const passwordConfirmModal = document.getElementById('password-confirm-modal');
+    const passwordConfirmForm = document.getElementById('password-confirm-form');
+    const passwordConfirmDesc = document.getElementById('password-confirm-desc');
+    const passwordConfirmError = document.getElementById('password-confirm-error');
+    const passwordConfirmErrorText = document.getElementById('password-confirm-error-text');
+    const confirmLoginPasswordInput = document.getElementById('confirm-login-password');
+    const btnVerifyPasswordSubmit = document.getElementById('btn-verify-password-submit');
+    let pendingPasswordCallback = null;
+
+    function requestPasswordVerification(descriptionText, onSuccessCallback) {
+        if (!auth.currentUser) {
+            alert('ไม่พบข้อมูลการเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่อีกครั้ง');
+            window.location.replace('login.html');
+            return;
+        }
+        passwordConfirmDesc.textContent = descriptionText;
+        passwordConfirmError.classList.add('hidden');
+        confirmLoginPasswordInput.value = '';
+        confirmLoginPasswordInput.type = 'password';
+        document.getElementById('toggle-confirm-password-icon').className = 'fa-solid fa-eye text-xs';
+        pendingPasswordCallback = onSuccessCallback;
+        passwordConfirmModal.classList.remove('hidden');
+        setTimeout(() => confirmLoginPasswordInput.focus(), 50);
+    }
+
+    window.closePasswordModal = function() {
+        passwordConfirmModal.classList.add('hidden');
+        pendingPasswordCallback = null;
+        confirmLoginPasswordInput.value = '';
+    };
+
+    document.getElementById('toggle-confirm-password').addEventListener('click', function() {
+        const icon = document.getElementById('toggle-confirm-password-icon');
+        const isPassword = confirmLoginPasswordInput.type === 'password';
+        confirmLoginPasswordInput.type = isPassword ? 'text' : 'password';
+        icon.classList.toggle('fa-eye');
+        icon.classList.toggle('fa-eye-slash');
+    });
+
+    passwordConfirmForm.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const password = confirmLoginPasswordInput.value;
+        const user = auth.currentUser;
+        if (!password || !user || !user.email) return;
+
+        btnVerifyPasswordSubmit.disabled = true;
+        btnVerifyPasswordSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังตรวจสอบ...';
+        passwordConfirmError.classList.add('hidden');
+
+        try {
+            const credential = firebase.auth.EmailAuthProvider.credential(user.email, password);
+            await user.reauthenticateWithCredential(credential);
+
+            const callback = pendingPasswordCallback;
+            closePasswordModal();
+            if (typeof callback === 'function') {
+                await callback();
+            }
+        } catch (error) {
+            console.error("Password verification failed:", error);
+            let msg = 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+            if (error.code === 'auth/too-many-requests') {
+                msg = 'กรอกรหัสผ่านผิดหลายครั้งเกินไป กรุณารอสักครู่';
+            } else if (error.code === 'auth/network-request-failed') {
+                msg = 'ไม่สามารถเชื่อมต่ออินเทอร์เน็ตได้';
+            }
+            passwordConfirmErrorText.textContent = msg;
+            passwordConfirmError.classList.remove('hidden');
+            confirmLoginPasswordInput.focus();
+            confirmLoginPasswordInput.select();
+        } finally {
+            btnVerifyPasswordSubmit.disabled = false;
+            btnVerifyPasswordSubmit.innerHTML = '<i class="fa-solid fa-check"></i> ยืนยันรหัสผ่านและดำเนินการ';
+        }
+    });
 
     window.toggleMenuDropdown = function() {
         const menu = document.getElementById('system-menu-dropdown');
@@ -704,107 +856,111 @@
         currentMergeSourceName = '';
     };
 
-    window.executeMergeCompany = async function() {
+    window.executeMergeCompany = function() {
         const sourceName = currentMergeSourceName;
         const targetName = mergeTargetSelect.value;
         const skipDuplicateProducts = mergeSkipDuplicateCheckbox.checked;
 
         if (!sourceName || !targetName) return;
 
-        const sourceStrictKey = cleanCompanyName(sourceName).toLowerCase().replace(/\s+/g, '');
-        const targetStrictKey = cleanCompanyName(targetName).toLowerCase().replace(/\s+/g, '');
+        const desc = `ยืนยันการย้ายสินค้าทั้งหมดจาก "${sourceName}" ไปรวมที่ "${targetName}" และลบบริษัท "${sourceName}" ออกจากระบบถาวร\n\nกรุณากรอกรหัสผ่านเข้าสู่ระบบเพื่อยืนยัน:`;
 
-        try {
-            confirmMergeBtn.disabled = true;
-            confirmMergeBtn.textContent = 'กำลังย้ายและรวมข้อมูล...';
+        requestPasswordVerification(desc, async () => {
+            const sourceStrictKey = cleanCompanyName(sourceName).toLowerCase().replace(/\s+/g, '');
+            const targetStrictKey = cleanCompanyName(targetName).toLowerCase().replace(/\s+/g, '');
 
-            const targetProductNames = new Set(
-                products
-                    .filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === targetStrictKey)
-                    .map(p => (p.name || '').trim().toLowerCase())
-            );
+            try {
+                confirmMergeBtn.disabled = true;
+                confirmMergeBtn.textContent = 'กำลังย้ายและรวมข้อมูล...';
 
-            let batch = db.batch();
-            let opCount = 0;
-            let movedCount = 0;
-            let skippedCount = 0;
+                const targetProductNames = new Set(
+                    products
+                        .filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === targetStrictKey)
+                        .map(p => (p.name || '').trim().toLowerCase())
+                );
 
-            const commitBatchIfNeeded = async () => {
-                if (opCount >= 450) {
-                    await batch.commit();
-                    batch = db.batch();
-                    opCount = 0;
-                }
-            };
+                let batch = db.batch();
+                let opCount = 0;
+                let movedCount = 0;
+                let skippedCount = 0;
 
-            const productsSnap = await db.collection('companyProducts').get();
-            for (const doc of productsSnap.docs) {
-                const data = doc.data();
-                const rawComp = data.companyName || data.company;
-                if (cleanCompanyName(rawComp).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
-                    const prodNameLower = (data.name || '').trim().toLowerCase();
-                    if (skipDuplicateProducts && targetProductNames.has(prodNameLower)) {
-                        batch.delete(doc.ref);
-                        skippedCount++;
-                    } else {
-                        batch.update(doc.ref, {
-                            companyName: targetName,
-                            company: targetName,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                        });
-                        targetProductNames.add(prodNameLower);
-                        movedCount++;
+                const commitBatchIfNeeded = async () => {
+                    if (opCount >= 450) {
+                        await batch.commit();
+                        batch = db.batch();
+                        opCount = 0;
                     }
-                    opCount++;
-                    await commitBatchIfNeeded();
+                };
+
+                const productsSnap = await db.collection('companyProducts').get();
+                for (const doc of productsSnap.docs) {
+                    const data = doc.data();
+                    const rawComp = data.companyName || data.company;
+                    if (cleanCompanyName(rawComp).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
+                        const prodNameLower = (data.name || '').trim().toLowerCase();
+                        if (skipDuplicateProducts && targetProductNames.has(prodNameLower)) {
+                            batch.delete(doc.ref);
+                            skippedCount++;
+                        } else {
+                            batch.update(doc.ref, {
+                                companyName: targetName,
+                                company: targetName,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            targetProductNames.add(prodNameLower);
+                            movedCount++;
+                        }
+                        opCount++;
+                        await commitBatchIfNeeded();
+                    }
                 }
-            }
 
-            const companiesSnap = await db.collection('companies').get();
-            for (const doc of companiesSnap.docs) {
-                const data = doc.data();
-                const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
-                if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
-                    batch.delete(doc.ref);
-                    opCount++;
-                    await commitBatchIfNeeded();
+                const companiesSnap = await db.collection('companies').get();
+                for (const doc of companiesSnap.docs) {
+                    const data = doc.data();
+                    const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
+                    if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
+                        batch.delete(doc.ref);
+                        opCount++;
+                        await commitBatchIfNeeded();
+                    }
                 }
+
+                if (opCount > 0) {
+                    await batch.commit();
+                }
+
+                companiesMap.delete(sourceStrictKey);
+
+                if (cleanCompanyName(filterCompany.value).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
+                    filterCompany.value = targetName;
+                }
+                if (cleanCompanyName(companySelectHidden.value).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
+                    companySelectHidden.value = targetName;
+                    companySearchInput.value = targetName;
+                }
+
+                closeMergeModal();
+                updateFilterDropdown();
+                renderManagerCompanyList(managerSearchInput.value);
+                renderTable();
+
+                let summaryText = `รวมข้อมูลสำเร็จ! ย้ายสินค้า ${movedCount} รายการ ไปที่ "${targetName}"`;
+                if (skippedCount > 0) summaryText += ` (ตัดรายการซ้ำออก ${skippedCount} รายการ)`;
+                showMessage(summaryText, 'success');
+                setTimeout(() => message.classList.add('hidden'), 5000);
+
+            } catch (error) {
+                console.error("Error merging company:", error);
+                alert('เกิดข้อผิดพลาดในการรวมข้อมูลบริษัท กรุณาลองใหม่อีกครั้ง');
+            } finally {
+                confirmMergeBtn.disabled = false;
+                confirmMergeBtn.textContent = '✅ ยืนยันการรวมและลบบริษัทซ้ำ';
             }
-
-            if (opCount > 0) {
-                await batch.commit();
-            }
-
-            companiesMap.delete(sourceStrictKey);
-
-            if (cleanCompanyName(filterCompany.value).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
-                filterCompany.value = targetName;
-            }
-            if (cleanCompanyName(companySelectHidden.value).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
-                companySelectHidden.value = targetName;
-                companySearchInput.value = targetName;
-            }
-
-            closeMergeModal();
-            updateFilterDropdown();
-            renderManagerCompanyList(managerSearchInput.value);
-            renderTable();
-
-            let summaryText = `รวมข้อมูลสำเร็จ! ย้ายสินค้า ${movedCount} รายการ ไปที่ "${targetName}"`;
-            if (skippedCount > 0) summaryText += ` (ตัดรายการซ้ำออก ${skippedCount} รายการ)`;
-            showMessage(summaryText, 'success');
-            setTimeout(() => message.classList.add('hidden'), 5000);
-
-        } catch (error) {
-            console.error("Error merging company:", error);
-            alert('เกิดข้อผิดพลาดในการรวมข้อมูลบริษัท กรุณาลองใหม่อีกครั้ง');
-        } finally {
-            confirmMergeBtn.disabled = false;
-            confirmMergeBtn.textContent = '✅ ยืนยันการรวมและลบบริษัทซ้ำ';
-        }
+        });
     };
 
-    window.deleteCompanyFromFirebase = async function(companyNameTarget, event) {
+    window.deleteCompanyFromFirebase = function(companyNameTarget, event) {
         if (event) {
             event.stopPropagation();
         }
@@ -819,59 +975,59 @@
 
         let confirmMsg = `คุณต้องการลบชื่อบริษัท "${companyNameTarget}" ออกจากฐานข้อมูล Firebase ใช่หรือไม่?`;
         if (relatedProducts.length > 0) {
-            confirmMsg += `\n\n⚠️ บริษัทนี้มีรายการสินค้าอยู่ ${relatedProducts.length} รายการ!\nหากต้องการเก็บสินค้าไว้ กรุณากด "ยกเลิก" แล้วใช้ปุ่ม [🔀 รวมเข้าบริษัทหลัก] แทน\n\nกด "ตกลง (OK)" เพื่อลบทั้งบริษัทและสินค้าทั้งหมดนี้ทิ้งถาวร`;
+            confirmMsg += `\n\n⚠️ บริษัทนี้มีรายการสินค้าอยู่ ${relatedProducts.length} รายการ! การดำเนินการนี้จะลบทั้งบริษัทและสินค้าทั้งหมดนี้ทิ้งถาวร`;
         }
 
-        if (!confirm(confirmMsg)) return;
+        requestPasswordVerification(confirmMsg, async () => {
+            try {
+                const batch = db.batch();
 
-        try {
-            const batch = db.batch();
+                const companiesSnap = await db.collection('companies').get();
+                companiesSnap.forEach(doc => {
+                    const data = doc.data();
+                    const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
+                    if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
+                        batch.delete(doc.ref);
+                    }
+                });
 
-            const companiesSnap = await db.collection('companies').get();
-            companiesSnap.forEach(doc => {
-                const data = doc.data();
-                const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
-                if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
-                    batch.delete(doc.ref);
+                const productsSnap = await db.collection('companyProducts').get();
+                productsSnap.forEach(doc => {
+                    const data = doc.data();
+                    const rawName = data.companyName || data.company;
+                    if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
+                        batch.delete(doc.ref);
+                    }
+                });
+
+                await batch.commit();
+
+                companiesMap.delete(targetStrictKey);
+                persistentCheckedCompanies.delete(companyNameTarget);
+
+                if (cleanCompanyName(companySelectHidden.value).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
+                    companySelectHidden.value = '';
+                    companySearchInput.value = '';
                 }
-            });
-
-            const productsSnap = await db.collection('companyProducts').get();
-            productsSnap.forEach(doc => {
-                const data = doc.data();
-                const rawName = data.companyName || data.company;
-                if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
-                    batch.delete(doc.ref);
+                if (cleanCompanyName(filterCompany.value).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
+                    filterCompany.value = 'all';
                 }
-            });
 
-            await batch.commit();
+                updateFilterDropdown();
+                renderCompanyDropdown(companySearchInput.value);
+                if (isMultiSelectMode) renderMultiCheckboxes(multiSearchInput.value);
+                if (!companyManagerModal.classList.contains('hidden')) {
+                    renderManagerCompanyList(managerSearchInput.value);
+                }
+                renderTable();
 
-            companiesMap.delete(targetStrictKey);
-            persistentCheckedCompanies.delete(companyNameTarget);
-
-            if (cleanCompanyName(companySelectHidden.value).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
-                companySelectHidden.value = '';
-                companySearchInput.value = '';
+                showMessage(`ลบชื่อบริษัท "${companyNameTarget}" ออกจากระบบเรียบร้อยแล้ว`, 'success');
+                setTimeout(() => message.classList.add('hidden'), 3000);
+            } catch (error) {
+                console.error("Error deleting company:", error);
+                alert('เกิดข้อผิดพลาดในการลบข้อมูลบริษัท กรุณาลองใหม่อีกครั้ง');
             }
-            if (cleanCompanyName(filterCompany.value).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
-                filterCompany.value = 'all';
-            }
-
-            updateFilterDropdown();
-            renderCompanyDropdown(companySearchInput.value);
-            if (isMultiSelectMode) renderMultiCheckboxes(multiSearchInput.value);
-            if (!companyManagerModal.classList.contains('hidden')) {
-                renderManagerCompanyList(managerSearchInput.value);
-            }
-            renderTable();
-
-            showMessage(`ลบชื่อบริษัท "${companyNameTarget}" ออกจากระบบเรียบร้อยแล้ว`, 'success');
-            setTimeout(() => message.classList.add('hidden'), 3000);
-        } catch (error) {
-            console.error("Error deleting company:", error);
-            alert('เกิดข้อผิดพลาดในการลบข้อมูลบริษัท กรุณาลองใหม่อีกครั้ง');
-        }
+        });
     };
 
     window.openCompanyManager = function() {
@@ -1027,7 +1183,7 @@
                         conflictDetails.push(`บริษัท "${compName}" มีสินค้าใกล้เคียงกันอยู่แล้ว`);
                     }
                 });
-            } else if (currentCompany) {
+            } else if (currentCompany && !editingProductId.value) {
                 products.forEach(p => {
                     const pComp = cleanCompanyName(p.companyName || p.company);
                     if (pComp.toLowerCase() !== currentCompany.toLowerCase()) return;
@@ -1256,14 +1412,18 @@
     // ==========================================
     function renderTable() {
         const selectedFilter = filterCompany.value;
+        const productKeyword = searchProductInput.value.trim().toLowerCase();
         tableBody.innerHTML = '';
 
-        const filteredProducts = selectedFilter === 'all' 
-            ? products 
-            : products.filter(p => {
-                const pComp = cleanCompanyName(p.companyName || p.company);
-                return pComp.toLowerCase().replace(/\s+/g, '') === selectedFilter.toLowerCase().replace(/\s+/g, '');
-            });
+        const filteredProducts = products.filter(p => {
+            const pComp = cleanCompanyName(p.companyName || p.company);
+            const matchCompany = selectedFilter === 'all' || 
+                pComp.toLowerCase().replace(/\s+/g, '') === selectedFilter.toLowerCase().replace(/\s+/g, '');
+            const matchProduct = !productKeyword || 
+                (p.name || '').toLowerCase().includes(productKeyword) ||
+                (p.unit || '').toLowerCase().includes(productKeyword);
+            return matchCompany && matchProduct;
+        });
 
         // คำนวณระบบแบ่งหน้า Pagination
         const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
@@ -1313,7 +1473,6 @@
     window.changePage = function(direction) {
         currentPage += direction;
         renderTable();
-        // เลื่อนมุมมองกลับมาที่หัวตารางเบาๆ
         const tableContainer = document.querySelector('.overflow-y-auto');
         if (tableContainer) tableContainer.scrollTop = 0;
     };
@@ -1375,8 +1534,26 @@
     }
 
     filterCompany.addEventListener('change', () => {
-        currentPage = 1; // รีเซ็ตกลับมาหน้าแรกเมื่อเปลี่ยนตัวกรองบริษัท
+        currentPage = 1;
         renderTable();
+    });
+
+    searchProductInput.addEventListener('input', () => {
+        if (searchProductInput.value.trim() !== '') {
+            clearSearchProductBtn.classList.remove('hidden');
+        } else {
+            clearSearchProductBtn.classList.add('hidden');
+        }
+        currentPage = 1;
+        renderTable();
+    });
+
+    clearSearchProductBtn.addEventListener('click', () => {
+        searchProductInput.value = '';
+        clearSearchProductBtn.classList.add('hidden');
+        currentPage = 1;
+        renderTable();
+        searchProductInput.focus();
     });
 
     window.editProduct = function(id) {
@@ -1407,6 +1584,10 @@
         multiSelectToggleLabel.classList.add('opacity-50', 'pointer-events-none');
         duplicateWarning.classList.add('hidden');
         
+        // แสดงกล่องตัวเลือกซิงค์กลุ่มบริษัทในเครือเฉพาะตอนแก้ไข
+        syncAffiliatedGroupContainer.classList.remove('hidden');
+        syncAffiliatedCheckbox.checked = false;
+
         form.scrollIntoView({ behavior: 'smooth' });
     }
 
@@ -1425,6 +1606,8 @@
         multiSelectToggleLabel.classList.remove('opacity-50', 'pointer-events-none');
         message.classList.add('hidden');
         duplicateWarning.classList.add('hidden');
+        syncAffiliatedGroupContainer.classList.add('hidden');
+        syncAffiliatedCheckbox.checked = false;
         persistentCheckedCompanies.clear();
         if (isMultiSelectMode) renderMultiCheckboxes(multiSearchInput.value);
         checkDuplicateStatus();
@@ -1452,18 +1635,72 @@
                 const company = companySelectHidden.value || companySearchInput.value.trim();
                 if (!company) {
                     alert('กรุณาเลือกชื่อบริษัท');
+                    submitBtn.disabled = false;
                     return;
                 }
-                await db.collection('companyProducts').doc(editId).update({
-                    companyName: company,
-                    company: company,
-                    name: name,
-                    cost: cost,
-                    price: price,
-                    unit: unit,
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                showMessage('อัปเดตข้อมูลสินค้าสำเร็จ!', 'success');
+
+                const shouldSyncAffiliated = syncAffiliatedCheckbox.checked;
+
+                if (shouldSyncAffiliated) {
+                    // หากเลือกซิงค์อัปเดตราคาพร้อมกันทุกบริษัทในเครือ (ใช้ Fuzzy Key ของบริษัทปัจจุบัน)
+                    const currentProduct = products.find(item => item.id === editId);
+                    const currentCompany = currentProduct ? (currentProduct.companyName || currentProduct.company) : company;
+                    const targetFuzzyKey = getFuzzyCompanyKey(currentCompany);
+                    const prodNameLower = name.toLowerCase();
+
+                    let batch = db.batch();
+                    let opCount = 0;
+                    let updatedCount = 0;
+
+                    products.forEach(item => {
+                        const itemComp = item.companyName || item.company;
+                        const itemFuzzyKey = getFuzzyCompanyKey(itemComp);
+                        const itemNameLower = (item.name || '').trim().toLowerCase();
+
+                        // อัปเดตทุกรายการที่มีชื่อสินค้าเดียวกัน และบริษัทอยู่ในเครือเดียวกัน (Fuzzy Key ตรงกัน)
+                        if (itemFuzzyKey === targetFuzzyKey && itemNameLower === prodNameLower) {
+                            const docRef = db.collection('companyProducts').doc(item.id);
+                            batch.update(docRef, {
+                                cost: cost,
+                                price: price,
+                                unit: unit,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            updatedCount++;
+                            opCount++;
+                        }
+                    });
+
+                    // ถ้าไม่มีรายการอื่นในเครือ ให้ทำการอัปเดตตัวเดี่ยวๆ แทน
+                    if (updatedCount === 0) {
+                        await db.collection('companyProducts').doc(editId).update({
+                            companyName: company,
+                            company: company,
+                            name: name,
+                            cost: cost,
+                            price: price,
+                            unit: unit,
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    } else {
+                        await batch.commit();
+                    }
+
+                    showMessage(`อัปเดตและซิงค์ราคาสินค้าไปยังบริษัทในเครือทั้งหมด (${updatedCount} รายการ) สำเร็จ!`, 'success');
+                } else {
+                    // อัปเดตเฉพาะบริษัทที่เลือกรายการนี้เท่านั้น (แยกอิสระ)
+                    await db.collection('companyProducts').doc(editId).update({
+                        companyName: company,
+                        company: company,
+                        name: name,
+                        cost: cost,
+                        price: price,
+                        unit: unit,
+                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    showMessage('อัปเดตข้อมูลสินค้าสำเร็จ!', 'success');
+                }
+
                 resetForm();
             } else if (isMultiSelectMode) {
                 if (persistentCheckedCompanies.size === 0) {
@@ -1533,38 +1770,49 @@
         }
     });
 
-    window.deleteProduct = async function(id) {
-        if (confirm('คุณต้องการลบรายการสินค้านี้จากฐานข้อมูลใช่หรือไม่?')) {
-            try {
-                await db.collection('companyProducts').doc(id).delete();
-                showMessage('ลบรายการสินค้าสำเร็จ', 'success');
-                if (editingProductId.value === id) {
-                    resetForm();
+    window.deleteProduct = function(id) {
+        const targetProduct = products.find(item => item.id === id);
+        const prodTitle = targetProduct ? `"${targetProduct.name}" (${targetProduct.companyName || targetProduct.company || '-'})` : 'รายการนี้';
+        
+        requestPasswordVerification(
+            `คุณกำลังจะลบสินค้า ${prodTitle} ออกจากฐานข้อมูลอย่างถาวร\n\nกรุณากรอกรหัสผ่านเข้าสู่ระบบเพื่อยืนยัน:`,
+            async () => {
+                try {
+                    await db.collection('companyProducts').doc(id).delete();
+                    showMessage('ลบรายการสินค้าสำเร็จ', 'success');
+                    if (editingProductId.value === id) {
+                        resetForm();
+                    }
+                    setTimeout(() => message.classList.add('hidden'), 3000);
+                } catch (error) {
+                    console.error("Error deleting product:", error);
+                    alert('ไม่สามารถลบรายการได้');
                 }
-            } catch (error) {
-                console.error("Error deleting product:", error);
-                alert('ไม่สามารถลบรายการได้');
             }
-        }
+        );
     }
 
-    document.getElementById('clear-all-btn').addEventListener('click', async function(e) {
+    document.getElementById('clear-all-btn').addEventListener('click', function(e) {
         e.preventDefault();
-        if (confirm('คุณต้องการล้างข้อมูลสินค้าทั้งหมดในระบบ (Firestore) ใช่หรือไม่?')) {
-            try {
-                const snapshot = await db.collection('companyProducts').get();
-                const batch = db.batch();
-                snapshot.docs.forEach((doc) => {
-                    batch.delete(doc.ref);
-                });
-                await batch.commit();
-                showMessage('ล้างข้อมูลทั้งหมดสำเร็จ', 'success');
-                resetForm();
-            } catch (error) {
-                console.error("Error clearing collection:", error);
-                alert('ไม่สามารถล้างข้อมูลได้');
+        requestPasswordVerification(
+            '⚠️ คำเตือน: คุณกำลังจะล้างข้อมูลสินค้าทั้งหมดในระบบ (Firestore) อย่างถาวร ไม่สามารถกู้คืนได้\n\nกรุณากรอกรหัสผ่านเข้าสู่ระบบเพื่อยืนยัน:',
+            async () => {
+                try {
+                    const snapshot = await db.collection('companyProducts').get();
+                    const batch = db.batch();
+                    snapshot.docs.forEach((doc) => {
+                        batch.delete(doc.ref);
+                    });
+                    await batch.commit();
+                    showMessage('ล้างข้อมูลทั้งหมดสำเร็จ', 'success');
+                    resetForm();
+                    setTimeout(() => message.classList.add('hidden'), 3000);
+                } catch (error) {
+                    console.error("Error clearing collection:", error);
+                    alert('ไม่สามารถล้างข้อมูลได้');
+                }
             }
-        }
+        );
     });
 
     auth.onAuthStateChanged(async (user) => {
