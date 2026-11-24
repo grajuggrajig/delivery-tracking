@@ -457,6 +457,9 @@
     </div>
 </div>
 
+<!-- Toast Notification Container -->
+<div id="toast-container" class="fixed bottom-5 right-5 z-[200] flex flex-col gap-2 pointer-events-none"></div>
+
 <script>
     const firebaseConfig = {
         apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
@@ -538,6 +541,37 @@
 
     const syncAffiliatedGroupContainer = document.getElementById('sync-affiliated-group-container');
     const syncAffiliatedCheckbox = document.getElementById('sync-affiliated-checkbox');
+
+    // ==========================================
+    // ระบบ Toast Notification เมื่อทำธุรกรรมเสร็จสิ้น
+    // ==========================================
+    function showNotification(messageText, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        
+        const toast = document.createElement('div');
+        toast.className = `pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-xl border text-xs font-semibold backdrop-blur-md modal-animate transition-all duration-300 ${
+            type === 'success' 
+                ? 'bg-emerald-900/95 text-white border-emerald-700 shadow-emerald-900/25' 
+                : 'bg-rose-900/95 text-white border-rose-700 shadow-rose-900/25'
+        }`;
+        
+        const icon = document.createElement('i');
+        icon.className = type === 'success' ? 'fa-solid fa-circle-check text-emerald-400 text-sm' : 'fa-solid fa-circle-exclamation text-rose-400 text-sm';
+        
+        const span = document.createElement('span');
+        span.textContent = messageText;
+        
+        toast.appendChild(icon);
+        toast.appendChild(span);
+        container.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(10px)';
+            setTimeout(() => toast.remove(), 3005);
+        }, 3500);
+    }
 
     // ==========================================
     // ระบบยืนยันรหัสผ่าน (Re-authentication) ก่อนลบข้อมูล
@@ -804,6 +838,7 @@
             let msg = `คัดลอกสำเร็จ! เพิ่มสินค้า ${copiedCount} รายการ จาก "${sourceName}" ให้ "${targetName}" แล้ว`;
             if (skippedCount > 0) msg += ` (ข้ามสินค้าซ้ำ ${skippedCount} รายการ)`;
             showMessage(msg, 'success');
+            showNotification(msg, 'success');
             setTimeout(() => message.classList.add('hidden'), 5000);
 
         } catch (error) {
@@ -948,6 +983,7 @@
                 let summaryText = `รวมข้อมูลสำเร็จ! ย้ายสินค้า ${movedCount} รายการ ไปที่ "${targetName}"`;
                 if (skippedCount > 0) summaryText += ` (ตัดรายการซ้ำออก ${skippedCount} รายการ)`;
                 showMessage(summaryText, 'success');
+                showNotification(summaryText, 'success');
                 setTimeout(() => message.classList.add('hidden'), 5000);
 
             } catch (error) {
@@ -1021,7 +1057,9 @@
                 }
                 renderTable();
 
-                showMessage(`ลบชื่อบริษัท "${companyNameTarget}" ออกจากระบบเรียบร้อยแล้ว`, 'success');
+                const successText = `ลบชื่อบริษัท "${companyNameTarget}" ออกจากระบบเรียบร้อยแล้ว`;
+                showMessage(successText, 'success');
+                showNotification(successText, 'success');
                 setTimeout(() => message.classList.add('hidden'), 3000);
             } catch (error) {
                 console.error("Error deleting company:", error);
@@ -1530,6 +1568,7 @@
         }, (error) => {
             console.error("Error fetching products:", error);
             showMessage('ไม่สามารถเชื่อมต่อฐานข้อมูลสินค้าได้', 'error');
+            showNotification('ไม่สามารถเชื่อมต่อฐานข้อมูลสินค้าได้', 'error');
         });
     }
 
@@ -1623,7 +1662,9 @@
         const editId = editingProductId.value;
 
         if (!name || !price) {
-            showMessage('กรุณากรอกชื่อสินค้าและราคาขายให้ครบถ้วน', 'error');
+            const errText = 'กรุณากรอกชื่อสินค้าและราคาขายให้ครบถ้วน';
+            showMessage(errText, 'error');
+            showNotification(errText, 'error');
             return;
         }
 
@@ -1642,7 +1683,6 @@
                 const shouldSyncAffiliated = syncAffiliatedCheckbox.checked;
 
                 if (shouldSyncAffiliated) {
-                    // หากเลือกซิงค์อัปเดตราคาพร้อมกันทุกบริษัทในเครือ (ใช้ Fuzzy Key ของบริษัทปัจจุบัน)
                     const currentProduct = products.find(item => item.id === editId);
                     const currentCompany = currentProduct ? (currentProduct.companyName || currentProduct.company) : company;
                     const targetFuzzyKey = getFuzzyCompanyKey(currentCompany);
@@ -1657,7 +1697,6 @@
                         const itemFuzzyKey = getFuzzyCompanyKey(itemComp);
                         const itemNameLower = (item.name || '').trim().toLowerCase();
 
-                        // อัปเดตทุกรายการที่มีชื่อสินค้าเดียวกัน และบริษัทอยู่ในเครือเดียวกัน (Fuzzy Key ตรงกัน)
                         if (itemFuzzyKey === targetFuzzyKey && itemNameLower === prodNameLower) {
                             const docRef = db.collection('companyProducts').doc(item.id);
                             batch.update(docRef, {
@@ -1671,7 +1710,6 @@
                         }
                     });
 
-                    // ถ้าไม่มีรายการอื่นในเครือ ให้ทำการอัปเดตตัวเดี่ยวๆ แทน
                     if (updatedCount === 0) {
                         await db.collection('companyProducts').doc(editId).update({
                             companyName: company,
@@ -1686,9 +1724,10 @@
                         await batch.commit();
                     }
 
-                    showMessage(`อัปเดตและซิงค์ราคาสินค้าไปยังบริษัทในเครือทั้งหมด (${updatedCount} รายการ) สำเร็จ!`, 'success');
+                    const successMsg = `อัปเดตและซิงค์ราคาสินค้าไปยังบริษัทในเครือทั้งหมด (${updatedCount} รายการ) สำเร็จ!`;
+                    showMessage(successMsg, 'success');
+                    showNotification(successMsg, 'success');
                 } else {
-                    // อัปเดตเฉพาะบริษัทที่เลือกรายการนี้เท่านั้น (แยกอิสระ)
                     await db.collection('companyProducts').doc(editId).update({
                         companyName: company,
                         company: company,
@@ -1698,7 +1737,9 @@
                         unit: unit,
                         updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                     });
-                    showMessage('อัปเดตข้อมูลสินค้าสำเร็จ!', 'success');
+                    const successMsg = 'อัปเดตข้อมูลสินค้าสำเร็จ!';
+                    showMessage(successMsg, 'success');
+                    showNotification(successMsg, 'success');
                 }
 
                 resetForm();
@@ -1724,7 +1765,9 @@
                 });
 
                 await batch.commit();
-                showMessage(`เพิ่มสินค้าไปยัง ${persistentCheckedCompanies.size} บริษัทสำเร็จ!`, 'success');
+                const successMsg = `เพิ่มสินค้าไปยัง ${persistentCheckedCompanies.size} บริษัทสำเร็จ!`;
+                showMessage(successMsg, 'success');
+                showNotification(successMsg, 'success');
                 form.reset();
                 duplicateWarning.classList.add('hidden');
                 persistentCheckedCompanies.clear();
@@ -1747,7 +1790,9 @@
                     unit: unit,
                     createdAt: firebase.firestore.FieldValue.serverTimestamp()
                 });
-                showMessage('บันทึกสินค้าเข้าสู่ Firestore สำเร็จ!', 'success');
+                const successMsg = 'บันทึกสินค้าเข้าสู่ Firestore สำเร็จ!';
+                showMessage(successMsg, 'success');
+                showNotification(successMsg, 'success');
                 const keepCompany = company;
                 form.reset();
                 companySearchInput.value = keepCompany;
@@ -1764,7 +1809,9 @@
             }, 3000);
         } catch (error) {
             console.error("Error saving product:", error);
-            showMessage('บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง', 'error');
+            const errText = 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
+            showMessage(errText, 'error');
+            showNotification(errText, 'error');
         } finally {
             checkDuplicateStatus();
         }
@@ -1779,7 +1826,9 @@
             async () => {
                 try {
                     await db.collection('companyProducts').doc(id).delete();
-                    showMessage('ลบรายการสินค้าสำเร็จ', 'success');
+                    const successMsg = 'ลบรายการสินค้าสำเร็จ';
+                    showMessage(successMsg, 'success');
+                    showNotification(successMsg, 'success');
                     if (editingProductId.value === id) {
                         resetForm();
                     }
@@ -1804,7 +1853,9 @@
                         batch.delete(doc.ref);
                     });
                     await batch.commit();
-                    showMessage('ล้างข้อมูลทั้งหมดสำเร็จ', 'success');
+                    const successMsg = 'ล้างข้อมูลทั้งหมดสำเร็จ';
+                    showMessage(successMsg, 'success');
+                    showNotification(successMsg, 'success');
                     resetForm();
                     setTimeout(() => message.classList.add('hidden'), 3000);
                 } catch (error) {
