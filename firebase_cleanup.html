@@ -6,10 +6,11 @@
     <title>Firebase Development Data Cleanup Tool</title>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Firebase App & Firestore SDK (Compat v9.22.0) -->
+    <!-- Firebase App & Firestore / Auth / Storage SDK (Compat v9.22.0) -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; background: #f0fdf4; }
     </style>
@@ -22,9 +23,9 @@
             <div>
                 <div class="flex items-center gap-2 text-emerald-600 font-extrabold text-lg">
                     <span>🧹</span>
-                    <span>Firebase Development Data Cleanup</span>
+                    <span>Firebase Development Data Cleanup & Image Purge</span>
                 </div>
-                <p class="text-xs text-slate-400 mt-1">เครื่องมือล้างข้อมูลขยะและเลือกติ๊กเฉพาะรายการที่ต้องการลบเพื่อความปลอดภัย</p>
+                <p class="text-xs text-slate-400 mt-1">เครื่องมือล้างข้อมูลขยะ ลบรูปภาพ และเลือกติ๊กเฉพาะรายการที่ต้องการลบพร้อมระบบยืนยันรหัสผ่าน</p>
             </div>
             <button onclick="window.location.href='index.html'" class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition">
                 ← กลับสู่หน้าหลัก CRM
@@ -74,6 +75,11 @@
                         <input type="checkbox" id="filter-invalid-name" class="accent-amber-600">
                         <span class="text-amber-900 font-semibold">⚠️ ชื่อบริษัทผิดปกติ (Test, ทดสอบ)</span>
                     </label>
+
+                    <label class="flex items-center gap-2 p-2 rounded-xl bg-teal-50/50 border border-teal-100 cursor-pointer hover:bg-teal-50 text-xs">
+                        <input type="checkbox" id="filter-has-images" class="accent-teal-600">
+                        <span class="text-teal-900 font-semibold">🖼️ เฉพาะรายการที่มีรูปภาพแนบอยู่</span>
+                    </label>
                 </div>
 
                 <div>
@@ -105,9 +111,9 @@
 
                 <div class="pt-4 border-t border-slate-100 mt-4 flex items-center justify-between gap-3">
                     <div class="text-[11px] text-slate-500">
-                        ⚠️ <span class="font-bold text-rose-600">คำเตือน:</span> จะลบเฉพาะรายการที่คุณติ๊กเลือกไว้เท่านั้น
+                        ⚠️ <span class="font-bold text-rose-600">คำเตือน:</span> จะลบข้อมูลรวมถึงรูปภาพที่เกี่ยวข้องในรายการที่เลือก
                     </div>
-                    <button id="delete-btn" onclick="confirmAndDelete()" disabled class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
+                    <button id="delete-btn" onclick="openPasswordModal()" disabled class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
                         🗑️ ลบรายการที่เลือก (0)
                     </button>
                 </div>
@@ -115,9 +121,35 @@
         </div>
     </div>
 
+    <!-- MODAL ยืนยันรหัสผ่าน (อ้างอิงจาก login.html) -->
+    <div id="password-modal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-slate-800">🔐 ยืนยันรหัสผ่านเพื่อความปลอดภัย</h3>
+                <button onclick="closePasswordModal()" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <p class="text-xs text-slate-500">กรุณากรอกรหัสผ่านบัญชีปัจจุบันของคุณ (<span id="current-user-email-label" class="font-semibold text-slate-700"></span>) เพื่อยืนยันการลบข้อมูลและรูปภาพ</p>
+            
+            <div id="modal-error-box" class="hidden p-3 rounded-xl bg-rose-50 text-rose-700 text-xs"></div>
+
+            <div>
+                <label class="block text-xs font-semibold text-slate-700 mb-1">รหัสผ่าน (Password)</label>
+                <input type="password" id="confirm-password-input" placeholder="••••••••" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:border-teal-500">
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button onclick="closePasswordModal()" class="px-4 py-2 bg-slate-100 text-slate-600 text-xs font-bold rounded-xl hover:bg-slate-200 transition">ยกเลิก</button>
+                <button onclick="verifyAndExecuteDelete()" id="btn-confirm-delete" class="px-5 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl transition shadow-sm">ยืนยันรหัสผ่านและลบข้อมูล</button>
+            </div>
+        </div>
+    </div>
+
     <footer class="text-center py-4 text-xs text-slate-400">
         Firebase Cleanup Utility &copy; 2026
     </footer>
+
+    <!-- FontAwesome สำหรับไอคอนใน Modal -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <script>
         const firebaseConfig = {
@@ -135,6 +167,7 @@
         }
         const db = firebase.firestore();
         const auth = firebase.auth();
+        const storage = firebase.storage();
 
         let scannedItemsMap = new Map();
 
@@ -144,6 +177,7 @@
             if (user) {
                 statusText.innerHTML = `✅ เข้าสู่ระบบแล้วในนาม: <b>${user.email}</b>`;
                 loginBtn.classList.add('hidden');
+                document.getElementById('current-user-email-label').textContent = user.email;
             } else {
                 statusText.innerHTML = `❌ ยังไม่ได้เข้าสู่ระบบ กรุณาเข้าสู่ระบบก่อนทำการลบข้อมูล`;
                 loginBtn.classList.remove('hidden');
@@ -159,6 +193,7 @@
             const keyword = document.getElementById('filter-keyword').value.trim().toLowerCase();
             const filterNoProducts = document.getElementById('filter-no-products').checked;
             const filterInvalidName = document.getElementById('filter-invalid-name').checked;
+            const filterHasImages = document.getElementById('filter-has-images').checked;
             
             const container = document.getElementById('scan-results-container');
             const badge = document.getElementById('scan-count-badge');
@@ -169,7 +204,7 @@
                 return;
             }
 
-            container.innerHTML = '<div class="text-center py-12 text-slate-400 animate-pulse">กำลังสแกนวิเคราะห์ข้อมูลใน Firebase...</div>';
+            container.innerHTML = '<div class="text-center py-12 text-slate-400 animate-pulse">กำลังสแกนวิเคราะห์ข้อมูลและตรวจสอบรูปภาพใน Firebase...</div>';
             scannedItemsMap.clear();
             let totalFound = 0;
 
@@ -193,8 +228,27 @@
                         const titleLower = String(title).toLowerCase();
                         const stringified = JSON.stringify(data).toLowerCase();
 
+                        // ตรวจสอบว่ามีลิงก์รูปภาพในข้อมูลหรือไม่
+                        const imageKeys = ['image', 'imageUrl', 'img', 'photo', 'picture', 'slip', 'receiptUrl', 'url'];
+                        let hasImages = false;
+                        let extractedImageUrls = [];
+
+                        function searchImages(obj) {
+                            if (!obj || typeof obj !== 'object') return;
+                            for (const k in obj) {
+                                const val = obj[k];
+                                if (typeof val === 'string' && (val.includes('firebasestorage.googleapis.com') || val.startsWith('http://') || val.startsWith('https://')) && (val.match(/\.(jpeg|jpg|png|webp|gif)/i) || val.includes('alt=media'))) {
+                                    hasImages = true;
+                                    extractedImageUrls.push(val);
+                                } else if (typeof val === 'object') {
+                                    searchImages(val);
+                                }
+                            }
+                        }
+                        searchImages(data);
+
                         let isMatch = false;
-                        let matchReason = '';
+                        let matchReasons = [];
 
                         const matchKeyword = !keyword || stringified.includes(keyword);
 
@@ -216,22 +270,22 @@
                             }
                         }
 
-                        if (filterNoProducts || filterInvalidName) {
-                            if ((filterNoProducts && isCompanyWithoutProduct) || (filterInvalidName && isInvalidNamed)) {
-                                isMatch = true;
-                                matchReason = isCompanyWithoutProduct ? '🚫 ไม่มีสินค้าผูกอยู่' : '⚠️ ชื่อผิดปกติ';
-                            }
+                        // ประเมินเงื่อนไขการกรอง
+                        if (filterNoProducts || filterInvalidName || filterHasImages) {
+                            if (filterNoProducts && isCompanyWithoutProduct) { matchReasons.push('🚫 ไม่มีสินค้าผูกอยู่'); isMatch = true; }
+                            if (filterInvalidName && isInvalidNamed) { matchReasons.push('⚠️ ชื่อผิดปกติ'); isMatch = true; }
+                            if (filterHasImages && hasImages) { matchReasons.push(`🖼️ มีรูปภาพ (${extractedImageUrls.length})`); isMatch = true; }
                         } else if (matchKeyword) {
                             isMatch = true;
-                            matchReason = '🔍 ตรงตาม Keyword';
+                            matchReasons.push(hasImages ? `🔍 ตรงเงื่อนไข (มีรูปภาพ ${extractedImageUrls.length} รูป)` : '🔍 ตรงตาม Keyword');
                         }
 
                         if (isMatch) {
                             totalFound++;
                             const uniqueKey = `${colName}_${doc.id}`;
-                            const subText = data.itemInput || data.price ? `ราคา: ${data.price || '-'} | จำนวน: ${data.subItems ? data.subItems.length : 1}` : JSON.stringify(data).substring(0, 50);
+                            const subText = data.itemInput || data.price ? `ราคา: ${data.price || '-'} | มีรูปภาพ: ${hasImages ? 'มี' : 'ไม่มี'}` : JSON.stringify(data).substring(0, 50);
 
-                            scannedItemsMap.set(uniqueKey, { collection: colName, id: doc.id, title });
+                            scannedItemsMap.set(uniqueKey, { collection: colName, id: doc.id, title, imageUris: extractedImageUrls });
 
                             const itemDiv = document.createElement('div');
                             itemDiv.className = 'flex items-center justify-between p-2.5 bg-white rounded-xl border border-slate-200 hover:border-emerald-300 transition';
@@ -243,7 +297,7 @@
                                         <div class="text-[10px] text-slate-400 truncate">${escapeHTML(subText)}</div>
                                     </div>
                                 </div>
-                                <span class="text-[10px] bg-rose-50 text-rose-600 px-2 py-1 rounded-lg font-bold shrink-0">${matchReason}</span>
+                                <span class="text-[10px] bg-rose-50 text-rose-600 px-2 py-1 rounded-lg font-bold shrink-0">${matchReasons.join(', ')}</span>
                             `;
                             container.appendChild(itemDiv);
                         }
@@ -278,28 +332,86 @@
             deleteBtn.disabled = checkedBoxes.length === 0;
         }
 
-        async function confirmAndDelete() {
+        function openPasswordModal() {
             const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
             if (checkedBoxes.length === 0) return;
+            document.getElementById('confirm-password-input').value = '';
+            document.getElementById('modal-error-box').classList.add('hidden');
+            document.getElementById('password-modal').classList.remove('hidden');
+        }
 
-            const confirmText = prompt(`⚠️ คุณกำลังจะลบข้อมูลที่เลือกจำนวน ${checkedBoxes.length} รายการออกจาก Firebase\nพิมพ์คำว่า "DELETE" เพื่อยืนยันการลบ:`);
-            if (confirmText !== "DELETE") {
-                alert("การลบถูกยกเลิกเนื่องจากพิมพ์ยืนยันไม่ถูกต้อง");
+        function closePasswordModal() {
+            document.getElementById('password-modal').classList.add('hidden');
+        }
+
+        async function verifyAndExecuteDelete() {
+            const password = document.getElementById('confirm-password-input').value;
+            const errorBox = document.getElementById('modal-error-box');
+            const user = auth.currentUser;
+
+            if (!user || !user.email) {
+                errorBox.textContent = 'กรุณาเข้าสู่ระบบใหม่อีกครั้ง';
+                errorBox.classList.remove('hidden');
                 return;
             }
 
+            if (!password) {
+                errorBox.textContent = 'กรุณากรอกรหัสผ่านเพื่อยืนยัน';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            const confirmBtn = document.getElementById('btn-confirm-delete');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'กำลังตรวจสอบรหัสผ่าน...';
+            errorBox.classList.add('hidden');
+
+            try {
+                // อ้างอิงตรรกะการตรวจสอบรหัสผ่าน (re-authentication) จาก login.html
+                const credential = firebase.auth.EmailAuthProvider.credential(user.email, password);
+                await user.reauthenticateWithCredential(credential);
+
+                closePasswordModal();
+                await executeDeleteProcess();
+            } catch (err) {
+                console.error("Re-auth error:", err);
+                errorBox.textContent = 'รหัสผ่านไม่ถูกต้อง กรุณาลองใหม่อีกครั้ง';
+                errorBox.classList.remove('hidden');
+                confirmBtn.disabled = false;
+                confirmBtn.textContent = 'ยืนยันรหัสผ่านและลบข้อมูล';
+            }
+        }
+
+        async function executeDeleteProcess() {
+            const checkedBoxes = document.querySelectorAll('.item-checkbox:checked');
             const deleteBtn = document.getElementById('delete-btn');
             deleteBtn.disabled = true;
-            deleteBtn.textContent = 'กำลังลบข้อมูล...';
+            deleteBtn.textContent = 'กำลังลบข้อมูลและรูปภาพ...';
 
             try {
                 const batches = [];
                 let currentBatch = db.batch();
                 let operationCount = 0;
+                let deletedImagesCount = 0;
 
                 for (const chk of checkedBoxes) {
                     const item = scannedItemsMap.get(chk.value);
                     if (item) {
+                        // 1. ลบไฟล์รูปภาพออกจาก Firebase Storage (ถ้ามี URL อ้างอิง)
+                        if (item.imageUris && item.imageUris.length > 0) {
+                            for (const imgUrl of item.imageUris) {
+                                try {
+                                    // แปลง Download URL ให้เป็น Storage Reference หรือใช้ refFromURL โดยตรง
+                                    const storageRef = storage.refFromURL(imgUrl);
+                                    await storageRef.delete();
+                                    deletedImagesCount++;
+                                } catch (storageErr) {
+                                    console.warn("ไม่สามารถลบไฟล์ภาพจาก Storage ได้หรือไฟล์อาจถูกลบไปแล้ว:", storageErr);
+                                }
+                            }
+                        }
+
+                        // 2. ลบ Document จาก Firestore
                         const docRef = db.collection(item.collection).doc(item.id);
                         currentBatch.delete(docRef);
                         operationCount++;
@@ -317,7 +429,7 @@
 
                 await Promise.all(batches);
 
-                alert(`🎉 ลบข้อมูลที่เลือกจำนวน ${checkedBoxes.length} รายการเรียบร้อยแล้ว!`);
+                alert(`🎉 ลบข้อมูลสำเร็จ ${checkedBoxes.length} รายการ และลบรูปภาพที่เกี่ยวข้องในระบบ Storage จำนวน ${deletedImagesCount} ไฟล์เรียบร้อยแล้ว!`);
                 
                 checkedBoxes.forEach(chk => {
                     scannedItemsMap.delete(chk.value);
