@@ -277,7 +277,7 @@
             </div>
         </section>
 
-        <!-- Sync Status Bar (ย้ายมาไว้ข้างล่างส่วนกรอง และกำหนด z-index ต่ำลงเพื่อไม่ให้ทับดรอปดาวน์) -->
+        <!-- Sync Status Bar -->
         <div id="sync-status-bar" class="bg-slate-900/90 backdrop-blur-md text-slate-200 rounded-2xl px-4 py-2.5 text-xs flex items-center justify-between shadow-lg no-print border border-slate-800 relative z-10">
             <div class="flex items-center gap-3">
                 <span class="font-semibold text-white flex items-center gap-1.5">
@@ -677,6 +677,9 @@
         }
 
         window.refreshAllData = async () => {
+            state.selectedCompany = 'ALL';
+            document.getElementById('selected-company-label').textContent = 'ทุกบริษัท / ร้านค้า (ทั้งหมด)';
+            state.currentPage = 1;
             await loadAllCollections();
             showToast('รีเฟรชข้อมูลเรียบร้อย', 'success');
         };
