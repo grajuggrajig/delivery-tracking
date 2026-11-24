@@ -365,12 +365,32 @@
             </button>
         </div>
 
-        <div class="p-4 border-b border-slate-200/70 bg-slate-50/70 flex gap-2">
-            <input type="text" id="manager-search-input" placeholder="🔍 ค้นหาชื่อบริษัทที่ต้องการจัดการ..." autocomplete="off"
-                class="flex-1 px-3.5 py-2 border border-teal-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm">
-            <button type="button" id="btn-reset-manager-search" onclick="resetManagerFilter()" class="hidden px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition">
-                แสดงทั้งหมด
-            </button>
+        <div class="p-4 border-b border-slate-200/70 bg-slate-50/70 space-y-2.5">
+            <div class="flex gap-2">
+                <input type="text" id="manager-search-input" placeholder="🔍 ค้นหาชื่อบริษัทที่ต้องการจัดการ..." autocomplete="off"
+                    class="flex-1 px-3.5 py-2 border border-teal-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm">
+                <button type="button" id="btn-reset-manager-search" onclick="resetManagerFilter()" class="hidden px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition">
+                    แสดงทั้งหมด
+                </button>
+            </div>
+
+            <!-- แถบเลือกหลายบริษัทลูกเพื่อคัดลอกสินค้าเข้าพร้อมกัน -->
+            <div class="flex flex-wrap items-center justify-between gap-2 bg-emerald-50/80 border border-emerald-200/80 rounded-xl px-3 py-2 text-xs">
+                <div class="flex items-center gap-2">
+                    <label class="flex items-center gap-1.5 cursor-pointer font-semibold text-emerald-900 select-none">
+                        <input type="checkbox" id="manager-select-all-visible" onchange="toggleSelectAllManagerCompanies(this.checked)" class="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4">
+                        <span>เลือกบริษัทเป้าหมาย (<span id="manager-selected-count">0</span>)</span>
+                    </label>
+                    <button type="button" id="manager-clear-selection-btn" onclick="clearManagerSelection()" class="hidden text-[11px] text-slate-500 hover:text-rose-600 underline">
+                        ล้างที่เลือก
+                    </button>
+                </div>
+                <button type="button" id="manager-bulk-copy-btn" onclick="openBulkCopyModal()" disabled
+                    class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs shadow-xs transition flex items-center gap-1.5">
+                    <span>📋</span>
+                    <span id="manager-bulk-copy-label">คัดลอกสินค้าเข้าหลายบริษัท</span>
+                </button>
+            </div>
         </div>
 
         <div id="manager-company-list" class="p-4 overflow-y-auto divide-y divide-slate-100 text-xs sm:text-sm flex-1">
@@ -383,36 +403,77 @@
     </div>
 </div>
 
-<!-- Modal คัดลอกสินค้า -->
+<!-- Modal คัดลอกสินค้า (รองรับหลายบริษัทแม่ และหลายบริษัทลูก พร้อมค้นหา) -->
 <div id="copy-products-modal" class="hidden fixed inset-0 z-[70] bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-md overflow-hidden flex flex-col modal-animate">
-        <div class="bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-4 text-white">
-            <h4 class="text-sm font-bold">📦 คัดลอกรายการและราคาจากบริษัทอื่น</h4>
-            <p class="text-[11px] text-white/85 mt-0.5">ดึงสินค้าและราคาจากบริษัทแม่ มาใส่ให้บริษัทในเครือที่ยังไม่มีสินค้า</p>
+    <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh] modal-animate">
+        <div class="bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-4 text-white flex items-center justify-between shrink-0">
+            <div>
+                <h4 class="text-sm font-bold">📦 คัดลอกรายการและราคาจากบริษัทแม่</h4>
+                <p class="text-[11px] text-white/85 mt-0.5">เลือกบริษัทแม่และบริษัทลูกได้พร้อมกันหลายบริษัท (รองรับการค้นหา)</p>
+            </div>
+            <button type="button" onclick="closeCopyModal()" class="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm font-bold transition">✕</button>
         </div>
-        <div class="p-5 space-y-4 text-xs">
-            <div class="p-3 bg-teal-50 border border-teal-200 rounded-xl">
-                <div class="text-[11px] text-teal-700 font-semibold">บริษัทเป้าหมาย (ผู้รับรายการสินค้า):</div>
-                <div id="copy-target-name" class="font-bold text-slate-800 text-sm mt-0.5"></div>
-                <div id="copy-target-current-count" class="text-[11px] text-slate-500 mt-0.5"></div>
+
+        <div class="p-5 space-y-4 text-xs overflow-y-auto flex-1">
+            <!-- ส่วนที่ 1: บริษัทแม่ (แหล่งข้อมูลสินค้า) เลือกได้ 1 หรือ 2 บริษัทขึ้นไป + ค้นหาได้ -->
+            <div class="p-3.5 bg-amber-50/70 border border-amber-200/90 rounded-2xl space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <label class="font-bold text-slate-800 flex items-center gap-1.5">
+                        <span>🏢 1. เลือกบริษัทแม่ (แหล่งข้อมูลสินค้า):</span>
+                    </label>
+                    <span id="copy-source-selected-badge" class="px-2 py-0.5 bg-amber-600 text-white rounded-lg text-[11px] font-bold">เลือกแล้ว 0 บริษัท</span>
+                </div>
+
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs pointer-events-none"></i>
+                    <input type="text" id="copy-source-search-input" placeholder="🔍 พิมพ์ค้นหาชื่อบริษัทแม่..." autocomplete="off"
+                        class="w-full pl-8 pr-8 py-2 border border-amber-300 bg-white rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-xs">
+                    <button type="button" id="clear-copy-source-search-btn" onclick="clearCopySourceSearch()" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div id="copy-source-list" class="max-h-36 overflow-y-auto bg-white border border-amber-200/80 rounded-xl divide-y divide-slate-100 p-1">
+                </div>
+                <div id="copy-source-summary" class="text-[11px] text-amber-900 font-medium px-1">
+                    กรุณาติ๊กเลือกบริษัทแม่ที่ต้องการดึงรายการสินค้า (เลือกได้มากกว่า 1 บริษัท)
+                </div>
             </div>
 
-            <div>
-                <label class="block font-bold text-slate-700 mb-1.5">🏢 เลือกบริษัทแม่ (แหล่งข้อมูลสินค้า):</label>
-                <select id="copy-source-select" class="w-full px-3.5 py-2.5 border border-teal-300 bg-teal-50/40 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm font-semibold text-slate-800">
-                </select>
+            <!-- ส่วนที่ 2: บริษัทเป้าหมาย (บริษัทลูก/ผู้รับรายการสินค้า) เลือกได้ 1 หรือ 2 บริษัทขึ้นไป + ค้นหาได้ -->
+            <div class="p-3.5 bg-teal-50/80 border border-teal-200 rounded-2xl space-y-2">
+                <div class="flex items-center justify-between gap-2">
+                    <label class="font-bold text-teal-900 flex items-center gap-1.5">
+                        <span>🎯 2. บริษัทเป้าหมาย / บริษัทลูก (ผู้รับรายการสินค้า):</span>
+                    </label>
+                    <span id="copy-target-selected-badge" class="px-2 py-0.5 bg-teal-600 text-white rounded-lg text-[11px] font-bold">เลือกแล้ว 0 บริษัท</span>
+                </div>
+
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs pointer-events-none"></i>
+                    <input type="text" id="copy-target-search-input" placeholder="🔍 พิมพ์ค้นหาหรือเลือกบริษัทเป้าหมายเพิ่มเติม..." autocomplete="off"
+                        class="w-full pl-8 pr-8 py-2 border border-teal-300 bg-white rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs">
+                    <button type="button" id="clear-copy-target-search-btn" onclick="clearCopyTargetSearch()" class="hidden absolute right-2.5 top-2 text-slate-400 hover:text-slate-700 text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div id="copy-target-list" class="max-h-36 overflow-y-auto bg-white border border-teal-200/80 rounded-xl divide-y divide-slate-100 p-1">
+                </div>
+                <div id="copy-target-current-count" class="text-[11px] text-teal-800 font-medium px-1"></div>
             </div>
 
             <label class="flex items-start gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer">
                 <input type="checkbox" id="copy-skip-duplicates" checked class="mt-0.5 rounded text-teal-600 focus:ring-teal-500">
                 <span class="text-[11px] text-slate-600 leading-relaxed">
-                    <b>ป้องกันสินค้าซ้ำ:</b> หากบริษัทนี้มีสินค้าชื่อเดียวกันอยู่แล้ว ให้ข้ามรายการนั้นไป ไม่คัดลอกทับ
+                    <b>ป้องกันสินค้าซ้ำ:</b> หากบริษัทเป้าหมายมีสินค้าชื่อเดียวกันอยู่แล้ว (หรือซ้ำกันระหว่างบริษัทแม่ที่เลือก) ให้ข้ามรายการนั้นไป ไม่คัดลอกทับ
                 </span>
             </label>
         </div>
-        <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200/70 flex justify-end gap-2">
+
+        <div class="px-5 py-3.5 bg-slate-50 border-t border-slate-200/70 flex justify-end gap-2 shrink-0">
             <button type="button" onclick="closeCopyModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl font-semibold text-xs transition">ยกเลิก</button>
-            <button type="button" id="confirm-copy-btn" onclick="executeCopyProducts()" class="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-md transition">
+            <button type="button" id="confirm-copy-btn" onclick="executeCopyProducts()" class="px-4 py-2 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-cyan-700 disabled:from-slate-300 disabled:to-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white rounded-xl font-bold text-xs shadow-md transition">
                 ✅ เริ่มคัดลอกรายการสินค้า
             </button>
         </div>
@@ -482,7 +543,11 @@
     let isMultiSelectMode = false;
     let showOnlyDuplicatesFlag = false;
     let currentMergeSourceName = '';
-    let currentCopyTargetName = '';
+
+    // ตัวแปรสำหรับระบบเลือกหลายบริษัทในการคัดลอกสินค้า (บริษัทแม่ และ บริษัทลูก)
+    let managerSelectedTargetCompanies = new Set();
+    let selectedCopySourceCompanies = new Set();
+    let selectedCopyTargetCompanies = new Set();
     
     let persistentCheckedCompanies = new Set();
     
@@ -526,9 +591,18 @@
     const btnResetManagerSearch = document.getElementById('btn-reset-manager-search');
 
     const copyProductsModal = document.getElementById('copy-products-modal');
-    const copyTargetNameEl = document.getElementById('copy-target-name');
     const copyTargetCurrentCountEl = document.getElementById('copy-target-current-count');
-    const copySourceSelect = document.getElementById('copy-source-select');
+    const copySourceSearchInput = document.getElementById('copy-source-search-input');
+    const clearCopySourceSearchBtn = document.getElementById('clear-copy-source-search-btn');
+    const copySourceListEl = document.getElementById('copy-source-list');
+    const copySourceSelectedBadge = document.getElementById('copy-source-selected-badge');
+    const copySourceSummaryEl = document.getElementById('copy-source-summary');
+
+    const copyTargetSearchInput = document.getElementById('copy-target-search-input');
+    const clearCopyTargetSearchBtn = document.getElementById('clear-copy-target-search-btn');
+    const copyTargetListEl = document.getElementById('copy-target-list');
+    const copyTargetSelectedBadge = document.getElementById('copy-target-selected-badge');
+
     const copySkipDuplicatesCheckbox = document.getElementById('copy-skip-duplicates');
     const confirmCopyBtn = document.getElementById('confirm-copy-btn');
 
@@ -718,82 +792,337 @@
             .replace(/[^ก-ฮa-z0-9]/g, '');
     }
 
-    window.openCopyModal = function(targetCompanyName) {
-        currentCopyTargetName = targetCompanyName;
-        const targetStrictKey = cleanCompanyName(targetCompanyName).toLowerCase().replace(/\s+/g, '');
+    // ==========================================
+    // ระบบคัดลอกรายการสินค้า (รองรับเลือกหลายบริษัทแม่และหลายบริษัทลูก + ค้นหา)
+    // ==========================================
+    function updateManagerSelectionUI() {
+        const count = managerSelectedTargetCompanies.size;
+        const countEl = document.getElementById('manager-selected-count');
+        const clearBtn = document.getElementById('manager-clear-selection-btn');
+        const bulkBtn = document.getElementById('manager-bulk-copy-btn');
+        const bulkLabel = document.getElementById('manager-bulk-copy-label');
 
-        const targetProducts = products.filter(p => 
-            cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === targetStrictKey
+        if (countEl) countEl.textContent = count;
+        if (clearBtn) {
+            if (count > 0) clearBtn.classList.remove('hidden');
+            else clearBtn.classList.add('hidden');
+        }
+        if (bulkBtn && bulkLabel) {
+            bulkBtn.disabled = count === 0;
+            bulkLabel.textContent = count > 0
+                ? `คัดลอกสินค้าเข้า ${count} บริษัทที่เลือก`
+                : 'คัดลอกสินค้าเข้าหลายบริษัท';
+        }
+    }
+
+    window.toggleSelectAllManagerCompanies = function(isChecked) {
+        const checkboxes = managerCompanyList.querySelectorAll('.manager-company-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = isChecked;
+            if (isChecked) {
+                managerSelectedTargetCompanies.add(cb.value);
+            } else {
+                managerSelectedTargetCompanies.delete(cb.value);
+            }
+        });
+        updateManagerSelectionUI();
+    };
+
+    window.clearManagerSelection = function() {
+        managerSelectedTargetCompanies.clear();
+        const selectAllCb = document.getElementById('manager-select-all-visible');
+        if (selectAllCb) selectAllCb.checked = false;
+        renderManagerCompanyList(managerSearchInput.value);
+        updateManagerSelectionUI();
+    };
+
+    window.openBulkCopyModal = function() {
+        if (managerSelectedTargetCompanies.size === 0) return;
+        openCopyModal(Array.from(managerSelectedTargetCompanies));
+    };
+
+    function renderCopySourceList(filterText = '') {
+        const targetStrictKeys = new Set(
+            Array.from(selectedCopyTargetCompanies).map(t => cleanCompanyName(t).toLowerCase().replace(/\s+/g, ''))
         );
-
-        copyTargetNameEl.textContent = targetCompanyName;
-        copyTargetCurrentCountEl.textContent = `ปัจจุบันมีสินค้าอยู่แล้ว: ${targetProducts.length} รายการ`;
 
         const sourceCandidates = Array.from(companiesMap.values()).filter(comp => {
             const cStrict = cleanCompanyName(comp).toLowerCase().replace(/\s+/g, '');
-            if (cStrict === targetStrictKey) return false;
+            // ซ่อนบริษัทที่ถูกเลือกเป็นบริษัทเป้าหมาย (ถ้าไม่ได้ติ๊กเป็นบริษัทแม่ไว้ก่อน)
+            if (targetStrictKeys.has(cStrict) && !selectedCopySourceCompanies.has(comp)) return false;
             const cCount = products.filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === cStrict).length;
             return cCount > 0;
-        }).sort((a, b) => a.localeCompare(b, 'th'));
+        }).sort((a, b) => {
+            // เรียงบริษัทแม่ที่ถูกติ๊กเลือกแล้วขึ้นด้านบนสุดเพื่อให้ตรวจสอบง่าย
+            const aSel = selectedCopySourceCompanies.has(a) ? 0 : 1;
+            const bSel = selectedCopySourceCompanies.has(b) ? 0 : 1;
+            if (aSel !== bSel) return aSel - bSel;
+            return a.localeCompare(b, 'th');
+        });
 
-        copySourceSelect.innerHTML = '';
-        if (sourceCandidates.length === 0) {
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.textContent = '--- ไม่พบบริษัทที่มีสินค้าในระบบ ---';
-            copySourceSelect.appendChild(opt);
-            copySourceSelect.disabled = true;
-            confirmCopyBtn.disabled = true;
+        const keyword = filterText.trim().toLowerCase();
+        const filtered = sourceCandidates.filter(c => c.toLowerCase().includes(keyword));
+
+        copySourceListEl.innerHTML = '';
+        if (filtered.length === 0) {
+            copySourceListEl.innerHTML = '<div class="p-3 text-center text-slate-400 text-xs">ไม่พบบริษัทแม่ที่มีสินค้าตามคำค้นหา</div>';
         } else {
-            copySourceSelect.disabled = false;
-            confirmCopyBtn.disabled = false;
-            sourceCandidates.forEach(comp => {
+            filtered.forEach(comp => {
                 const cStrict = cleanCompanyName(comp).toLowerCase().replace(/\s+/g, '');
                 const cCount = products.filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === cStrict).length;
-                
-                const opt = document.createElement('option');
-                opt.value = comp;
-                opt.textContent = `${comp} (${cCount} รายการ)`;
-                copySourceSelect.appendChild(opt);
+                const isChecked = selectedCopySourceCompanies.has(comp);
+
+                const label = document.createElement('label');
+                label.className = `flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition ${
+                    isChecked ? 'bg-amber-100/80 text-amber-950 font-semibold' : 'hover:bg-amber-50/70 text-slate-700'
+                }`;
+
+                const leftWrap = document.createElement('div');
+                leftWrap.className = 'flex items-center gap-2 min-w-0';
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = isChecked;
+                cb.className = 'rounded text-amber-600 focus:ring-amber-500 w-4 h-4 shrink-0';
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        selectedCopySourceCompanies.add(comp);
+                        // หากเคยถูกเลือกอยู่ฝั่งบริษัทลูก ให้เอาออกจากฝั่งบริษัทลูกอัตโนมัติเพื่อกันคัดลอกเข้าตัวเอง
+                        selectedCopyTargetCompanies.delete(comp);
+                    } else {
+                        selectedCopySourceCompanies.delete(comp);
+                    }
+                    renderCopySourceList(copySourceSearchInput.value);
+                    renderCopyTargetList(copyTargetSearchInput.value);
+                    updateCopyModalSummary();
+                });
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'truncate';
+                nameSpan.textContent = comp;
+                nameSpan.title = comp;
+
+                leftWrap.appendChild(cb);
+                leftWrap.appendChild(nameSpan);
+
+                const badge = document.createElement('span');
+                badge.className = 'px-2 py-0.5 bg-white border border-amber-200 text-amber-800 rounded-md text-[10px] font-bold shrink-0';
+                badge.textContent = `${cCount} รายการ`;
+
+                label.appendChild(leftWrap);
+                label.appendChild(badge);
+                copySourceListEl.appendChild(label);
             });
         }
+    }
+
+    function renderCopyTargetList(filterText = '') {
+        const sourceStrictKeys = new Set(
+            Array.from(selectedCopySourceCompanies).map(s => cleanCompanyName(s).toLowerCase().replace(/\s+/g, ''))
+        );
+
+        const targetCandidates = Array.from(companiesMap.values()).filter(comp => {
+            const cStrict = cleanCompanyName(comp).toLowerCase().replace(/\s+/g, '');
+            if (sourceStrictKeys.has(cStrict) && !selectedCopyTargetCompanies.has(comp)) return false;
+            return true;
+        }).sort((a, b) => {
+            // เรียงบริษัทลูกที่ถูกติ๊กเลือกไว้ขึ้นด้านบนสุด
+            const aSel = selectedCopyTargetCompanies.has(a) ? 0 : 1;
+            const bSel = selectedCopyTargetCompanies.has(b) ? 0 : 1;
+            if (aSel !== bSel) return aSel - bSel;
+            return a.localeCompare(b, 'th');
+        });
+
+        const keyword = filterText.trim().toLowerCase();
+        const filtered = targetCandidates.filter(c => c.toLowerCase().includes(keyword));
+
+        copyTargetListEl.innerHTML = '';
+        if (filtered.length === 0) {
+            copyTargetListEl.innerHTML = '<div class="p-3 text-center text-slate-400 text-xs">ไม่พบบริษัทเป้าหมายตามคำค้นหา</div>';
+        } else {
+            filtered.forEach(comp => {
+                const cStrict = cleanCompanyName(comp).toLowerCase().replace(/\s+/g, '');
+                const cCount = products.filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === cStrict).length;
+                const isChecked = selectedCopyTargetCompanies.has(comp);
+
+                const label = document.createElement('label');
+                label.className = `flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg cursor-pointer transition ${
+                    isChecked ? 'bg-teal-100/80 text-teal-950 font-semibold' : 'hover:bg-teal-50/70 text-slate-700'
+                }`;
+
+                const leftWrap = document.createElement('div');
+                leftWrap.className = 'flex items-center gap-2 min-w-0';
+
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.checked = isChecked;
+                cb.className = 'rounded text-teal-600 focus:ring-teal-500 w-4 h-4 shrink-0';
+                cb.addEventListener('change', () => {
+                    if (cb.checked) {
+                        selectedCopyTargetCompanies.add(comp);
+                        selectedCopySourceCompanies.delete(comp);
+                    } else {
+                        selectedCopyTargetCompanies.delete(comp);
+                    }
+                    renderCopySourceList(copySourceSearchInput.value);
+                    renderCopyTargetList(copyTargetSearchInput.value);
+                    updateCopyModalSummary();
+                });
+
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'truncate';
+                nameSpan.textContent = comp;
+                nameSpan.title = comp;
+
+                leftWrap.appendChild(cb);
+                leftWrap.appendChild(nameSpan);
+
+                const badge = document.createElement('span');
+                badge.className = `px-2 py-0.5 bg-white border rounded-md text-[10px] font-bold shrink-0 ${
+                    cCount === 0 ? 'border-rose-200 text-rose-500' : 'border-teal-200 text-teal-700'
+                }`;
+                badge.textContent = `มีแล้ว ${cCount} รายการ`;
+
+                label.appendChild(leftWrap);
+                label.appendChild(badge);
+                copyTargetListEl.appendChild(label);
+            });
+        }
+    }
+
+    function updateCopyModalSummary() {
+        const sourceCount = selectedCopySourceCompanies.size;
+        const targetCount = selectedCopyTargetCompanies.size;
+
+        copySourceSelectedBadge.textContent = `เลือกแล้ว ${sourceCount} บริษัท`;
+        copyTargetSelectedBadge.textContent = `เลือกแล้ว ${targetCount} บริษัท`;
+
+        // นับจำนวนรายการสินค้าต้นฉบับทั้งหมดจากบริษัทแม่ที่เลือก
+        const sourceStrictKeys = new Set(
+            Array.from(selectedCopySourceCompanies).map(s => cleanCompanyName(s).toLowerCase().replace(/\s+/g, ''))
+        );
+        const totalSourceItems = products.filter(p =>
+            sourceStrictKeys.has(cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, ''))
+        ).length;
+
+        if (sourceCount === 0) {
+            copySourceSummaryEl.textContent = 'กรุณาติ๊กเลือกบริษัทแม่ที่ต้องการดึงรายการสินค้า (เลือกได้มากกว่า 1 บริษัท)';
+        } else {
+            copySourceSummaryEl.textContent = `เลือกบริษัทแม่แล้ว ${sourceCount} บริษัท (รวมสินค้าต้นฉบับทั้งหมด ${totalSourceItems} รายการ)`;
+        }
+
+        if (targetCount === 0) {
+            copyTargetCurrentCountEl.textContent = 'กรุณาติ๊กเลือกบริษัทเป้าหมายอย่างน้อย 1 บริษัท';
+        } else if (targetCount === 1) {
+            const singleTarget = Array.from(selectedCopyTargetCompanies)[0];
+            const tStrict = cleanCompanyName(singleTarget).toLowerCase().replace(/\s+/g, '');
+            const existingCount = products.filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === tStrict).length;
+            copyTargetCurrentCountEl.textContent = `เป้าหมาย: "${singleTarget}" (ปัจจุบันมีสินค้าอยู่แล้ว ${existingCount} รายการ)`;
+        } else {
+            copyTargetCurrentCountEl.textContent = `เลือกบริษัทเป้าหมายพร้อมกัน ${targetCount} บริษัท`;
+        }
+
+        confirmCopyBtn.disabled = (sourceCount === 0 || targetCount === 0);
+        confirmCopyBtn.textContent = (sourceCount > 0 && targetCount > 0)
+            ? `✅ คัดลอกจาก ${sourceCount} บริษัทแม่ → ${targetCount} บริษัทเป้าหมาย`
+            : '✅ เริ่มคัดลอกรายการสินค้า';
+    }
+
+    window.clearCopySourceSearch = function() {
+        copySourceSearchInput.value = '';
+        clearCopySourceSearchBtn.classList.add('hidden');
+        renderCopySourceList('');
+        copySourceSearchInput.focus();
+    };
+
+    window.clearCopyTargetSearch = function() {
+        copyTargetSearchInput.value = '';
+        clearCopyTargetSearchBtn.classList.add('hidden');
+        renderCopyTargetList('');
+        copyTargetSearchInput.focus();
+    };
+
+    copySourceSearchInput.addEventListener('input', (e) => {
+        if (e.target.value.trim() !== '') clearCopySourceSearchBtn.classList.remove('hidden');
+        else clearCopySourceSearchBtn.classList.add('hidden');
+        renderCopySourceList(e.target.value);
+    });
+
+    copyTargetSearchInput.addEventListener('input', (e) => {
+        if (e.target.value.trim() !== '') clearCopyTargetSearchBtn.classList.remove('hidden');
+        else clearCopyTargetSearchBtn.classList.add('hidden');
+        renderCopyTargetList(e.target.value);
+    });
+
+    window.openCopyModal = function(targetCompanyInput) {
+        selectedCopySourceCompanies.clear();
+        selectedCopyTargetCompanies.clear();
+
+        if (Array.isArray(targetCompanyInput)) {
+            targetCompanyInput.forEach(name => {
+                if (name) selectedCopyTargetCompanies.add(name);
+            });
+        } else if (targetCompanyInput) {
+            selectedCopyTargetCompanies.add(targetCompanyInput);
+        }
+
+        copySourceSearchInput.value = '';
+        copyTargetSearchInput.value = '';
+        clearCopySourceSearchBtn.classList.add('hidden');
+        clearCopyTargetSearchBtn.classList.add('hidden');
+
+        renderCopySourceList('');
+        renderCopyTargetList('');
+        updateCopyModalSummary();
 
         copyProductsModal.classList.remove('hidden');
+        setTimeout(() => copySourceSearchInput.focus(), 50);
     };
 
     window.closeCopyModal = function() {
         copyProductsModal.classList.add('hidden');
-        currentCopyTargetName = '';
+        selectedCopySourceCompanies.clear();
+        selectedCopyTargetCompanies.clear();
     };
 
     window.executeCopyProducts = async function() {
-        const targetName = currentCopyTargetName;
-        const sourceName = copySourceSelect.value;
+        const targetNames = Array.from(selectedCopyTargetCompanies);
+        const sourceNames = Array.from(selectedCopySourceCompanies);
         const skipDuplicates = copySkipDuplicatesCheckbox.checked;
 
-        if (!targetName || !sourceName) return;
-
-        const sourceStrictKey = cleanCompanyName(sourceName).toLowerCase().replace(/\s+/g, '');
-        const targetStrictKey = cleanCompanyName(targetName).toLowerCase().replace(/\s+/g, '');
+        if (targetNames.length === 0 || sourceNames.length === 0) return;
 
         try {
             confirmCopyBtn.disabled = true;
             confirmCopyBtn.textContent = 'กำลังคัดลอกรายการ...';
 
-            const sourceProducts = products.filter(p => 
-                cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === sourceStrictKey
-            );
+            // รวบรวมสินค้าจากบริษัทแม่ทั้งหมดที่เลือก
+            const rawSourceProducts = [];
+            sourceNames.forEach(sName => {
+                const sStrict = cleanCompanyName(sName).toLowerCase().replace(/\s+/g, '');
+                const items = products.filter(p =>
+                    cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === sStrict
+                );
+                rawSourceProducts.push(...items);
+            });
 
-            const existingTargetProductNames = new Set(
-                products
-                    .filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === targetStrictKey)
-                    .map(p => (p.name || '').trim().toLowerCase())
-            );
+            // กรองสินค้าชื่อซ้ำกันระหว่างบริษัทแม่หลายแห่งที่เลือก (คงรายการแรกที่พบไว้)
+            const uniqueSourceProducts = [];
+            const seenInSourceBatch = new Set();
+            for (const sp of rawSourceProducts) {
+                const prodNameLower = (sp.name || '').trim().toLowerCase();
+                if (!prodNameLower) continue;
+                if (skipDuplicates && seenInSourceBatch.has(prodNameLower)) {
+                    continue;
+                }
+                seenInSourceBatch.add(prodNameLower);
+                uniqueSourceProducts.push(sp);
+            }
 
             let batch = db.batch();
             let opCount = 0;
-            let copiedCount = 0;
-            let skippedCount = 0;
+            let totalCopiedCount = 0;
+            let totalSkippedCount = 0;
 
             const commitBatchIfNeeded = async () => {
                 if (opCount >= 450) {
@@ -803,28 +1132,38 @@
                 }
             };
 
-            for (const sp of sourceProducts) {
-                const prodNameLower = (sp.name || '').trim().toLowerCase();
-                if (skipDuplicates && existingTargetProductNames.has(prodNameLower)) {
-                    skippedCount++;
-                    continue;
+            // วนคัดลอกเข้าทุกบริษัทเป้าหมาย (บริษัทลูก) ที่เลือกไว้
+            for (const targetName of targetNames) {
+                const targetStrictKey = cleanCompanyName(targetName).toLowerCase().replace(/\s+/g, '');
+                const existingTargetProductNames = new Set(
+                    products
+                        .filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === targetStrictKey)
+                        .map(p => (p.name || '').trim().toLowerCase())
+                );
+
+                for (const sp of uniqueSourceProducts) {
+                    const prodNameLower = (sp.name || '').trim().toLowerCase();
+                    if (skipDuplicates && existingTargetProductNames.has(prodNameLower)) {
+                        totalSkippedCount++;
+                        continue;
+                    }
+
+                    const newDocRef = db.collection('companyProducts').doc();
+                    batch.set(newDocRef, {
+                        companyName: targetName,
+                        company: targetName,
+                        name: sp.name || '',
+                        cost: Number(sp.cost || 0),
+                        price: Number(sp.price || 0),
+                        unit: sp.unit || '',
+                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+
+                    existingTargetProductNames.add(prodNameLower);
+                    totalCopiedCount++;
+                    opCount++;
+                    await commitBatchIfNeeded();
                 }
-
-                const newDocRef = db.collection('companyProducts').doc();
-                batch.set(newDocRef, {
-                    companyName: targetName,
-                    company: targetName,
-                    name: sp.name || '',
-                    cost: Number(sp.cost || 0),
-                    price: Number(sp.price || 0),
-                    unit: sp.unit || '',
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-
-                existingTargetProductNames.add(prodNameLower);
-                copiedCount++;
-                opCount++;
-                await commitBatchIfNeeded();
             }
 
             if (opCount > 0) {
@@ -835,8 +1174,11 @@
             renderTable();
             renderManagerCompanyList(managerSearchInput.value);
 
-            let msg = `คัดลอกสำเร็จ! เพิ่มสินค้า ${copiedCount} รายการ จาก "${sourceName}" ให้ "${targetName}" แล้ว`;
-            if (skippedCount > 0) msg += ` (ข้ามสินค้าซ้ำ ${skippedCount} รายการ)`;
+            const sourceSummaryLabel = sourceNames.length === 1 ? `"${sourceNames[0]}"` : `${sourceNames.length} บริษัทแม่`;
+            const targetSummaryLabel = targetNames.length === 1 ? `"${targetNames[0]}"` : `${targetNames.length} บริษัทเป้าหมาย`;
+
+            let msg = `คัดลอกสำเร็จ! เพิ่มสินค้า ${totalCopiedCount} รายการ จาก ${sourceSummaryLabel} ให้ ${targetSummaryLabel} แล้ว`;
+            if (totalSkippedCount > 0) msg += ` (ข้ามสินค้าซ้ำ ${totalSkippedCount} รายการ)`;
             showMessage(msg, 'success');
             showNotification(msg, 'success');
             setTimeout(() => message.classList.add('hidden'), 5000);
@@ -846,7 +1188,7 @@
             alert('เกิดข้อผิดพลาดในการคัดลอกสินค้า กรุณาลองใหม่อีกครั้ง');
         } finally {
             confirmCopyBtn.disabled = false;
-            confirmCopyBtn.textContent = '✅ เริ่มคัดลอกรายการสินค้า';
+            updateCopyModalSummary();
         }
     };
 
@@ -966,6 +1308,7 @@
                 }
 
                 companiesMap.delete(sourceStrictKey);
+                managerSelectedTargetCompanies.delete(sourceName);
 
                 if (cleanCompanyName(filterCompany.value).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
                     filterCompany.value = targetName;
@@ -1040,6 +1383,7 @@
 
                 companiesMap.delete(targetStrictKey);
                 persistentCheckedCompanies.delete(companyNameTarget);
+                managerSelectedTargetCompanies.delete(companyNameTarget);
 
                 if (cleanCompanyName(companySelectHidden.value).toLowerCase().replace(/\s+/g, '') === targetStrictKey) {
                     companySelectHidden.value = '';
@@ -1071,8 +1415,12 @@
     window.openCompanyManager = function() {
         managerSearchInput.value = '';
         showOnlyDuplicatesFlag = false;
+        managerSelectedTargetCompanies.clear();
+        const selectAllCb = document.getElementById('manager-select-all-visible');
+        if (selectAllCb) selectAllCb.checked = false;
         btnResetManagerSearch.classList.add('hidden');
         renderManagerCompanyList('');
+        updateManagerSelectionUI();
         companyManagerModal.classList.remove('hidden');
         setTimeout(() => managerSearchInput.focus(), 50);
     };
@@ -1136,8 +1484,14 @@
         managerTotalCompanies.textContent = `แสดง ${filtered.length} จากทั้งหมด ${sortedCompanies.length} บริษัท`;
         managerCompanyList.innerHTML = '';
 
+        const selectAllCb = document.getElementById('manager-select-all-visible');
+        if (selectAllCb) {
+            selectAllCb.checked = filtered.length > 0 && filtered.every(c => managerSelectedTargetCompanies.has(c));
+        }
+
         if (filtered.length === 0) {
             managerCompanyList.innerHTML = '<div class="py-8 text-center text-slate-400">ไม่พบรายชื่อบริษัทที่ค้นหา</div>';
+            updateManagerSelectionUI();
             return;
         }
 
@@ -1146,14 +1500,41 @@
             const fuzzyKey = getFuzzyCompanyKey(name);
             const isSuspectedDuplicate = duplicateFuzzyKeys.has(fuzzyKey);
             const itemCount = products.filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === strictKey).length;
+            const isSelected = managerSelectedTargetCompanies.has(name);
 
             const row = document.createElement('div');
             row.className = `py-3 px-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl transition ${
-                isSuspectedDuplicate ? 'bg-amber-50/70 hover:bg-amber-100/60' : 'hover:bg-teal-50/50'
+                isSelected
+                    ? 'bg-emerald-50/90 hover:bg-emerald-100/70'
+                    : (isSuspectedDuplicate ? 'bg-amber-50/70 hover:bg-amber-100/60' : 'hover:bg-teal-50/50')
             }`;
+
+            const leftGroup = document.createElement('div');
+            leftGroup.className = 'flex items-start gap-2.5 min-w-0 flex-1';
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.value = name;
+            checkbox.checked = isSelected;
+            checkbox.className = 'manager-company-checkbox mt-1 rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer shrink-0';
+            checkbox.addEventListener('change', () => {
+                if (checkbox.checked) {
+                    managerSelectedTargetCompanies.add(name);
+                } else {
+                    managerSelectedTargetCompanies.delete(name);
+                }
+                if (selectAllCb) {
+                    selectAllCb.checked = filtered.every(c => managerSelectedTargetCompanies.has(c));
+                }
+                updateManagerSelectionUI();
+            });
             
             const infoDiv = document.createElement('div');
-            infoDiv.className = 'min-w-0 flex-1';
+            infoDiv.className = 'min-w-0 flex-1 cursor-pointer';
+            infoDiv.onclick = () => {
+                checkbox.checked = !checkbox.checked;
+                checkbox.dispatchEvent(new Event('change'));
+            };
             infoDiv.innerHTML = `
                 <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="font-semibold text-slate-800 break-words">${name}</span>
@@ -1163,6 +1544,9 @@
                     มีรายการสินค้า: <b class="${itemCount === 0 ? 'text-rose-500' : 'text-teal-700'}">${itemCount} รายการ</b>
                 </div>
             `;
+
+            leftGroup.appendChild(checkbox);
+            leftGroup.appendChild(infoDiv);
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'flex items-center gap-1.5 shrink-0 flex-wrap justify-end';
@@ -1191,10 +1575,12 @@
             actionsDiv.appendChild(mergeBtn);
             actionsDiv.appendChild(delBtn);
 
-            row.appendChild(infoDiv);
+            row.appendChild(leftGroup);
             row.appendChild(actionsDiv);
             managerCompanyList.appendChild(row);
         });
+
+        updateManagerSelectionUI();
     }
 
     function checkDuplicateStatus() {
@@ -1556,6 +1942,10 @@
             if (!companyManagerModal.classList.contains('hidden')) {
                 renderManagerCompanyList(managerSearchInput.value);
             }
+            if (!copyProductsModal.classList.contains('hidden')) {
+                renderCopySourceList(copySourceSearchInput.value);
+                renderCopyTargetList(copyTargetSearchInput.value);
+            }
         }, (error) => {
             console.error("Error fetching companies:", error);
         });
@@ -1571,6 +1961,11 @@
             if (isMultiSelectMode) renderMultiCheckboxes(multiSearchInput.value);
             if (!companyManagerModal.classList.contains('hidden')) {
                 renderManagerCompanyList(managerSearchInput.value);
+            }
+            if (!copyProductsModal.classList.contains('hidden')) {
+                renderCopySourceList(copySourceSearchInput.value);
+                renderCopyTargetList(copyTargetSearchInput.value);
+                updateCopyModalSummary();
             }
             renderTable();
             checkDuplicateStatus();
