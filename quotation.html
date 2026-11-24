@@ -26,7 +26,13 @@
 
         body {
             font-family: 'Sarabun', 'Inter', sans-serif;
-            background: linear-gradient(135deg, #f6f8fb 0%, #eef2f7 100%);
+            /* ปรับโทนพื้นหลังตามภาพที่แนบมา (เขียวมิ้นต์และฟ้าพาสเทลฟุ้งๆ) */
+            background:
+                radial-gradient(circle at 0% 0%, rgba(165, 243, 252, 0.55) 0%, transparent 45%),
+                radial-gradient(circle at 92% 35%, rgba(125, 211, 252, 0.45) 0%, transparent 45%),
+                radial-gradient(circle at 42% 85%, rgba(167, 243, 208, 0.45) 0%, transparent 50%),
+                linear-gradient(135deg, #f4fcfe 0%, #f0fdfa 50%, #f5fbff 100%);
+            background-attachment: fixed;
             color: var(--secondary-color);
             margin: 0;
             padding: 30px 15px 60px 15px;
@@ -306,17 +312,13 @@
     background: #fff;
     transition: all 0.25s ease;
     
-    /* 🛑 [จุดที่ต้องแก้] ลบ height: 45px; และ overflow: hidden; ออก */
-    /* height: 45px; */
-    /* overflow: hidden; */
-    
-    /* ✅ [จุดที่ต้องเพิ่ม] เพิ่ม min-height เพื่อให้มีพื้นที่ขั้นต่ำ */
+    /* ✅ เพิ่ม min-height เพื่อให้มีพื้นที่ขั้นต่ำ */
     min-height: 28px; 
     
-    /* ✅ [จุดที่ต้องเพิ่ม] บังคับให้ขยายความสูงอัตโนมัติเมื่อข้อความเยอะขึ้น */
+    /* ✅ บังคับให้ขยายความสูงอัตโนมัติเมื่อข้อความเยอะขึ้น */
     height: auto; 
     
-    /* ✅ [จุดที่ต้องเพิ่ม] ซ่อน scrollbar ตลอดเวลา */
+    /* ✅ ซ่อน scrollbar ตลอดเวลา */
     overflow-y: hidden; 
 	/* ✅ เพิ่มคำสั่งบังคับตัดคำป้องกันข้อความล้น */
     word-break: break-word !important;
@@ -553,7 +555,8 @@
                 margin: 5mm; /* ลดขอบกระดาษสำหรับการพิมพ์ */
             }
             body {
-                background-color: #ffffff;
+                background: #ffffff !important;
+                background-color: #ffffff !important;
                 padding: 0;
                 font-size: 11px; /* ลดขนาดฟอนต์ลงเล็กน้อยเพื่อให้พอดีหน้า */
                 line-height: 1.3;
@@ -807,7 +810,7 @@
     }
 }
 .footer-table td:first-child {
-    width: %;
+    width: 50%;
 }
 .footer-table td.footer-total-label {
     width: 25%;
