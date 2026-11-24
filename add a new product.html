@@ -1433,8 +1433,17 @@
     });
 
     companySearchInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
         companySelectHidden.value = '';
-        renderCompanyDropdown(e.target.value);
+        
+        // หากฝั่งซ้ายไม่มีชื่อบริษัท (ช่องค้นหาถูกลบออกจนว่างเปล่า) ให้รีเซ็ตฝั่งขวาเป็นค่าเริ่มต้นแสดงทุกบริษัททั้งหมดทันที
+        if (val === '') {
+            filterCompany.value = 'all';
+            currentPage = 1;
+            renderTable();
+        }
+
+        renderCompanyDropdown(val);
         companyDropdownList.classList.remove('hidden');
         checkDuplicateStatus();
     });
