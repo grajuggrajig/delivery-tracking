@@ -25,7 +25,7 @@
                     <span>🧹</span>
                     <span>Firebase Development Data Cleanup & Image Purge</span>
                 </div>
-                <p class="text-xs text-slate-400 mt-1">เครื่องมือล้างข้อมูลขยะ ลบรูปภาพ สินค้าที่ไม่ได้ผูกบริษัท และบิลที่ไม่มีบริษัทคงอยู่</p>
+                <p class="text-xs text-slate-400 mt-1">เครื่องมือล้างข้อมูลขยะ ลบรูปภาพ และเลือกติ๊กเฉพาะรายการที่ต้องการลบพร้อมระบบยืนยันรหัสผ่าน</p>
             </div>
             <button onclick="window.location.href='index.html'" class="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-bold rounded-xl transition">
                 ← กลับสู่หน้าหลัก CRM
@@ -66,14 +66,19 @@
                 <div class="space-y-2 pt-2 border-t border-slate-100">
                     <label class="block text-xs font-bold text-slate-600 mb-1">⚙️ เงื่อนไขพิเศษ (Advanced Filters)</label>
                     
-                    <label class="flex items-center gap-2 p-2 rounded-xl bg-rose-50/60 border border-rose-100 cursor-pointer hover:bg-rose-50 text-xs">
-                        <input type="checkbox" id="filter-unbound-orphans" checked class="accent-rose-600">
-                        <span class="text-rose-900 font-semibold">🚫 ลบสินค้า/บิลที่ไม่มีบริษัทรองรับ</span>
-                    </label>
-
                     <label class="flex items-center gap-2 p-2 rounded-xl bg-emerald-50/40 border border-emerald-100 cursor-pointer hover:bg-emerald-50 text-xs">
                         <input type="checkbox" id="filter-no-products" class="accent-emerald-600">
                         <span class="text-emerald-900 font-semibold">🔍 เฉพาะบริษัทที่ "ไม่มีสินค้า" ผูกอยู่</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 p-2 rounded-xl bg-purple-50/50 border border-purple-100 cursor-pointer hover:bg-purple-50 text-xs">
+                        <input type="checkbox" id="filter-unbound-products" class="accent-purple-600">
+                        <span class="text-purple-900 font-semibold">🏷️ สินค้ากลางที่ไม่มีบริษัทผูกอยู่เลย</span>
+                    </label>
+
+                    <label class="flex items-center gap-2 p-2 rounded-xl bg-rose-50/40 border border-rose-100 cursor-pointer hover:bg-rose-50 text-xs">
+                        <input type="checkbox" id="filter-invalid-deliveries" class="accent-rose-600">
+                        <span class="text-rose-900 font-semibold">📦 รายการจัดส่งที่ไม่มีชื่อบริษัท</span>
                     </label>
 
                     <label class="flex items-center gap-2 p-2 rounded-xl bg-amber-50/40 border border-amber-100 cursor-pointer hover:bg-amber-50 text-xs">
@@ -196,8 +201,9 @@
         async function scanDatabase() {
             const selectedCols = Array.from(document.querySelectorAll('input[name="target-col"]:checked')).map(el => el.value);
             const keyword = document.getElementById('filter-keyword').value.trim().toLowerCase();
-            const filterUnboundOrphans = document.getElementById('filter-unbound-orphans').checked;
             const filterNoProducts = document.getElementById('filter-no-products').checked;
+            const filterUnboundProducts = document.getElementById('filter-unbound-products').checked;
+            const filterInvalidDeliveries = document.getElementById('filter-invalid-deliveries').checked;
             const filterInvalidName = document.getElementById('filter-invalid-name').checked;
             const filterHasImages = document.getElementById('filter-has-images').checked;
             
@@ -210,33 +216,38 @@
                 return;
             }
 
-            container.innerHTML = '<div class="text-center py-12 text-slate-400 animate-pulse">กำลังสแกนวิเคราะห์ข้อมูลและตรวจสอบรายชื่อบริษัทอ้างอิงใน Firebase...</div>';
+            container.innerHTML = '<div class="text-center py-12 text-slate-400 animate-pulse">กำลังสแกนวิเคราะห์ข้อมูลและตรวจสอบความสัมพันธ์ใน Firebase...</div>';
             scannedItemsMap.clear();
             let totalFound = 0;
 
             try {
-                // รวบรวมรายชื่อบริษัทที่ถูกต้องทั้งหมดจากฐานข้อมูลหลัก (อ้างอิงจาก index เก่า.html)
-                let validCompaniesSet = new Set();
-                let companyWithProductsSet = new Set();
+                // รวบรวมข้อมูลอ้างอิงสำหรับตรวจสอบสินค้าไร้บริษัท หรือบิลไร้บริษัท
+                const companyProductsSnapshot = await db.collection('companyProducts').get();
+                const deliveriesSnapshot = await db.collection('deliveries').get();
 
-                // ดึงรายชื่อบริษัทจาก deliveries หรือเอกสารทั้งหมดเพื่อสร้างรายการบริษัทที่มีอยู่จริง
-                const allDeliveriesSnap = await db.collection('deliveries').get();
-                allDeliveriesSnap.forEach(doc => {
+                const companyNamesSet = new Set();
+                const linkedProductNamesOrIds = new Set();
+                const companyWithProductsSet = new Set();
+
+                companyProductsSnapshot.forEach(doc => {
                     const d = doc.data();
                     if (d.companyName) {
-                        validCompaniesSet.add(d.companyName.trim().toLowerCase());
+                        companyWithProductsSet.add(d.companyName.trim().toLowerCase());
+                        companyNamesSet.add(d.companyName.trim().toLowerCase());
                     }
+                    if (d.stockProductId) linkedProductNamesOrIds.add(d.stockProductId);
+                    if (d.name) linkedProductNamesOrIds.add(d.name.trim().toLowerCase());
                 });
 
-                // ตรวจสอบ collection อื่นๆ เพิ่มเติมเพื่อความครอบคลุมของบริษัท
-                const cpSnapshot = await db.collection('companyProducts').get();
-                cpSnapshot.forEach(doc => {
+                deliveriesSnapshot.forEach(doc => {
                     const d = doc.data();
                     if (d.companyName) {
-                        const cName = d.companyName.trim().toLowerCase();
-                        validCompaniesSet.add(cName);
-                        companyWithProductsSet.add(cName);
+                        companyNamesSet.add(d.companyName.trim().toLowerCase());
                     }
+                    const subs = Array.isArray(d.subItems) ? d.subItems : [];
+                    subs.forEach(sub => {
+                        if (sub.text) linkedProductNamesOrIds.add(sub.text.trim().toLowerCase());
+                    });
                 });
 
                 for (const colName of selectedCols) {
@@ -247,7 +258,8 @@
                         const titleLower = String(title).toLowerCase();
                         const stringified = JSON.stringify(data).toLowerCase();
 
-                        // ตรวจสอบว่ามีลิงก์รูปภาพในข้อมูลหรือไม่
+                        // ตรวจสอบรูปภาพ
+                        const imageKeys = ['image', 'imageUrl', 'img', 'photo', 'picture', 'slip', 'receiptUrl', 'url'];
                         let hasImages = false;
                         let extractedImageUrls = [];
 
@@ -270,22 +282,30 @@
 
                         const matchKeyword = !keyword || stringified.includes(keyword);
 
-                        // เงื่อนไข: สินค้าหรือบิลที่ไม่ได้ผูกกับบริษัทใดๆ เลย หรือมีการออกบิลไว้ที่ไม่ได้อยู่ในบริษัททั้งหมด
-                        let isUnboundOrphan = false;
-                        if (filterUnboundOrphans) {
-                            const itemComp = (data.companyName || '').trim().toLowerCase();
-                            if (colName === 'companyProducts' || colName === 'deliveries') {
-                                if (!itemComp || !validCompaniesSet.has(itemComp)) {
-                                    isUnboundOrphan = true;
-                                }
-                            }
-                        }
-
                         let isCompanyWithoutProduct = false;
                         if (filterNoProducts && (colName === 'companyProducts' || colName === 'deliveries')) {
                             const compName = (data.companyName || '').trim().toLowerCase();
                             if (compName && !companyWithProductsSet.has(compName)) {
                                 isCompanyWithoutProduct = true;
+                            }
+                        }
+
+                        // เงื่อนไข: สินค้ากลาง (products) ที่ไม่มีบริษัทผูกอยู่เลย และไม่ได้ถูกใช้ในบิลใด
+                        let isUnboundProduct = false;
+                        if (filterUnboundProducts && colName === 'products') {
+                            const prodId = doc.id;
+                            const prodName = (data.name || '').trim().toLowerCase();
+                            if (!linkedProductNamesOrIds.has(prodId) && !linkedProductNamesOrIds.has(prodName)) {
+                                isUnboundProduct = true;
+                            }
+                        }
+
+                        // เงื่อนไข: รายการจัดส่ง (deliveries) ที่ไม่มีบริษัท หรือไม่มีอยู่ในบริษัททั้งหมด
+                        let isInvalidDelivery = false;
+                        if (filterInvalidDeliveries && colName === 'deliveries') {
+                            const compName = (data.companyName || '').trim().toLowerCase();
+                            if (!compName || !companyNamesSet.has(compName)) {
+                                isInvalidDelivery = true;
                             }
                         }
 
@@ -300,9 +320,10 @@
                         }
 
                         // ประเมินเงื่อนไขการกรอง
-                        if (filterUnboundOrphans || filterNoProducts || filterInvalidName || filterHasImages) {
-                            if (filterUnboundOrphans && isUnboundOrphan) { matchReasons.push('🚫 ไม่พบว่าผูกกับบริษัทใดๆ'); isMatch = true; }
+                        if (filterNoProducts || filterUnboundProducts || filterInvalidDeliveries || filterInvalidName || filterHasImages) {
                             if (filterNoProducts && isCompanyWithoutProduct) { matchReasons.push('🚫 ไม่มีสินค้าผูกอยู่'); isMatch = true; }
+                            if (filterUnboundProducts && isUnboundProduct) { matchReasons.push('🏷️ สินค้ากลางไร้บริษัท/ไร้บิลอ้างอิง'); isMatch = true; }
+                            if (filterInvalidDeliveries && isInvalidDelivery) { matchReasons.push('📦 บิลจัดส่งไม่มีบริษัท'); isMatch = true; }
                             if (filterInvalidName && isInvalidNamed) { matchReasons.push('⚠️ ชื่อผิดปกติ'); isMatch = true; }
                             if (filterHasImages && hasImages) { matchReasons.push(`🖼️ มีรูปภาพ (${extractedImageUrls.length})`); isMatch = true; }
                         } else if (matchKeyword) {
@@ -313,7 +334,7 @@
                         if (isMatch) {
                             totalFound++;
                             const uniqueKey = `${colName}_${doc.id}`;
-                            const subText = data.companyName ? `บริษัท: ${data.companyName} | ราคา: ${data.price || '-'}` : JSON.stringify(data).substring(0, 50);
+                            const subText = data.itemInput || data.price ? `ราคา: ${data.price || '-'} | มีรูปภาพ: ${hasImages ? 'มี' : 'ไม่มี'}` : JSON.stringify(data).substring(0, 50);
 
                             scannedItemsMap.set(uniqueKey, { collection: colName, id: doc.id, title, imageUris: extractedImageUrls });
 
