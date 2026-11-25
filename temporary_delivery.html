@@ -1207,18 +1207,40 @@
             calculateTotalsOnly();
         }
 
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const base64Img = e.target.result;
+                document.querySelectorAll('.companyLogoImgClass').forEach(img => {
+                    img.src = base64Img;
+                    img.classList.remove('hidden');
+                });
+                showToast('อัปโหลดและอัปเดตโลโก้สำเร็จ');
+            };
+            reader.readAsDataURL(file);
+        }
+
         function calculateTotalsOnly() {
             let subTotal = 0;
             let totalQty = 0;
             let activeItems = 0;
 
-            billItems.forEach(item => {
+            // กรองเฉพาะรายการที่มีข้อมูลจริงมาคำนวณและนับ
+            const validItems = billItems.filter(item => {
+                const desc = (item.desc || '').trim();
                 const qty = parseFloat(item.qty) || 0;
                 const price = parseFloat(item.price) || 0;
-                const desc = (item.desc || '').trim();
+                return desc !== '' || qty > 0 || price > 0;
+            });
+
+            validItems.forEach(item => {
+                const qty = parseFloat(item.qty) || 0;
+                const price = parseFloat(item.price) || 0;
                 subTotal += (qty * price);
                 totalQty += qty;
-                if (desc !== '' || qty > 0) activeItems++;
+                activeItems++;
             });
 
             const discountVal = parseFloat(document.getElementById('stateDiscountInput').value) || 0;
@@ -1295,14 +1317,31 @@
             const discountType = document.getElementById('stateDiscountType').value;
             const vatMode = document.getElementById('stateVatMode').value;
 
-            // ตรวจสอบว่าในหน้านี้มีรายการสินค้าจริงหรือไม่
-            const hasValidItems = pageItems.some(item => (item.desc || '').trim() !== '' || (parseFloat(item.qty) || 0) > 0);
+            // ตรวจสอบเฉพาะรายการที่มีข้อมูลจริง (ตัดแถวว่างออกทันที)
+            const validPageItems = pageItems.filter(item => {
+                const desc = (item.desc || '').trim();
+                const qty = parseFloat(item.qty) || 0;
+                const price = parseFloat(item.price) || 0;
+                return desc !== '' || qty > 0 || price > 0;
+            });
+
+            const hasValidItems = validPageItems.length > 0;
 
             let rowsHtml = '';
             if (hasValidItems) {
+                // แสดงเฉพาะรายการที่มีข้อมูลจริงเท่านั้น
                 pageItems.forEach((item, idx) => {
                     const actualIndex = startIndex + idx;
-                    const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+                    const desc = (item.desc || '').trim();
+                    const qty = parseFloat(item.qty) || 0;
+                    const price = parseFloat(item.price) || 0;
+
+                    // ข้ามแถวที่ว่างเปล่าสมบูรณ์ไม่ให้แสดงบนตาราง
+                    if (desc === '' && qty === 0 && price === 0 && billItems.length > 1) {
+                        return;
+                    }
+
+                    const amount = qty * price;
                     rowsHtml += `
                         <tr class="hover:bg-teal-50/40 transition group">
                             <td class="border border-slate-300 py-1 px-2 text-center font-medium text-slate-600">${actualIndex + 1}</td>
@@ -1337,12 +1376,13 @@
             return `
                 <div>
                     <!-- 1. Header -->
-                    <header class="flex justify-between items-start gap-5 pb-3 border-b-2 border-teal-800">
-                        <div class="flex items-start gap-3.5 flex-1">
+                    <header class="flex justify-between items-start gap-4 pb-3 border-b-2 border-teal-800">
+                        <div class="flex items-start gap-3 flex-1">
                             <div class="relative group shrink-0">
                                 <input type="file" id="logoInput_${pageIdx}" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
-                                <div onclick="document.getElementById('logoInput_${pageIdx}').click()" class="w-18 h-18 rounded-xl border border-slate-300 hover:border-teal-600 bg-white flex flex-col items-center justify-center cursor-pointer overflow-hidden transition relative p-1" title="คลิกเพื่ออัปโหลดโลโก้บริษัท">
-                                    <img id="companyLogoImg_${pageIdx}" src="logo.png" alt="Company Logo" class="w-full h-full object-contain" onerror="this.classList.add('hidden');">
+                                <!-- ปรับขนาดความกว้าง/สูงกล่องโลโก้ให้กะทัดรัด เหมาะสมสวยงาม (w-20 h-16 หรือ w-24 h-16) -->
+                                <div onclick="document.getElementById('logoInput_${pageIdx}').click()" class="w-22 h-16 rounded-xl border border-slate-300 hover:border-teal-600 bg-white flex items-center justify-center cursor-pointer overflow-hidden transition relative p-1 shadow-sm" title="คลิกเพื่ออัปโหลดโลโก้บริษัท">
+                                    <img src="logo.png" alt="Company Logo" class="companyLogoImgClass w-full h-full object-contain" onerror="this.classList.add('hidden');">
                                 </div>
                             </div>
                             <div class="text-xs leading-relaxed text-slate-700 flex-1">
@@ -1413,9 +1453,9 @@
                         </div>
                     </section>
 
-                    <!-- 3. Items Table (แสดงเฉพาะเมื่อมีรายการสินค้า หรือแสดงปุ่มเพิ่มรายการถ้าไม่มี) -->
+                    <!-- 3. Items Table -->
                     <section class="mt-3">
-                        ${hasValidItems ? `
+                        ${rowsHtml !== '' ? `
                             <table class="w-full border-collapse border border-slate-300 text-xs">
                                 <thead>
                                     <tr class="bg-teal-800 text-white font-heading">
@@ -1440,7 +1480,7 @@
                             </div>
                         `}
 
-                        <!-- ปุ่มเพิ่มรายการสินค้าลอยอยู่ใต้รายการสินค้าตามคำขอ -->
+                        <!-- ปุ่มเพิ่มรายการสินค้า -->
                         <div class="no-print mt-2 flex justify-end">
                             <button type="button" onclick="addItemRow()" class="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer shadow-sm">
                                 <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
@@ -1563,6 +1603,14 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>กำลังบันทึก...</span>';
 
             try {
+                // บันทึกเฉพาะรายการที่มีข้อมูลจริงเท่านั้น
+                const validItems = billItems.filter(item => {
+                    const desc = (item.desc || '').trim();
+                    const qty = parseFloat(item.qty) || 0;
+                    const price = parseFloat(item.price) || 0;
+                    return desc !== '' || qty > 0 || price > 0;
+                });
+
                 const payload = {
                     docNo: docNo,
                     docDate: document.getElementById('stateDocDate').textContent.trim(),
@@ -1579,7 +1627,7 @@
                     discountType: document.getElementById('stateDiscountType').value,
                     vatMode: document.getElementById('stateVatMode').value,
                     showPrices: document.getElementById('togglePriceCheckbox').checked,
-                    items: billItems,
+                    items: validItems,
                     grandTotal: grandTotalNumeric,
                     grandTotalText: grandTotalText,
                     issuerSnapshot: issuerInfo,
@@ -1731,10 +1779,7 @@
             document.getElementById('stateCustomerPhone').textContent = '-';
             document.getElementById('stateTransportBy').textContent = 'รถบริษัท / ขนส่งเอกชน';
 
-            billItems = [];
-            for (let i = 0; i < 4; i++) {
-                billItems.push({ code: '', desc: '', qty: '', unit: 'ชิ้น', price: '' });
-            }
+            billItems = [{ code: '', desc: '', qty: '', unit: 'ชิ้น', price: '' }];
 
             document.getElementById('stateDiscountInput').value = 0;
             document.getElementById('stateDiscountType').value = 'baht';
