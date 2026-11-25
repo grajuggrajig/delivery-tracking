@@ -326,10 +326,16 @@
                         <span id="saved-docs-badge" class="px-1.5 py-0.2 bg-teal-600 text-white rounded-full text-[10px] font-bold">0</span>
                     </button>
 
-                    <!-- บันทึกลง Cloud -->
-                    <button id="btn-save-cloud" onclick="saveDeliveryNoteToFirebase()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition shadow-sm cursor-pointer">
+                    <!-- บันทึกลง Cloud (ทับบิลเดิมที่เปิดอยู่) -->
+                    <button id="btn-save-cloud" onclick="saveDeliveryNoteToFirebase()" class="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition shadow-sm cursor-pointer" title="บันทึกทับบิลปัจจุบัน">
                         <i class="fa-solid fa-cloud-arrow-up"></i>
                         <span>บันทึก Cloud</span>
+                    </button>
+
+                    <!-- ปุ่มบันทึกเป็นบิลใหม่ (ไม่ทับบิลเดิม) -->
+                    <button id="btn-save-new-cloud" onclick="saveAsNewDeliveryNoteToFirebase()" class="flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition shadow-sm cursor-pointer" title="บันทึกเป็นบิลใหม่ (ไม่ทับบิลเดิม)">
+                        <i class="fa-solid fa-file-circle-plus"></i>
+                        <span>บันทึกบิลใหม่</span>
                     </button>
 
                     <!-- สร้างเอกสารใหม่ / รีเซ็ต -->
@@ -1154,11 +1160,15 @@
             const desc = decodeURIComponent(encodedName);
             const unit = decodeURIComponent(encodedUnit) || 'ชิ้น';
 
-            if (billItems.length === 1 && !billItems[0].desc && !billItems[0].code) {
-                billItems[0] = { code, desc, qty: 1, unit, price: Number(price) || 0 };
-            } else {
-                billItems.push({ code, desc, qty: 1, unit, price: Number(price) || 0 });
-            }
+            // ลบแถวที่ว่างเปล่าออกก่อนเพิ่มสินค้า เพื่อไม่ให้ลำดับกระโดด
+            billItems = billItems.filter(it =>
+                (it.code || '').trim() !== '' ||
+                (it.desc || '').trim() !== '' ||
+                (parseFloat(it.qty) || 0) > 0 ||
+                (parseFloat(it.price) || 0) > 0
+            );
+
+            billItems.push({ code, desc, qty: 1, unit, price: Number(price) || 0 });
 
             closeSpecialProductPicker();
             renderAllPages();
@@ -1169,7 +1179,7 @@
             billItems.push({
                 code: item.code || '',
                 desc: item.desc || '',
-                qty: item.qty !== '' ? Number(item.qty) || 0 : '',
+                qty: item.qty !== '' ? Number(item.qty) || 0 : 1,
                 unit: item.unit || 'ชิ้น',
                 price: item.price !== '' ? Number(item.price) || 0 : 0
             });
@@ -1177,11 +1187,7 @@
         }
 
         function removeItemRow(index) {
-            if (billItems.length > 1) {
-                billItems.splice(index, 1);
-            } else {
-                billItems[0] = { code: '', desc: '', qty: '', unit: 'ชิ้น', price: '' };
-            }
+            billItems.splice(index, 1);
             renderAllPages();
         }
 
@@ -1227,12 +1233,12 @@
             let totalQty = 0;
             let activeItems = 0;
 
-            // กรองเฉพาะรายการที่มีข้อมูลจริงมาคำนวณและนับ
             const validItems = billItems.filter(item => {
+                const code = (item.code || '').trim();
                 const desc = (item.desc || '').trim();
                 const qty = parseFloat(item.qty) || 0;
                 const price = parseFloat(item.price) || 0;
-                return desc !== '' || qty > 0 || price > 0;
+                return code !== '' || desc !== '' || qty > 0 || price > 0;
             });
 
             validItems.forEach(item => {
@@ -1264,20 +1270,17 @@
             document.querySelectorAll('.afterDiscountDisplay').forEach(el => el.textContent = formatCurrency(afterDiscount));
             document.querySelectorAll('.vatDisplay').forEach(el => el.textContent = formatCurrency(vatAmount));
             document.querySelectorAll('.grandTotalDisplay').forEach(el => el.textContent = formatCurrency(grandTotal) + ' บาท');
-            document.querySelectorAll('.bahtTextDisplay').textContent = `(${numberToThaiBahtText(grandTotal)})`;
-            document.querySelectorAll('.totalItemsCount').textContent = activeItems;
-            document.querySelectorAll('.totalQtyCount').textContent = totalQty.toLocaleString('en-US');
+            document.querySelectorAll('.bahtTextDisplay').forEach(el => el.textContent = `(${numberToThaiBahtText(grandTotal)})`);
+            document.querySelectorAll('.totalItemsCount').forEach(el => el.textContent = activeItems);
+            document.querySelectorAll('.totalQtyCount').forEach(el => el.textContent = totalQty.toLocaleString('en-US'));
         }
 
         function renderAllPages() {
             const container = document.getElementById('a4PagesContainer');
             container.innerHTML = '';
 
-            if (billItems.length === 0) {
-                billItems.push({ code: '', desc: '', qty: '', unit: 'ชิ้น', price: '' });
-            }
-
-            const totalPages = Math.ceil(billItems.length / ITEMS_PER_PAGE);
+            // คำนวณจำนวนหน้าจากรายการที่มีอยู่จริง (อย่างน้อย 1 หน้าเสมอแม้เป็นบิลว่าง)
+            const totalPages = Math.max(1, Math.ceil(billItems.length / ITEMS_PER_PAGE));
 
             for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
                 const isLastPage = (pageIdx === totalPages - 1);
@@ -1317,31 +1320,14 @@
             const discountType = document.getElementById('stateDiscountType').value;
             const vatMode = document.getElementById('stateVatMode').value;
 
-            // ตรวจสอบเฉพาะรายการที่มีข้อมูลจริง (ตัดแถวว่างออกทันที)
-            const validPageItems = pageItems.filter(item => {
-                const desc = (item.desc || '').trim();
-                const qty = parseFloat(item.qty) || 0;
-                const price = parseFloat(item.price) || 0;
-                return desc !== '' || qty > 0 || price > 0;
-            });
-
-            const hasValidItems = validPageItems.length > 0;
-
             let rowsHtml = '';
-            if (hasValidItems) {
-                // แสดงเฉพาะรายการที่มีข้อมูลจริงเท่านั้น
+            if (pageItems.length > 0) {
                 pageItems.forEach((item, idx) => {
                     const actualIndex = startIndex + idx;
-                    const desc = (item.desc || '').trim();
                     const qty = parseFloat(item.qty) || 0;
                     const price = parseFloat(item.price) || 0;
-
-                    // ข้ามแถวที่ว่างเปล่าสมบูรณ์ไม่ให้แสดงบนตาราง
-                    if (desc === '' && qty === 0 && price === 0 && billItems.length > 1) {
-                        return;
-                    }
-
                     const amount = qty * price;
+
                     rowsHtml += `
                         <tr class="hover:bg-teal-50/40 transition group">
                             <td class="border border-slate-300 py-1 px-2 text-center font-medium text-slate-600">${actualIndex + 1}</td>
@@ -1380,7 +1366,6 @@
                         <div class="flex items-start gap-3 flex-1">
                             <div class="relative group shrink-0">
                                 <input type="file" id="logoInput_${pageIdx}" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
-                                <!-- ปรับขนาดความกว้าง/สูงกล่องโลโก้ให้กะทัดรัด เหมาะสมสวยงาม (w-20 h-16 หรือ w-24 h-16) -->
                                 <div onclick="document.getElementById('logoInput_${pageIdx}').click()" class="w-22 h-16 rounded-xl border border-slate-300 hover:border-teal-600 bg-white flex items-center justify-center cursor-pointer overflow-hidden transition relative p-1 shadow-sm" title="คลิกเพื่ออัปโหลดโลโก้บริษัท">
                                     <img src="logo.png" alt="Company Logo" class="companyLogoImgClass w-full h-full object-contain" onerror="this.classList.add('hidden');">
                                 </div>
@@ -1603,12 +1588,12 @@
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>กำลังบันทึก...</span>';
 
             try {
-                // บันทึกเฉพาะรายการที่มีข้อมูลจริงเท่านั้น
                 const validItems = billItems.filter(item => {
+                    const code = (item.code || '').trim();
                     const desc = (item.desc || '').trim();
                     const qty = parseFloat(item.qty) || 0;
                     const price = parseFloat(item.price) || 0;
-                    return desc !== '' || qty > 0 || price > 0;
+                    return code !== '' || desc !== '' || qty > 0 || price > 0;
                 });
 
                 const payload = {
@@ -1636,7 +1621,7 @@
                 };
 
                 const existing = savedDeliveryNotes.find(d => d.docId === currentEditingDocId || d.docNo === docNo);
-                if (existing && existing.docId) {
+                if (existing && existing.docId && currentEditingDocId) {
                     await db.collection('temporaryDeliveryNotes').doc(existing.docId).set(payload, { merge: true });
                     currentEditingDocId = existing.docId;
                 } else {
@@ -1653,6 +1638,81 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> <span>บันทึก Cloud</span>';
+            }
+        }
+
+        // ฟังก์ชันสำหรับบันทึกเป็นบิลใหม่โดยไม่ทับบิลเดิม
+        async function saveAsNewDeliveryNoteToFirebase() {
+            if (!db || !currentUser) {
+                showToast('กรุณาเข้าสู่ระบบ Cloud ก่อนบันทึกเอกสาร', 'error');
+                showLoginScreen();
+                return;
+            }
+
+            const customerName = document.getElementById('stateCustomerName').textContent.trim();
+            if (!customerName || customerName === 'ระบุชื่อบริษัท / ลูกค้า') {
+                showToast('กรุณาระบุชื่อลูกค้า / บริษัทก่อนบันทึกเอกสาร', 'error');
+                return;
+            }
+
+            // เคลียร์ ID เดิมและสร้างเลขที่เอกสารใหม่ทันที เพื่อให้ระบบบันทึกเป็นเอกสารใหม่
+            currentEditingDocId = null;
+            const newDocNo = generateDocNumber();
+            document.getElementById('stateDocNo').textContent = newDocNo;
+            document.getElementById('editing-doc-badge').classList.add('hidden');
+
+            const grandTotalText = document.querySelector('.grandTotalDisplay')?.textContent.replace(' บาท', '').trim() || '0.00';
+            const grandTotalNumeric = parseFloat(grandTotalText.replace(/,/g, '')) || 0;
+
+            const btn = document.getElementById('btn-save-new-cloud');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>กำลังบันทึกบิลใหม่...</span>';
+
+            try {
+                const validItems = billItems.filter(item => {
+                    const code = (item.code || '').trim();
+                    const desc = (item.desc || '').trim();
+                    const qty = parseFloat(item.qty) || 0;
+                    const price = parseFloat(item.price) || 0;
+                    return code !== '' || desc !== '' || qty > 0 || price > 0;
+                });
+
+                const payload = {
+                    docNo: newDocNo,
+                    docDate: document.getElementById('stateDocDate').textContent.trim(),
+                    poNo: document.getElementById('stateDocPoNo').textContent.trim(),
+                    staffName: document.getElementById('stateDocStaffName').textContent.trim(),
+                    customerName: customerName,
+                    customerAddress: document.getElementById('stateCustomerAddress').textContent.trim(),
+                    customerTax: document.getElementById('stateCustomerTax').textContent.trim(),
+                    customerContact: document.getElementById('stateCustomerContact').textContent.trim(),
+                    customerPhone: document.getElementById('stateCustomerPhone').textContent.trim(),
+                    transportBy: document.getElementById('stateTransportBy').textContent.trim(),
+                    remarks: document.getElementById('stateRemarks').innerHTML.trim(),
+                    discountVal: parseFloat(document.getElementById('stateDiscountInput').value) || 0,
+                    discountType: document.getElementById('stateDiscountType').value,
+                    vatMode: document.getElementById('stateVatMode').value,
+                    showPrices: document.getElementById('togglePriceCheckbox').checked,
+                    items: validItems,
+                    grandTotal: grandTotalNumeric,
+                    grandTotalText: grandTotalText,
+                    issuerSnapshot: issuerInfo,
+                    ownerUid: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                const docRef = await db.collection('temporaryDeliveryNotes').add(payload);
+                currentEditingDocId = docRef.id;
+                document.getElementById('editing-doc-badge').classList.remove('hidden');
+
+                showToast(`บันทึกเป็นบิลใหม่เลขที่ ${newDocNo} สำเร็จแล้ว`);
+            } catch (err) {
+                console.error("Save as new error:", err);
+                showToast('บันทึกบิลใหม่ไม่สำเร็จ: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-file-circle-plus"></i> <span>บันทึกบิลใหม่</span>';
             }
         }
 
@@ -1702,9 +1762,35 @@
                         <button type="button" onclick="loadDeliveryNoteFromHistory('${doc.docId}')" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-semibold transition cursor-pointer">
                             <i class="fa-solid fa-folder-open mr-1"></i>เปิดเอกสาร
                         </button>
+                        <!-- ปุ่มลบประวัติเอกสาร -->
+                        <button type="button" onclick="deleteHistoryDoc('${doc.docId}')" class="px-2.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 rounded-xl font-semibold transition cursor-pointer" title="ลบเอกสารนี้">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
                     </div>
                 </div>
             `).join('');
+        }
+
+        // ฟังก์ชันลบประวัติเอกสาร
+        async function deleteHistoryDoc(docId) {
+            if (!db || !currentUser) {
+                showToast('กรุณาเข้าสู่ระบบ Cloud ก่อนดำเนินการ', 'error');
+                return;
+            }
+            if (!confirm('คุณต้องการลบประวัติเอกสารฉบับนี้ออกจาก Cloud ใช่หรือไม่?')) {
+                return;
+            }
+            try {
+                await db.collection('temporaryDeliveryNotes').doc(docId).delete();
+                showToast('ลบประวัติเอกสารเรียบร้อยแล้ว', 'info');
+                // หากกำลังเปิดเอกสารที่ถูกลบอยู่ ให้รีเซ็ตสถานะหน้าจอด้วย
+                if (currentEditingDocId === docId) {
+                    createBlankDeliveryNote();
+                }
+            } catch (err) {
+                console.error("Delete history error:", err);
+                showToast('ไม่สามารถลบเอกสารได้: ' + err.message, 'error');
+            }
         }
 
         function loadDeliveryNoteFromHistory(docId) {
@@ -1736,7 +1822,7 @@
                 document.getElementById('togglePriceCheckbox').checked = doc.showPrices;
             }
 
-            billItems = Array.isArray(doc.items) && doc.items.length > 0 ? doc.items : [{ code: '', desc: '', qty: 1, unit: 'ชิ้น', price: 0 }];
+            billItems = Array.isArray(doc.items) && doc.items.length > 0 ? doc.items : [];
 
             renderAllPages();
             closeHistoryModal();
@@ -1779,7 +1865,8 @@
             document.getElementById('stateCustomerPhone').textContent = '-';
             document.getElementById('stateTransportBy').textContent = 'รถบริษัท / ขนส่งเอกชน';
 
-            billItems = [{ code: '', desc: '', qty: '', unit: 'ชิ้น', price: '' }];
+            // เคลียร์อาร์เรย์รายการสินค้าให้ว่างเปล่า 100% เพื่อให้รายการแรกที่เพิ่มเริ่มที่ลำดับ 1 เสมอ
+            billItems = [];
 
             document.getElementById('stateDiscountInput').value = 0;
             document.getElementById('stateDiscountType').value = 'baht';
