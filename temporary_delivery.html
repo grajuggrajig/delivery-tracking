@@ -71,9 +71,11 @@
         [contenteditable="true"] {
             outline: none;
             border-radius: 3px;
+            padding: 0 3px;
             transition: background-color 0.15s ease, box-shadow 0.15s ease;
-            min-width: 18px;
+            min-width: 24px;
             display: inline-block;
+            cursor: text;
         }
 
         [contenteditable="true"]:hover {
@@ -193,6 +195,8 @@
                 background-color: transparent !important;
                 box-shadow: none !important;
                 border-color: transparent !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
             }
 
             select.doc-input {
@@ -289,7 +293,7 @@
                                 <i class="fa-solid fa-pen mr-1"></i>กำลังแก้ไขเอกสารเดิม
                             </span>
                         </div>
-                        <p class="text-[11px] text-slate-400 hidden sm:block">คลิกที่ข้อความใดๆ บนเอกสารเพื่อแก้ไขได้ทันที หรือค้นหาลูกค้าจากฐานข้อมูลด้านล่าง</p>
+                        <p class="text-[11px] text-slate-400 hidden sm:block">คลิกที่ข้อความใดๆ บนเอกสารเพื่อพิมพ์หรือแก้ไขได้ทันที หรือค้นหาลูกค้าจากฐานข้อมูลด้านล่าง</p>
                     </div>
                 </div>
 
@@ -363,7 +367,7 @@
                     <div class="relative flex items-center">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 text-teal-400 text-xs"></i>
                         <input type="text" id="company-autocomplete-input"
-                            placeholder="ค้นหาบริษัทลูกค้า..."
+                            placeholder="ค้นหาบริษัทลูกค้า (หรือคลิกพิมพ์เองบนบิล)..."
                             autocomplete="off"
                             onfocus="renderCompanyDropdown(this.value)"
                             oninput="renderCompanyDropdown(this.value)"
@@ -708,6 +712,35 @@
             return text;
         }
 
+        // ซิงค์ค่าที่พิมพ์แก้ไขบนกระดาษ A4 กลับไปยัง Master State และซิงค์ข้ามหน้า (กรณีมีหลายหน้า)
+        function syncDocField(stateId, el, isHtml = false) {
+            const stateEl = document.getElementById(stateId);
+            if (!stateEl || !el) return;
+
+            const value = isHtml ? el.innerHTML : el.innerText;
+            if (isHtml) {
+                stateEl.innerHTML = value;
+            } else {
+                stateEl.textContent = value;
+            }
+
+            // อัปเดตช่องเดียวกันในหน้าอื่นๆ (ถ้าเอกสารมีหลายหน้า) โดยไม่รบกวนตำแหน่งเคอร์เซอร์ของช่องที่กำลังพิมพ์
+            document.querySelectorAll(`[data-sync-state="${stateId}"]`).forEach(target => {
+                if (target !== el) {
+                    if (isHtml) {
+                        target.innerHTML = value;
+                    } else {
+                        target.textContent = value;
+                    }
+                }
+            });
+
+            // หากแก้ไขชื่อลูกค้า ให้ตรวจสอบราคาเฉพาะของบริษัทนั้นทันที
+            if (stateId === 'stateCustomerName') {
+                refreshSpecialPriceAvailability();
+            }
+        }
+
         document.getElementById('toggle-password')?.addEventListener('click', function () {
             const pwdInput = document.getElementById('login-password');
             const icon = document.getElementById('toggle-password-icon');
@@ -877,6 +910,7 @@
                 const staffEl = document.getElementById('stateDocStaffName');
                 if (staffEl && (staffEl.textContent.trim() === '-' || staffEl.textContent.trim() === '')) {
                     staffEl.textContent = displayName;
+                    renderAllPages();
                 }
 
                 updateAuthToolbarUI(true);
@@ -1228,6 +1262,54 @@
             reader.readAsDataURL(file);
         }
 
+        // ฟังก์ชันเปิด/ปิด Modal ตั้งค่าหัวบิล
+        function openIssuerModal() {
+            document.getElementById('issuerNameInput').value = document.getElementById('stateIssuerName').textContent.trim();
+            document.getElementById('issuerAddressInput').value = document.getElementById('stateIssuerAddress').textContent.trim();
+            document.getElementById('issuerTaxInput').value = document.getElementById('stateIssuerTax').textContent.trim();
+            document.getElementById('issuerPhoneInput').value = document.getElementById('stateIssuerPhone').textContent.trim();
+            const modal = document.getElementById('issuerModal');
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+
+        function closeIssuerModal() {
+            const modal = document.getElementById('issuerModal');
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+
+        document.getElementById('issuerForm')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            issuerInfo = {
+                name: document.getElementById('issuerNameInput').value.trim(),
+                address: document.getElementById('issuerAddressInput').value.trim(),
+                taxId: document.getElementById('issuerTaxInput').value.trim(),
+                phone: document.getElementById('issuerPhoneInput').value.trim()
+            };
+
+            localStorage.setItem(STORAGE_ISSUER_KEY, JSON.stringify(issuerInfo));
+            document.getElementById('stateIssuerName').textContent = issuerInfo.name;
+            document.getElementById('stateIssuerAddress').textContent = issuerInfo.address;
+            document.getElementById('stateIssuerTax').textContent = issuerInfo.taxId;
+            document.getElementById('stateIssuerPhone').textContent = issuerInfo.phone;
+
+            renderAllPages();
+            closeIssuerModal();
+
+            if (db && currentUser) {
+                try {
+                    await db.collection('settings').doc('temporaryBillIssuer').set(issuerInfo, { merge: true });
+                    showToast('บันทึกข้อมูลหัวบิลลง Cloud และเครื่องเรียบร้อยแล้ว');
+                } catch (err) {
+                    console.warn("Save issuer settings to cloud warning:", err);
+                    showToast('อัปเดตหัวบิลในเครื่องเรียบร้อยแล้ว', 'info');
+                }
+            } else {
+                showToast('อัปเดตข้อมูลหัวบิลเรียบร้อยแล้ว');
+            }
+        });
+
         function calculateTotalsOnly() {
             let subTotal = 0;
             let totalQty = 0;
@@ -1249,6 +1331,15 @@
                 activeItems++;
             });
 
+            // อัปเดตยอดรวมรายแถวบนหน้าจอด้วย
+            const amountCells = document.querySelectorAll('.item-amount');
+            billItems.forEach((item, idx) => {
+                if (amountCells[idx]) {
+                    const rowAmt = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+                    amountCells[idx].textContent = formatCurrency(rowAmt);
+                }
+            });
+
             const discountVal = parseFloat(document.getElementById('stateDiscountInput').value) || 0;
             const discountType = document.getElementById('stateDiscountType').value;
             let discountAmount = discountType === 'percent' ? (subTotal * discountVal) / 100 : discountVal;
@@ -1267,7 +1358,9 @@
             }
 
             document.querySelectorAll('.subTotalDisplay').forEach(el => el.textContent = formatCurrency(subTotal));
+            document.querySelectorAll('.discountDisplay').forEach(el => el.textContent = `${discountVal} ${discountType === 'percent' ? '%' : 'บาท'}`);
             document.querySelectorAll('.afterDiscountDisplay').forEach(el => el.textContent = formatCurrency(afterDiscount));
+            document.querySelectorAll('.vatModeLabelDisplay').forEach(el => el.textContent = `VAT 7% (${vatMode}):`);
             document.querySelectorAll('.vatDisplay').forEach(el => el.textContent = formatCurrency(vatAmount));
             document.querySelectorAll('.grandTotalDisplay').forEach(el => el.textContent = formatCurrency(grandTotal) + ' บาท');
             document.querySelectorAll('.bahtTextDisplay').forEach(el => el.textContent = `(${numberToThaiBahtText(grandTotal)})`);
@@ -1371,11 +1464,11 @@
                                 </div>
                             </div>
                             <div class="text-xs leading-relaxed text-slate-700 flex-1">
-                                <div class="font-heading font-bold text-base text-slate-900 leading-snug mb-0.5">${escapeHtml(issuerName)}</div>
-                                <div class="block text-slate-600">${escapeHtml(issuerAddress)}</div>
+                                <div contenteditable="true" data-sync-state="stateIssuerName" oninput="syncDocField('stateIssuerName', this)" class="font-heading font-bold text-base text-slate-900 leading-snug mb-0.5">${escapeHtml(issuerName)}</div>
+                                <div contenteditable="true" data-sync-state="stateIssuerAddress" oninput="syncDocField('stateIssuerAddress', this)" class="block text-slate-600">${escapeHtml(issuerAddress)}</div>
                                 <div class="mt-0.5 flex flex-wrap gap-x-4 text-slate-600">
-                                    <span>เลขประจำตัวผู้เสียภาษี: <span class="font-medium text-slate-900">${escapeHtml(issuerTax)}</span></span>
-                                    <span>โทร: <span class="font-medium text-slate-800">${escapeHtml(issuerPhone)}</span></span>
+                                    <span>เลขประจำตัวผู้เสียภาษี: <span contenteditable="true" data-sync-state="stateIssuerTax" oninput="syncDocField('stateIssuerTax', this)" class="font-medium text-slate-900">${escapeHtml(issuerTax)}</span></span>
+                                    <span>โทร: <span contenteditable="true" data-sync-state="stateIssuerPhone" oninput="syncDocField('stateIssuerPhone', this)" class="font-medium text-slate-800">${escapeHtml(issuerPhone)}</span></span>
                                 </div>
                             </div>
                         </div>
@@ -1388,52 +1481,52 @@
                             <div class="border border-t-0 border-slate-300 rounded-b-lg p-2 bg-slate-50/70 text-xs space-y-0.5 text-left">
                                 <div class="flex justify-between items-center gap-1">
                                     <span class="text-slate-500 font-medium shrink-0">เลขที่เอกสาร:</span>
-                                    <span class="font-bold text-teal-900 text-right">${escapeHtml(docNo)}</span>
+                                    <span contenteditable="true" data-sync-state="stateDocNo" oninput="syncDocField('stateDocNo', this)" class="font-bold text-teal-900 text-right">${escapeHtml(docNo)}</span>
                                 </div>
                                 <div class="flex justify-between items-center gap-1">
                                     <span class="text-slate-500 font-medium shrink-0">วันที่ (Date):</span>
-                                    <span class="font-medium text-slate-800 text-right">${escapeHtml(docDate)}</span>
+                                    <span contenteditable="true" data-sync-state="stateDocDate" oninput="syncDocField('stateDocDate', this)" class="font-medium text-slate-800 text-right">${escapeHtml(docDate)}</span>
                                 </div>
                                 <div class="flex justify-between items-center gap-1">
                                     <span class="text-slate-500 font-medium shrink-0">อ้างอิง PO No.:</span>
-                                    <span class="font-medium text-slate-800 text-right">${escapeHtml(docPoNo)}</span>
+                                    <span contenteditable="true" data-sync-state="stateDocPoNo" oninput="syncDocField('stateDocPoNo', this)" class="font-medium text-slate-800 text-right">${escapeHtml(docPoNo)}</span>
                                 </div>
                                 <div class="flex justify-between items-center gap-1">
                                     <span class="text-slate-500 font-medium shrink-0">ผู้ส่ง / พนักงานขาย:</span>
-                                    <span class="font-medium text-slate-800 text-right">${escapeHtml(staffName)}</span>
+                                    <span contenteditable="true" data-sync-state="stateDocStaffName" oninput="syncDocField('stateDocStaffName', this)" class="font-medium text-slate-800 text-right">${escapeHtml(staffName)}</span>
                                 </div>
                             </div>
                         </div>
                     </header>
 
-                    <!-- 2. Customer Info -->
+                    <!-- 2. Customer Info (คลิกแก้ไขได้ทุกช่อง) -->
                     <section class="mt-3 grid grid-cols-12 gap-3 bg-slate-50/80 border border-slate-300 rounded-lg p-2.5 text-xs">
                         <div class="col-span-7 space-y-1 pr-2 border-r border-slate-200">
                             <div class="flex items-baseline gap-2">
                                 <span class="font-semibold text-teal-800 w-24 shrink-0">นามลูกค้า / บริษัท:</span>
-                                <span class="font-bold text-slate-900 text-sm flex-1">${escapeHtml(customerName)}</span>
+                                <span contenteditable="true" data-sync-state="stateCustomerName" oninput="syncDocField('stateCustomerName', this)" class="font-bold text-slate-900 text-sm flex-1">${escapeHtml(customerName)}</span>
                             </div>
                             <div class="flex items-baseline gap-2">
                                 <span class="font-semibold text-slate-600 w-24 shrink-0">ที่อยู่จัดส่ง:</span>
-                                <span class="text-slate-800 flex-1 leading-relaxed">${escapeHtml(customerAddress)}</span>
+                                <span contenteditable="true" data-sync-state="stateCustomerAddress" oninput="syncDocField('stateCustomerAddress', this)" class="text-slate-800 flex-1 leading-relaxed">${escapeHtml(customerAddress)}</span>
                             </div>
                             <div class="flex items-baseline gap-2">
                                 <span class="font-semibold text-slate-600 w-24 shrink-0">เลขผู้เสียภาษี:</span>
-                                <span class="text-slate-800 flex-1">${escapeHtml(customerTax)}</span>
+                                <span contenteditable="true" data-sync-state="stateCustomerTax" oninput="syncDocField('stateCustomerTax', this)" class="text-slate-800 flex-1">${escapeHtml(customerTax)}</span>
                             </div>
                         </div>
                         <div class="col-span-5 space-y-1 pl-1">
                             <div class="flex items-baseline gap-1.5">
                                 <span class="font-semibold text-slate-600 w-16 shrink-0">ผู้ติดต่อ:</span>
-                                <span class="text-slate-800 font-medium flex-1">${escapeHtml(customerContact)}</span>
+                                <span contenteditable="true" data-sync-state="stateCustomerContact" oninput="syncDocField('stateCustomerContact', this)" class="text-slate-800 font-medium flex-1">${escapeHtml(customerContact)}</span>
                             </div>
                             <div class="flex items-baseline gap-1.5">
                                 <span class="font-semibold text-slate-600 w-16 shrink-0">โทรศัพท์:</span>
-                                <span class="text-slate-800 flex-1">${escapeHtml(customerPhone)}</span>
+                                <span contenteditable="true" data-sync-state="stateCustomerPhone" oninput="syncDocField('stateCustomerPhone', this)" class="text-slate-800 flex-1">${escapeHtml(customerPhone)}</span>
                             </div>
                             <div class="flex items-baseline gap-1.5">
                                 <span class="font-semibold text-slate-600 w-16 shrink-0">ขนส่งโดย:</span>
-                                <span class="text-slate-800 flex-1">${escapeHtml(transportBy)}</span>
+                                <span contenteditable="true" data-sync-state="stateTransportBy" oninput="syncDocField('stateTransportBy', this)" class="text-slate-800 flex-1">${escapeHtml(transportBy)}</span>
                             </div>
                         </div>
                     </section>
@@ -1487,7 +1580,7 @@
                                 <div class="border border-slate-300 rounded-lg p-2 bg-slate-50/50 text-xs flex-1 flex flex-col justify-between">
                                     <div>
                                         <div class="font-bold text-teal-900 mb-0.5">หมายเหตุ / เงื่อนไขการส่งมอบ (Remarks):</div>
-                                        <div class="text-slate-700 leading-relaxed block">${remarks}</div>
+                                        <div contenteditable="true" data-sync-state="stateRemarks" oninput="syncDocField('stateRemarks', this, true)" class="text-slate-700 leading-relaxed block w-full">${remarks}</div>
                                     </div>
                                     <div class="mt-1 pt-1 border-t border-slate-200 flex justify-between text-[11px] text-slate-600">
                                         <span>รวมจำนวนรายการ: <strong class="totalItemsCount text-slate-900">0</strong> รายการ</span>
@@ -1504,14 +1597,14 @@
                                     </div>
                                     <div class="flex justify-between items-center text-slate-600 gap-1">
                                         <span class="shrink-0">ส่วนลด (Discount):</span>
-                                        <span class="font-medium text-rose-600">${discountVal} ${discountType === 'percent' ? '%' : 'บาท'}</span>
+                                        <span class="discountDisplay font-medium text-rose-600">${discountVal} ${discountType === 'percent' ? '%' : 'บาท'}</span>
                                     </div>
                                     <div class="flex justify-between items-center text-slate-600">
                                         <span>หลังหักส่วนลด:</span>
                                         <span class="afterDiscountDisplay font-medium text-slate-800">0.00</span>
                                     </div>
                                     <div class="flex justify-between items-center text-slate-600">
-                                        <span>VAT 7% (${vatMode}):</span>
+                                        <span class="vatModeLabelDisplay">VAT 7% (${vatMode}):</span>
                                         <span class="vatDisplay font-medium text-slate-800">0.00</span>
                                     </div>
                                 </div>
@@ -1659,6 +1752,7 @@
             currentEditingDocId = null;
             const newDocNo = generateDocNumber();
             document.getElementById('stateDocNo').textContent = newDocNo;
+            document.querySelectorAll('[data-sync-state="stateDocNo"]').forEach(el => el.textContent = newDocNo);
             document.getElementById('editing-doc-badge').classList.add('hidden');
 
             const grandTotalText = document.querySelector('.grandTotalDisplay')?.textContent.replace(' บาท', '').trim() || '0.00';
@@ -1824,6 +1918,7 @@
 
             billItems = Array.isArray(doc.items) && doc.items.length > 0 ? doc.items : [];
 
+            refreshSpecialPriceAvailability();
             renderAllPages();
             closeHistoryModal();
             showToast(`โหลดใบส่งของ ${doc.docNo} เรียบร้อยแล้ว`, 'info');
@@ -1872,6 +1967,7 @@
             document.getElementById('stateDiscountType').value = 'baht';
             document.getElementById('stateVatMode').value = 'none';
 
+            refreshSpecialPriceAvailability();
             renderAllPages();
             closeResetModal();
             showToast('สร้างใบส่งของชั่วคราวฉบับใหม่เรียบร้อยแล้ว', 'info');
@@ -1897,6 +1993,7 @@
             document.getElementById('stateDiscountType').value = 'baht';
             document.getElementById('stateVatMode').value = 'none';
 
+            refreshSpecialPriceAvailability();
             renderAllPages();
             closeResetModal();
             showToast('โหลดข้อมูลตัวอย่างเริ่มต้นเรียบร้อยแล้ว', 'info');
