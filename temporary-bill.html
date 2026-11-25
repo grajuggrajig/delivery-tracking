@@ -346,7 +346,7 @@
                     </div>
                 </div>
 
-                <!-- 2. ข้อมูลลูกค้า / บริษัท (ซิงค์จาก Firebase companies & deliveries) -->
+                <!-- 2. ข้อมูลบริษัท / ลูกค้า (ซิงค์จาก Firebase companies & deliveries) -->
                 <div class="bg-white/60 border border-teal-100 rounded-2xl p-4 space-y-3">
                     <div class="flex items-center justify-between border-b border-teal-100 pb-2">
                         <h3 class="text-xs font-bold text-teal-800 flex items-center gap-1.5">
@@ -477,24 +477,27 @@
                 <div>
                     <!-- หัวเอกสาร: ข้อมูลผู้ออกบิล & ชื่อเอกสาร -->
                     <div id="doc-header" class="flex justify-between items-start border-b-2 border-teal-700 pb-4 mb-4 gap-4">
-                        <div class="space-y-1 flex-1">
-                            <div class="flex items-center gap-2">
-                                <div id="doc-logo-badge" class="w-8 h-8 rounded-lg bg-teal-700 text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        <div class="header-left flex items-start gap-3 flex-1">
+                            <div class="logo-container w-14 h-14 sm:w-16 sm:h-16 rounded-xl bg-white border border-slate-200 flex items-center justify-center overflow-hidden shrink-0 p-1">
+                                <img src="logo.png" alt="KL Logo" class="w-full h-full object-contain" onerror="this.style.display='none'; document.getElementById('doc-logo-badge').classList.remove('hidden');">
+                                <div id="doc-logo-badge" class="hidden w-full h-full rounded-lg bg-teal-700 text-white flex items-center justify-center font-bold text-lg">
                                     <i class="fa-solid fa-building"></i>
                                 </div>
-                                <h2 id="preview-issuer-name" class="text-base sm:text-lg font-bold text-slate-900 leading-snug">บริษัท ดีลิเวอรี่ แทรคกิ้ง ซัพพลาย จำกัด</h2>
                             </div>
-                            <p id="preview-issuer-address" class="text-xs text-slate-600 leading-relaxed">99/99 ถนนรัชดาภิเษก แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310</p>
-                            <div class="text-[11px] text-slate-600 flex flex-wrap gap-x-4 gap-y-0.5">
-                                <span id="preview-issuer-tax">เลขประจำตัวผู้เสียภาษี: 0105560000000</span>
-                                <span id="preview-issuer-phone">โทร: 02-000-0000</span>
+                            <div class="flex-1">
+                                <h2 id="preview-issuer-name" class="text-base sm:text-lg font-bold text-slate-900 leading-snug">บริษัท เค แอล สเตชั่นเนอรี่ จำกัด (สำนักงานใหญ่)</h2>
+                                <p id="preview-issuer-address" class="text-xs text-slate-600 leading-relaxed mt-1">873, 875 ถนนสุขุมวิท 105 แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260</p>
+                                <div class="text-[11px] text-slate-600 flex flex-wrap gap-x-4 gap-y-0.5 mt-0.5">
+                                    <span id="preview-issuer-tax">เลขประจำตัวผู้เสียภาษี: 0105544005337</span>
+                                    <span id="preview-issuer-phone">โทร. 0-2748-6788</span>
+                                </div>
                             </div>
                         </div>
 
-                        <div class="text-right shrink-0">
+                        <div class="title-box text-right shrink-0">
                             <div class="inline-block px-3 py-1 bg-teal-50 border border-teal-600 rounded-md mb-1.5">
-                                <div class="text-sm sm:text-base font-bold text-teal-800 tracking-wide">บิลชั่วคราว</div>
-                                <div class="text-[9px] font-bold text-teal-600 uppercase tracking-widest">TEMPORARY BILL</div>
+                                <div class="text-sm sm:text-base font-bold text-teal-800 tracking-wide">ใบเสนอราคา</div>
+                                <div class="text-[9px] font-bold text-teal-600 uppercase tracking-widest">QUOTATION</div>
                             </div>
                             <div class="text-xs space-y-0.5 mt-1">
                                 <div><span class="text-slate-500">เลขที่:</span> <strong id="preview-bill-no" class="text-slate-900">TMP-20261124-001</strong></div>
@@ -738,10 +741,10 @@
     ];
 
     let issuerInfo = {
-        name: 'บริษัท ดีลิเวอรี่ แทรคกิ้ง ซัพพลาย จำกัด',
-        address: '99/99 ถนนรัชดาภิเษก แขวงห้วยขวาง เขตห้วยขวาง กรุงเทพมหานคร 10310',
-        taxId: '0105560000000',
-        phone: '02-000-0000'
+        name: 'บริษัท เค แอล สเตชั่นเนอรี่ จำกัด (สำนักงานใหญ่)',
+        address: '873, 875 ถนนสุขุมวิท 105 แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260',
+        taxId: '0105544005337',
+        phone: '0-2748-6788'
     };
 
     let currentPaperSize = 'a4';
@@ -898,7 +901,6 @@
             roleDesktop.textContent = roleText;
             roleDesktop.className = `px-2 py-0.5 rounded-md text-[10px] font-bold ${roleBg} text-white tracking-wider`;
 
-            // เติมชื่อพนักงานผู้รับเงินให้อัตโนมัติถ้ายังว่างอยู่
             const staffInput = document.getElementById('input-staff-name');
             if (staffInput && !staffInput.value.trim()) {
                 staffInput.value = displayName;
@@ -946,7 +948,6 @@
 
         const isAdmin = currentUserRole === 'admin';
 
-        // A. ซิงค์หัวบิลร้านค้าจาก Firestore (settings/temporaryBillIssuer)
         unsubIssuerSettings = db.collection('settings').doc('temporaryBillIssuer').onSnapshot((doc) => {
             if (doc.exists) {
                 const data = doc.data();
@@ -961,7 +962,6 @@
             }
         }, (err) => console.warn("Issuer settings snapshot warning:", err));
 
-        // B. ซิงค์ทะเบียนบริษัท (companies)
         let companiesQuery = db.collection('companies');
         if (!isAdmin) companiesQuery = companiesQuery.where('ownerUid', '==', currentUser.uid);
 
@@ -975,7 +975,6 @@
             updateConnectionBadge('error', 'สิทธิ์เข้าถึงข้อมูลขัดข้อง');
         });
 
-        // C. ซิงค์ประวัติจัดส่ง (deliveries) เพื่อดึงรายชื่อบริษัทที่เคยเปิดบิล
         let deliveriesQuery = db.collection('deliveries');
         if (!isAdmin) deliveriesQuery = deliveriesQuery.where('ownerUid', '==', currentUser.uid);
 
@@ -985,14 +984,12 @@
             rebuildCustomerDirectory();
         }, (err) => console.warn("Deliveries snapshot warning:", err));
 
-        // D. ซิงค์ราคาสินค้าเฉพาะบริษัท (companyProducts)
         unsubCompanyProducts = db.collection('companyProducts').onSnapshot((snap) => {
             rawCompanyProducts = [];
             snap.forEach(doc => rawCompanyProducts.push({ id: doc.id, ...doc.data() }));
             refreshSpecialPriceAvailability();
         }, (err) => console.warn("companyProducts snapshot warning:", err));
 
-        // E. ซิงค์ประวัติบิลชั่วคราวที่บันทึกไว้ (temporaryBills)
         let billsQuery = db.collection('temporaryBills');
         if (!isAdmin) billsQuery = billsQuery.where('ownerUid', '==', currentUser.uid);
 
@@ -1001,7 +998,6 @@
             snap.forEach(doc => {
                 savedBills.push({ docId: doc.id, ...doc.data() });
             });
-            // เรียงลำดับจากบิลล่าสุด
             savedBills.sort((a, b) => {
                 const tsA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : (a.createdAt?.toMillis ? a.createdAt.toMillis() : 0);
                 const tsB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : (b.createdAt?.toMillis ? b.createdAt.toMillis() : 0);
@@ -1478,7 +1474,7 @@
         document.getElementById('preview-issuer-name').textContent = issuerInfo.name || '-';
         document.getElementById('preview-issuer-address').textContent = issuerInfo.address || '-';
         document.getElementById('preview-issuer-tax').textContent = issuerInfo.taxId ? `เลขประจำตัวผู้เสียภาษี: ${issuerInfo.taxId}` : '';
-        document.getElementById('preview-issuer-phone').textContent = issuerInfo.phone ? `โทร: ${issuerInfo.phone}` : '';
+        document.getElementById('preview-issuer-phone').textContent = issuerInfo.phone ? `โทร. ${issuerInfo.phone}` : '';
 
         const billNo = document.getElementById('input-bill-no').value.trim() || '-';
         const billDate = document.getElementById('input-bill-date').value;
@@ -1665,7 +1661,6 @@
                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
             };
 
-            // ตรวจสอบว่ามีบิลเลขที่นี้อยู่แล้วหรือไม่
             const existingBill = savedBills.find(b => b.docId === currentEditingBillDocId || b.billNo === billNo);
             if (existingBill && existingBill.docId) {
                 await db.collection('temporaryBills').doc(existingBill.docId).set(payload, { merge: true });
