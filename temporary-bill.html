@@ -81,15 +81,29 @@
             animation: fadeIn 0.2s ease-out forwards;
         }
 
+        /* Dynamic Print Page Size & Minimal Margin */
+        @page {
+            size: A4 portrait;
+            margin: 4mm;
+        }
+
         /* Print Media Queries */
         @media print {
-            body {
+            html, body {
                 background: #ffffff !important;
                 margin: 0 !important;
                 padding: 0 !important;
+                width: 100% !important;
             }
             .no-print {
                 display: none !important;
+            }
+            main {
+                display: block !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                padding: 0 !important;
+                margin: 0 !important;
             }
             #print-area-wrapper {
                 width: 100% !important;
@@ -100,20 +114,22 @@
             }
             .paper-sheet {
                 box-shadow: none !important;
-                margin: 0 !important;
+                border-radius: 0 !important;
+                margin: 0 auto !important;
                 width: 100% !important;
                 max-width: 100% !important;
                 min-height: auto !important;
             }
             .paper-a4 {
-                padding: 8mm 10mm !important;
+                padding: 3mm 4mm !important;
             }
             .paper-a5 {
-                padding: 6mm 8mm !important;
+                padding: 2.5mm 3.5mm !important;
             }
             .paper-80mm {
-                width: 80mm !important;
-                padding: 2mm 3mm !important;
+                width: 76mm !important;
+                max-width: 76mm !important;
+                padding: 1.5mm 2mm !important;
             }
             * {
                 -webkit-print-color-adjust: exact !important;
@@ -331,6 +347,7 @@
                             <label class="block text-[11px] font-semibold text-slate-600 mb-1">เงื่อนไขการชำระเงิน</label>
                             <select id="input-payment-method" onchange="updatePreview()"
                                 class="w-full px-3 py-2 bg-white border border-teal-200 rounded-xl text-xs sm:text-sm outline-none focus:ring-2 focus:ring-teal-500">
+                                <option value="-" selected>-</option>
                                 <option value="เงินสด (Cash)">💵 เงินสด (Cash)</option>
                                 <option value="โอนเงินผ่านธนาคาร (Transfer)">🏦 โอนเงินผ่านธนาคาร (Transfer)</option>
                                 <option value="เครดิต 30 วัน (Credit 30 Days)">📅 เครดิต 30 วัน (Credit 30 Days)</option>
@@ -521,7 +538,7 @@
                         <div class="col-span-5 border border-slate-300 rounded-lg p-3 bg-slate-50/50 space-y-1 flex flex-col justify-between">
                             <div>
                                 <div class="text-[11px] font-bold text-teal-800 uppercase tracking-wider border-b border-slate-200 pb-1 mb-1">รายละเอียดการชำระ</div>
-                                <div><span class="text-slate-500">ชำระโดย:</span> <strong id="preview-payment-method" class="text-slate-800">เงินสด (Cash)</strong></div>
+                                <div><span class="text-slate-500">ชำระโดย:</span> <strong id="preview-payment-method" class="text-slate-800">-</strong></div>
                                 <div><span class="text-slate-500">ผู้รับเงิน/พนักงาน:</span> <span id="preview-staff-name" class="text-slate-800">-</span></div>
                             </div>
                             <div class="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1 mt-1">
@@ -1342,6 +1359,20 @@
         paper.classList.remove('paper-a4', 'paper-a5', 'paper-80mm');
         paper.classList.add(`paper-${size}`);
 
+        let pageStyleTag = document.getElementById('dynamic-page-style');
+        if (!pageStyleTag) {
+            pageStyleTag = document.createElement('style');
+            pageStyleTag.id = 'dynamic-page-style';
+            document.head.appendChild(pageStyleTag);
+        }
+        if (size === '80mm') {
+            pageStyleTag.textContent = '@page { size: 80mm auto; margin: 1.5mm; }';
+        } else if (size === 'a5') {
+            pageStyleTag.textContent = '@page { size: A5 landscape; margin: 3mm; }';
+        } else {
+            pageStyleTag.textContent = '@page { size: A4 portrait; margin: 4mm; }';
+        }
+
         const docHeader = document.getElementById('doc-header');
         const docCustomer = document.getElementById('doc-customer-box');
         const docSummary = document.getElementById('doc-summary-box');
@@ -1746,7 +1777,7 @@
 
         document.getElementById('input-bill-no').value = bill.billNo;
         document.getElementById('input-bill-date').value = bill.billDate;
-        document.getElementById('input-payment-method').value = bill.paymentMethod || 'เงินสด (Cash)';
+        document.getElementById('input-payment-method').value = bill.paymentMethod || '-';
         document.getElementById('input-staff-name').value = bill.staffName || '';
         document.getElementById('input-customer-name').value = bill.customerName || '';
         document.getElementById('input-customer-address').value = bill.customerAddress || '';
@@ -1797,6 +1828,7 @@
         document.getElementById('company-autocomplete-input').value = '';
         document.getElementById('input-bill-no').value = generateBillNumber();
         document.getElementById('input-bill-date').valueAsDate = new Date();
+        document.getElementById('input-payment-method').value = '-';
         document.getElementById('input-customer-name').value = '';
         document.getElementById('input-customer-address').value = '';
         document.getElementById('input-customer-tax').value = '';
