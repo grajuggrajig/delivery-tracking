@@ -11,7 +11,7 @@
     <!-- Google Fonts: Prompt & Inter -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- Firebase SDKs (Compat v10 - เหมือน index.html) -->
+    <!-- Firebase SDKs (Compat v10) -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -147,7 +147,7 @@
         <div class="absolute -bottom-24 left-1/4 w-80 h-80 sm:w-[28rem] sm:h-[28rem] rounded-full bg-emerald-300/30 blur-3xl"></div>
     </div>
 
-    <!-- Login Overlay Screen (เหมือน index.html) -->
+    <!-- Login Overlay Screen -->
     <div id="login-screen" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 no-print">
         <div class="bg-white/90 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/80 w-full max-w-md p-6 sm:p-8 modal-animate">
             <div class="text-center mb-6">
@@ -271,10 +271,16 @@
                         <span id="saved-bills-badge" class="px-1.5 py-0.2 bg-teal-600 text-white rounded-full text-[10px] font-bold">0</span>
                     </button>
 
-                    <!-- บันทึกบิลขึ้น Firebase -->
-                    <button type="button" id="btn-save-bill" onclick="saveCurrentBillToFirebase()" class="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95">
+                    <!-- บันทึกบิลขึ้น Firebase (Save ทับบิลเดิม) -->
+                    <button type="button" id="btn-save-bill" onclick="saveCurrentBillToFirebase()" class="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95" title="บันทึกทับบิลปัจจุบัน">
                         <i class="fa-solid fa-cloud-arrow-up"></i>
-                        <span>save</span>
+                        <span>Save</span>
+                    </button>
+
+                    <!-- เพิ่มปุ่ม Save As (บันทึกสำเนาใหม่/ไม่ทับไฟล์เดิม) -->
+                    <button type="button" id="btn-save-as-bill" onclick="saveAsNewBillToFirebase()" class="flex items-center gap-1.5 px-3 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-2xl text-xs font-semibold shadow-sm transition active:scale-95" title="บันทึกเป็นบิลใหม่ (สร้างเลขบิลใหม่และไม่ทับไฟล์เดิม)">
+                        <i class="fa-solid fa-clone"></i>
+                        <span>Save As</span>
                     </button>
 
                     <!-- ออกบิลใหม่ -->
@@ -363,7 +369,7 @@
                     </div>
                 </div>
 
-                <!-- 2. ข้อมูลบริษัท / ลูกค้า (ซิงค์จาก Firebase companies & deliveries) -->
+                <!-- 2. ข้อมูลบริษัท / ลูกค้า -->
                 <div class="bg-white/60 border border-teal-100 rounded-2xl p-4 space-y-3">
                     <div class="flex items-center justify-between border-b border-teal-100 pb-2">
                         <h3 class="text-xs font-bold text-teal-800 flex items-center gap-1.5">
@@ -413,7 +419,7 @@
                     </div>
                 </div>
 
-                <!-- 3. รายการสินค้า / บริการ (รองรับราคาเฉพาะบริษัทจาก companyProducts) -->
+                <!-- 3. รายการสินค้า / บริการ -->
                 <div class="bg-white/60 border border-teal-100 rounded-2xl p-4 space-y-3">
                     <div class="flex items-center justify-between border-b border-teal-100 pb-2 gap-2 flex-wrap">
                         <h3 class="text-xs font-bold text-teal-800 flex items-center gap-1.5">
@@ -629,7 +635,7 @@
 
     </main>
 
-    <!-- Modal: เลือกราคาสินค้าเฉพาะบริษัท (จาก companyProducts ใน Firebase) -->
+    <!-- Modal: เลือกราคาสินค้าเฉพาะบริษัท -->
     <div id="special-product-picker-modal" class="hidden fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4 no-print">
         <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-lg overflow-hidden flex flex-col max-h-[82vh] modal-animate">
             <div class="bg-gradient-to-r from-amber-500 to-orange-500 px-6 py-4 text-white flex items-center justify-between">
@@ -647,7 +653,7 @@
         </div>
     </div>
 
-    <!-- Modal: ตั้งค่าข้อมูลร้านค้า/บริษัทผู้ออกบิล (ซิงค์กับ Firestore settings/temporaryBillIssuer) -->
+    <!-- Modal: ตั้งค่าข้อมูลร้านค้า/บริษัทผู้ออกบิล -->
     <div id="issuer-modal" class="hidden fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4 no-print">
         <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-lg overflow-hidden modal-animate">
             <div class="bg-gradient-to-r from-teal-600 to-emerald-600 px-6 py-4 text-white flex items-center justify-between">
@@ -716,7 +722,7 @@
 
 <script>
     // ==========================================
-    // 1. Firebase Configuration & Initialization (ตรงกับ index.html)
+    // 1. Firebase Configuration & Initialization
     // ==========================================
     const firebaseConfig = {
         apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
@@ -1590,7 +1596,7 @@
     };
 
     // ==========================================
-    // Issuer Settings Modal (บันทึกบน Firestore + LocalStorage)
+    // Issuer Settings Modal
     // ==========================================
     window.openIssuerModal = function() {
         document.getElementById('issuer-name-input').value = issuerInfo.name;
@@ -1642,7 +1648,7 @@
     });
 
     // ==========================================
-    // Save & History Management on Cloud Firestore (temporaryBills)
+    // Save & Save As & History Management on Cloud Firestore
     // ==========================================
     window.saveCurrentBillToFirebase = async function() {
         if (!db || !currentUser) {
@@ -1693,7 +1699,7 @@
             };
 
             const existingBill = savedBills.find(b => b.docId === currentEditingBillDocId || b.billNo === billNo);
-            if (existingBill && existingBill.docId) {
+            if (existingBill && existingBill.docId && currentEditingBillDocId) {
                 await db.collection('temporaryBills').doc(existingBill.docId).set(payload, { merge: true });
                 currentEditingBillDocId = existingBill.docId;
             } else {
@@ -1709,7 +1715,76 @@
             showToast('บันทึกข้อมูลไม่สำเร็จ: ' + (err.message || 'กรุณาตรวจสอบสิทธิ์ Firestore'), 'error');
         } finally {
             saveBtn.disabled = false;
-            saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> <span>บันทึกบิล</span>';
+            saveBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> <span>Save</span>';
+        }
+    };
+
+    // ฟังก์ชัน Save As (บันทึกเป็นบิลใหม่โดยไม่ทับไฟล์เดิม)
+    window.saveAsNewBillToFirebase = async function() {
+        if (!db || !currentUser) {
+            showToast('กรุณาเข้าสู่ระบบก่อนบันทึกบิลขึ้น Cloud', 'error');
+            return;
+        }
+
+        const customerName = document.getElementById('input-customer-name').value.trim();
+        if (!customerName) {
+            showToast('กรุณาระบุชื่อบริษัทหรือชื่อลูกค้าก่อนบันทึกบิล', 'error');
+            document.getElementById('input-customer-name').focus();
+            return;
+        }
+
+        // สร้างเลขที่บิลใหม่และเคลียร์ ID เดิม เพื่อบังคับให้สร้างเอกสารใหม่ใน Firestore (ไม่ทับไฟล์เดิม)
+        const newBillNo = generateBillNumber();
+        document.getElementById('input-bill-no').value = newBillNo;
+        currentEditingBillDocId = null; 
+
+        const grandTotalText = document.getElementById('preview-grand-total').textContent;
+        const grandTotalNumeric = parseFloat(grandTotalText.replace(/,/g, '')) || 0;
+
+        const saveAsBtn = document.getElementById('btn-save-as-bill');
+        saveAsBtn.disabled = true;
+        saveAsBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>กำลังบันทึกสำเนา...</span>';
+
+        try {
+            const payload = {
+                billNo: newBillNo,
+                billDate: document.getElementById('input-bill-date').value,
+                paymentMethod: document.getElementById('input-payment-method').value,
+                staffName: document.getElementById('input-staff-name').value.trim(),
+                customerName: customerName,
+                customerAddress: document.getElementById('input-customer-address').value.trim(),
+                customerTax: document.getElementById('input-customer-tax').value.trim(),
+                customerPhone: document.getElementById('input-customer-phone').value.trim(),
+                discountVal: Number(document.getElementById('input-discount-val').value) || 0,
+                discountType: document.getElementById('input-discount-type').value,
+                vatMode: document.getElementById('input-vat-mode').value,
+                note: document.getElementById('input-note').value.trim(),
+                items: billItems.map(it => ({
+                    name: it.name || '',
+                    qty: Number(it.qty) || 0,
+                    unit: it.unit || 'ชิ้น',
+                    price: Number(it.price) || 0
+                })),
+                grandTotal: grandTotalNumeric,
+                grandTotalText: grandTotalText,
+                issuerSnapshot: issuerInfo,
+                ownerUid: currentUser.uid,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            const docRef = await db.collection('temporaryBills').add(payload);
+            currentEditingBillDocId = docRef.id;
+
+            document.getElementById('editing-bill-badge').classList.remove('hidden');
+            showToast(`บันทึกสำเนาใหม่ (${newBillNo}) เรียบร้อยแล้ว (ไม่ทับไฟล์เดิม)`);
+            updatePreview();
+        } catch (err) {
+            console.error("Save As bill to Firestore error:", err);
+            showToast('บันทึกสำเนาไม่สำเร็จ: ' + (err.message || 'กรุณาตรวจสอบสิทธิ์ Firestore'), 'error');
+        } finally {
+            saveAsBtn.disabled = false;
+            saveAsBtn.innerHTML = '<i class="fa-solid fa-clone"></i> <span>Save As</span>';
         }
     };
 
