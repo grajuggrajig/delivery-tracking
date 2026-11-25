@@ -55,7 +55,7 @@
         .a4-page {
             width: 210mm;
             min-height: 297mm;
-            padding: 13mm 15mm;
+            padding: 10mm 14mm;
             margin: 22px auto;
             background: #ffffff;
             box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.16), 0 0 1px 1px rgba(15, 23, 42, 0.06);
@@ -176,7 +176,7 @@
                 min-height: 297mm !important;
                 max-height: 297mm !important;
                 margin: 0 !important;
-                padding: 11mm 14mm !important;
+                padding: 10mm 14mm !important;
                 box-shadow: none !important;
                 border: none !important;
                 page-break-after: always;
@@ -308,7 +308,7 @@
                         <span>เข้าสู่ระบบ Cloud</span>
                     </button>
 
-                    <!-- ลิงก์กลับหน้าหลัก (ปรับเป็นไอคอน Home ตามคำขอ) -->
+                    <!-- ลิงก์กลับหน้าหลัก -->
                     <a href="index.html" class="flex items-center justify-center w-9 h-9 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-teal-400 rounded-xl transition cursor-pointer" title="กลับหน้าหลักฐานข้อมูลบริษัท (Home)">
                         <i class="fa-solid fa-house text-sm"></i>
                     </a>
@@ -351,17 +351,17 @@
                 </div>
             </div>
 
-            <!-- แถวล่าง: ค้นหาบริษัทลูกค้า Autocomplete และปุ่มจัดการตาราง -->
+            <!-- แถวล่าง: ค้นหาบริษัทลูกค้า Autocomplete, ช่องส่วนลด, VAT และปุ่มจัดการ -->
             <div class="pt-2 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
-                <div class="relative flex-1 min-w-[240px] max-w-md">
+                <div class="relative flex-1 min-w-[220px] max-w-sm">
                     <div class="relative flex items-center">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 text-teal-400 text-xs"></i>
                         <input type="text" id="company-autocomplete-input"
-                            placeholder="ค้นหาบริษัทลูกค้าจากระบบเพื่อเติมข้อมูลอัตโนมัติ..."
+                            placeholder="ค้นหาบริษัทลูกค้า..."
                             autocomplete="off"
                             onfocus="renderCompanyDropdown(this.value)"
                             oninput="renderCompanyDropdown(this.value)"
-                            class="w-full pl-8 pr-24 py-1.5 bg-slate-800/90 focus:bg-slate-800 border border-slate-700 focus:border-teal-500 rounded-xl text-xs text-white placeholder-slate-400 outline-none">
+                            class="w-full pl-8 pr-20 py-1.5 bg-slate-800/90 focus:bg-slate-800 border border-slate-700 focus:border-teal-500 rounded-xl text-xs text-white placeholder-slate-400 outline-none">
                         <span id="directory-sync-count" class="absolute right-2 px-1.5 py-0.5 rounded bg-slate-700 text-teal-300 text-[10px] font-semibold">
                             0 บริษัท
                         </span>
@@ -370,20 +370,34 @@
                     </div>
                 </div>
 
+                <!-- ช่องส่วนลดและการคำนวน vat ด้านบน -->
                 <div class="flex flex-wrap items-center gap-2">
-                    <button type="button" id="btn-special-prices" onclick="openSpecialProductPicker()" class="hidden items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
+                    <div class="flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl text-xs">
+                        <span class="text-slate-400 text-[11px]">ส่วนลด:</span>
+                        <input type="number" id="stateDiscountInput" value="0" min="0" step="any" oninput="handleDiscountFieldChange(this.value)" class="w-14 bg-slate-900 border border-slate-700 text-center text-white rounded px-1 py-0.5 text-xs outline-none focus:border-teal-500">
+                        <select id="stateDiscountType" onchange="handleDiscountTypeChange(this.value)" class="bg-slate-900 border border-slate-700 text-white rounded px-1 py-0.5 text-xs outline-none focus:border-teal-500 cursor-pointer">
+                            <option value="baht">บาท</option>
+                            <option value="percent">%</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-1 bg-slate-800 border border-slate-700 px-2.5 py-1 rounded-xl text-xs">
+                        <span class="text-slate-400 text-[11px]">VAT:</span>
+                        <select id="stateVatMode" onchange="handleVatModeChange(this.value)" class="bg-slate-900 border border-slate-700 text-white rounded px-1.5 py-0.5 text-xs outline-none focus:border-teal-500 cursor-pointer">
+                            <option value="none">ไม่มี VAT</option>
+                            <option value="exclude">แยกนอก (7%)</option>
+                            <option value="include">รวมใน (7%)</option>
+                        </select>
+                    </div>
+
+                    <button type="button" id="btn-special-prices" onclick="openSpecialProductPicker()" class="hidden items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/50 text-amber-300 text-xs font-semibold px-2.5 py-1.5 rounded-xl transition cursor-pointer">
                         <i class="fa-solid fa-tags"></i>
-                        <span id="special-price-btn-label">ดึงราคาเฉพาะบริษัท (0)</span>
+                        <span id="special-price-btn-label">ราคาเฉพาะ (0)</span>
                     </button>
 
-                    <button type="button" onclick="addItemRow()" class="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer">
-                        <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-                        <span>เพิ่มรายการ</span>
-                    </button>
-
-                    <label class="flex items-center gap-2 bg-slate-800 hover:bg-slate-750 border border-slate-700 px-3 py-1.5 rounded-xl cursor-pointer select-none transition">
+                    <label class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 px-2.5 py-1.5 rounded-xl cursor-pointer select-none transition">
                         <input type="checkbox" id="togglePriceCheckbox" checked onchange="togglePriceColumns()" class="w-3.5 h-3.5 accent-teal-500 rounded cursor-pointer">
-                        <span class="text-xs font-medium text-slate-200">แสดงราคา/ยอดเงิน</span>
+                        <span class="text-xs font-medium text-slate-200">แสดงราคา</span>
                     </label>
                 </div>
             </div>
@@ -394,7 +408,7 @@
          3. พื้นที่แสดงกระดาษ A4 (รองรับหลายหน้าอัตโนมัติ)
          ========================================== -->
     <div class="a4-wrapper pb-12" id="a4PagesContainer">
-        <!-- หน้าเอกสาร A4 จะถูกสร้างและจัดการเรนเดอร์แบบไดนามิกผ่าน JavaScript (รองรับหลายหน้า) -->
+        <!-- หน้าเอกสาร A4 จะถูกสร้างและจัดการเรนเดอร์แบบไดนามิกผ่าน JavaScript -->
     </div>
 
     <!-- ==========================================
@@ -509,7 +523,7 @@
         <span id="toastText">ดำเนินการเรียบร้อยแล้ว</span>
     </div>
 
-    <!-- Hidden Master Form State (เก็บสถานะข้อมูลทั้งหมดสำหรับเชื่อมโยงการแก้ไขและบันทึก) -->
+    <!-- Hidden Master Form State -->
     <div id="masterFormState" class="hidden">
         <div id="stateIssuerName">บริษัท เค แอล สเตชั่นเนอรี่ จำกัด (สำนักงานใหญ่)</div>
         <div id="stateIssuerAddress">873, 875 ถนนสุขุมวิท 105 แขวงบางนาใต้ เขตบางนา กรุงเทพมหานคร 10260</div>
@@ -526,15 +540,9 @@
         <div id="stateCustomerPhone">-</div>
         <div id="stateTransportBy">รถบริษัท / ขนส่งเอกชน</div>
         <div id="stateRemarks">1. เอกสารฉบับนี้เป็นใบส่งของชั่วคราว ใช้สำหรับตรวจรับสินค้าเบื้องต้นเท่านั้น (ไม่ใช่ใบกำกับภาษี)<br>2. บริษัทฯ จะจัดส่งใบกำกับภาษี / ใบแจ้งหนี้ฉบับสมบูรณ์ตามไปในภายหลัง<br>3. กรุณาตรวจสอบความถูกต้องและสภาพสินค้าก่อนลงนามรับสินค้าทุกครั้ง</div>
-        <input type="number" id="stateDiscountInput" value="0">
-        <select id="stateDiscountType"><option value="baht">บาท</option><option value="percent">%</option></select>
-        <select id="stateVatMode"><option value="none">ไม่มี VAT</option><option value="exclude">แยกนอก (7%)</option><option value="include">รวมใน (7%)</option></select>
     </div>
 
     <script>
-        // ==========================================
-        // 1. Firebase Configuration & State
-        // ==========================================
         const firebaseConfig = {
             apiKey: "AIzaSyBAQ347hnwb3a30uOCkyHK1QWV9eUEMiWE",
             authDomain: "delivery-tracking-2313a.firebaseapp.com",
@@ -583,11 +591,8 @@
         ];
 
         let billItems = [];
-        const ITEMS_PER_PAGE = 12; // จำนวนรายการสูงสุดต่อ 1 หน้ากระดาษ A4
+        const ITEMS_PER_PAGE = 15;
 
-        // ==========================================
-        // 2. Toast & Utilities
-        // ==========================================
         let toastTimer = null;
         function showToast(text, type = 'success') {
             const toast = document.getElementById('toastNotification');
@@ -697,9 +702,6 @@
             return text;
         }
 
-        // ==========================================
-        // 3. Firebase Authentication & Connection
-        // ==========================================
         document.getElementById('toggle-password')?.addEventListener('click', function () {
             const pwdInput = document.getElementById('login-password');
             const icon = document.getElementById('toggle-password-icon');
@@ -889,9 +891,6 @@
             if (unsubIssuerSettings) { unsubIssuerSettings(); unsubIssuerSettings = null; }
         }
 
-        // ==========================================
-        // 4. Firestore Subscriptions
-        // ==========================================
         function subscribeToFirestoreCollections() {
             detachListeners();
             if (!db || !currentUser) return;
@@ -1006,9 +1005,6 @@
             document.getElementById('directory-sync-count').textContent = `${mergedDirectory.length} บริษัท`;
         }
 
-        // ==========================================
-        // 5. Autocomplete & Special Prices
-        // ==========================================
         function renderCompanyDropdown(keyword = '') {
             const dropdown = document.getElementById('company-autocomplete-dropdown');
             const q = normalizeKey(keyword);
@@ -1088,7 +1084,7 @@
             const topLabel = document.getElementById('special-price-btn-label');
 
             if (specialList.length > 0) {
-                topLabel.textContent = `ดึงราคาเฉพาะบริษัท (${specialList.length})`;
+                topLabel.textContent = `ราคาเฉพาะ (${specialList.length})`;
                 topBtn.classList.remove('hidden');
                 topBtn.classList.add('flex');
             } else {
@@ -1169,9 +1165,6 @@
             showToast(`เพิ่ม "${desc}" ลงในตารางแล้ว`);
         }
 
-        // ==========================================
-        // 6. Multi-page Dynamic Rendering Engine
-        // ==========================================
         function addItemRow(item = { code: '', desc: '', qty: 1, unit: 'ชิ้น', price: 0 }) {
             billItems.push({
                 code: item.code || '',
@@ -1199,7 +1192,18 @@
             } else {
                 billItems[index][field] = value;
             }
-            // รีเรนเดอร์เฉพาะข้อมูลสรุปหรือคำนวณใหม่โดยไม่ทำลายโฟกัส input ปัจจุบัน
+            calculateTotalsOnly();
+        }
+
+        function handleDiscountFieldChange(val) {
+            calculateTotalsOnly();
+        }
+
+        function handleDiscountTypeChange(val) {
+            calculateTotalsOnly();
+        }
+
+        function handleVatModeChange(val) {
             calculateTotalsOnly();
         }
 
@@ -1234,7 +1238,6 @@
                 grandTotal = afterDiscount;
             }
 
-            // อัปเดตทุกหน้าที่มีช่องแสดงผลสรุป
             document.querySelectorAll('.subTotalDisplay').forEach(el => el.textContent = formatCurrency(subTotal));
             document.querySelectorAll('.afterDiscountDisplay').forEach(el => el.textContent = formatCurrency(afterDiscount));
             document.querySelectorAll('.vatDisplay').forEach(el => el.textContent = formatCurrency(vatAmount));
@@ -1244,17 +1247,14 @@
             document.querySelectorAll('.totalQtyCount').textContent = totalQty.toLocaleString('en-US');
         }
 
-        // ฟังก์ชันหลักในการสร้างหน้า A4 แบบหลายหน้า (Pagination)
         function renderAllPages() {
             const container = document.getElementById('a4PagesContainer');
             container.innerHTML = '';
 
-            // หากไม่มีรายการเลย ให้สร้างอย่างน้อย 1 รายการว่าง
             if (billItems.length === 0) {
                 billItems.push({ code: '', desc: '', qty: '', unit: 'ชิ้น', price: '' });
             }
 
-            // แบ่งรายการออกเป็นหน้าๆ หน้าละ ITEMS_PER_PAGE รายการ
             const totalPages = Math.ceil(billItems.length / ITEMS_PER_PAGE);
 
             for (let pageIdx = 0; pageIdx < totalPages; pageIdx++) {
@@ -1295,66 +1295,53 @@
             const discountType = document.getElementById('stateDiscountType').value;
             const vatMode = document.getElementById('stateVatMode').value;
 
-            // สร้างตารางรายการสินค้าประจำหน้านั้นๆ
-            let rowsHtml = '';
-            pageItems.forEach((item, idx) => {
-                const actualIndex = startIndex + idx;
-                const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
-                rowsHtml += `
-                    <tr class="hover:bg-teal-50/40 transition group">
-                        <td class="border border-slate-300 py-1.5 px-2 text-center font-medium text-slate-600">${actualIndex + 1}</td>
-                        <td class="border border-slate-300 py-1 px-1.5 text-center">
-                            <input type="text" value="${escapeHtml(item.code)}" placeholder="รหัส" oninput="updateItemField(${actualIndex}, 'code', this.value)" class="doc-input text-center font-medium text-slate-700">
-                        </td>
-                        <td class="border border-slate-300 py-1 px-2">
-                            <div contenteditable="true" oninput="updateItemField(${actualIndex}, 'desc', this.innerText)" class="w-full text-slate-800 leading-snug py-0.5">${escapeHtml(item.desc)}</div>
-                        </td>
-                        <td class="border border-slate-300 py-1 px-1.5 text-center">
-                            <input type="number" value="${item.qty !== '' ? item.qty : ''}" min="0" step="any" oninput="updateItemField(${actualIndex}, 'qty', this.value)" class="doc-input text-center font-semibold text-slate-800">
-                        </td>
-                        <td class="border border-slate-300 py-1 px-1.5 text-center">
-                            <input type="text" value="${escapeHtml(item.unit)}" oninput="updateItemField(${actualIndex}, 'unit', this.value)" class="doc-input text-center text-slate-700">
-                        </td>
-                        <td class="price-col border border-slate-300 py-1 px-1.5 text-right">
-                            <input type="number" value="${item.price !== '' ? item.price : ''}" min="0" step="0.01" oninput="updateItemField(${actualIndex}, 'price', this.value)" class="doc-input text-right text-slate-800">
-                        </td>
-                        <td class="price-col border border-slate-300 py-1.5 px-2.5 text-right font-semibold text-slate-900 item-amount">
-                            ${formatCurrency(amount)}
-                        </td>
-                        <td class="no-print border border-slate-300 py-1 px-1 text-center">
-                            <button type="button" onclick="removeItemRow(${actualIndex})" class="text-slate-400 hover:text-rose-600 p-1 rounded transition cursor-pointer" title="ลบรายการนี้">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i>
-                            </button>
-                        </td>
-                    </tr>
-                `;
-            });
+            // ตรวจสอบว่าในหน้านี้มีรายการสินค้าจริงหรือไม่
+            const hasValidItems = pageItems.some(item => (item.desc || '').trim() !== '' || (parseFloat(item.qty) || 0) > 0);
 
-            // เติมแถวว่างให้ครบจำนวน ITEMS_PER_PAGE ต่อหน้า เพื่อให้ฟอร์มสวยงามและคงขนาดหน้ากระดาษ
-            const emptyRowsNeeded = ITEMS_PER_PAGE - pageItems.length;
-            for (let i = 0; i < emptyRowsNeeded; i++) {
-                rowsHtml += `
-                    <tr class="text-slate-300">
-                        <td class="border border-slate-300 py-1.5 px-2 text-center">-</td>
-                        <td class="border border-slate-300 py-1 px-1.5 text-center">-</td>
-                        <td class="border border-slate-300 py-1 px-2">&nbsp;</td>
-                        <td class="border border-slate-300 py-1 px-1.5 text-center">-</td>
-                        <td class="border border-slate-300 py-1 px-1.5 text-center">-</td>
-                        <td class="price-col border border-slate-300 py-1 px-1.5 text-right">-</td>
-                        <td class="price-col border border-slate-300 py-1.5 px-2.5 text-right">-</td>
-                        <td class="no-print border border-slate-300 py-1 px-1 text-center">-</td>
-                    </tr>
-                `;
+            let rowsHtml = '';
+            if (hasValidItems) {
+                pageItems.forEach((item, idx) => {
+                    const actualIndex = startIndex + idx;
+                    const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0);
+                    rowsHtml += `
+                        <tr class="hover:bg-teal-50/40 transition group">
+                            <td class="border border-slate-300 py-1 px-2 text-center font-medium text-slate-600">${actualIndex + 1}</td>
+                            <td class="border border-slate-300 py-1 px-1.5 text-center">
+                                <input type="text" value="${escapeHtml(item.code)}" placeholder="รหัส" oninput="updateItemField(${actualIndex}, 'code', this.value)" class="doc-input text-center font-medium text-slate-700">
+                            </td>
+                            <td class="border border-slate-300 py-1 px-2">
+                                <div contenteditable="true" oninput="updateItemField(${actualIndex}, 'desc', this.innerText)" class="w-full text-slate-800 leading-snug py-0.5">${escapeHtml(item.desc)}</div>
+                            </td>
+                            <td class="border border-slate-300 py-1 px-1.5 text-center">
+                                <input type="number" value="${item.qty !== '' ? item.qty : ''}" min="0" step="any" oninput="updateItemField(${actualIndex}, 'qty', this.value)" class="doc-input text-center font-semibold text-slate-800">
+                            </td>
+                            <td class="border border-slate-300 py-1 px-1.5 text-center">
+                                <input type="text" value="${escapeHtml(item.unit)}" oninput="updateItemField(${actualIndex}, 'unit', this.value)" class="doc-input text-center text-slate-700">
+                            </td>
+                            <td class="price-col border border-slate-300 py-1 px-1.5 text-right">
+                                <input type="number" value="${item.price !== '' ? item.price : ''}" min="0" step="0.01" oninput="updateItemField(${actualIndex}, 'price', this.value)" class="doc-input text-right text-slate-800">
+                            </td>
+                            <td class="price-col border border-slate-300 py-1 px-2.5 text-right font-semibold text-slate-900 item-amount">
+                                ${formatCurrency(amount)}
+                            </td>
+                            <td class="no-print border border-slate-300 py-1 px-1 text-center">
+                                <button type="button" onclick="removeItemRow(${actualIndex})" class="text-slate-400 hover:text-rose-600 p-1 rounded transition cursor-pointer" title="ลบรายการนี้">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5 mx-auto"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
             }
 
             return `
                 <div>
                     <!-- 1. Header -->
-                    <header class="flex justify-between items-start gap-5 pb-4 border-b-2 border-teal-800">
+                    <header class="flex justify-between items-start gap-5 pb-3 border-b-2 border-teal-800">
                         <div class="flex items-start gap-3.5 flex-1">
                             <div class="relative group shrink-0">
                                 <input type="file" id="logoInput_${pageIdx}" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
-                                <div onclick="document.getElementById('logoInput_${pageIdx}').click()" class="w-20 h-20 rounded-xl border border-slate-300 hover:border-teal-600 bg-white flex flex-col items-center justify-center cursor-pointer overflow-hidden transition relative p-1" title="คลิกเพื่ออัปโหลดโลโก้บริษัท">
+                                <div onclick="document.getElementById('logoInput_${pageIdx}').click()" class="w-18 h-18 rounded-xl border border-slate-300 hover:border-teal-600 bg-white flex flex-col items-center justify-center cursor-pointer overflow-hidden transition relative p-1" title="คลิกเพื่ออัปโหลดโลโก้บริษัท">
                                     <img id="companyLogoImg_${pageIdx}" src="logo.png" alt="Company Logo" class="w-full h-full object-contain" onerror="this.classList.add('hidden');">
                                 </div>
                             </div>
@@ -1368,12 +1355,12 @@
                             </div>
                         </div>
 
-                        <div class="w-64 shrink-0 text-right">
-                            <div class="bg-gradient-to-r from-teal-800 to-teal-700 text-white px-3 py-2 rounded-t-lg text-center">
-                                <h2 class="font-heading font-bold text-base tracking-wide">ใบส่งของชั่วคราว</h2>
-                                <p class="font-heading text-[10px] tracking-widest text-teal-100 uppercase">TEMPORARY DELIVERY NOTE ${totalPages > 1 ? `(หน้า ${pageIdx + 1}/${totalPages})` : ''}</p>
+                        <div class="w-60 shrink-0 text-right">
+                            <div class="bg-gradient-to-r from-teal-800 to-teal-700 text-white px-3 py-1.5 rounded-t-lg text-center">
+                                <h2 class="font-heading font-bold text-sm tracking-wide">ใบส่งของชั่วคราว</h2>
+                                <p class="font-heading text-[9px] tracking-widest text-teal-100 uppercase">TEMPORARY DELIVERY NOTE ${totalPages > 1 ? `(หน้า ${pageIdx + 1}/${totalPages})` : ''}</p>
                             </div>
-                            <div class="border border-t-0 border-slate-300 rounded-b-lg p-2.5 bg-slate-50/70 text-xs space-y-1 text-left">
+                            <div class="border border-t-0 border-slate-300 rounded-b-lg p-2 bg-slate-50/70 text-xs space-y-0.5 text-left">
                                 <div class="flex justify-between items-center gap-1">
                                     <span class="text-slate-500 font-medium shrink-0">เลขที่เอกสาร:</span>
                                     <span class="font-bold text-teal-900 text-right">${escapeHtml(docNo)}</span>
@@ -1395,7 +1382,7 @@
                     </header>
 
                     <!-- 2. Customer Info -->
-                    <section class="mt-3.5 grid grid-cols-12 gap-3 bg-slate-50/80 border border-slate-300 rounded-lg p-3 text-xs">
+                    <section class="mt-3 grid grid-cols-12 gap-3 bg-slate-50/80 border border-slate-300 rounded-lg p-2.5 text-xs">
                         <div class="col-span-7 space-y-1 pr-2 border-r border-slate-200">
                             <div class="flex items-baseline gap-2">
                                 <span class="font-semibold text-teal-800 w-24 shrink-0">นามลูกค้า / บริษัท:</span>
@@ -1426,43 +1413,58 @@
                         </div>
                     </section>
 
-                    <!-- 3. Items Table -->
-                    <section class="mt-3.5">
-                        <table class="w-full border-collapse border border-slate-300 text-xs">
-                            <thead>
-                                <tr class="bg-teal-800 text-white font-heading">
-                                    <th class="border border-teal-700 py-1.5 px-2 text-center w-11">ลำดับ<br><span class="text-[10px] font-normal text-teal-200">No.</span></th>
-                                    <th class="border border-teal-700 py-1.5 px-2 text-center w-24">รหัสสินค้า<br><span class="text-[10px] font-normal text-teal-200">Code</span></th>
-                                    <th class="border border-teal-700 py-1.5 px-3 text-left">รายการสินค้า / รายละเอียด<br><span class="text-[10px] font-normal text-teal-200">Description</span></th>
-                                    <th class="border border-teal-700 py-1.5 px-2 text-center w-16">จำนวน<br><span class="text-[10px] font-normal text-teal-200">Qty</span></th>
-                                    <th class="border border-teal-700 py-1.5 px-2 text-center w-16">หน่วย<br><span class="text-[10px] font-normal text-teal-200">Unit</span></th>
-                                    <th class="price-col border border-teal-700 py-1.5 px-2 text-right w-24">ราคา/หน่วย<br><span class="text-[10px] font-normal text-teal-200">Unit Price</span></th>
-                                    <th class="price-col border border-teal-700 py-1.5 px-2 text-right w-28">จำนวนเงิน<br><span class="text-[10px] font-normal text-teal-200">Amount</span></th>
-                                    <th class="no-print border border-teal-700 py-1.5 px-1 text-center w-9 bg-teal-950">ลบ</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-200">
-                                ${rowsHtml}
-                            </tbody>
-                        </table>
+                    <!-- 3. Items Table (แสดงเฉพาะเมื่อมีรายการสินค้า หรือแสดงปุ่มเพิ่มรายการถ้าไม่มี) -->
+                    <section class="mt-3">
+                        ${hasValidItems ? `
+                            <table class="w-full border-collapse border border-slate-300 text-xs">
+                                <thead>
+                                    <tr class="bg-teal-800 text-white font-heading">
+                                        <th class="border border-teal-700 py-1.5 px-2 text-center w-10">ลำดับ<br><span class="text-[9px] font-normal text-teal-200">No.</span></th>
+                                        <th class="border border-teal-700 py-1.5 px-2 text-center w-24">รหัสสินค้า<br><span class="text-[9px] font-normal text-teal-200">Code</span></th>
+                                        <th class="border border-teal-700 py-1.5 px-3 text-left">รายการสินค้า / รายละเอียด<br><span class="text-[9px] font-normal text-teal-200">Description</span></th>
+                                        <th class="border border-teal-700 py-1.5 px-2 text-center w-16">จำนวน<br><span class="text-[9px] font-normal text-teal-200">Qty</span></th>
+                                        <th class="border border-teal-700 py-1.5 px-2 text-center w-16">หน่วย<br><span class="text-[9px] font-normal text-teal-200">Unit</span></th>
+                                        <th class="price-col border border-teal-700 py-1.5 px-2 text-right w-24">ราคา/หน่วย<br><span class="text-[9px] font-normal text-teal-200">Unit Price</span></th>
+                                        <th class="price-col border border-teal-700 py-1.5 px-2 text-right w-28">จำนวนเงิน<br><span class="text-[9px] font-normal text-teal-200">Amount</span></th>
+                                        <th class="no-print border border-teal-700 py-1.5 px-1 text-center w-9 bg-teal-950">ลบ</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-200">
+                                    ${rowsHtml}
+                                </tbody>
+                            </table>
+                        ` : `
+                            <div class="border border-dashed border-slate-300 rounded-lg p-6 text-center bg-slate-50 text-slate-500 text-xs">
+                                <i class="fa-solid fa-box-open text-2xl mb-1 text-slate-400"></i>
+                                <p>ยังไม่มีรายการสินค้าในหน้านี้</p>
+                            </div>
+                        `}
+
+                        <!-- ปุ่มเพิ่มรายการสินค้าลอยอยู่ใต้รายการสินค้าตามคำขอ -->
+                        <div class="no-print mt-2 flex justify-end">
+                            <button type="button" onclick="addItemRow()" class="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-semibold px-3 py-1.5 rounded-xl transition cursor-pointer shadow-sm">
+                                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                                <span>เพิ่มรายการสินค้า</span>
+                            </button>
+                        </div>
                     </section>
                 </div>
 
-                <!-- ส่วนล่าง: หากเป็นหน้าสุดท้ายจะแสดงการคำนวณเงินและช่องสรุปครบถ้วน, หน้าก่อนหน้าจะเป็นช่องว่างสมบูรณ์แต่ยังคงองค์ประกอบบิล -->
-                <div class="mt-3">
+                <!-- ส่วนล่าง: สรุปยอดและลายเซ็น -->
+                <div class="mt-2">
                     ${isLastPage ? `
-                        <section class="grid grid-cols-12 gap-3.5 items-stretch">
+                        <section class="grid grid-cols-12 gap-3 items-stretch">
                             <div class="col-span-7 flex flex-col justify-between gap-2" id="remarksBox">
-                                <div class="price-col border border-teal-200 bg-teal-50/70 rounded-lg px-3 py-2 text-xs">
+                                <div class="price-col border border-teal-200 bg-teal-50/70 rounded-lg px-3 py-1.5 text-xs">
                                     <span class="text-[10px] font-semibold text-teal-700 block">จำนวนเงินตัวอักษร (Baht Text):</span>
                                     <span class="bahtTextDisplay font-bold text-teal-950 text-xs sm:text-sm">(ศูนย์บาทถ้วน)</span>
                                 </div>
-                                <div class="border border-slate-300 rounded-lg p-2.5 bg-slate-50/50 text-xs flex-1 flex flex-col justify-between">
+                                <div class="border border-slate-300 rounded-lg p-2 bg-slate-50/50 text-xs flex-1 flex flex-col justify-between">
                                     <div>
-                                        <div class="font-bold text-teal-900 mb-1">หมายเหตุ / เงื่อนไขการส่งมอบ (Remarks):</div>
+                                        <div class="font-bold text-teal-900 mb-0.5">หมายเหตุ / เงื่อนไขการส่งมอบ (Remarks):</div>
                                         <div class="text-slate-700 leading-relaxed block">${remarks}</div>
                                     </div>
-                                    <div class="mt-2 pt-1.5 border-t border-slate-200 flex justify-between text-[11px] text-slate-600">
+                                    <div class="mt-1 pt-1 border-t border-slate-200 flex justify-between text-[11px] text-slate-600">
                                         <span>รวมจำนวนรายการ: <strong class="totalItemsCount text-slate-900">0</strong> รายการ</span>
                                         <span>รวมจำนวนสินค้า: <strong class="totalQtyCount text-slate-900">0</strong> หน่วย</span>
                                     </div>
@@ -1470,7 +1472,7 @@
                             </div>
 
                             <div class="price-col col-span-5 border border-slate-300 rounded-lg overflow-hidden text-xs flex flex-col justify-between">
-                                <div class="p-2.5 space-y-1.5 bg-white">
+                                <div class="p-2.5 space-y-1 bg-white">
                                     <div class="flex justify-between items-center text-slate-600">
                                         <span>รวมเป็นเงิน (Subtotal):</span>
                                         <span class="subTotalDisplay font-semibold text-slate-800">0.00</span>
@@ -1495,43 +1497,43 @@
                             </div>
                         </section>
                     ` : `
-                        <div class="border border-dashed border-slate-300 rounded-lg p-3 bg-slate-50/40 text-center text-xs text-slate-500">
+                        <div class="border border-dashed border-slate-300 rounded-lg p-2.5 bg-slate-50/40 text-center text-xs text-slate-500">
                             (มีรายการสินค้าต่อในหน้าถัดไป — ยอดรวมและสรุปการเงินแสดงในหน้าสุดท้ายของเอกสาร)
                         </div>
                     `}
 
                     <!-- Signatures Section -->
-                    <section class="mt-3.5 grid grid-cols-3 gap-3 text-xs">
-                        <div class="border border-slate-300 rounded-lg p-2.5 text-center flex flex-col justify-between h-28 bg-white">
+                    <section class="mt-3 grid grid-cols-3 gap-3 text-xs">
+                        <div class="border border-slate-300 rounded-lg p-2 text-center flex flex-col justify-between h-24 bg-white">
                             <div class="font-semibold text-slate-700">ผู้ส่งของ (Delivered By)</div>
-                            <div class="mt-auto space-y-1">
-                                <div class="border-b border-dotted border-slate-400 w-4/5 mx-auto h-5"></div>
+                            <div class="mt-auto space-y-0.5">
+                                <div class="border-b border-dotted border-slate-400 w-4/5 mx-auto h-4"></div>
                                 <div class="text-slate-600">(<span class="px-2">${escapeHtml(staffName && staffName !== '-' ? staffName : '...........................................')}</span>)</div>
-                                <div class="text-[11px] text-slate-500">วันที่ / Date: ____/____/______</div>
+                                <div class="text-[10px] text-slate-500">วันที่ / Date: ____/____/______</div>
                             </div>
                         </div>
-                        <div class="border border-slate-300 rounded-lg p-2.5 text-center flex flex-col justify-between h-28 bg-white">
+                        <div class="border border-slate-300 rounded-lg p-2 text-center flex flex-col justify-between h-24 bg-white">
                             <div class="font-semibold text-slate-700">ผู้ตรวจสอบ / ผู้อนุมัติ (Authorized By)</div>
-                            <div class="mt-auto space-y-1">
-                                <div class="border-b border-dotted border-slate-400 w-4/5 mx-auto h-5"></div>
-                                <div class="text-slate-600">(<span class="px-2">...........................................</span>)</div>
-                                <div class="text-[11px] text-slate-500">วันที่ / Date: ____/____/______</div>
-                            </div>
-                        </div>
-                        <div class="border border-teal-800/40 rounded-lg p-2.5 text-center flex flex-col justify-between h-28 bg-teal-50/30">
-                            <div>
-                                <div class="font-bold text-teal-950">ผู้รับของ (Received By)</div>
-                                <p class="text-[10px] text-slate-600 mt-0.5 leading-tight">ได้รับสินค้าตามรายการข้างต้นครบถ้วนและเรียบร้อยแล้ว</p>
-                            </div>
-                            <div class="mt-auto space-y-1">
+                            <div class="mt-auto space-y-0.5">
                                 <div class="border-b border-dotted border-slate-400 w-4/5 mx-auto h-4"></div>
                                 <div class="text-slate-600">(<span class="px-2">...........................................</span>)</div>
-                                <div class="text-[11px] text-slate-500">วันที่ / Date: ____/____/______</div>
+                                <div class="text-[10px] text-slate-500">วันที่ / Date: ____/____/______</div>
+                            </div>
+                        </div>
+                        <div class="border border-teal-800/40 rounded-lg p-2 text-center flex flex-col justify-between h-24 bg-teal-50/30">
+                            <div>
+                                <div class="font-bold text-teal-950">ผู้รับของ (Received By)</div>
+                                <p class="text-[9px] text-slate-600 mt-0.5 leading-tight">ได้รับสินค้าตามรายการข้างต้นครบถ้วนและเรียบร้อยแล้ว</p>
+                            </div>
+                            <div class="mt-auto space-y-0.5">
+                                <div class="border-b border-dotted border-slate-400 w-4/5 mx-auto h-3"></div>
+                                <div class="text-slate-600">(<span class="px-2">...........................................</span>)</div>
+                                <div class="text-[10px] text-slate-500">วันที่ / Date: ____/____/______</div>
                             </div>
                         </div>
                     </section>
 
-                    <footer class="mt-2 flex justify-between items-center text-[10px] text-slate-400">
+                    <footer class="mt-1.5 flex justify-between items-center text-[10px] text-slate-400">
                         <span>เอกสารฉบับนี้จัดทำขึ้นเพื่อใช้เป็นหลักฐานการส่งมอบสินค้าชั่วคราว</span>
                         <span>หน้า ${pageIdx + 1} จาก ${totalPages} — ต้นฉบับ (Original) / สำเนา (Copy)</span>
                     </footer>
@@ -1539,9 +1541,6 @@
             `;
         }
 
-        // ==========================================
-        // 7. Save / History & Modal Controls
-        // ==========================================
         async function saveDeliveryNoteToFirebase() {
             if (!db || !currentUser) {
                 showToast('กรุณาเข้าสู่ระบบ Cloud ก่อนบันทึกเอกสาร', 'error');
