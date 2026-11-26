@@ -1697,8 +1697,8 @@
 
                 try {
                     const querySnapshot = await db.collection('companies').get();
+                    let found = false;
                     let batch = db.batch();
-                    let updated = false;
 
                     querySnapshot.forEach(doc => {
                         const data = doc.data();
@@ -1708,14 +1708,23 @@
                                 groupName: newGroupName,
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                             });
-                            updated = true;
+                            found = true;
                         }
                     });
 
-                    if (updated) {
+                    if (found) {
                         await batch.commit();
-                        showNotification(`บันทึกกลุ่มเครือ "${newGroupName || 'ไม่มีกลุ่ม'}" สำหรับบริษัท ${name} สำเร็จ`, 'success');
+                    } else {
+                        // ถ้ายังไม่มีเอกสารบริษัทในตาราง companies ให้สร้างใหม่ทันที
+                        await db.collection('companies').add({
+                            name: name,
+                            companyName: name,
+                            groupName: newGroupName,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
                     }
+
+                    showNotification(`บันทึกกลุ่มเครือ "${newGroupName || 'ไม่มีกลุ่ม'}" สำหรับบริษัท ${name} สำเร็จ`, 'success');
                 } catch (err) {
                     console.error("Error updating groupName:", err);
                     alert('ไม่สามารถบันทึกกลุ่มเครือบริษัทได้ กรุณาลองใหม่อีกครั้ง');
