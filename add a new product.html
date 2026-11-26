@@ -112,7 +112,6 @@
                                 ทางลัดระบบงาน
                             </div>
                             <div class="py-1 space-y-0.5 max-h-[70vh] overflow-y-auto">
-							
                                 <a href="customer.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-users"></i>
@@ -150,18 +149,18 @@
                                     </div>
                                     <span>ใบเสนอราคา (Quotation)</span>
                                 </a>
-<a href="temporary-bill.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
-    <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-        <i class="fa-solid fa-receipt"></i>
-    </div>
-    <span>บิลชั่วคราว (Temporary Bill)</span>
-</a>
+                                <a href="temporary-bill.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
+                                    <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-receipt"></i>
+                                    </div>
+                                    <span>บิลชั่วคราว (Temporary Bill)</span>
+                                </a>
 								<a href="temporary_delivery.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
-    <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-        <i class="fa-solid fa-file-invoice"></i>
-    </div>
-    <span>ใบส่งของชั่วคราว (temporary_delivery)</span>
-</a>
+                                    <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-file-invoice"></i>
+                                    </div>
+                                    <span>ใบส่งของชั่วคราว (temporary_delivery)</span>
+                                </a>
                                 <a href="pdf_manager_ready.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-file-pdf"></i>
@@ -174,12 +173,12 @@
                                     </div>
                                     <span>ระบบแจ้งเตือน / REM</span>
                                 </a>
-<a href="user management.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
-    <div class="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-        <i class="fa-solid fa-user-shield"></i>
-    </div>
-    <span>ระบบตรวจสอบสิทธิ์ Admin</span>
-</a>
+                                <a href="user management.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
+                                    <div class="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-user-shield"></i>
+                                    </div>
+                                    <span>ระบบตรวจสอบสิทธิ์ Admin</span>
+                                </a>
 								<a href="firebase_cleanup.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
 									<div class="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
 									<i class="fa-solid fa-broom"></i>
@@ -211,7 +210,7 @@
                 </div>
             </div>
             <div class="flex items-center gap-1.5">
-                <button type="button" onclick="openCompanyManager()" class="px-2.5 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-semibold transition border border-white/20" title="จัดการ/รวม/คัดลอกสินค้าบริษัท">
+                <button type="button" onclick="openCompanyManager()" class="px-2.5 py-1.5 bg-white/15 hover:bg-white/25 rounded-xl text-xs font-semibold transition border border-white/20" title="จัดการบริษัทและกลุ่มเครือ">
                     🏢 จัดการบริษัท
                 </button>
             </div>
@@ -256,14 +255,15 @@
                         class="w-full px-3.5 py-2.5 border border-teal-200/80 bg-white/70 rounded-xl outline-none focus:ring-2 focus:ring-teal-500 focus:bg-white transition text-xs sm:text-sm">
                 </div>
 
-                <!-- เพิ่มตัวเลือกสำหรับการซิงค์ราคาบริษัทในเครือเดียวกันเฉพาะตอนแก้ไขสินค้า -->
+                <!-- เพิ่มตัวเลือกสำหรับการซิงค์ราคาบริษัทในกลุ่มเครือเดียวกันเฉพาะตอนแก้ไขสินค้า พร้อม Real-time Preview -->
                 <div id="sync-affiliated-group-container" class="hidden p-3 bg-teal-50/80 border border-teal-200 rounded-xl space-y-1.5">
                     <label class="flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" id="sync-affiliated-checkbox" class="mt-0.5 rounded text-teal-600 focus:ring-teal-500 w-4 h-4">
                         <span class="text-[11px] text-teal-900 leading-snug font-medium">
-                            <b>🔄 อัปเดตราคาพร้อมกันทุกบริษัทในเครือ:</b> เปลี่ยนแปลงราคา/ต้นทุนนี้ให้สินค้าชื่อเดียวกันทุกบริษัทที่มีชื่อรากเดียวกันโดยอัตโนมัติ (ไม่รวมบริษัทอิสระนอกเครือ)
+                            <b>🔄 อัปเดตราคาพร้อมกันทุกบริษัทในเครือ:</b> เปลี่ยนแปลงราคา/ต้นทุนนี้ให้สินค้าชื่อเดียวกันทุกบริษัทที่มีรหัสกลุ่มเครือเดียวกันโดยอัตโนมัติ
                         </span>
                     </label>
+                    <div id="sync-affiliated-preview" class="hidden text-[11px] font-semibold text-teal-800 pl-6"></div>
                 </div>
 
                 <div id="duplicate-warning" class="hidden rounded-xl p-3 bg-amber-50/90 border border-amber-200 text-amber-800 text-xs space-y-1">
@@ -425,13 +425,13 @@
     </div>
 </div>
 
-<!-- Modal จัดการบริษัท คัดลอก และรวมสินค้า -->
+<!-- Modal จัดการบริษัท คัดลอก รวมสินค้า และกำหนดกลุ่มเครือบริษัท (Company Group Tagging) -->
 <div id="company-manager-modal" class="hidden fixed inset-0 z-50 bg-slate-900/55 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-2xl overflow-hidden flex flex-col max-h-[88vh] modal-animate">
+    <div class="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl border border-white w-full max-w-4xl overflow-hidden flex flex-col max-h-[88vh] modal-animate">
         <div class="bg-gradient-to-r from-teal-600 to-cyan-600 px-6 py-4 text-white flex items-center justify-between">
             <div>
-                <h4 class="text-sm font-bold">🏢 จัดการบริษัท คัดลอก และรวมข้อมูลสินค้า</h4>
-                <p class="text-[11px] text-white/85">จัดการชื่อบริษัท คัดลอกรายการจากบริษัทแม่ หรือรวมบริษัทซ้ำ</p>
+                <h4 class="text-sm font-bold">🏢 จัดการบริษัทและกำหนดกลุ่มเครือบริษัท (Company Group Tagging)</h4>
+                <p class="text-[11px] text-white/85">กำหนด groupName เพื่อผูกบริษัทในเครือเดียวกัน, จัดการชื่อบริษัท, คัดลอก หรือรวมข้อมูลสินค้า</p>
             </div>
             <button type="button" onclick="closeCompanyManager()" class="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm font-bold transition">✕</button>
         </div>
@@ -439,7 +439,7 @@
         <div id="duplicate-companies-banner" class="hidden px-5 py-3 bg-amber-50 border-b border-amber-200 text-xs text-amber-900 flex items-center justify-between gap-2">
             <div class="flex items-center gap-2">
                 <span class="text-base">💡</span>
-                <span id="duplicate-companies-text">พบรายชื่อบริษัทที่อาจซ้ำกันในระบบ กดปุ่ม <b>"รวมเข้าบริษัทอื่น"</b> เพื่อย้ายสินค้ามารวมกันได้ทันที</span>
+                <span id="duplicate-companies-text">พบรายชื่อบริษัทที่อาจซ้ำกันในระบบ สามารถใช้ฟีเจอร์กลุ่มเครือหรือกด <b>"รวมเข้าบริษัทอื่น"</b> ได้ทันที</span>
             </div>
             <button type="button" onclick="filterOnlyDuplicates()" id="btn-show-duplicates" class="px-2.5 py-1 bg-amber-200/80 hover:bg-amber-300 text-amber-900 rounded-lg font-bold text-[11px] shrink-0 transition">
                 กรองเฉพาะชื่อซ้ำ
@@ -448,7 +448,7 @@
 
         <div class="p-4 border-b border-slate-200/70 bg-slate-50/70 space-y-2.5">
             <div class="flex gap-2">
-                <input type="text" id="manager-search-input" placeholder="🔍 ค้นหาชื่อบริษัทที่ต้องการจัดการ..." autocomplete="off"
+                <input type="text" id="manager-search-input" placeholder="🔍 ค้นหาชื่อบริษัทหรือกลุ่มเครือที่ต้องการจัดการ..." autocomplete="off"
                     class="flex-1 px-3.5 py-2 border border-teal-200 bg-white rounded-xl outline-none focus:ring-2 focus:ring-teal-500 text-xs sm:text-sm">
                 <button type="button" id="btn-reset-manager-search" onclick="resetManagerFilter()" class="hidden px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-xl text-xs font-semibold transition">
                     แสดงทั้งหมด
@@ -621,6 +621,7 @@
 
     let products = [];
     let companiesMap = new Map();
+    let companyGroupMap = new Map(); // strictKey -> groupName (Company Group Tagging)
     let isMultiSelectMode = false;
     let showOnlyDuplicatesFlag = false;
     let currentMergeSourceName = '';
@@ -807,14 +808,14 @@
         }
     });
 
-    window.toggleMenuDropdown = function() {
-        const menu = document.getElementById('system-menu-dropdown');
+    window.toggleQuickMenu = function() {
+        const menu = document.getElementById('quick-menu-dropdown');
         menu.classList.toggle('hidden');
     };
 
     document.addEventListener('click', (e) => {
-        const menu = document.getElementById('system-menu-dropdown');
-        const btn = document.querySelector('button[onclick="toggleMenuDropdown()"]');
+        const menu = document.getElementById('quick-menu-dropdown');
+        const btn = document.querySelector('button[onclick="toggleQuickMenu()"]');
         if (menu && btn && !menu.contains(e.target) && !btn.contains(e.target)) {
             menu.classList.add('hidden');
         }
@@ -857,12 +858,15 @@
             .replace(/[^ก-ฮa-z0-9]/g, '');
     }
 
-    function addCompany(name) {
+    function addCompany(name, groupName = '') {
         const cleaned = cleanCompanyName(name);
         if (!cleaned) return;
         const strictKey = cleaned.toLowerCase().replace(/\s+/g, '');
         if (!companiesMap.has(strictKey)) {
             companiesMap.set(strictKey, cleaned);
+        }
+        if (groupName !== undefined && groupName !== null) {
+            companyGroupMap.set(strictKey, groupName.trim());
         }
     }
 
@@ -873,10 +877,51 @@
             .replace(/[^ก-ฮa-z0-9]/g, '');
     }
 
-	        function toggleQuickMenu() {
-            const menu = document.getElementById('quick-menu-dropdown');
-            menu.classList.toggle('hidden');
+    // ==========================================
+    // Real-time Preview สำหรับการซิงค์ราคาตามกลุ่มเครือ (Requirement 3)
+    // ==========================================
+    function updateSyncAffiliatedPreview() {
+        const previewEl = document.getElementById('sync-affiliated-preview');
+        if (!previewEl) return;
+
+        if (!syncAffiliatedCheckbox.checked) {
+            previewEl.classList.add('hidden');
+            previewEl.textContent = '';
+            return;
         }
+
+        const editId = editingProductId.value;
+        const currentProduct = products.find(item => item.id === editId);
+        const currentCompany = currentProduct ? (currentProduct.companyName || currentProduct.company) : (companySelectHidden.value || companySearchInput.value.trim());
+        const currentStrictKey = cleanCompanyName(currentCompany).toLowerCase().replace(/\s+/g, '');
+        const currentGroupName = companyGroupMap.get(currentStrictKey) || '';
+
+        if (!currentGroupName) {
+            previewEl.textContent = '⚠️ บริษัทนี้ยังไม่ได้กำหนดกลุ่มเครือบริษัท (groupName) ในหน้าจัดการบริษัท';
+            previewEl.className = 'text-[11px] font-semibold text-amber-700 pl-6';
+            previewEl.classList.remove('hidden');
+            return;
+        }
+
+        // ดึงรายชื่อบริษัทที่มี groupName เดียวกันแบบ Real-time
+        const groupCompanies = [];
+        companiesMap.forEach((compName, strictKey) => {
+            if (companyGroupMap.get(strictKey) === currentGroupName) {
+                groupCompanies.push(compName);
+            }
+        });
+
+        if (groupCompanies.length === 0) {
+            groupCompanies.push(currentCompany);
+        }
+
+        previewEl.textContent = `จะอัปเดตราคาให้: ${groupCompanies.join(', ')} (${groupCompanies.length} บริษัท)`;
+        previewEl.className = 'text-[11px] font-semibold text-teal-800 pl-6';
+        previewEl.classList.remove('hidden');
+    }
+
+    syncAffiliatedCheckbox.addEventListener('change', updateSyncAffiliatedPreview);
+
     // ==========================================
     // ระบบคัดลอกรายการสินค้า (รองรับเลือกหลายบริษัทแม่และหลายบริษัทลูก + ค้นหา)
     // ==========================================
@@ -933,12 +978,10 @@
 
         const sourceCandidates = Array.from(companiesMap.values()).filter(comp => {
             const cStrict = cleanCompanyName(comp).toLowerCase().replace(/\s+/g, '');
-            // ซ่อนบริษัทที่ถูกเลือกเป็นบริษัทเป้าหมาย (ถ้าไม่ได้ติ๊กเป็นบริษัทแม่ไว้ก่อน)
             if (targetStrictKeys.has(cStrict) && !selectedCopySourceCompanies.has(comp)) return false;
             const cCount = products.filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === cStrict).length;
             return cCount > 0;
         }).sort((a, b) => {
-            // เรียงบริษัทแม่ที่ถูกติ๊กเลือกแล้วขึ้นด้านบนสุดเพื่อให้ตรวจสอบง่าย
             const aSel = selectedCopySourceCompanies.has(a) ? 0 : 1;
             const bSel = selectedCopySourceCompanies.has(b) ? 0 : 1;
             if (aSel !== bSel) return aSel - bSel;
@@ -972,7 +1015,6 @@
                 cb.addEventListener('change', () => {
                     if (cb.checked) {
                         selectedCopySourceCompanies.add(comp);
-                        // หากเคยถูกเลือกอยู่ฝั่งบริษัทลูก ให้เอาออกจากฝั่งบริษัทลูกอัตโนมัติเพื่อกันคัดลอกเข้าตัวเอง
                         selectedCopyTargetCompanies.delete(comp);
                     } else {
                         selectedCopySourceCompanies.delete(comp);
@@ -1011,7 +1053,6 @@
             if (sourceStrictKeys.has(cStrict) && !selectedCopyTargetCompanies.has(comp)) return false;
             return true;
         }).sort((a, b) => {
-            // เรียงบริษัทลูกที่ถูกติ๊กเลือกไว้ขึ้นด้านบนสุด
             const aSel = selectedCopyTargetCompanies.has(a) ? 0 : 1;
             const bSel = selectedCopyTargetCompanies.has(b) ? 0 : 1;
             if (aSel !== bSel) return aSel - bSel;
@@ -1082,7 +1123,6 @@
         copySourceSelectedBadge.textContent = `เลือกแล้ว ${sourceCount} บริษัท`;
         copyTargetSelectedBadge.textContent = `เลือกแล้ว ${targetCount} บริษัท`;
 
-        // นับจำนวนรายการสินค้าต้นฉบับทั้งหมดจากบริษัทแม่ที่เลือก
         const sourceStrictKeys = new Set(
             Array.from(selectedCopySourceCompanies).map(s => cleanCompanyName(s).toLowerCase().replace(/\s+/g, ''))
         );
@@ -1181,7 +1221,6 @@
             confirmCopyBtn.disabled = true;
             confirmCopyBtn.textContent = 'กำลังคัดลอกรายการ...';
 
-            // รวบรวมสินค้าจากบริษัทแม่ทั้งหมดที่เลือก
             const rawSourceProducts = [];
             sourceNames.forEach(sName => {
                 const sStrict = cleanCompanyName(sName).toLowerCase().replace(/\s+/g, '');
@@ -1191,7 +1230,6 @@
                 rawSourceProducts.push(...items);
             });
 
-            // กรองสินค้าชื่อซ้ำกันระหว่างบริษัทแม่หลายแห่งที่เลือก (คงรายการแรกที่พบไว้)
             const uniqueSourceProducts = [];
             const seenInSourceBatch = new Set();
             for (const sp of rawSourceProducts) {
@@ -1217,7 +1255,6 @@
                 }
             };
 
-            // วนคัดลอกเข้าทุกบริษัทเป้าหมาย (บริษัทลูก) ที่เลือกไว้
             for (const targetName of targetNames) {
                 const targetStrictKey = cleanCompanyName(targetName).toLowerCase().replace(/\s+/g, '');
                 const existingTargetProductNames = new Set(
@@ -1393,6 +1430,7 @@
                 }
 
                 companiesMap.delete(sourceStrictKey);
+                companyGroupMap.delete(sourceStrictKey);
                 managerSelectedTargetCompanies.delete(sourceName);
 
                 if (cleanCompanyName(filterCompany.value).toLowerCase().replace(/\s+/g, '') === sourceStrictKey) {
@@ -1467,6 +1505,7 @@
                 await batch.commit();
 
                 companiesMap.delete(targetStrictKey);
+                companyGroupMap.delete(targetStrictKey);
                 persistentCheckedCompanies.delete(companyNameTarget);
                 managerSelectedTargetCompanies.delete(companyNameTarget);
 
@@ -1551,6 +1590,9 @@
         return dupSet;
     }
 
+    // ==========================================
+    // ฟังก์ชันแสดงและอัปเดตกลุ่มเครือบริษัท (Company Group Tagging) ใน Modal จัดการบริษัท (Requirement 1)
+    // ==========================================
     function renderManagerCompanyList(filterText = '') {
         const sortedCompanies = Array.from(companiesMap.values()).sort((a, b) => a.localeCompare(b, 'th'));
         const duplicateFuzzyKeys = getDuplicateFuzzyKeysSet();
@@ -1561,7 +1603,13 @@
             duplicateCompaniesBanner.classList.add('hidden');
         }
 
-        let filtered = sortedCompanies.filter(c => c.toLowerCase().includes(filterText.toLowerCase()));
+        let filtered = sortedCompanies.filter(c => {
+            const strictKey = c.toLowerCase().replace(/\s+/g, '');
+            const groupName = companyGroupMap.get(strictKey) || '';
+            const query = filterText.toLowerCase();
+            return c.toLowerCase().includes(query) || groupName.toLowerCase().includes(query);
+        });
+
         if (showOnlyDuplicatesFlag) {
             filtered = filtered.filter(c => duplicateFuzzyKeys.has(getFuzzyCompanyKey(c)));
         }
@@ -1586,9 +1634,10 @@
             const isSuspectedDuplicate = duplicateFuzzyKeys.has(fuzzyKey);
             const itemCount = products.filter(p => cleanCompanyName(p.companyName || p.company).toLowerCase().replace(/\s+/g, '') === strictKey).length;
             const isSelected = managerSelectedTargetCompanies.has(name);
+            const currentGroup = companyGroupMap.get(strictKey) || '';
 
             const row = document.createElement('div');
-            row.className = `py-3 px-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 rounded-xl transition ${
+            row.className = `py-3 px-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 rounded-xl transition ${
                 isSelected
                     ? 'bg-emerald-50/90 hover:bg-emerald-100/70'
                     : (isSuspectedDuplicate ? 'bg-amber-50/70 hover:bg-amber-100/60' : 'hover:bg-teal-50/50')
@@ -1615,11 +1664,7 @@
             });
             
             const infoDiv = document.createElement('div');
-            infoDiv.className = 'min-w-0 flex-1 cursor-pointer';
-            infoDiv.onclick = () => {
-                checkbox.checked = !checkbox.checked;
-                checkbox.dispatchEvent(new Event('change'));
-            };
+            infoDiv.className = 'min-w-0 flex-1';
             infoDiv.innerHTML = `
                 <div class="flex items-center gap-1.5 flex-wrap">
                     <span class="font-semibold text-slate-800 break-words">${name}</span>
@@ -1633,6 +1678,50 @@
             leftGroup.appendChild(checkbox);
             leftGroup.appendChild(infoDiv);
 
+            // ส่วนระบุ/พิมพ์ชื่อกลุ่มเครือบริษัท (groupName) ใน Modal จัดการบริษัท
+            const groupSection = document.createElement('div');
+            groupSection.className = 'flex items-center gap-2 shrink-0';
+            groupSection.innerHTML = `
+                <div class="flex flex-col">
+                    <label class="text-[10px] font-bold text-slate-500 mb-0.5">🏷️ กลุ่มเครือบริษัท (groupName):</label>
+                    <input type="text" value="${currentGroup}" placeholder="เช่น เครือยูนิซัน" 
+                        class="manager-group-input px-2.5 py-1.5 bg-white border border-teal-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-teal-500 w-40 sm:w-48 font-medium text-teal-900"
+                        data-strict-key="${strictKey}" data-company-name="${name}">
+                </div>
+            `;
+
+            const groupInputEl = groupSection.querySelector('.manager-group-input');
+            groupInputEl.addEventListener('change', async (e) => {
+                const newGroupName = e.target.value.trim();
+                companyGroupMap.set(strictKey, newGroupName);
+
+                try {
+                    const querySnapshot = await db.collection('companies').get();
+                    let batch = db.batch();
+                    let updated = false;
+
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
+                        if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === strictKey) {
+                            batch.update(doc.ref, {
+                                groupName: newGroupName,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            updated = true;
+                        }
+                    });
+
+                    if (updated) {
+                        await batch.commit();
+                        showNotification(`บันทึกกลุ่มเครือ "${newGroupName || 'ไม่มีกลุ่ม'}" สำหรับบริษัท ${name} สำเร็จ`, 'success');
+                    }
+                } catch (err) {
+                    console.error("Error updating groupName:", err);
+                    alert('ไม่สามารถบันทึกกลุ่มเครือบริษัทได้ กรุณาลองใหม่อีกครั้ง');
+                }
+            });
+
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'flex items-center gap-1.5 shrink-0 flex-wrap justify-end';
 
@@ -1640,20 +1729,20 @@
             copyBtn.type = 'button';
             copyBtn.className = 'px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white border border-emerald-200 hover:border-emerald-600 rounded-xl text-xs font-semibold transition flex items-center gap-1';
             copyBtn.title = 'คัดลอกรายการและราคาสินค้าจากบริษัทแม่/บริษัทอื่นมาใส่บริษัทนี้';
-            copyBtn.innerHTML = '<span>📋</span><span>คัดลอกสินค้า</span>';
+            copyBtn.innerHTML = '<span>📋</span><span>คัดลอก</span>';
             copyBtn.onclick = () => openCopyModal(name);
 
             const mergeBtn = document.createElement('button');
             mergeBtn.type = 'button';
             mergeBtn.className = 'px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-600 text-indigo-600 hover:text-white border border-indigo-200 hover:border-indigo-600 rounded-xl text-xs font-semibold transition flex items-center gap-1';
             mergeBtn.title = 'ย้ายสินค้าทั้งหมดของชื่อนี้ไปรวมกับบริษัทหลัก แล้วลบชื่อนี้ทิ้ง';
-            mergeBtn.innerHTML = '<span>🔀</span><span>รวมเข้าบริษัทหลัก</span>';
+            mergeBtn.innerHTML = '<span>🔀</span><span>รวม</span>';
             mergeBtn.onclick = () => openMergeModal(name);
 
             const delBtn = document.createElement('button');
             delBtn.type = 'button';
             delBtn.className = 'px-2.5 py-1.5 bg-rose-50 hover:bg-rose-500 text-rose-600 hover:text-white border border-rose-200 hover:border-rose-500 rounded-xl text-xs font-semibold transition flex items-center gap-1';
-            delBtn.innerHTML = '<span>🗑️</span><span>ลบบริษัท</span>';
+            delBtn.innerHTML = '<span>🗑️</span><span>ลบ</span>';
             delBtn.onclick = (e) => deleteCompanyFromFirebase(name, e);
 
             actionsDiv.appendChild(copyBtn);
@@ -1661,6 +1750,7 @@
             actionsDiv.appendChild(delBtn);
 
             row.appendChild(leftGroup);
+            row.appendChild(groupSection);
             row.appendChild(actionsDiv);
             managerCompanyList.appendChild(row);
         });
@@ -1874,6 +1964,7 @@
                     renderTable();
                 }
                 checkDuplicateStatus();
+                updateSyncAffiliatedPreview();
             });
 
             companyDropdownList.appendChild(row);
@@ -1907,7 +1998,6 @@
         const val = e.target.value.trim();
         companySelectHidden.value = '';
         
-        // หากฝั่งซ้ายไม่มีชื่อบริษัท (ช่องค้นหาถูกลบออกจนว่างเปล่า) ให้รีเซ็ตฝั่งขวาเป็นค่าเริ่มต้นแสดงทุกบริษัททั้งหมดทันที
         if (val === '') {
             filterCompany.value = 'all';
             currentPage = 1;
@@ -1917,6 +2007,7 @@
         renderCompanyDropdown(val);
         companyDropdownList.classList.remove('hidden');
         checkDuplicateStatus();
+        updateSyncAffiliatedPreview();
     });
 
     document.addEventListener('click', (e) => {
@@ -1943,7 +2034,6 @@
             return matchCompany && matchProduct;
         });
 
-        // คำนวณระบบแบ่งหน้า Pagination
         const totalPages = Math.ceil(filteredProducts.length / itemsPerPage) || 1;
         if (currentPage > totalPages) currentPage = totalPages;
         if (currentPage < 1) currentPage = 1;
@@ -1977,7 +2067,6 @@
             });
         }
 
-        // อัปเดตข้อความบอกสถานะหน้าและปุ่มกด
         totalCount.innerHTML = `
             <span class="w-2 h-2 rounded-full bg-teal-600 inline-block"></span>
             <span>รวมทั้งหมด: ${filteredProducts.length.toLocaleString('th-TH')} รายการ</span>
@@ -1987,7 +2076,6 @@
         document.getElementById('next-page-btn').disabled = currentPage === totalPages || totalPages === 0;
     }
 
-    // ฟังก์ชันเปลี่ยนหน้า Pagination
     window.changePage = function(direction) {
         currentPage += direction;
         renderTable();
@@ -1997,16 +2085,18 @@
 
     function rebuildCompaniesMapFromAllSources(companiesSnapshot, productsList) {
         companiesMap.clear();
+        companyGroupMap.clear();
         if (companiesSnapshot) {
             companiesSnapshot.forEach((doc) => {
                 const data = doc.data();
                 const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
-                addCompany(rawName);
+                const groupName = data.groupName || '';
+                addCompany(rawName, groupName);
             });
         }
         productsList.forEach((pData) => {
             const rawName = pData.companyName || pData.company;
-            addCompany(rawName);
+            addCompany(rawName, '');
         });
     }
 
@@ -2031,6 +2121,7 @@
                 renderCopySourceList(copySourceSearchInput.value);
                 renderCopyTargetList(copyTargetSearchInput.value);
             }
+            updateSyncAffiliatedPreview();
         }, (error) => {
             console.error("Error fetching companies:", error);
         });
@@ -2054,6 +2145,7 @@
             }
             renderTable();
             checkDuplicateStatus();
+            updateSyncAffiliatedPreview();
         }, (error) => {
             console.error("Error fetching products:", error);
             showMessage('ไม่สามารถเชื่อมต่อฐานข้อมูลสินค้าได้', 'error');
@@ -2112,9 +2204,10 @@
         multiSelectToggleLabel.classList.add('opacity-50', 'pointer-events-none');
         duplicateWarning.classList.add('hidden');
         
-        // แสดงกล่องตัวเลือกซิงค์กลุ่มบริษัทในเครือเฉพาะตอนแก้ไข
+        // แสดงกล่องตัวเลือกซิงค์กลุ่มเครือบริษัทเฉพาะตอนแก้ไข พร้อมอัปเดต Preview Real-time
         syncAffiliatedGroupContainer.classList.remove('hidden');
         syncAffiliatedCheckbox.checked = false;
+        updateSyncAffiliatedPreview();
 
         form.scrollIntoView({ behavior: 'smooth' });
     }
@@ -2136,11 +2229,16 @@
         duplicateWarning.classList.add('hidden');
         syncAffiliatedGroupContainer.classList.add('hidden');
         syncAffiliatedCheckbox.checked = false;
+        const previewEl = document.getElementById('sync-affiliated-preview');
+        if (previewEl) previewEl.classList.add('hidden');
         persistentCheckedCompanies.clear();
         if (isMultiSelectMode) renderMultiCheckboxes(multiSearchInput.value);
         checkDuplicateStatus();
     }
 
+    // ==========================================
+    // ปรับเงื่อนไขการซิงค์ราคาให้เช็กจาก "รหัสกลุ่ม" (groupName) แทน "ชื่อราก" (Requirement 2)
+    // ==========================================
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         
@@ -2174,8 +2272,15 @@
                 if (shouldSyncAffiliated) {
                     const currentProduct = products.find(item => item.id === editId);
                     const currentCompany = currentProduct ? (currentProduct.companyName || currentProduct.company) : company;
-                    const targetFuzzyKey = getFuzzyCompanyKey(currentCompany);
+                    const currentStrictKey = cleanCompanyName(currentCompany).toLowerCase().replace(/\s+/g, '');
+                    const currentGroupName = companyGroupMap.get(currentStrictKey) || '';
                     const prodNameLower = name.toLowerCase();
+
+                    if (!currentGroupName) {
+                        alert('บริษัทนี้ยังไม่ได้กำหนดกลุ่มเครือบริษัท (groupName) ในหน้าจัดการบริษัท ไม่สามารถซิงค์ข้ามบริษัทได้');
+                        submitBtn.disabled = false;
+                        return;
+                    }
 
                     let batch = db.batch();
                     let opCount = 0;
@@ -2183,10 +2288,12 @@
 
                     products.forEach(item => {
                         const itemComp = item.companyName || item.company;
-                        const itemFuzzyKey = getFuzzyCompanyKey(itemComp);
+                        const itemStrictKey = cleanCompanyName(itemComp).toLowerCase().replace(/\s+/g, '');
+                        const itemGroupName = companyGroupMap.get(itemStrictKey) || '';
                         const itemNameLower = (item.name || '').trim().toLowerCase();
 
-                        if (itemFuzzyKey === targetFuzzyKey && itemNameLower === prodNameLower) {
+                        // เปรียบเทียบจาก groupName แทนชื่อรากบริษัทเดิม
+                        if (itemGroupName && itemGroupName === currentGroupName && itemNameLower === prodNameLower) {
                             const docRef = db.collection('companyProducts').doc(item.id);
                             batch.update(docRef, {
                                 cost: cost,
@@ -2213,7 +2320,7 @@
                         await batch.commit();
                     }
 
-                    const successMsg = `อัปเดตและซิงค์ราคาสินค้าไปยังบริษัทในเครือทั้งหมด (${updatedCount} รายการ) สำเร็จ!`;
+                    const successMsg = `อัปเดตและซิงค์ราคาสินค้าไปยังกลุ่มเครือ "${currentGroupName}" ทั้งหมด (${updatedCount} รายการ) สำเร็จ!`;
                     showMessage(successMsg, 'success');
                     showNotification(successMsg, 'success');
                 } else {
@@ -2389,20 +2496,18 @@ window.addEventListener('DOMContentLoaded', () => {
     if (prefillCompany) {
         const decodedCompany = decodeURIComponent(prefillCompany);
         
-        // รอให้ข้อมูลบริษัทในระบบโหลดเสร็จเรียบร้อยเล็กน้อย แล้วเซ็ตค่า
         const checkAndSetCompany = setInterval(() => {
             if (companiesMap.size > 0 || products.length > 0) {
                 clearInterval(checkAndSetCompany);
                 
-                // ใส่ชื่อบริษัทลงในช่องค้นหาและ hidden input
                 companySearchInput.value = decodedCompany;
                 companySelectHidden.value = decodedCompany;
                 
-                // กรองตารางฝั่งขวาให้แสดงเฉพาะสินค้าของบริษัทนี้ทันที
                 filterCompany.value = decodedCompany;
                 currentPage = 1;
                 renderTable();
                 checkDuplicateStatus();
+                updateSyncAffiliatedPreview();
                 
                 console.log("Pre-filled company from index:", decodedCompany);
             }
