@@ -858,15 +858,21 @@
             .replace(/[^ก-ฮa-z0-9]/g, '');
     }
 
-    function addCompany(name, groupName = '') {
+    function normalizeGroupName(groupName) {
+        return String(groupName || '').normalize('NFKC').trim().replace(/\s+/g, ' ').toLocaleLowerCase('th-TH');
+    }
+
+    function addCompany(name, groupName) {
         const cleaned = cleanCompanyName(name);
         if (!cleaned) return;
         const strictKey = cleaned.toLowerCase().replace(/\s+/g, '');
         if (!companiesMap.has(strictKey)) {
             companiesMap.set(strictKey, cleaned);
         }
+        // อย่าให้ชื่อบริษัทที่อ่านจาก companyProducts (ไม่มี groupName)
+        // เขียนทับ groupName ที่อ่านมาจาก companies
         if (groupName !== undefined && groupName !== null) {
-            companyGroupMap.set(strictKey, groupName.trim());
+            companyGroupMap.set(strictKey, String(groupName).trim());
         }
     }
 
@@ -892,29 +898,37 @@
 
         const editId = editingProductId.value;
         const currentProduct = products.find(item => item.id === editId);
-        const currentCompany = currentProduct ? (currentProduct.companyName || currentProduct.company) : (companySelectHidden.value || companySearchInput.value.trim());
-        const currentStrictKey = cleanCompanyName(currentCompany).toLowerCase().replace(/\s+/g, '');
+        const currentCompany = cleanCompanyName(
+            currentProduct ? (currentProduct.companyName || currentProduct.company) :
+            (companySelectHidden.value || companySearchInput.value.trim())
+        );
+        const currentStrictKey = currentCompany.toLowerCase().replace(/\s+/g, '');
         const currentGroupName = companyGroupMap.get(currentStrictKey) || '';
+        const normalizedCurrentGroup = normalizeGroupName(currentGroupName);
 
-        if (!currentGroupName) {
+        if (!normalizedCurrentGroup) {
             previewEl.textContent = '⚠️ บริษัทนี้ยังไม่ได้กำหนดกลุ่มเครือบริษัท (groupName) ในหน้าจัดการบริษัท';
             previewEl.className = 'text-[11px] font-semibold text-amber-700 pl-6';
             previewEl.classList.remove('hidden');
             return;
         }
 
-        // ดึงรายชื่อบริษัทที่มี groupName เดียวกันแบบ Real-time
         const groupCompanies = [];
         companiesMap.forEach((compName, strictKey) => {
-            if (companyGroupMap.get(strictKey) === currentGroupName) {
+            const candidateGroup = companyGroupMap.get(strictKey) || '';
+            if (normalizeGroupName(candidateGroup) === normalizedCurrentGroup) {
                 groupCompanies.push(compName);
             }
         });
 
-        if (groupCompanies.length === 0) {
+        // แสดงบริษัทปัจจุบันด้วย แม้เอกสาร companies ของบริษัทนั้นยังไม่ถูกสร้าง
+        if (currentCompany && !groupCompanies.some(name =>
+            cleanCompanyName(name).toLowerCase().replace(/\s+/g, '') === currentStrictKey
+        )) {
             groupCompanies.push(currentCompany);
         }
 
+        groupCompanies.sort((a, b) => a.localeCompare(b, 'th'));
         previewEl.textContent = `จะอัปเดตราคาให้: ${groupCompanies.join(', ')} (${groupCompanies.length} บริษัท)`;
         previewEl.className = 'text-[11px] font-semibold text-teal-800 pl-6';
         previewEl.classList.remove('hidden');
@@ -1693,41 +1707,49 @@
             const groupInputEl = groupSection.querySelector('.manager-group-input');
             groupInputEl.addEventListener('change', async (e) => {
                 const newGroupName = e.target.value.trim();
-                companyGroupMap.set(strictKey, newGroupName);
+                const previousGroupName = companyGroupMap.get(strictKey) || '';
+                groupInputEl.disabled = true;
 
                 try {
                     const querySnapshot = await db.collection('companies').get();
-                    let found = false;
-                    let batch = db.batch();
-
-                    querySnapshot.forEach(doc => {
+                    const matchingDocs = querySnapshot.docs.filter(doc => {
                         const data = doc.data();
                         const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
-                        if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === strictKey) {
-                            batch.update(doc.ref, {
-                                groupName: newGroupName,
-                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
-                            found = true;
-                        }
+                        return cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === strictKey;
                     });
 
-                    if (found) {
-                        await batch.commit();
-                    } else {
-                        // ถ้ายังไม่มีเอกสารบริษัทในตาราง companies ให้สร้างใหม่ทันที
+                    if (matchingDocs.length === 0) {
                         await db.collection('companies').add({
                             name: name,
                             companyName: name,
                             groupName: newGroupName,
-                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
+                    } else {
+                        // Firestore จำกัด 500 writes ต่อ batch จึงแบ่งชุดละ 450 เพื่อเผื่อความปลอดภัย
+                        for (let i = 0; i < matchingDocs.length; i += 450) {
+                            const batch = db.batch();
+                            matchingDocs.slice(i, i + 450).forEach(doc => {
+                                batch.update(doc.ref, {
+                                    groupName: newGroupName,
+                                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                                });
+                            });
+                            await batch.commit();
+                        }
                     }
 
+                    companyGroupMap.set(strictKey, newGroupName);
+                    updateSyncAffiliatedPreview();
                     showNotification(`บันทึกกลุ่มเครือ "${newGroupName || 'ไม่มีกลุ่ม'}" สำหรับบริษัท ${name} สำเร็จ`, 'success');
                 } catch (err) {
+                    companyGroupMap.set(strictKey, previousGroupName);
+                    groupInputEl.value = previousGroupName;
                     console.error("Error updating groupName:", err);
-                    alert('ไม่สามารถบันทึกกลุ่มเครือบริษัทได้ กรุณาลองใหม่อีกครั้ง');
+                    showNotification('ไม่สามารถบันทึกกลุ่มเครือบริษัทได้ กรุณาลองใหม่อีกครั้ง', 'error');
+                } finally {
+                    groupInputEl.disabled = false;
                 }
             });
 
@@ -2105,7 +2127,7 @@
         }
         productsList.forEach((pData) => {
             const rawName = pData.companyName || pData.company;
-            addCompany(rawName, '');
+            addCompany(rawName);
         });
     }
 
@@ -2250,7 +2272,7 @@
     // ==========================================
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
-        
+
         const name = document.getElementById('product-name').value.trim();
         const cost = parseFloat(document.getElementById('product-cost').value) || 0;
         const price = parseFloat(document.getElementById('product-price').value) || 0;
@@ -2272,64 +2294,62 @@
                 const company = companySelectHidden.value || companySearchInput.value.trim();
                 if (!company) {
                     alert('กรุณาเลือกชื่อบริษัท');
-                    submitBtn.disabled = false;
                     return;
                 }
 
-                const shouldSyncAffiliated = syncAffiliatedCheckbox.checked;
-
-                if (shouldSyncAffiliated) {
+                if (syncAffiliatedCheckbox.checked) {
                     const currentProduct = products.find(item => item.id === editId);
-                    const currentCompany = currentProduct ? (currentProduct.companyName || currentProduct.company) : company;
+                    const currentCompany = currentProduct
+                        ? (currentProduct.companyName || currentProduct.company)
+                        : company;
                     const currentStrictKey = cleanCompanyName(currentCompany).toLowerCase().replace(/\s+/g, '');
                     const currentGroupName = companyGroupMap.get(currentStrictKey) || '';
-                    const prodNameLower = name.toLowerCase();
+                    const normalizedCurrentGroup = normalizeGroupName(currentGroupName);
 
-                    if (!currentGroupName) {
+                    if (!normalizedCurrentGroup) {
                         alert('บริษัทนี้ยังไม่ได้กำหนดกลุ่มเครือบริษัท (groupName) ในหน้าจัดการบริษัท ไม่สามารถซิงค์ข้ามบริษัทได้');
-                        submitBtn.disabled = false;
                         return;
                     }
 
-                    let batch = db.batch();
-                    let opCount = 0;
-                    let updatedCount = 0;
-
-                    products.forEach(item => {
-                        const itemComp = item.companyName || item.company;
-                        const itemStrictKey = cleanCompanyName(itemComp).toLowerCase().replace(/\s+/g, '');
+                    const targetProducts = products.filter(item => {
+                        if (item.id === editId) return true;
+                        const itemCompany = item.companyName || item.company;
+                        const itemStrictKey = cleanCompanyName(itemCompany).toLowerCase().replace(/\s+/g, '');
                         const itemGroupName = companyGroupMap.get(itemStrictKey) || '';
-                        const itemNameLower = (item.name || '').trim().toLowerCase();
+                        const sameGroup = normalizeGroupName(itemGroupName) === normalizedCurrentGroup;
+                        const sameProductName = String(item.name || '').trim().toLocaleLowerCase('th-TH') ===
+                            name.toLocaleLowerCase('th-TH');
+                        return sameGroup && sameProductName;
+                    });
 
-                        // เปรียบเทียบจาก groupName แทนชื่อรากบริษัทเดิม
-                        if (itemGroupName && itemGroupName === currentGroupName && itemNameLower === prodNameLower) {
-                            const docRef = db.collection('companyProducts').doc(item.id);
-                            batch.update(docRef, {
+                    if (!targetProducts.some(item => item.id === editId)) {
+                        targetProducts.push({ id: editId });
+                    }
+
+                    // แบ่ง batch ไม่เกิน 450 writes ป้องกัน Firestore ปฏิเสธเมื่อมีสมาชิกจำนวนมาก
+                    let updatedCount = 0;
+                    for (let i = 0; i < targetProducts.length; i += 450) {
+                        const batch = db.batch();
+                        targetProducts.slice(i, i + 450).forEach(item => {
+                            const updateData = {
                                 cost: cost,
                                 price: price,
                                 unit: unit,
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                            });
+                            };
+                            // แก้ชื่อ/บริษัทของเอกสารที่กำลังแก้ไขเท่านั้น
+                            if (item.id === editId) {
+                                updateData.companyName = company;
+                                updateData.company = company;
+                                updateData.name = name;
+                            }
+                            batch.update(db.collection('companyProducts').doc(item.id), updateData);
                             updatedCount++;
-                            opCount++;
-                        }
-                    });
-
-                    if (updatedCount === 0) {
-                        await db.collection('companyProducts').doc(editId).update({
-                            companyName: company,
-                            company: company,
-                            name: name,
-                            cost: cost,
-                            price: price,
-                            unit: unit,
-                            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
-                    } else {
                         await batch.commit();
                     }
 
-                    const successMsg = `อัปเดตและซิงค์ราคาสินค้าไปยังกลุ่มเครือ "${currentGroupName}" ทั้งหมด (${updatedCount} รายการ) สำเร็จ!`;
+                    const successMsg = `อัปเดตและซิงค์ราคาไปยังกลุ่มเครือ "${currentGroupName}" สำเร็จ (${updatedCount} รายการ)`;
                     showMessage(successMsg, 'success');
                     showNotification(successMsg, 'success');
                 } else {
@@ -2351,26 +2371,28 @@
             } else if (isMultiSelectMode) {
                 if (persistentCheckedCompanies.size === 0) {
                     alert('กรุณาเลือกอย่างน้อย 1 บริษัท');
-                    submitBtn.disabled = false;
                     return;
                 }
 
-                const batch = db.batch();
-                persistentCheckedCompanies.forEach(compName => {
-                    const newDocRef = db.collection('companyProducts').doc();
-                    batch.set(newDocRef, {
-                        companyName: compName,
-                        company: compName,
-                        name: name,
-                        cost: cost,
-                        price: price,
-                        unit: unit,
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                const selectedCompanies = Array.from(persistentCheckedCompanies);
+                for (let i = 0; i < selectedCompanies.length; i += 450) {
+                    const batch = db.batch();
+                    selectedCompanies.slice(i, i + 450).forEach(compName => {
+                        const newDocRef = db.collection('companyProducts').doc();
+                        batch.set(newDocRef, {
+                            companyName: compName,
+                            company: compName,
+                            name: name,
+                            cost: cost,
+                            price: price,
+                            unit: unit,
+                            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                        });
                     });
-                });
+                    await batch.commit();
+                }
 
-                await batch.commit();
-                const successMsg = `เพิ่มสินค้าไปยัง ${persistentCheckedCompanies.size} บริษัทสำเร็จ!`;
+                const successMsg = `เพิ่มสินค้าไปยัง ${selectedCompanies.length} บริษัทสำเร็จ!`;
                 showMessage(successMsg, 'success');
                 showNotification(successMsg, 'success');
                 form.reset();
@@ -2382,7 +2404,6 @@
                 const company = companySelectHidden.value || companySearchInput.value.trim();
                 if (!company) {
                     alert('กรุณาเลือกชื่อบริษัท');
-                    submitBtn.disabled = false;
                     return;
                 }
 
@@ -2409,15 +2430,19 @@
                 checkDuplicateStatus();
             }
 
-            setTimeout(() => {
-                message.classList.add('hidden');
-            }, 3000);
+            setTimeout(() => message.classList.add('hidden'), 3000);
         } catch (error) {
             console.error("Error saving product:", error);
             const errText = 'บันทึกข้อมูลไม่สำเร็จ กรุณาลองใหม่อีกครั้ง';
             showMessage(errText, 'error');
             showNotification(errText, 'error');
         } finally {
+            submitBtn.disabled = false;
+            if (editingProductId.value) {
+                submitBtn.innerHTML = '<span>💾 บันทึกการแก้ไข</span>';
+            } else {
+                submitBtn.innerHTML = '<span>💾 บันทึกสินค้าเข้าสู่ระบบ</span>';
+            }
             checkDuplicateStatus();
         }
     });
