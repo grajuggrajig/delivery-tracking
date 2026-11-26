@@ -542,10 +542,10 @@
             </div>
 
             <div class="absolute bottom-4 right-4 sm:right-6 z-20">
-                <a href="add a new product.html" class="inline-flex items-center gap-2 px-4 py-2.5 sm:py-3 bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-bold rounded-2xl shadow-lg shadow-amber-500/30 transition-all active:scale-95">
-                    <i class="fa-solid fa-square-plus text-sm sm:text-base"></i>
-                    <span>เพิ่มสินค้าใหม่</span>
-                </a>
+<a id="btn-goto-add-product" href="add a new product.html" class="inline-flex items-center gap-2 px-4 py-2.5 sm:py-3 bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-bold rounded-2xl shadow-lg shadow-amber-500/30 transition-all active:scale-95">
+    <i class="fa-solid fa-square-plus text-sm sm:text-base"></i>
+    <span>เพิ่มสินค้าใหม่</span>
+</a>
             </div>
         </div>
     </div>
@@ -1977,6 +1977,12 @@
             if (!comp) return;
 
             currentOpenCompany = comp;
+
+            // เพิ่มโค้ดส่วนนี้เพื่อผูกชื่อบริษัทเข้ากับปุ่ม "เพิ่มสินค้าใหม่"
+            const addProductBtn = document.getElementById('btn-goto-add-product');
+            if (addProductBtn) {
+                addProductBtn.href = `add a new product.html?company=${encodeURIComponent(comp.companyName)}`;
+            }
 
             document.getElementById('detail-comp-name').textContent = comp.companyName;
             document.getElementById('detail-comp-district').innerHTML = `
