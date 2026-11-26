@@ -431,7 +431,7 @@
         <div class="bg-gradient-to-r from-teal-600 to-cyan-600 px-6 py-4 text-white flex items-center justify-between">
             <div>
                 <h4 class="text-sm font-bold">🏢 จัดการบริษัทและกำหนดกลุ่มเครือบริษัท (Company Group Tagging)</h4>
-                <p class="text-[11px] text-white/85">กำหนด groupName และกดปุ่มบันทึกเพื่อผูกบริษัทในเครือเดียวกัน, จัดการชื่อบริษัท, คัดลอก หรือรวมข้อมูลสินค้า</p>
+                <p class="text-[11px] text-white/85">กำหนด groupName เพื่อผูกบริษัทในเครือเดียวกัน, จัดการชื่อบริษัท, คัดลอก หรือรวมข้อมูลสินค้า</p>
             </div>
             <button type="button" onclick="closeCompanyManager()" class="w-8 h-8 rounded-xl bg-white/15 hover:bg-white/25 flex items-center justify-center text-sm font-bold transition">✕</button>
         </div>
@@ -858,7 +858,7 @@
             .replace(/[^ก-ฮa-z0-9]/g, '');
     }
 
-    function addCompany(name, groupName = undefined) {
+    function addCompany(name, groupName = '') {
         const cleaned = cleanCompanyName(name);
         if (!cleaned) return;
         const strictKey = cleaned.toLowerCase().replace(/\s+/g, '');
@@ -867,8 +867,6 @@
         }
         if (groupName !== undefined && groupName !== null) {
             companyGroupMap.set(strictKey, groupName.trim());
-        } else if (!companyGroupMap.has(strictKey)) {
-            companyGroupMap.set(strictKey, '');
         }
     }
 
@@ -880,7 +878,7 @@
     }
 
     // ==========================================
-    // Real-time Preview สำหรับการซิงค์ราคาตามกลุ่มเครือ
+    // Real-time Preview สำหรับการซิงค์ราคาตามกลุ่มเครือ (Requirement 3)
     // ==========================================
     function updateSyncAffiliatedPreview() {
         const previewEl = document.getElementById('sync-affiliated-preview');
@@ -1593,70 +1591,7 @@
     }
 
     // ==========================================
-    // ฟังก์ชันบันทึกกลุ่มเครือบริษัท (Company Group Tagging) ลง Firestore เมื่อกดปุ่ม "บันทึก"
-    // ==========================================
-    async function saveCompanyGroupName(companyName, strictKey, newGroupName, saveBtnEl, inputEl) {
-        const trimmedGroup = newGroupName.trim();
-        const originalHtml = saveBtnEl.innerHTML;
-
-        try {
-            saveBtnEl.disabled = true;
-            saveBtnEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
-
-            const querySnapshot = await db.collection('companies').get();
-            const batch = db.batch();
-            let matchedCount = 0;
-
-            querySnapshot.forEach(doc => {
-                const data = doc.data();
-                const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
-                if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === strictKey) {
-                    batch.update(doc.ref, {
-                        groupName: trimmedGroup,
-                        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    matchedCount++;
-                }
-            });
-
-            // กรณีชื่อบริษัทนี้มาจากรายการสินค้า (companyProducts) แต่ยังไม่มีเอกสารใน Collection companies ให้สร้างเอกสารใหม่
-            if (matchedCount === 0) {
-                const newCompanyRef = db.collection('companies').doc();
-                batch.set(newCompanyRef, {
-                    name: companyName,
-                    companyName: companyName,
-                    groupName: trimmedGroup,
-                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }
-
-            await batch.commit();
-            companyGroupMap.set(strictKey, trimmedGroup);
-            inputEl.value = trimmedGroup;
-
-            // คืนค่าสไตล์ปุ่มเป็นสถานะปกติที่บันทึกแล้ว
-            saveBtnEl.className = 'px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1 shrink-0 shadow-2xs';
-            saveBtnEl.innerHTML = '<span>💾</span><span>บันทึก</span>';
-
-            updateSyncAffiliatedPreview();
-            showNotification(
-                trimmedGroup
-                    ? `บันทึกกลุ่มเครือ "${trimmedGroup}" ให้บริษัท ${companyName} สำเร็จ`
-                    : `ล้างข้อมูลกลุ่มเครือของบริษัท ${companyName} สำเร็จ`,
-                'success'
-            );
-        } catch (err) {
-            console.error("Error saving groupName:", err);
-            saveBtnEl.innerHTML = originalHtml;
-            alert('ไม่สามารถบันทึกกลุ่มเครือบริษัทได้ กรุณาลองใหม่อีกครั้ง');
-        } finally {
-            saveBtnEl.disabled = false;
-        }
-    }
-
-    // ==========================================
-    // ฟังก์ชันแสดงรายการบริษัทและช่องระบุกลุ่มเครือพร้อมปุ่มบันทึกใน Modal จัดการบริษัท
+    // ฟังก์ชันแสดงและอัปเดตกลุ่มเครือบริษัท (Company Group Tagging) ใน Modal จัดการบริษัท (Requirement 1)
     // ==========================================
     function renderManagerCompanyList(filterText = '') {
         const sortedCompanies = Array.from(companiesMap.values()).sort((a, b) => a.localeCompare(b, 'th'));
@@ -1743,58 +1678,49 @@
             leftGroup.appendChild(checkbox);
             leftGroup.appendChild(infoDiv);
 
-            // ส่วนระบุ/พิมพ์ชื่อกลุ่มเครือบริษัท (groupName) พร้อมปุ่ม "บันทึก" ใน Modal จัดการบริษัท
+            // ส่วนระบุ/พิมพ์ชื่อกลุ่มเครือบริษัท (groupName) ใน Modal จัดการบริษัท
             const groupSection = document.createElement('div');
-            groupSection.className = 'flex flex-col shrink-0';
+            groupSection.className = 'flex items-center gap-2 shrink-0';
+            groupSection.innerHTML = `
+                <div class="flex flex-col">
+                    <label class="text-[10px] font-bold text-slate-500 mb-0.5">🏷️ กลุ่มเครือบริษัท (groupName):</label>
+                    <input type="text" value="${currentGroup}" placeholder="เช่น เครือยูนิซัน" 
+                        class="manager-group-input px-2.5 py-1.5 bg-white border border-teal-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-teal-500 w-40 sm:w-48 font-medium text-teal-900"
+                        data-strict-key="${strictKey}" data-company-name="${name}">
+                </div>
+            `;
 
-            const groupLabel = document.createElement('label');
-            groupLabel.className = 'text-[10px] font-bold text-slate-500 mb-0.5';
-            groupLabel.textContent = '🏷️ กลุ่มเครือบริษัท (groupName):';
+            const groupInputEl = groupSection.querySelector('.manager-group-input');
+            groupInputEl.addEventListener('change', async (e) => {
+                const newGroupName = e.target.value.trim();
+                companyGroupMap.set(strictKey, newGroupName);
 
-            const groupInputRow = document.createElement('div');
-            groupInputRow.className = 'flex items-center gap-1.5';
+                try {
+                    const querySnapshot = await db.collection('companies').get();
+                    let batch = db.batch();
+                    let updated = false;
 
-            const groupInputEl = document.createElement('input');
-            groupInputEl.type = 'text';
-            groupInputEl.value = currentGroup;
-            groupInputEl.placeholder = 'เช่น เครือยูนิซัน';
-            groupInputEl.className = 'manager-group-input px-2.5 py-1.5 bg-white border border-teal-200 rounded-xl text-xs outline-none focus:ring-2 focus:ring-teal-500 w-36 sm:w-44 font-medium text-teal-900';
+                    querySnapshot.forEach(doc => {
+                        const data = doc.data();
+                        const rawName = data.name || data.companyName || data.company || data.title || data.customerName;
+                        if (cleanCompanyName(rawName).toLowerCase().replace(/\s+/g, '') === strictKey) {
+                            batch.update(doc.ref, {
+                                groupName: newGroupName,
+                                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                            });
+                            updated = true;
+                        }
+                    });
 
-            const saveGroupBtn = document.createElement('button');
-            saveGroupBtn.type = 'button';
-            saveGroupBtn.className = 'px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1 shrink-0 shadow-2xs';
-            saveGroupBtn.title = 'บันทึกชื่อกลุ่มเครือบริษัทนี้ลงฐานข้อมูล Firestore';
-            saveGroupBtn.innerHTML = '<span>💾</span><span>บันทึก</span>';
-
-            // ไฮไลต์ปุ่มเป็นสีส้มเตือนหากมีการแก้ไขข้อความแต่ยังไม่ได้กดบันทึก
-            groupInputEl.addEventListener('input', () => {
-                const savedVal = companyGroupMap.get(strictKey) || '';
-                if (groupInputEl.value.trim() !== savedVal) {
-                    saveGroupBtn.className = 'px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition flex items-center gap-1 shrink-0 shadow-xs';
-                    saveGroupBtn.innerHTML = '<span>💾</span><span>บันทึก*</span>';
-                } else {
-                    saveGroupBtn.className = 'px-2.5 py-1.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-semibold transition flex items-center gap-1 shrink-0 shadow-2xs';
-                    saveGroupBtn.innerHTML = '<span>💾</span><span>บันทึก</span>';
+                    if (updated) {
+                        await batch.commit();
+                        showNotification(`บันทึกกลุ่มเครือ "${newGroupName || 'ไม่มีกลุ่ม'}" สำหรับบริษัท ${name} สำเร็จ`, 'success');
+                    }
+                } catch (err) {
+                    console.error("Error updating groupName:", err);
+                    alert('ไม่สามารถบันทึกกลุ่มเครือบริษัทได้ กรุณาลองใหม่อีกครั้ง');
                 }
             });
-
-            // รองรับการกดปุ่ม Enter ในช่องกรอกเพื่อบันทึกได้ทันที
-            groupInputEl.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    saveCompanyGroupName(name, strictKey, groupInputEl.value, saveGroupBtn, groupInputEl);
-                }
-            });
-
-            saveGroupBtn.addEventListener('click', () => {
-                saveCompanyGroupName(name, strictKey, groupInputEl.value, saveGroupBtn, groupInputEl);
-            });
-
-            groupInputRow.appendChild(groupInputEl);
-            groupInputRow.appendChild(saveGroupBtn);
-
-            groupSection.appendChild(groupLabel);
-            groupSection.appendChild(groupInputRow);
 
             const actionsDiv = document.createElement('div');
             actionsDiv.className = 'flex items-center gap-1.5 shrink-0 flex-wrap justify-end';
@@ -2170,7 +2096,7 @@
         }
         productsList.forEach((pData) => {
             const rawName = pData.companyName || pData.company;
-            addCompany(rawName);
+            addCompany(rawName, '');
         });
     }
 
@@ -2278,6 +2204,7 @@
         multiSelectToggleLabel.classList.add('opacity-50', 'pointer-events-none');
         duplicateWarning.classList.add('hidden');
         
+        // แสดงกล่องตัวเลือกซิงค์กลุ่มเครือบริษัทเฉพาะตอนแก้ไข พร้อมอัปเดต Preview Real-time
         syncAffiliatedGroupContainer.classList.remove('hidden');
         syncAffiliatedCheckbox.checked = false;
         updateSyncAffiliatedPreview();
@@ -2310,7 +2237,7 @@
     }
 
     // ==========================================
-    // บันทึกและซิงค์ราคาสินค้าข้ามบริษัทในกลุ่มเครือเดียวกัน (groupName)
+    // ปรับเงื่อนไขการซิงค์ราคาให้เช็กจาก "รหัสกลุ่ม" (groupName) แทน "ชื่อราก" (Requirement 2)
     // ==========================================
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -2365,6 +2292,7 @@
                         const itemGroupName = companyGroupMap.get(itemStrictKey) || '';
                         const itemNameLower = (item.name || '').trim().toLowerCase();
 
+                        // เปรียบเทียบจาก groupName แทนชื่อรากบริษัทเดิม
                         if (itemGroupName && itemGroupName === currentGroupName && itemNameLower === prodNameLower) {
                             const docRef = db.collection('companyProducts').doc(item.id);
                             batch.update(docRef, {
