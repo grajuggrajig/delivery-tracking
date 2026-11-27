@@ -260,7 +260,7 @@
                     <label class="flex items-start gap-2 cursor-pointer">
                         <input type="checkbox" id="sync-affiliated-checkbox" class="mt-0.5 rounded text-teal-600 focus:ring-teal-500 w-4 h-4">
                         <span class="text-[11px] text-teal-900 leading-snug font-medium">
-                            <b>🔄 อัปเดตราคาพร้อมกันทุกบริษัทในเครือ:</b> เปลี่ยนแปลงราคา/ต้นทุนนี้ให้สินค้าชื่อเดียวกันทุกบริษัทที่มีรหัสกลุ่มเครือเดียวกันโดยอัตโนมัติ
+                            <b>🔄 อัปเดตข้อมูลพร้อมกันทุกบริษัทในเครือ:</b> เปลี่ยนแปลงรายการสินค้า (ชื่อ, ราคา, หน่วย, ต้นทุน) นี้ให้ตรงกันทุกบริษัทที่มีรหัสกลุ่มเครือเดียวกันโดยอัตโนมัติ
                         </span>
                     </label>
                     <div id="sync-affiliated-preview" class="hidden text-[11px] font-semibold text-teal-800 pl-6"></div>
@@ -725,7 +725,7 @@
         setTimeout(() => {
             toast.style.opacity = '0';
             toast.style.transform = 'translateY(10px)';
-            setTimeout(() => toast.remove(), 3005);
+            setTimeout(() => toast.remove(), 300);
         }, 3500);
     }
 
@@ -869,8 +869,6 @@
         if (!companiesMap.has(strictKey)) {
             companiesMap.set(strictKey, cleaned);
         }
-        // อย่าให้ชื่อบริษัทที่อ่านจาก companyProducts (ไม่มี groupName)
-        // เขียนทับ groupName ที่อ่านมาจาก companies
         if (groupName !== undefined && groupName !== null) {
             companyGroupMap.set(strictKey, String(groupName).trim());
         }
@@ -884,7 +882,7 @@
     }
 
     // ==========================================
-    // Real-time Preview สำหรับการซิงค์ราคาตามกลุ่มเครือ (Requirement 3)
+    // Real-time Preview สำหรับการซิงค์ราคาตามกลุ่มเครือ
     // ==========================================
     function updateSyncAffiliatedPreview() {
         const previewEl = document.getElementById('sync-affiliated-preview');
@@ -921,7 +919,6 @@
             }
         });
 
-        // แสดงบริษัทปัจจุบันด้วย แม้เอกสาร companies ของบริษัทนั้นยังไม่ถูกสร้าง
         if (currentCompany && !groupCompanies.some(name =>
             cleanCompanyName(name).toLowerCase().replace(/\s+/g, '') === currentStrictKey
         )) {
@@ -929,7 +926,7 @@
         }
 
         groupCompanies.sort((a, b) => a.localeCompare(b, 'th'));
-        previewEl.textContent = `จะอัปเดตราคาให้: ${groupCompanies.join(', ')} (${groupCompanies.length} บริษัท)`;
+        previewEl.textContent = `จะอัปเดตข้อมูลพร้อมกัน: ${groupCompanies.join(', ')} (${groupCompanies.length} บริษัท)`;
         previewEl.className = 'text-[11px] font-semibold text-teal-800 pl-6';
         previewEl.classList.remove('hidden');
     }
@@ -937,7 +934,7 @@
     syncAffiliatedCheckbox.addEventListener('change', updateSyncAffiliatedPreview);
 
     // ==========================================
-    // ระบบคัดลอกรายการสินค้า (รองรับเลือกหลายบริษัทแม่และหลายบริษัทลูก + ค้นหา)
+    // ระบบคัดลอกรายการสินค้า
     // ==========================================
     function updateManagerSelectionUI() {
         const count = managerSelectedTargetCompanies.size;
@@ -1604,9 +1601,6 @@
         return dupSet;
     }
 
-    // ==========================================
-    // ฟังก์ชันแสดงและอัปเดตกลุ่มเครือบริษัท (Company Group Tagging) ใน Modal จัดการบริษัท (Requirement 1)
-    // ==========================================
     function renderManagerCompanyList(filterText = '') {
         const sortedCompanies = Array.from(companiesMap.values()).sort((a, b) => a.localeCompare(b, 'th'));
         const duplicateFuzzyKeys = getDuplicateFuzzyKeysSet();
@@ -1692,7 +1686,6 @@
             leftGroup.appendChild(checkbox);
             leftGroup.appendChild(infoDiv);
 
-            // ส่วนระบุ/พิมพ์ชื่อกลุ่มเครือบริษัท (groupName) ใน Modal จัดการบริษัท
             const groupSection = document.createElement('div');
             groupSection.className = 'flex items-center gap-2 shrink-0';
             groupSection.innerHTML = `
@@ -1727,7 +1720,6 @@
                             updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                         });
                     } else {
-                        // Firestore จำกัด 500 writes ต่อ batch จึงแบ่งชุดละ 450 เพื่อเผื่อความปลอดภัย
                         for (let i = 0; i < matchingDocs.length; i += 450) {
                             const batch = db.batch();
                             matchingDocs.slice(i, i + 450).forEach(doc => {
@@ -2235,7 +2227,6 @@
         multiSelectToggleLabel.classList.add('opacity-50', 'pointer-events-none');
         duplicateWarning.classList.add('hidden');
         
-        // แสดงกล่องตัวเลือกซิงค์กลุ่มเครือบริษัทเฉพาะตอนแก้ไข พร้อมอัปเดต Preview Real-time
         syncAffiliatedGroupContainer.classList.remove('hidden');
         syncAffiliatedCheckbox.checked = false;
         updateSyncAffiliatedPreview();
@@ -2268,7 +2259,7 @@
     }
 
     // ==========================================
-    // ปรับเงื่อนไขการซิงค์ราคาให้เช็กจาก "รหัสกลุ่ม" (groupName) แทน "ชื่อราก" (Requirement 2)
+    // ฟังก์ชันบันทึกและอัปเดตสินค้า (รองรับการซิงค์กลุ่มเครือ ครบถ้วนทุกรายละเอียด และป้องกันการตกหล่น)
     // ==========================================
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
@@ -2299,6 +2290,7 @@
 
                 if (syncAffiliatedCheckbox.checked) {
                     const currentProduct = products.find(item => item.id === editId);
+                    const originalProductName = currentProduct ? (currentProduct.name || '').trim().toLocaleLowerCase('th-TH') : '';
                     const currentCompany = currentProduct
                         ? (currentProduct.companyName || currentProduct.company)
                         : company;
@@ -2311,37 +2303,39 @@
                         return;
                     }
 
+                    // ค้นหาสินค้าทั้งหมดในกลุ่มเครือที่ตรงกับชื่อเดิม หรือชื่อใหม่ เพื่อป้องกันการตกหล่นของรายการที่กำลังแก้ไข
                     const targetProducts = products.filter(item => {
                         if (item.id === editId) return true;
                         const itemCompany = item.companyName || item.company;
                         const itemStrictKey = cleanCompanyName(itemCompany).toLowerCase().replace(/\s+/g, '');
                         const itemGroupName = companyGroupMap.get(itemStrictKey) || '';
                         const sameGroup = normalizeGroupName(itemGroupName) === normalizedCurrentGroup;
-                        const sameProductName = String(item.name || '').trim().toLocaleLowerCase('th-TH') ===
-                            name.toLocaleLowerCase('th-TH');
-                        return sameGroup && sameProductName;
+                        
+                        const itemNameLower = String(item.name || '').trim().toLocaleLowerCase('th-TH');
+                        const sameOriginalName = originalProductName && itemNameLower === originalProductName;
+                        const sameNewName = itemNameLower === name.toLocaleLowerCase('th-TH');
+                        
+                        return sameGroup && (sameOriginalName || sameNewName);
                     });
 
                     if (!targetProducts.some(item => item.id === editId)) {
                         targetProducts.push({ id: editId });
                     }
 
-                    // แบ่ง batch ไม่เกิน 450 writes ป้องกัน Firestore ปฏิเสธเมื่อมีสมาชิกจำนวนมาก
                     let updatedCount = 0;
                     for (let i = 0; i < targetProducts.length; i += 450) {
                         const batch = db.batch();
                         targetProducts.slice(i, i + 450).forEach(item => {
                             const updateData = {
+                                name: name,
                                 cost: cost,
                                 price: price,
                                 unit: unit,
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                             };
-                            // แก้ชื่อ/บริษัทของเอกสารที่กำลังแก้ไขเท่านั้น
                             if (item.id === editId) {
                                 updateData.companyName = company;
                                 updateData.company = company;
-                                updateData.name = name;
                             }
                             batch.update(db.collection('companyProducts').doc(item.id), updateData);
                             updatedCount++;
@@ -2349,7 +2343,7 @@
                         await batch.commit();
                     }
 
-                    const successMsg = `อัปเดตและซิงค์ราคาไปยังกลุ่มเครือ "${currentGroupName}" สำเร็จ (${updatedCount} รายการ)`;
+                    const successMsg = `อัปเดตและซิงค์ข้อมูล (ชื่อ, ราคา, หน่วย, ต้นทุน) ไปยังกลุ่มเครือ "${currentGroupName}" สำเร็จ (${updatedCount} รายการ)`;
                     showMessage(successMsg, 'success');
                     showNotification(successMsg, 'success');
                 } else {
@@ -2474,7 +2468,7 @@
     document.getElementById('clear-all-btn').addEventListener('click', function(e) {
         e.preventDefault();
         requestPasswordVerification(
-            '⚠️ คำเตือน: คุณกำลังจะล้างข้อมูลสินค้าทั้งหมดในระบบ (Firestore) อย่างถาวร ไม่สามารถกู้คืนได้\n\nกรุณากรอกรหัสผ่านเข้าสู่ระบบเพื่อยืนยัน:',
+            '⚠️ คำเตือน: คุณกำลังจะลบข้อมูลสินค้าทั้งหมดในระบบ (Firestore) อย่างถาวร ไม่สามารถกู้คืนได้\n\nกรุณากรอกรหัสผ่านเข้าสู่ระบบเพื่อยืนยัน:',
             async () => {
                 try {
                     const snapshot = await db.collection('companyProducts').get();
@@ -2522,32 +2516,31 @@
         }
     });
 	
-	// ตรวจสอบชื่อบริษัทจาก URL Parameter เมื่อเปิดหน้าเว็บ
-window.addEventListener('DOMContentLoaded', () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const prefillCompany = urlParams.get('company');
-    
-    if (prefillCompany) {
-        const decodedCompany = decodeURIComponent(prefillCompany);
+	window.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const prefillCompany = urlParams.get('company');
         
-        const checkAndSetCompany = setInterval(() => {
-            if (companiesMap.size > 0 || products.length > 0) {
-                clearInterval(checkAndSetCompany);
-                
-                companySearchInput.value = decodedCompany;
-                companySelectHidden.value = decodedCompany;
-                
-                filterCompany.value = decodedCompany;
-                currentPage = 1;
-                renderTable();
-                checkDuplicateStatus();
-                updateSyncAffiliatedPreview();
-                
-                console.log("Pre-filled company from index:", decodedCompany);
-            }
-        }, 100);
-    }
-});
+        if (prefillCompany) {
+            const decodedCompany = decodeURIComponent(prefillCompany);
+            
+            const checkAndSetCompany = setInterval(() => {
+                if (companiesMap.size > 0 || products.length > 0) {
+                    clearInterval(checkAndSetCompany);
+                    
+                    companySearchInput.value = decodedCompany;
+                    companySelectHidden.value = decodedCompany;
+                    
+                    filterCompany.value = decodedCompany;
+                    currentPage = 1;
+                    renderTable();
+                    checkDuplicateStatus();
+                    updateSyncAffiliatedPreview();
+                    
+                    console.log("Pre-filled company from index:", decodedCompany);
+                }
+            }, 100);
+        }
+    });
 </script>
 </body>
 </html>
