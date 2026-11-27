@@ -2311,48 +2311,37 @@
                         return;
                     }
 
-                    // ใช้ชื่อสินค้าเดิมของเอกสารที่กำลังแก้ไขเป็นตัวระบุรายการในเครือ
-                    // เพื่อให้การเปลี่ยนชื่อสินค้า (Rename) ซิงค์ไปยังรายการเดิมของทุกบริษัทในกลุ่มได้ด้วย
-                    const originalProductName = String(
-                        currentProduct && currentProduct.name ? currentProduct.name : ''
-                    ).trim().toLocaleLowerCase('th-TH');
-
-                    if (!originalProductName) {
-                        alert('ไม่พบชื่อสินค้าเดิมสำหรับจับคู่รายการในกลุ่มเครือ กรุณายกเลิกแล้วเปิดแก้ไขสินค้าอีกครั้ง');
-                        return;
-                    }
-
                     const targetProducts = products.filter(item => {
+                        if (item.id === editId) return true;
                         const itemCompany = item.companyName || item.company;
-                        const itemStrictKey = cleanCompanyName(itemCompany).toLowerCase().replace(/\\s+/g, '');
+                        const itemStrictKey = cleanCompanyName(itemCompany).toLowerCase().replace(/\s+/g, '');
                         const itemGroupName = companyGroupMap.get(itemStrictKey) || '';
                         const sameGroup = normalizeGroupName(itemGroupName) === normalizedCurrentGroup;
-                        const sameOriginalProductName = String(item.name || '').trim().toLocaleLowerCase('th-TH') ===
-                            originalProductName;
-                        return sameGroup && sameOriginalProductName;
+                        const sameProductName = String(item.name || '').trim().toLocaleLowerCase('th-TH') ===
+                            name.toLocaleLowerCase('th-TH');
+                        return sameGroup && sameProductName;
                     });
 
                     if (!targetProducts.some(item => item.id === editId)) {
-                        targetProducts.push(currentProduct || { id: editId });
+                        targetProducts.push({ id: editId });
                     }
 
                     // แบ่ง batch ไม่เกิน 450 writes ป้องกัน Firestore ปฏิเสธเมื่อมีสมาชิกจำนวนมาก
-                    // เมื่อเปลี่ยนชื่อสินค้า จะเปลี่ยนชื่อให้ทุกรายการที่จับคู่จากชื่อเดิมในกลุ่มเดียวกัน
                     let updatedCount = 0;
                     for (let i = 0; i < targetProducts.length; i += 450) {
                         const batch = db.batch();
                         targetProducts.slice(i, i + 450).forEach(item => {
                             const updateData = {
-                                name: name,
                                 cost: cost,
                                 price: price,
                                 unit: unit,
                                 updatedAt: firebase.firestore.FieldValue.serverTimestamp()
                             };
-                            // เปลี่ยนชื่อบริษัทเฉพาะเอกสารที่กำลังแก้ไข ไม่เปลี่ยนบริษัทของรายการอื่นในเครือ
+                            // แก้ชื่อ/บริษัทของเอกสารที่กำลังแก้ไขเท่านั้น
                             if (item.id === editId) {
                                 updateData.companyName = company;
                                 updateData.company = company;
+                                updateData.name = name;
                             }
                             batch.update(db.collection('companyProducts').doc(item.id), updateData);
                             updatedCount++;
