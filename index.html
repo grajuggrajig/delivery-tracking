@@ -201,18 +201,18 @@
                                     </div>
                                     <span>ใบเสนอราคา (Quotation)</span>
                                 </a>
-<a href="temporary-bill.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
-    <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-        <i class="fa-solid fa-receipt"></i>
-    </div>
-    <span>บิลชั่วคราว (Temporary Bill)</span>
-</a>
-								<a href="temporary_delivery.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
-    <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
-        <i class="fa-solid fa-file-invoice"></i>
-    </div>
-    <span>ใบส่งของชั่วคราว (temporary_delivery)</span>
-</a>
+                                <a href="temporary-bill.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
+                                    <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-receipt"></i>
+                                    </div>
+                                    <span>บิลชั่วคราว (Temporary Bill)</span>
+                                </a>
+                                <a href="temporary_delivery.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
+                                    <div class="w-7 h-7 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-file-invoice"></i>
+                                    </div>
+                                    <span>ใบส่งของชั่วคราว (temporary_delivery)</span>
+                                </a>
                                 <a href="pdf_manager_ready.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors">
                                     <div class="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
                                         <i class="fa-solid fa-file-pdf"></i>
@@ -225,18 +225,18 @@
                                     </div>
                                     <span>ระบบแจ้งเตือน / REM</span>
                                 </a>
-<a href="user management.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
-    <div class="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
-        <i class="fa-solid fa-user-shield"></i>
-    </div>
-    <span>ระบบตรวจสอบสิทธิ์ Admin</span>
-</a>
-								<a href="firebase_cleanup.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
-									<div class="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
-									<i class="fa-solid fa-broom"></i>
-									</div>
-									<span>ล้างข้อมูล cleanup</span>
-								</a>
+                                <a href="user management.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
+                                    <div class="w-7 h-7 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-user-shield"></i>
+                                    </div>
+                                    <span>ระบบตรวจสอบสิทธิ์ Admin</span>
+                                </a>
+                                <a href="firebase_cleanup.html" class="flex items-center gap-3 px-4 py-2 text-xs font-medium text-slate-700 hover:bg-teal-50 hover:text-teal-700 transition-colors rounded-xl">
+                                    <div class="w-7 h-7 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+                                        <i class="fa-solid fa-broom"></i>
+                                    </div>
+                                    <span>ล้างข้อมูล cleanup</span>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -329,9 +329,14 @@
             </div>
             <h3 class="text-sm sm:text-base font-bold text-slate-800 mb-1">ไม่พบข้อมูลบริษัทหรือลูกค้า</h3>
             <p class="text-xs sm:text-sm text-slate-500 mb-5">ยังไม่มีข้อมูลในระบบ หรือไม่พบรายการที่ตรงกับคำค้นหาของคุณ</p>
-            <button onclick="openCompanyModal()" class="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-2xl transition-colors shadow-sm">
-                <i class="fa-solid fa-plus"></i> เพิ่มข้อมูลบริษัทแรก
-            </button>
+            <div class="flex flex-wrap items-center justify-center gap-2.5">
+                <button id="btn-reset-search" onclick="resetSearchAndFilters()" class="hidden inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-2xl transition-colors shadow-2xs">
+                    <i class="fa-solid fa-arrow-left"></i> กลับ / ล้างการค้นหา
+                </button>
+                <button onclick="openCompanyModal()" class="inline-flex items-center gap-2 px-4 py-2 text-xs sm:text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-2xl transition-colors shadow-sm">
+                    <i class="fa-solid fa-plus"></i> เพิ่มข้อมูลบริษัทแรก
+                </button>
+            </div>
         </div>
 
         <!-- Master-Detail Layout -->
@@ -542,10 +547,10 @@
             </div>
 
             <div class="absolute bottom-4 right-4 sm:right-6 z-20">
-<a id="btn-goto-add-product" href="add a new product.html" class="inline-flex items-center gap-2 px-4 py-2.5 sm:py-3 bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-bold rounded-2xl shadow-lg shadow-amber-500/30 transition-all active:scale-95">
-    <i class="fa-solid fa-square-plus text-sm sm:text-base"></i>
-    <span>เพิ่มสินค้าใหม่</span>
-</a>
+                <a id="btn-goto-add-product" href="add a new product.html" class="inline-flex items-center gap-2 px-4 py-2.5 sm:py-3 bg-amber-500 hover:bg-amber-600 text-white text-xs sm:text-sm font-bold rounded-2xl shadow-lg shadow-amber-500/30 transition-all active:scale-95">
+                    <i class="fa-solid fa-square-plus text-sm sm:text-base"></i>
+                    <span>เพิ่มสินค้าใหม่</span>
+                </a>
             </div>
         </div>
     </div>
@@ -694,10 +699,8 @@
                     }
                 }
 
-                // ปิด Modal ยืนยันรหัสผ่านก่อนเรียกใช้คำสั่งถัดไป
                 closePasswordConfirmModal();
                 
-                // ดำเนินการฟังก์ชันที่ค้างไว้ทันที
                 if (pendingActionCallback) {
                     const callbackToRun = pendingActionCallback;
                     pendingActionCallback = null;
@@ -774,9 +777,6 @@
                 auth = firebase.auth();
                 db = firebase.firestore();
 
-                // แก้ปัญหา Firestore Listen WebChannel ตอบกลับ 404 / transport errored
-                // โดยบังคับใช้ Long Polling แทนการเชื่อมต่อแบบ streaming
-                // ต้องกำหนดก่อนเริ่มอ่าน/เขียนข้อมูล Firestore ครั้งแรก
                 db.settings({
                     experimentalForceLongPolling: true,
                     useFetchStreams: false
@@ -1382,6 +1382,14 @@
             if (list.length === 0) {
                 layout.classList.add('hidden');
                 emptyState.classList.remove('hidden');
+
+                const hasActiveFilter = document.getElementById('search-input').value.trim() !== '' ||
+                                        document.getElementById('district-filter').value !== '';
+                const resetBtn = document.getElementById('btn-reset-search');
+                if (resetBtn) {
+                    if (hasActiveFilter) resetBtn.classList.remove('hidden');
+                    else resetBtn.classList.add('hidden');
+                }
                 return;
             }
 
@@ -1978,7 +1986,6 @@
 
             currentOpenCompany = comp;
 
-            // เพิ่มโค้ดส่วนนี้เพื่อผูกชื่อบริษัทเข้ากับปุ่ม "เพิ่มสินค้าใหม่"
             const addProductBtn = document.getElementById('btn-goto-add-product');
             if (addProductBtn) {
                 addProductBtn.href = `add a new product.html?company=${encodeURIComponent(comp.companyName)}`;
@@ -1992,7 +1999,6 @@
             document.getElementById('detail-comp-address').textContent = comp.address || 'ยังไม่ได้ระบุที่อยู่';
             document.getElementById('detail-comp-notes').textContent = comp.notes || 'ไม่มีหมายเหตุเพิ่มเติม';
 
-            // ตั้งค่าปุ่มแก้ไขใน Detail Modal ไม่ให้ Modal ซ้อนทับกัน
             document.getElementById('detail-edit-btn').onclick = () => {
                 closeDetailModal();
                 requestPasswordAndConfirm(() => openCompanyModal(encodedCompanyName));
@@ -2113,8 +2119,11 @@
 
             if (filtered.length === 0) {
                 spList.innerHTML = `
-                    <div class="col-span-full py-6 text-center text-xs text-slate-400 bg-amber-50/30 rounded-2xl border border-dashed border-amber-200">
-                        ไม่พบรายการสินค้าที่ตรงกับคำค้นหา "${escapeHtml(searchInput.value)}"
+                    <div class="col-span-full py-6 px-4 text-center text-xs text-slate-500 bg-amber-50/40 rounded-2xl border border-dashed border-amber-200 space-y-3">
+                        <p>ไม่พบรายการสินค้าที่ตรงกับคำค้นหา "${escapeHtml(searchInput.value)}"</p>
+                        <button type="button" onclick="clearSpecialSearch()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-white hover:bg-amber-50 text-amber-800 font-semibold rounded-xl border border-amber-200 shadow-2xs transition-colors">
+                            <i class="fa-solid fa-arrow-left"></i> กลับไปแสดงรายการทั้งหมด
+                        </button>
                     </div>
                 `;
                 return;
@@ -2155,6 +2164,15 @@
         function clearSearch() {
             const input = document.getElementById('search-input');
             input.value = '';
+            document.getElementById('clear-search').classList.add('hidden');
+            rebuildDirectoryFromSources();
+        }
+
+        function resetSearchAndFilters() {
+            const input = document.getElementById('search-input');
+            const districtFilter = document.getElementById('district-filter');
+            if (input) input.value = '';
+            if (districtFilter) districtFilter.value = '';
             document.getElementById('clear-search').classList.add('hidden');
             rebuildDirectoryFromSources();
         }
