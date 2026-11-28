@@ -548,9 +548,14 @@
                             <i class="fa-solid fa-clock-rotate-left text-cyan-600"></i>
                             <span>ประวัติบิลจัดส่ง (<span id="detail-history-count">0</span> บิล)</span>
                         </h3>
-                        <span id="detail-total-spent" class="text-xs font-bold px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            ยอดรวม ฿0
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="openAddDeliveryBillModal()" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl transition-colors shadow-2xs">
+                                <i class="fa-solid fa-plus"></i> เพิ่มบิลจัดส่ง
+                            </button>
+                            <span id="detail-total-spent" class="text-xs font-bold px-3 py-1 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                ยอดรวม ฿0
+                            </span>
+                        </div>
                     </div>
 
                     <div id="detail-history-list" class="space-y-2.5 sm:space-y-3"></div>
@@ -563,6 +568,84 @@
                     <span>เพิ่มสินค้าใหม่</span>
                 </a>
             </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: Add / Edit Delivery Bill -->
+    <div id="delivery-bill-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-slate-900/55 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4">
+        <div class="bg-white/95 backdrop-blur-xl rounded-t-3xl sm:rounded-3xl shadow-2xl border border-white w-full max-w-xl overflow-hidden modal-animate sm:my-8 max-h-[92vh] flex flex-col">
+            <div class="px-5 py-4 bg-slate-50/90 border-b border-slate-200/80 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-8 h-8 rounded-xl bg-teal-600 text-white flex items-center justify-center shadow-2xs shrink-0">
+                        <i class="fa-solid fa-file-invoice text-sm"></i>
+                    </div>
+                    <h2 id="modal-delivery-title" class="text-sm sm:text-lg font-bold text-slate-900 truncate">บันทึกบิลจัดส่งใหม่</h2>
+                </div>
+                <button onclick="closeDeliveryBillModal()" class="w-8 h-8 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-200/70 flex items-center justify-center transition-colors shrink-0">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <form id="delivery-bill-form" class="p-4 sm:p-6 overflow-y-auto space-y-4 flex-1" onsubmit="event.preventDefault(); saveDeliveryBillData();">
+                <input type="hidden" id="edit-delivery-id">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">เลขที่บิล / ใบจัดส่ง <span class="text-rose-500">*</span></label>
+                        <input type="text" id="bill-no" required placeholder="เช่น B1001"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">วันที่จัดส่ง <span class="text-rose-500">*</span></label>
+                        <input type="date" id="bill-date" required
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อผู้ติดต่อ / ลูกค้า</label>
+                        <input type="text" id="bill-customer-name" placeholder="เช่น คุณสมชาย"
+                            class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">สถานะบิล</label>
+                        <select id="bill-status" class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 outline-none cursor-pointer">
+                            <option value="สำเร็จ">สำเร็จ</option>
+                            <option value="รอดำเนินการ">รอดำเนินการ</option>
+                            <option value="กำลังจัดส่ง">กำลังจัดส่ง</option>
+                            <option value="ยกเลิก">ยกเลิก</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="space-y-3 pt-2">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold uppercase tracking-wider text-teal-600 flex items-center gap-1.5">
+                            <i class="fa-solid fa-boxes-stacked"></i> รายการสินค้าในบิล
+                        </h3>
+                        <button type="button" onclick="addBillItemRow()" class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-xl transition-colors">
+                            <i class="fa-solid fa-plus"></i> เพิ่มสินค้า
+                        </button>
+                    </div>
+                    <div id="bill-items-list" class="space-y-2"></div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">หมายเหตุ / ข้อมูลเพิ่มเติม</label>
+                    <input type="text" id="bill-note" placeholder="เช่น จัดส่งเรียบร้อยแล้ว"
+                        class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:bg-white focus:border-teal-500 outline-none">
+                </div>
+
+                <div class="pt-3 border-t border-slate-200 flex items-center justify-end gap-2.5 sticky bottom-0 bg-white/95 py-2">
+                    <button type="button" onclick="closeDeliveryBillModal()" class="px-4 py-2.5 text-xs sm:text-sm font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors">
+                        ยกเลิก
+                    </button>
+                    <button type="submit" id="btn-save-bill" class="px-5 py-2.5 text-xs sm:text-sm font-semibold text-white bg-teal-600 hover:bg-teal-700 rounded-xl shadow-sm transition-colors flex items-center gap-2">
+                        <i class="fa-solid fa-floppy-disk"></i> บันทึกบิลจัดส่ง
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -1887,6 +1970,148 @@
             } finally {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> บันทึกข้อมูล';
+            }
+        }
+
+        // =========================================================================
+        // Delivery Bill Modal Handlers
+        // =========================================================================
+        function openAddDeliveryBillModal() {
+            if (!currentOpenCompany) return;
+            const modal = document.getElementById('delivery-bill-modal');
+            document.getElementById('delivery-bill-form').reset();
+            document.getElementById('edit-delivery-id').value = '';
+            document.getElementById('modal-delivery-title').textContent = `บันทึกบิลจัดส่งใหม่ (${currentOpenCompany.companyName})`;
+            
+            // Set today's date as default in YYYY-MM-DD
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('bill-date').value = today;
+
+            const itemsContainer = document.getElementById('bill-items-list');
+            itemsContainer.innerHTML = '';
+            addBillItemRow();
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeDeliveryBillModal() {
+            document.getElementById('delivery-bill-modal').classList.add('hidden');
+        }
+
+        function addBillItemRow(item = {}) {
+            const container = document.getElementById('bill-items-list');
+            const rowId = 'bill-item-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+
+            const div = document.createElement('div');
+            div.id = rowId;
+            div.className = 'p-3 rounded-2xl bg-slate-50 border border-slate-200 space-y-2 relative';
+            div.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <span class="text-[11px] font-semibold text-slate-500">รายการสินค้า</span>
+                    <button type="button" onclick="const r = document.getElementById('${rowId}'); if(r) r.remove();" class="text-xs text-rose-500 hover:text-rose-700">
+                        <i class="fa-solid fa-trash-can"></i> ลบ
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                    <div class="sm:col-span-5">
+                        <input type="text" name="bi_name" value="${escapeHtml(item.name || '')}" placeholder="ชื่อสินค้า" 
+                            class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:border-teal-500 outline-none">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <input type="number" name="bi_qty" value="${escapeHtml(item.qty || 1)}" min="1" placeholder="จำนวน" 
+                            class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:border-teal-500 outline-none">
+                    </div>
+                    <div class="sm:col-span-2">
+                        <input type="text" name="bi_unit" value="${escapeHtml(item.unit || 'ชิ้น')}" placeholder="หน่วย" 
+                            class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:border-teal-500 outline-none">
+                    </div>
+                    <div class="sm:col-span-3">
+                        <input type="number" name="bi_price" value="${escapeHtml(item.price || 0)}" min="0" step="0.01" placeholder="ราคาต่อหน่วย" 
+                            class="w-full px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs focus:border-teal-500 outline-none">
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+        }
+
+        async function saveDeliveryBillData() {
+            if (!db || !currentUser || !currentOpenCompany) {
+                showToast('กรุณาเลือกบริษัทและเข้าสู่ระบบก่อนบันทึกบิล', 'error');
+                return;
+            }
+
+            const billNo = document.getElementById('bill-no').value.trim();
+            const billDateInput = document.getElementById('bill-date').value;
+            const customerName = document.getElementById('bill-customer-name').value.trim();
+            const status = document.getElementById('bill-status').value;
+            const note = document.getElementById('bill-note').value.trim();
+
+            if (!billNo || !billDateInput) {
+                showToast('กรุณากรอกเลขที่บิลและเลือกวันที่จัดส่ง', 'error');
+                return;
+            }
+
+            // Format date for display in Thai format if needed or store as YYYY-MM-DD / DD/MM/YYYY
+            const dateObj = new Date(billDateInput);
+            const formattedDate = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString('th-TH') : billDateInput;
+
+            const itemRows = document.querySelectorAll('#bill-items-list > div');
+            const subItems = [];
+            let totalAmount = 0;
+
+            itemRows.forEach(row => {
+                const name = row.querySelector('input[name="bi_name"]')?.value.trim() || 'สินค้า';
+                const qty = Number(row.querySelector('input[name="bi_qty"]')?.value || 1);
+                const unit = row.querySelector('input[name="bi_unit"]')?.value.trim() || 'ชิ้น';
+                const price = Number(row.querySelector('input[name="bi_price"]')?.value || 0);
+                const lineTotal = qty * price;
+                totalAmount += lineTotal;
+
+                subItems.push({
+                    productName: name,
+                    quantity: qty,
+                    unit: unit,
+                    unitPrice: price,
+                    totalPrice: lineTotal
+                });
+            });
+
+            const btn = document.getElementById('btn-save-bill');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> กำลังบันทึก...';
+
+            try {
+                const payload = {
+                    billNo: billNo,
+                    deliveryDate: formattedDate,
+                    date: formattedDate,
+                    companyName: currentOpenCompany.companyName,
+                    companyDistrict: currentOpenCompany.companyDistrict || '',
+                    companyCode: currentOpenCompany.companyCode || '',
+                    address: currentOpenCompany.address || '',
+                    customerName: customerName || (currentOpenCompany.contacts[0]?.name || '-'),
+                    phone: currentOpenCompany.contacts[0]?.phone || '',
+                    status: status,
+                    subItems: subItems,
+                    totalAmount: totalAmount,
+                    note: note,
+                    ownerUid: currentUser.uid,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                };
+
+                await db.collection('deliveries').add(payload);
+                showToast('บันทึกบิลจัดส่งเรียบร้อยแล้ว');
+                closeDeliveryBillModal();
+                
+                // Refresh detail modal view
+                openDetailModal(encodeURIComponent(currentOpenCompany.companyName));
+            } catch (err) {
+                console.error("Save delivery bill error:", err);
+                showToast('บันทึกบิลไม่สำเร็จ: ' + err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> บันทึกบิลจัดส่ง';
             }
         }
 
