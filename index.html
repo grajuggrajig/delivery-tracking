@@ -355,7 +355,7 @@
 
                     <div class="relative">
                         <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                        <input type="text" id="search-input" placeholder="ชื่อบริษัท ชื่อลูกค้า เบอร์โทร..." 
+                        <input type="text" id="search-input" placeholder="รหัส, ชื่อบริษัท, ชื่อลูกค้า, เบอร์โทร..." 
                             class="w-full pl-8 pr-8 py-2 bg-white/75 border border-white/90 rounded-xl text-xs focus:bg-white focus:border-teal-500 outline-none transition-all placeholder:text-slate-400">
                         <button id="clear-search" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs">
                             <i class="fa-solid fa-circle-xmark"></i>
@@ -413,12 +413,20 @@
                     </h3>
                     
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div>
+                            <label class="block text-xs font-medium text-slate-700 mb-1">รหัสบริษัท</label>
+                            <input type="text" id="comp-code" placeholder="เช่น C001"
+                                class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
+                        </div>
                         <div class="sm:col-span-2">
                             <label class="block text-xs font-medium text-slate-700 mb-1">ชื่อบริษัท / ร้านค้า <span class="text-rose-500">*</span></label>
                             <input type="text" id="comp-name" required placeholder="เช่น บริษัท เอสซีจี โลจิสติกส์ จำกัด"
                                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
                         </div>
-                        <div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div class="sm:col-span-3">
                             <label class="block text-xs font-medium text-slate-700 mb-1">อำเภอ / เขต</label>
                             <input type="text" id="comp-district" placeholder="เช่น เมือง, บางพลี"
                                 class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl sm:rounded-2xl text-sm focus:bg-white focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 outline-none">
@@ -474,7 +482,10 @@
                         <i class="fa-solid fa-building text-base sm:text-lg"></i>
                     </div>
                     <div class="min-w-0 flex-1">
-                        <h2 id="detail-comp-name" class="text-sm sm:text-lg font-bold leading-tight truncate">ชื่อบริษัท</h2>
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span id="detail-comp-code-badge" class="px-2 py-0.5 rounded text-[10px] font-bold bg-white/30 text-white border border-white/40 hidden">รหัสบริษัท</span>
+                            <h2 id="detail-comp-name" class="text-sm sm:text-lg font-bold leading-tight truncate">ชื่อบริษัท</h2>
+                        </div>
                         <p id="detail-comp-district" class="text-xs text-teal-100 flex items-center gap-1.5 mt-0.5 truncate">
                             <i class="fa-solid fa-location-dot text-white"></i> <span>อำเภอ/เขต</span>
                         </p>
@@ -1002,13 +1013,14 @@
         function rebuildDirectoryFromSources() {
             const companyMap = new Map();
 
-            function ensureCompanyEntry(rawName, district = '', address = '') {
+            function ensureCompanyEntry(rawName, district = '', address = '', companyCode = '') {
                 const cleanName = (rawName || '').trim() || 'ลูกค้าทั่วไป / ไม่ระบุบริษัท';
                 const key = normalizeKey(cleanName);
 
                 if (!companyMap.has(key)) {
                     companyMap.set(key, {
                         id: null,
+                        companyCode: (companyCode || '').trim(),
                         companyName: cleanName,
                         companyDistrict: (district || '').trim(),
                         address: (address || '').trim(),
@@ -1023,14 +1035,16 @@
                 }
 
                 const entry = companyMap.get(key);
+                if (!entry.companyCode && companyCode) entry.companyCode = companyCode.trim();
                 if (!entry.companyDistrict && district) entry.companyDistrict = district.trim();
                 if (!entry.address && address) entry.address = address.trim();
                 return entry;
             }
 
             rawCompanies.forEach(comp => {
-                const entry = ensureCompanyEntry(comp.companyName || comp.name, comp.companyDistrict || comp.district, comp.address);
+                const entry = ensureCompanyEntry(comp.companyName || comp.name, comp.companyDistrict || comp.district, comp.address, comp.companyCode || comp.code);
                 entry.id = comp.id;
+                if (comp.companyCode || comp.code) entry.companyCode = (comp.companyCode || comp.code).trim();
                 if (comp.notes) entry.notes = comp.notes;
                 if (comp.address) entry.address = comp.address;
                 if (comp.companyDistrict || comp.district) entry.companyDistrict = comp.companyDistrict || comp.district;
@@ -1066,7 +1080,8 @@
                 const compName = del.companyName || del.company || (del.customerName ? `คุณ ${del.customerName}` : 'ลูกค้าทั่วไป');
                 const district = del.companyDistrict || del.district || '';
                 const address = del.address || del.deliveryAddress || '';
-                const entry = ensureCompanyEntry(compName, district, address);
+                const compCode = del.companyCode || del.code || '';
+                const entry = ensureCompanyEntry(compName, district, address, compCode);
                 entry.deliveryDocIds.push(del.id);
 
                 let orderDateStr = del.deliveryDate || del.date || '';
@@ -1282,6 +1297,7 @@
                 if (district && comp.companyDistrict !== district) return false;
                 if (!query) return true;
 
+                if (normalizeKey(comp.companyCode).includes(query)) return true;
                 if (normalizeKey(comp.companyName).includes(query)) return true;
                 if (normalizeKey(comp.companyDistrict).includes(query)) return true;
                 if (normalizeKey(comp.address).includes(query)) return true;
@@ -1346,6 +1362,7 @@
 
             try {
                 const payload = {
+                    companyCode: comp.companyCode || '',
                     companyName: comp.companyName,
                     companyDistrict: comp.companyDistrict || '',
                     address: comp.address || '',
@@ -1409,6 +1426,7 @@
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex items-center gap-1.5 flex-wrap mb-0.5">
+                                ${comp.companyCode ? `<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-teal-100 text-teal-800">${escapeHtml(comp.companyCode)}</span>` : ''}
                                 ${isVirtual ? '<span class="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-100 text-amber-800">จากบิล</span>' : ''}
                             </div>
                             <h3 class="text-xs sm:text-sm font-bold ${isSelected ? 'text-teal-950' : 'text-slate-900'} truncate leading-snug" title="${escapeHtml(comp.companyName)}">
@@ -1461,6 +1479,7 @@
                                 </div>
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-center gap-1.5 flex-wrap mb-1">
+                                        ${comp.companyCode ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-teal-600 text-white shadow-2xs">${escapeHtml(comp.companyCode)}</span>` : ''}
                                         <span class="text-[11px] font-bold text-slate-500 uppercase tracking-wider">บริษัท</span>
                                         ${isVirtual ? `
                                             <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400/20 text-amber-800 border border-amber-300/60">
@@ -1652,6 +1671,7 @@
                     titleEl.textContent = 'แก้ไขข้อมูลบริษัทและผู้ติดต่อ';
                     document.getElementById('edit-company-id').value = comp.id || '';
                     document.getElementById('edit-original-company-name').value = comp.companyName;
+                    document.getElementById('comp-code').value = comp.companyCode || '';
                     document.getElementById('comp-name').value = comp.companyName;
                     document.getElementById('comp-district').value = comp.companyDistrict || '';
                     document.getElementById('comp-address').value = comp.address || '';
@@ -1734,6 +1754,7 @@
 
             let compId = document.getElementById('edit-company-id').value.trim();
             const originalCompName = document.getElementById('edit-original-company-name').value.trim();
+            const compCode = document.getElementById('comp-code').value.trim();
             const compDistrict = document.getElementById('comp-district').value.trim();
             const compAddress = document.getElementById('comp-address').value.trim();
             const compNotes = document.getElementById('comp-notes').value.trim();
@@ -1792,6 +1813,7 @@
                 }
 
                 const payload = {
+                    companyCode: compCode,
                     companyName: compName,
                     companyDistrict: compDistrict,
                     address: compAddress,
@@ -1817,6 +1839,7 @@
                     const existingDelSnap = await deliveryQueryRef.get();
 
                     const deliveryPayload = {
+                        companyCode: compCode,
                         companyName: compName,
                         companyDistrict: compDistrict,
                         address: compAddress,
@@ -1992,6 +2015,15 @@
             }
 
             document.getElementById('detail-comp-name').textContent = comp.companyName;
+            
+            const codeBadge = document.getElementById('detail-comp-code-badge');
+            if (comp.companyCode) {
+                codeBadge.textContent = comp.companyCode;
+                codeBadge.classList.remove('hidden');
+            } else {
+                codeBadge.classList.add('hidden');
+            }
+
             document.getElementById('detail-comp-district').innerHTML = `
                 <i class="fa-solid fa-location-dot text-white"></i>
                 <span>${escapeHtml(comp.companyDistrict || 'ไม่ระบุอำเภอ/เขต')}</span>
